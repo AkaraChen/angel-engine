@@ -15,6 +15,8 @@ import {
   fleetRoutePath,
   lastOpenedTargetPath,
   projectDraftRoutePath,
+  projectPullRequestsRoutePath,
+  scheduleRoutePath,
   workspaceModeForChat,
 } from "@/app/workspace/workspace-route-paths";
 import {
@@ -265,6 +267,22 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
     if (location !== fleetRoutePath) navigate(fleetRoutePath);
   }, [location, navigate]);
 
+  const openSchedule = useCallback(() => {
+    if (location !== scheduleRoutePath) navigate(scheduleRoutePath);
+  }, [location, navigate]);
+
+  const openPullRequests = useCallback(
+    (project: Project) => {
+      setPowerDraftWorktree(undefined);
+      setPowerActiveWorktree(undefined);
+      setPowerWorktreeView(null);
+      if (workspaceMode === "chat") setWorkspaceMode("work");
+      const path = projectPullRequestsRoutePath(project.id);
+      if (location !== path) navigate(path);
+    },
+    [location, navigate, setWorkspaceMode, workspaceMode],
+  );
+
   /**
    * Fleet spans every project, so a row can point at a chat the current
    * workspace mode cannot reach. Switch to the mode that owns the chat before
@@ -306,7 +324,9 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
     openChat,
     openChatFromFleet,
     openFleet,
+    openSchedule,
     openPowerWorktree,
+    openPullRequests,
     openSettings,
     registerChatTab,
     selectDraftProject,

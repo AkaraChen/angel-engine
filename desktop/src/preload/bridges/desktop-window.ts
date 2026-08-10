@@ -1,13 +1,9 @@
 import type { IpcRendererEvent } from "electron";
 import type {
-  DesktopConfirmDeleteArchivedChatsInput,
-  DesktopConfirmDeleteCustomAgentInput,
-  DesktopConfirmDeleteManagedWorktreesInput,
-  DesktopConfirmSaveWorkspaceFileChangesInput,
-  DesktopConfirmSaveWorkspaceFileChangesResult,
   DesktopOpenChatFromNotificationEvent,
   DesktopThemeSetInput,
   DesktopUpdateDownloadedEvent,
+  DesktopUpdateMessageEvent,
   DesktopWindowCommand,
 } from "../../shared/desktop-window";
 import type {
@@ -24,25 +20,37 @@ import type {
   WorkspaceToolSurfaceState,
 } from "../../shared/workspace-tool-surface";
 import type {
+  DesktopNotificationHistory,
+  DesktopNotificationPreferences,
+  DesktopNotificationPreferencesSetInput,
+} from "../../shared/notification-preferences";
+import type {
   DesktopUpdateChannelSetInput,
   DesktopUpdateStatus,
 } from "../../shared/update-channel";
+import type {
+  WorkspaceDiffBasePreference,
+  WorkspaceDiffBasePreferenceInput,
+} from "../../shared/workspace-diff-preferences";
 import { contextBridge, ipcRenderer } from "electron";
+import { KEYMAP_USER_BINDINGS_CHANGED_CHANNEL } from "../../shared/keybindings/channels";
 import {
   DESKTOP_ACTIVE_CHAT_SET_CHANNEL,
   DESKTOP_COMMAND_CHANNEL,
-  DESKTOP_CONFIRM_DELETE_ALL_CHATS_CHANNEL,
-  DESKTOP_CONFIRM_DELETE_ARCHIVED_CHATS_CHANNEL,
-  DESKTOP_CONFIRM_DELETE_CUSTOM_AGENT_CHANNEL,
-  DESKTOP_CONFIRM_DELETE_MANAGED_WORKTREES_CHANNEL,
-  DESKTOP_CONFIRM_SAVE_WORKSPACE_FILE_CHANGES_CHANNEL,
   DESKTOP_INSTALL_UPDATE_CHANNEL,
+  DESKTOP_NOTIFICATION_HISTORY_CHANGED_CHANNEL,
+  DESKTOP_NOTIFICATION_HISTORY_CLEAR_CHANNEL,
+  DESKTOP_NOTIFICATION_HISTORY_GET_CHANNEL,
+  DESKTOP_NOTIFICATION_HISTORY_MARK_READ_CHANNEL,
+  DESKTOP_NOTIFICATION_PREFERENCES_GET_CHANNEL,
+  DESKTOP_NOTIFICATION_PREFERENCES_SET_CHANNEL,
   DESKTOP_OPEN_CHAT_FROM_NOTIFICATION_CHANNEL,
   DESKTOP_SETTINGS_OPEN_CHANNEL,
   DESKTOP_THEME_SET_CHANNEL,
   DESKTOP_UPDATE_CHANNEL_SET_CHANNEL,
   DESKTOP_UPDATE_CHECK_CHANNEL,
   DESKTOP_UPDATE_DOWNLOADED_CHANNEL,
+  DESKTOP_UPDATE_MESSAGE_CHANNEL,
   DESKTOP_UPDATE_STATUS_CHANGED_CHANNEL,
   DESKTOP_UPDATE_STATUS_GET_CHANNEL,
   DESKTOP_WINDOW_CLOSE_CURRENT_CHANNEL,
@@ -61,46 +69,14 @@ import {
   DESKTOP_WORKSPACE_TOOL_WINDOW_GET_CHANNEL,
   DESKTOP_WORKSPACE_TOOL_WINDOW_OPEN_CHANNEL,
 } from "../../shared/desktop-window";
+import { isDesktopNotificationHistory } from "../../shared/notification-preferences";
+import {
+  DESKTOP_WORKSPACE_DIFF_BASE_GET_CHANNEL,
+  DESKTOP_WORKSPACE_DIFF_BASE_SET_CHANNEL,
+} from "../../shared/workspace-diff-preferences";
 
 export function exposeDesktopWindowBridge() {
   contextBridge.exposeInMainWorld("desktopWindow", {
-    async confirmDeleteAllChats() {
-      return ipcRenderer.invoke(
-        DESKTOP_CONFIRM_DELETE_ALL_CHATS_CHANNEL,
-      ) as Promise<boolean>;
-    },
-    async confirmDeleteArchivedChats(
-      input: DesktopConfirmDeleteArchivedChatsInput,
-    ) {
-      return ipcRenderer.invoke(
-        DESKTOP_CONFIRM_DELETE_ARCHIVED_CHATS_CHANNEL,
-        input,
-      ) as Promise<boolean>;
-    },
-    async confirmDeleteCustomAgent(
-      input: DesktopConfirmDeleteCustomAgentInput,
-    ) {
-      return ipcRenderer.invoke(
-        DESKTOP_CONFIRM_DELETE_CUSTOM_AGENT_CHANNEL,
-        input,
-      ) as Promise<boolean>;
-    },
-    async confirmDeleteManagedWorktrees(
-      input: DesktopConfirmDeleteManagedWorktreesInput,
-    ) {
-      return ipcRenderer.invoke(
-        DESKTOP_CONFIRM_DELETE_MANAGED_WORKTREES_CHANNEL,
-        input,
-      ) as Promise<boolean>;
-    },
-    async confirmSaveWorkspaceFileChanges(
-      input: DesktopConfirmSaveWorkspaceFileChangesInput,
-    ) {
-      return ipcRenderer.invoke(
-        DESKTOP_CONFIRM_SAVE_WORKSPACE_FILE_CHANGES_CHANNEL,
-        input,
-      ) as Promise<DesktopConfirmSaveWorkspaceFileChangesResult>;
-    },
     closeCurrent() {
       ipcRenderer.send(DESKTOP_WINDOW_CLOSE_CURRENT_CHANNEL);
     },
@@ -116,6 +92,34 @@ export function exposeDesktopWindowBridge() {
       ipcRenderer.on(DESKTOP_COMMAND_CHANNEL, listener);
       return () => {
         ipcRenderer.removeListener(DESKTOP_COMMAND_CHANNEL, listener);
+      };
+    },
+    onKeymapUserBindingsChanged(
+      handler: (state: {
+        file: { version: 1; bindings: unknown[] };
+        warnings: unknown[];
+        fatal?: unknown;
+        path: string;
+      }) => void,
+    ) {
+      const listener = (_event: IpcRendererEvent, payload: unknown) => {
+        if (!payload || typeof payload !== "object") return;
+        handler(
+          payload as {
+            file: { version: 1; bindings: unknown[] };
+            warnings: unknown[];
+            fatal?: unknown;
+            path: string;
+          },
+        );
+      };
+
+      ipcRenderer.on(KEYMAP_USER_BINDINGS_CHANGED_CHANNEL, listener);
+      return () => {
+        ipcRenderer.removeListener(
+          KEYMAP_USER_BINDINGS_CHANGED_CHANNEL,
+          listener,
+        );
       };
     },
     onOpenChatFromNotification(
@@ -134,6 +138,51 @@ export function exposeDesktopWindowBridge() {
         );
       };
     },
+    onNotificationHistoryChanged(
+      handler: (history: DesktopNotificationHistory) => void,
+    ) {
+      const listener = (_event: IpcRendererEvent, payload: unknown) => {
+        if (!isDesktopNotificationHistory(payload)) return;
+        handler(payload);
+      };
+
+      ipcRenderer.on(DESKTOP_NOTIFICATION_HISTORY_CHANGED_CHANNEL, listener);
+      return () => {
+        ipcRenderer.removeListener(
+          DESKTOP_NOTIFICATION_HISTORY_CHANGED_CHANNEL,
+          listener,
+        );
+      };
+    },
+    async getNotificationHistory() {
+      return ipcRenderer.invoke(
+        DESKTOP_NOTIFICATION_HISTORY_GET_CHANNEL,
+      ) as Promise<DesktopNotificationHistory>;
+    },
+    async clearNotificationHistory() {
+      return ipcRenderer.invoke(
+        DESKTOP_NOTIFICATION_HISTORY_CLEAR_CHANNEL,
+      ) as Promise<DesktopNotificationHistory>;
+    },
+    async markNotificationHistoryRead(ids: string[]) {
+      return ipcRenderer.invoke(
+        DESKTOP_NOTIFICATION_HISTORY_MARK_READ_CHANNEL,
+        { ids },
+      ) as Promise<DesktopNotificationHistory>;
+    },
+    async getNotificationPreferences() {
+      return ipcRenderer.invoke(
+        DESKTOP_NOTIFICATION_PREFERENCES_GET_CHANNEL,
+      ) as Promise<DesktopNotificationPreferences>;
+    },
+    async setNotificationPreferences(
+      input: DesktopNotificationPreferencesSetInput,
+    ) {
+      return ipcRenderer.invoke(
+        DESKTOP_NOTIFICATION_PREFERENCES_SET_CHANNEL,
+        input,
+      ) as Promise<DesktopNotificationPreferences>;
+    },
     onUpdateDownloaded(handler: (event: DesktopUpdateDownloadedEvent) => void) {
       const listener = (_event: IpcRendererEvent, payload: unknown) => {
         if (!isUpdateDownloadedEvent(payload)) return;
@@ -143,6 +192,17 @@ export function exposeDesktopWindowBridge() {
       ipcRenderer.on(DESKTOP_UPDATE_DOWNLOADED_CHANNEL, listener);
       return () => {
         ipcRenderer.removeListener(DESKTOP_UPDATE_DOWNLOADED_CHANNEL, listener);
+      };
+    },
+    onUpdateMessage(handler: (event: DesktopUpdateMessageEvent) => void) {
+      const listener = (_event: IpcRendererEvent, payload: unknown) => {
+        if (!isUpdateMessageEvent(payload)) return;
+        handler(payload);
+      };
+
+      ipcRenderer.on(DESKTOP_UPDATE_MESSAGE_CHANNEL, listener);
+      return () => {
+        ipcRenderer.removeListener(DESKTOP_UPDATE_MESSAGE_CHANNEL, listener);
       };
     },
     onUpdateStatusChanged(handler: (status: DesktopUpdateStatus) => void) {
@@ -246,6 +306,12 @@ export function exposeDesktopWindowBridge() {
         DESKTOP_WORKSPACE_TOOL_SURFACE_GET_CHANNEL,
       ) as Promise<WorkspaceToolSurfaceState>;
     },
+    async getWorkspaceDiffBase(root: string) {
+      return ipcRenderer.invoke(
+        DESKTOP_WORKSPACE_DIFF_BASE_GET_CHANNEL,
+        root,
+      ) as Promise<WorkspaceDiffBasePreference | undefined>;
+    },
     openWorkspaceToolWindow(input: WorkspaceToolWindowOpenInput) {
       ipcRenderer.send(DESKTOP_WORKSPACE_TOOL_WINDOW_OPEN_CHANNEL, input);
     },
@@ -284,6 +350,9 @@ export function exposeDesktopWindowBridge() {
         input,
       );
     },
+    setWorkspaceDiffBase(input: WorkspaceDiffBasePreferenceInput) {
+      return ipcRenderer.invoke(DESKTOP_WORKSPACE_DIFF_BASE_SET_CHANNEL, input);
+    },
   });
 }
 
@@ -310,6 +379,25 @@ function isUpdateStatus(value: unknown): value is DesktopUpdateStatus {
   if (typeof value !== "object" || value === null) return false;
   const status = value as { channel?: unknown; state?: unknown };
   return typeof status.channel === "string" && typeof status.state === "string";
+}
+
+function isUpdateMessageEvent(
+  value: unknown,
+): value is DesktopUpdateMessageEvent {
+  if (typeof value !== "object" || value === null) return false;
+  const event = value as {
+    actions?: unknown;
+    detail?: unknown;
+    message?: unknown;
+    tone?: unknown;
+  };
+  return (
+    Array.isArray(event.actions) &&
+    event.actions.every((action) => action === "install") &&
+    typeof event.detail === "string" &&
+    typeof event.message === "string" &&
+    (event.tone === "error" || event.tone === "info")
+  );
 }
 
 function isUpdateDownloadedEvent(

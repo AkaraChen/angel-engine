@@ -91,7 +91,9 @@ describe("chatPrewarmMatches", () => {
 
 describe("cwdForNewChat", () => {
   it("uses an explicit cwd before project/worktree resolution", async () => {
-    // The explicit cwd short-circuits before any project lookup happens.
+    // Session handoff (same or cross agent) creates a new chat with the
+    // source session's cwd so the workspace is preserved without worktree
+    // recreation. The explicit cwd short-circuits before any project lookup.
     const testDbLayer = dieDbLayer();
 
     await expect(
@@ -101,6 +103,19 @@ describe("cwdForNewChat", () => {
         ),
       ),
     ).resolves.toBe("/tmp/existing-worktree");
+  });
+
+  it("preserves an explicit handoff workspace even when a projectId is set", async () => {
+    // Handoff passes both cwd and projectId from the source chat; cwd wins so
+    // worktree chats stay in the same directory instead of creating another.
+    await expect(
+      Effect.runPromise(
+        cwdForNewChat({
+          cwd: "/tmp/source-session-cwd",
+          projectId: "project-1",
+        }).pipe(Effect.provide(dieDbLayer())),
+      ),
+    ).resolves.toBe("/tmp/source-session-cwd");
   });
 
   it("still refuses a worktree chat without a project", async () => {

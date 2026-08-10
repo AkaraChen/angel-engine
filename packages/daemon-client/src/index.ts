@@ -9,6 +9,7 @@ import type {
 import type {
   Chat,
   ChatActiveRunResult,
+  ChatAmbiguousRunResult,
   ChatActivityListResult,
   ChatAttentionListResult,
   ChatAttentionReadInput,
@@ -32,6 +33,8 @@ import type {
   ChatRuntimeConfigInput,
   ChatRunObserverEvent,
   ChatRunStartInput,
+  ChatSendInput,
+  ChatSendResult,
   ChatSetModeInput,
   ChatSetModeResult,
   ChatSetPermissionModeInput,
@@ -43,6 +46,7 @@ import type {
 } from "@angel-engine/daemon-api/chat";
 import {
   isChatActiveRunResult,
+  isChatAmbiguousRunResult,
   isChatActivityListResult,
   isChatAttentionListResult,
   isChatAttentionReadResult,
@@ -57,13 +61,34 @@ import type {
   ProcessRegistrySnapshotEntry,
 } from "@angel-engine/daemon-api/daemon";
 import type {
+  GitHubAddPullRequestCommentInput,
+  GitHubAddPullRequestCommentResult,
+  GitHubCreatePullRequestInput,
+  GitHubCreatePullRequestResult,
+  GitHubCreateWorkspaceFromPullRequestInput,
+  GitHubCreateWorkspaceFromPullRequestResult,
   GitHubListItemsInput,
   GitHubListItemsResult,
+  GitHubPrChecksFixPromptInput,
+  GitHubPrChecksFixPromptResult,
+  GitHubPrChecksInput,
+  GitHubPrChecksResult,
+  GitHubListPullRequestsInput,
+  GitHubListPullRequestsResult,
+  GitHubPullRequestDetail,
+  GitHubPullRequestTemplateInput,
+  GitHubPullRequestTemplateResult,
+  GitHubListRepositoriesInput,
+  GitHubListRepositoriesResult,
+  GitHubRepositoryOwnersResult,
   GitHubResolveUrlInput,
   GitHubResolvedItem,
+  GitHubViewPullRequestInput,
 } from "@angel-engine/daemon-api/github";
 import type {
   CreateProjectInput,
+  ProjectCloneEvent,
+  ProjectCloneInput,
   ManagedWorktreeDeleteInput,
   ManagedWorktreeDeleteResult,
   ManagedWorktreeScanInput,
@@ -73,16 +98,28 @@ import type {
   ProjectConfigResult,
   ProjectGitStatusInput,
   ProjectGitStatusResult,
+  ProjectSetupLifecycleView,
+  ProjectSetupRetryInput,
   UpdateProjectConfigInput,
   UpdateProjectInput,
 } from "@angel-engine/daemon-api/projects";
+import { isProjectCloneEvent } from "@angel-engine/daemon-api/projects";
 import type {
   WorkspaceFileReadResult,
   WorkspaceFileTreeResult,
   WorkspaceFileWriteResult,
+  WorkspaceGitBranchesResult,
+  WorkspaceGitCheckoutInput,
+  WorkspaceGitCheckoutResult,
+  WorkspaceGitCommitShowInput,
+  WorkspaceGitCommitShowResult,
+  WorkspaceGitDiffInput,
   WorkspaceGitDiffResult,
+  WorkspaceGitLogResult,
   WorkspaceToolGitCommitInput,
   WorkspaceToolGitCommitResult,
+  WorkspaceToolGitPullInput,
+  WorkspaceToolGitPullResult,
   WorkspaceToolGitPushInput,
   WorkspaceToolGitPushResult,
   WorkspaceToolReadFileInput,
@@ -225,12 +262,69 @@ export function createDaemonClient(options: DaemonClientOptions) {
     }
   }
 
+  async function* streamCloneEvents(
+    path: string,
+    init: RequestInit,
+  ): AsyncIterable<ProjectCloneEvent> {
+    const headers = new Headers(init.headers);
+    headers.set("accept", "text/event-stream");
+    const response = await send(path, { ...init, headers });
+    if (!response.ok) {
+      throw DaemonRequestError.http(
+        response.status,
+        undefined,
+        `Daemon request failed: ${init.method ?? "GET"} ${path}`,
+      );
+    }
+    if (response.body === null) {
+      throw DaemonRequestError.invalidResponse(
+        `Daemon returned an empty stream for ${path}.`,
+        response.status,
+      );
+    }
+
+    let terminalEventReceived = false;
+    for await (const message of readSseEvents(response.body)) {
+      if (!isProjectCloneEvent(message)) {
+        throw DaemonRequestError.invalidResponse(
+          `Daemon returned an invalid clone event for ${path}.`,
+          response.status,
+        );
+      }
+      terminalEventReceived =
+        terminalEventReceived ||
+        message.type === "completed" ||
+        message.type === "failed";
+      yield message;
+    }
+    if (!terminalEventReceived) {
+      throw DaemonRequestError.invalidResponse(
+        `Daemon clone stream ended without a terminal event for ${path}.`,
+        response.status,
+      );
+    }
+  }
+
   const activeRun = async (chatId: string): Promise<ChatActiveRunResult> => {
     const path = `/api/chats/${encodeURIComponent(chatId)}/active-run`;
     const result = await request<unknown>(path);
     if (!isChatActiveRunResult(result)) {
       throw DaemonRequestError.invalidResponse(
         `Daemon returned an invalid active chat run for ${path}.`,
+        200,
+      );
+    }
+    return result;
+  };
+
+  const ambiguousRun = async (
+    chatId: string,
+  ): Promise<ChatAmbiguousRunResult> => {
+    const path = `/api/chats/${encodeURIComponent(chatId)}/ambiguous-run`;
+    const result = await request<unknown>(path);
+    if (!isChatAmbiguousRunResult(result)) {
+      throw DaemonRequestError.invalidResponse(
+        `Daemon returned an invalid ambiguous chat run for ${path}.`,
         200,
       );
     }
@@ -334,6 +428,7 @@ export function createDaemonClient(options: DaemonClientOptions) {
       read: readAttention,
     },
     chats: {
+      ambiguousRun,
       archive: (id: string) =>
         request<Chat>(`/api/chats/${encodeURIComponent(id)}/archive`, {
           method: "POST",
@@ -358,6 +453,11 @@ export function createDaemonClient(options: DaemonClientOptions) {
           `/api/chats/${encodeURIComponent(id)}/worktree-creation`,
           { method: "DELETE" },
         ),
+      clearAmbiguousRun: (id: string) =>
+        request<{ cleared: boolean }>(
+          `/api/chats/${encodeURIComponent(id)}/ambiguous-run`,
+          { method: "DELETE" },
+        ),
       delete: (id: string) =>
         request<{ ok: boolean }>(`/api/chats/${encodeURIComponent(id)}`, {
           method: "DELETE",
@@ -369,6 +469,30 @@ export function createDaemonClient(options: DaemonClientOptions) {
         ),
       get: (id: string) =>
         request<Chat | null>(`/api/chats/${encodeURIComponent(id)}`),
+      lifecycle: (id: string) =>
+        request<ProjectSetupLifecycleView>(
+          `/api/chats/${encodeURIComponent(id)}/lifecycle`,
+        ),
+      cancelSetup: (id: string) =>
+        request<ProjectSetupLifecycleView>(
+          `/api/chats/${encodeURIComponent(id)}/setup/cancel`,
+          { method: "POST" },
+        ),
+      continueSetup: (id: string) =>
+        request<ProjectSetupLifecycleView>(
+          `/api/chats/${encodeURIComponent(id)}/setup/continue`,
+          { method: "POST" },
+        ),
+      discardSetup: (id: string) =>
+        request<{ ok: boolean }>(
+          `/api/chats/${encodeURIComponent(id)}/setup/discard`,
+          { method: "POST" },
+        ),
+      retrySetup: (id: string, input: ProjectSetupRetryInput) =>
+        request<ProjectSetupLifecycleView>(
+          `/api/chats/${encodeURIComponent(id)}/setup/retry`,
+          json("POST", input),
+        ),
       inspectConfig: (input: ChatRuntimeConfigInput = {}) =>
         request<ChatRuntimeConfig>(
           "/api/chats/runtime-config",
@@ -398,6 +522,8 @@ export function createDaemonClient(options: DaemonClientOptions) {
           `/api/chats/${encodeURIComponent(input.chatId)}`,
           json("PATCH", { title: input.title }),
         ),
+      send: (input: ChatSendInput) =>
+        request<ChatSendResult>("/api/chats/send", json("POST", input)),
       setMode: (input: ChatSetModeInput) =>
         request<ChatSetModeResult>(
           `/api/chats/${encodeURIComponent(input.chatId)}/mode`,
@@ -420,10 +546,52 @@ export function createDaemonClient(options: DaemonClientOptions) {
         ),
     },
     github: {
+      addPullRequestComment: (input: GitHubAddPullRequestCommentInput) =>
+        request<GitHubAddPullRequestCommentResult>(
+          `/api/github/pull-requests/${encodeURIComponent(String(input.number))}/comments`,
+          json("POST", { body: input.body, cwd: input.cwd }),
+        ),
+      createPullRequest: (input: GitHubCreatePullRequestInput) =>
+        request<GitHubCreatePullRequestResult>(
+          "/api/github/pull-requests",
+          json("POST", input),
+        ),
+      createWorkspaceFromPullRequest: (
+        input: GitHubCreateWorkspaceFromPullRequestInput,
+      ) =>
+        request<GitHubCreateWorkspaceFromPullRequestResult>(
+          "/api/github/pull-requests/workspace",
+          json("POST", input),
+        ),
       listItems: (input: GitHubListItemsInput) =>
         request<GitHubListItemsResult>(`/api/github/items?${query(input)}`),
+      listPrChecks: (input: GitHubPrChecksInput) =>
+        request<GitHubPrChecksResult>(`/api/github/pr-checks?${query(input)}`),
+      prChecksFixPrompt: (input: GitHubPrChecksFixPromptInput) =>
+        request<GitHubPrChecksFixPromptResult>(
+          "/api/github/pr-checks/fix-prompt",
+          json("POST", input),
+        ),
+      listPullRequests: (input: GitHubListPullRequestsInput) =>
+        request<GitHubListPullRequestsResult>(
+          `/api/github/pull-requests?${query(input)}`,
+        ),
+      pullRequestTemplate: (input: GitHubPullRequestTemplateInput) =>
+        request<GitHubPullRequestTemplateResult>(
+          `/api/github/pull-request-template?${query(input)}`,
+        ),
+      listRepositories: (input: GitHubListRepositoriesInput) =>
+        request<GitHubListRepositoriesResult>(
+          `/api/github/repos?${query(input)}`,
+        ),
+      listRepositoryOwners: () =>
+        request<GitHubRepositoryOwnersResult>("/api/github/repo-owners"),
       resolveUrl: (input: GitHubResolveUrlInput) =>
         request<GitHubResolvedItem>("/api/github/resolve", json("POST", input)),
+      viewPullRequest: (input: GitHubViewPullRequestInput) =>
+        request<GitHubPullRequestDetail>(
+          `/api/github/pull-requests/${encodeURIComponent(String(input.number))}?${query({ cwd: input.cwd })}`,
+        ),
     },
     health: () => request<DaemonHealth>("/api/health"),
     events: {
@@ -446,6 +614,11 @@ export function createDaemonClient(options: DaemonClientOptions) {
         ),
     },
     projects: {
+      clone: (input: ProjectCloneInput, signal?: AbortSignal) =>
+        streamCloneEvents("/api/projects/clone", {
+          ...json("POST", input),
+          signal,
+        }),
       config: (input: ProjectConfigInput) =>
         request<ProjectConfigResult>(
           `/api/projects/${encodeURIComponent(input.projectId)}/config`,
@@ -475,7 +648,11 @@ export function createDaemonClient(options: DaemonClientOptions) {
       updateConfig: (input: UpdateProjectConfigInput) =>
         request<ProjectConfigResult>(
           `/api/projects/${encodeURIComponent(input.projectId)}/config`,
-          json("PUT", { setupScript: input.setupScript }),
+          json("PUT", {
+            runScript: input.runScript,
+            setupScript: input.setupScript,
+            teardownScript: input.teardownScript,
+          }),
         ),
     },
     worktrees: {
@@ -494,14 +671,36 @@ export function createDaemonClient(options: DaemonClientOptions) {
         request<WorkspaceFileTreeResult>(
           `/api/workspace/file-tree?${query(input)}`,
         ),
+      gitBranches: (input: WorkspaceToolRootInput) =>
+        request<WorkspaceGitBranchesResult>(
+          `/api/workspace/git-branches?${query(input)}`,
+        ),
+      gitCheckout: (input: WorkspaceGitCheckoutInput) =>
+        request<WorkspaceGitCheckoutResult>(
+          "/api/workspace/git-checkout",
+          json("POST", input),
+        ),
       gitCommit: (input: WorkspaceToolGitCommitInput) =>
         request<WorkspaceToolGitCommitResult>(
           "/api/workspace/git-commit",
           json("POST", input),
         ),
-      gitDiff: (input: WorkspaceToolRootInput) =>
+      gitCommitShow: (input: WorkspaceGitCommitShowInput) =>
+        request<WorkspaceGitCommitShowResult>(
+          `/api/workspace/git-commit-show?${query(input)}`,
+        ),
+      gitDiff: (input: WorkspaceGitDiffInput) =>
         request<WorkspaceGitDiffResult>(
           `/api/workspace/git-diff?${query(input)}`,
+        ),
+      gitLog: (input: WorkspaceToolRootInput & { limit?: number }) =>
+        request<WorkspaceGitLogResult>(
+          `/api/workspace/git-log?${query(input)}`,
+        ),
+      gitPull: (input: WorkspaceToolGitPullInput) =>
+        request<WorkspaceToolGitPullResult>(
+          "/api/workspace/git-pull",
+          json("POST", input),
         ),
       gitPush: (input: WorkspaceToolGitPushInput) =>
         request<WorkspaceToolGitPushResult>(

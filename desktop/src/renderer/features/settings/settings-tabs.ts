@@ -6,6 +6,7 @@ import {
   Archive as ArchiveIcon,
   Robot as Bot,
   Monitor as ComputerIcon,
+  Keyboard as KeyboardIcon,
   DeviceMobile as MobileIcon,
   Palette as PaletteIcon,
   ArrowsClockwise as UpdateIcon,
@@ -14,6 +15,7 @@ import {
 
 type SettingsTab =
   | "appearance"
+  | "keyboard"
   | "workspace"
   | "agents"
   | "updates"
@@ -45,6 +47,13 @@ const settingsTabs: SettingsTabDefinition[] = [
     icon: PaletteIcon,
     id: "appearance",
     labelKey: "settings.tabs.appearance",
+  },
+  {
+    descriptionKey: "settings.tabDescriptions.keyboard",
+    group: "general",
+    icon: KeyboardIcon,
+    id: "keyboard",
+    labelKey: "settings.tabs.keyboard",
   },
   {
     descriptionKey: "settings.tabDescriptions.workspace",

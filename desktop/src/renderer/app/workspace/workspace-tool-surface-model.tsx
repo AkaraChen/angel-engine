@@ -49,6 +49,7 @@ export interface WorkspaceToolSurfaceModel {
   addBrowserTab: () => void;
   addTerminalTab: () => void;
   api: ApiClient;
+  chatId: string | null;
   contextKey: string | null;
   closeDynamicTab: (tab: WorkspaceToolSurfaceDynamicTab) => void;
   host: WorkspaceToolSurfaceHost;
@@ -87,6 +88,7 @@ export function useWorkspaceToolSurfaceModel({
     (state) => state.requestWorkspaceToolHost,
   );
   const contextKey = propContextKey ?? context.contextKey ?? null;
+  const chatId = context.chatId ?? null;
   const root = propRoot ?? context.root ?? null;
   const snapshot = currentWorkspaceToolSnapshot(contextKey, snapshots);
   const activeTabId = visibleActiveWorkspaceToolTabId(snapshot);
@@ -254,6 +256,7 @@ export function useWorkspaceToolSurfaceModel({
   const tabItems = useMemo(
     () =>
       workspaceToolTabItems(snapshot.tabs, {
+        checks: t("workspace.tools.tabs.checks"),
         files: t("workspace.tools.tabs.files"),
         gitChanges: t("workspace.tools.tabs.gitChanges"),
         processes: t("workspace.tools.tabs.processes"),
@@ -269,6 +272,7 @@ export function useWorkspaceToolSurfaceModel({
       addBrowserTab,
       addTerminalTab,
       api,
+      chatId,
       contextKey,
       closeDynamicTab,
       host,
@@ -287,6 +291,7 @@ export function useWorkspaceToolSurfaceModel({
       addBrowserTab,
       addTerminalTab,
       api,
+      chatId,
       contextKey,
       closeDynamicTab,
       host,

@@ -1,13 +1,17 @@
 import type { DaemonGlobalEvent } from "@angel-engine/daemon-api";
 import type {
+  ChatActivity,
   ChatAttention,
   ChatHistoryMessage,
 } from "@angel-engine/daemon-api/chat";
 import type { DaemonInfo } from "@angel-engine/daemon-api/daemon";
 
 import { chatPartsText } from "@angel-engine/daemon-api/chat";
+import is from "@sindresorhus/is";
 import { BrowserWindow } from "electron";
+import { scheduleTrayRefresh } from "../features/tray/service";
 import {
+  notifyChatFailed,
   notifyChatNeedsInput,
   notifyChatTurnCompleted,
 } from "../windows/notifications";
@@ -19,8 +23,9 @@ let unsubscribe: (() => void) | undefined;
 
 /**
  * Attention ids already turned into a notification. The id is
- * `<runId>:input:<elicitationId>` or `<runId>:completed`, so it survives the
- * run leaving the daemon registry and dedupes per event rather than per chat.
+ * `<runId>:input:<elicitationId>`, `<runId>:done`, or `<runId>:failed`, so it
+ * survives the run leaving the daemon registry and dedupes per event rather
+ * than per chat.
  */
 const notified = new Set<string>();
 
@@ -42,12 +47,16 @@ function connect(info: DaemonInfo) {
     `angel-engine-token.${info.token}`,
   );
   socket = next;
+  next.addEventListener("open", () => {
+    scheduleTrayRefresh();
+  });
   next.addEventListener("message", (message) => {
     handleEvent(JSON.parse(String(message.data)) as DaemonGlobalEvent);
   });
   next.addEventListener("close", () => {
     if (socket !== next) return;
     socket = undefined;
+    scheduleTrayRefresh();
     setTimeout(() => {
       if (socket === undefined) connect(info);
     }, 1_000);
@@ -66,9 +75,18 @@ export function stopDaemonEvents() {
  * `chat-attention-changed` is a hint, not a verdict: the daemon publishes it on
  * clears too, so the authoritative status always comes from a pull. The main
  * process no longer mirrors run events of its own.
+ *
+ * `chat-activity-changed` drives the menu-bar fleet summary (badge + list).
  */
 function handleEvent(message: DaemonGlobalEvent) {
+  if (message.type === "chat-activity-changed") {
+    scheduleTrayRefresh();
+    return;
+  }
   if (message.type !== "chat-attention-changed") return;
+  // Attention and activity usually move together; refresh the tray too so
+  // needs-you counts stay live even if an activity event was coalesced away.
+  scheduleTrayRefresh();
   const chatIds = new Set(message.chatIds);
   queue = queue.then(() =>
     notifyChangedAttention(chatIds).catch((): undefined => undefined),
@@ -100,8 +118,34 @@ async function notifyAttention(attention: ChatAttention) {
     const chat = await daemonClient.chats.get(attention.chatId);
     if (chat === null) return;
     notifyChatNeedsInput({
+      attentionId: attention.id,
       chat,
       elicitation: run.pendingElicitation,
+      window: notificationWindow(),
+    });
+    return;
+  }
+
+  if (attention.status === "failed") {
+    const [{ items }, chat] = await Promise.all([
+      daemonClient.activity.list(),
+      daemonClient.chats.get(attention.chatId),
+    ]);
+    if (chat === null) return;
+    const activity = items.find(
+      (
+        item: ChatActivity,
+      ): item is Extract<ChatActivity, { status: "failed" }> =>
+        item.status === "failed" && item.attentionId === attention.id,
+    );
+    const body =
+      activity !== undefined && is.nonEmptyString(activity.failure.message)
+        ? activity.failure.message
+        : "";
+    notifyChatFailed({
+      attentionId: attention.id,
+      body,
+      chat,
       window: notificationWindow(),
     });
     return;
@@ -111,6 +155,7 @@ async function notifyAttention(attention: ChatAttention) {
   // body comes from the chat's canonical history instead.
   const loaded = await daemonClient.chats.load(attention.chatId);
   notifyChatTurnCompleted({
+    attentionId: attention.id,
     body: lastAssistantText(loaded.messages),
     chat: loaded.chat,
     window: notificationWindow(),

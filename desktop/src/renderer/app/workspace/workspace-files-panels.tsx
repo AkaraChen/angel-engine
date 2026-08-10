@@ -11,6 +11,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { confirmSaveWorkspaceFileChanges } from "@/app/workspace/confirm-save-workspace-file-changes";
 import { getErrorMessage } from "@/app/workspace/workspace-file-display";
 import { WorkspaceWindowFileEditor } from "@/app/workspace/workspace-file-editor";
 import {
@@ -33,6 +34,12 @@ import {
 } from "@/app/workspace/workspace-tool-store";
 import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
 import { useWorkspaceWindowFileOpener } from "@/app/workspace/workspace-window-file-state";
+import { COMMAND_IDS } from "@shared/keybindings";
+import {
+  KeymapScope,
+  useCommand,
+  useContextKey,
+} from "@/platform/keymap/provider";
 import { queryKeys } from "@/platform/query-keys";
 
 export type WorkspaceToolPanelLayout = "compact" | "split";
@@ -235,7 +242,7 @@ function WorkspaceSplitFilesPanel({ root }: { root: string }) {
           queryKey: queryKeys.workspaceTools.fileTree(root),
         });
         void queryClient.invalidateQueries({
-          queryKey: queryKeys.workspaceTools.gitDiff(root),
+          queryKey: queryKeys.workspaceTools.gitDiffRoot(root),
         });
         return true;
       } catch {
@@ -254,32 +261,22 @@ function WorkspaceSplitFilesPanel({ root }: { root: string }) {
     if (!is.nonEmptyString(activePath)) return;
     void saveFile(activePath);
   }, [activePath, saveFile]);
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (
-        event.key.toLowerCase() !== "s" ||
-        (!event.ctrlKey && !event.metaKey) ||
-        event.altKey ||
-        event.shiftKey
-      ) {
-        return;
-      }
 
-      event.preventDefault();
-      saveActiveFile();
-    };
+  const activeDirty =
+    is.nonEmptyString(activePath) &&
+    isWorkspaceWindowFileStateDirty(fileStates[activePath]);
+  useContextKey("files.activeDirty", activeDirty);
+  useCommand(COMMAND_IDS.filesSave, () => {
+    if (!activeDirty) return false;
+    saveActiveFile();
+    return true;
+  }, [activeDirty, saveActiveFile]);
 
-    window.addEventListener("keydown", handleKeyDown, true);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown, true);
-    };
-  }, [saveActiveFile]);
   const closeFile = useCallback(
     async (path: string) => {
       const state = fileStates[path];
       if (isWorkspaceWindowFileStateDirty(state)) {
-        const action =
-          await window.desktopWindow.confirmSaveWorkspaceFileChanges({ path });
+        const action = await confirmSaveWorkspaceFileChanges({ path });
         if (action === "cancel") {
           return;
         }
@@ -314,29 +311,34 @@ function WorkspaceSplitFilesPanel({ root }: { root: string }) {
   );
 
   return (
-    <div className="flex h-full min-h-0 bg-background">
-      <div className="flex shrink-0 flex-col" style={{ width: fileTreeWidth }}>
-        <WorkspaceFileTreePane root={root} onOpenPath={openPath} />
-      </div>
-      <WorkspaceToolPanelSplitter
-        ariaLabel={t("workspace.tools.resizeFileTree")}
-        max={workspaceToolFileTreeWidthMax}
-        min={workspaceToolFileTreeWidthMin}
-        value={fileTreeWidth}
-        onChange={updateFileTreeWidth}
-      />
-      <div className="min-w-0 flex-1">
-        <WorkspaceWindowFileEditor
-          activePath={activePath}
-          fileStates={fileStates}
-          openFilePaths={openFilePaths}
-          onClose={(path) => {
-            void closeFile(path);
-          }}
-          onContentChange={updateActiveFileContent}
-          onSelect={selectFile}
+    <KeymapScope scope="view" id="workspace.files" capture>
+      <div className="flex h-full min-h-0 bg-background">
+        <div
+          className="flex shrink-0 flex-col"
+          style={{ width: fileTreeWidth }}
+        >
+          <WorkspaceFileTreePane root={root} onOpenPath={openPath} />
+        </div>
+        <WorkspaceToolPanelSplitter
+          ariaLabel={t("workspace.tools.resizeFileTree")}
+          max={workspaceToolFileTreeWidthMax}
+          min={workspaceToolFileTreeWidthMin}
+          value={fileTreeWidth}
+          onChange={updateFileTreeWidth}
         />
+        <div className="min-w-0 flex-1">
+          <WorkspaceWindowFileEditor
+            activePath={activePath}
+            fileStates={fileStates}
+            openFilePaths={openFilePaths}
+            onClose={(path) => {
+              void closeFile(path);
+            }}
+            onContentChange={updateActiveFileContent}
+            onSelect={selectFile}
+          />
+        </div>
       </div>
-    </div>
+    </KeymapScope>
   );
 }

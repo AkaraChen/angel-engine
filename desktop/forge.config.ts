@@ -154,6 +154,20 @@ function copyMobileBundle(buildPath: string) {
   });
 }
 
+/** Host control CLI staged by `@angel-engine/host-cli` build (KIT-830). */
+function hostCliBinDir() {
+  return path.join(workspaceRoot, "packages", "host-cli", "dist", "bin");
+}
+
+function assertHostCliBundled() {
+  const binary = path.join(hostCliBinDir(), "angelctl");
+  if (!fs.existsSync(binary)) {
+    throw new Error(
+      "Host CLI not found at packages/host-cli/dist/bin/angelctl. Run `bun run host-cli:build` (or desktop runtime:build) first.",
+    );
+  }
+}
+
 function resolveRuntimeModulePackageJson(moduleName: string): string {
   const paths = [projectRoot, daemonRoot, usageCollectorRoot, workspaceRoot];
   const parentModuleName = nativeRuntimeModuleParents.get(moduleName);
@@ -287,6 +301,7 @@ function verifyCopiedCcusageBinary(buildPath: string) {
 const config: ForgeConfig = {
   hooks: {
     packageAfterCopy: async (_config, buildPath) => {
+      assertHostCliBundled();
       copyRuntimePath(buildPath, "drizzle");
       copyMobileBundle(buildPath);
       copyNativeRuntimeDependencies(buildPath);
@@ -303,7 +318,15 @@ const config: ForgeConfig = {
       unpack:
         "{**/node_modules/node-pty/**/spawn-helper,**/node_modules/@ccusage/**/bin/**}",
     },
-    extraResource: [path.join(projectRoot, "build", "app-update.yml")],
+    extraResource: [
+      path.join(projectRoot, "build", "app-update.yml"),
+      // Host control CLI for agents (KIT-830). Lands at
+      // Angel Engine.app/Contents/Resources/bin/angelctl when the directory exists
+      // at package time (runtime:build produces it).
+      ...(fs.existsSync(path.join(hostCliBinDir(), "angelctl"))
+        ? [hostCliBinDir()]
+        : []),
+    ],
     icon: appIconPath,
     // Installers are produced by electron-builder from the prepackaged app.
     // Forge is used for dev start and package-app.cjs, including .app signing.

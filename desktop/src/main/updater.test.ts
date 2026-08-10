@@ -88,8 +88,8 @@ vi.mock("electron", () => ({
     getAllWindows: () => [
       { isDestroyed: () => false, webContents: { send: mocks.send } },
     ],
+    getFocusedWindow: () => null,
   },
-  dialog: { showMessageBox: vi.fn(async () => ({ response: 1 })) },
   ipcMain: {
     handle: (
       channel: string,

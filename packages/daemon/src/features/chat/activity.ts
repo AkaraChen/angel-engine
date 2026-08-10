@@ -64,14 +64,22 @@ export class ChatActivityStore {
   attentionList(): ChatAttentionListResult {
     const attentions = [];
     for (const { activity } of this.#activities.values()) {
-      if (activity.status !== "waiting_for_you" && activity.status !== "done") {
+      if (
+        activity.status !== "waiting_for_you" &&
+        activity.status !== "done" &&
+        activity.status !== "failed"
+      ) {
         continue;
       }
       attentions.push({
         chatId: activity.chatId,
         id: activity.attentionId,
         status:
-          activity.status === "waiting_for_you" ? "needsInput" : "completed",
+          activity.status === "waiting_for_you"
+            ? "needsInput"
+            : activity.status === "failed"
+              ? "failed"
+              : "completed",
         updatedAt: activity.updatedAt,
       } as const);
     }

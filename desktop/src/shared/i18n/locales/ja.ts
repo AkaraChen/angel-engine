@@ -1,9 +1,33 @@
 import type { LocaleResource } from "./schema";
+import { scheduleTranslation } from "./schedule";
 
 export const ja = {
   translation: {
     app: {
       name: "Angel Engine",
+    },
+    commands: {
+      categories: {
+        app: "App",
+        chat: "Chat",
+        files: "Files",
+        view: "View",
+      },
+      chatFocusComposer: "Focus chat composer",
+      chatInterrupt: "Interrupt run",
+      chatNew: "New chat",
+      chatNewline: "Insert newline",
+      chatRemoveLastAttachment: "Remove last attachment",
+      chatSend: "Send message",
+      filesSave: "Save file",
+      paletteClose: "Close command palette",
+      paletteOpen: "Open command palette",
+      settingsOpen: "Open settings",
+      workspaceCloseTab: "Close tab",
+      workspaceNewTab: "New tab",
+      workspaceNextTab: "Next tab",
+      workspacePreviousTab: "Previous tab",
+      workspaceToggleSidebar: "Toggle sidebar",
     },
     common: {
       allow: "許可",
@@ -62,6 +86,12 @@ export const ja = {
       open: "{{name}} を開く",
     },
     workspace: {
+      ambiguousSend: {
+        description:
+          "送信中に Angel Engine が再起動しました。重複を避けるため、このメッセージは自動再送されていません。",
+        dismiss: "保留中の送信を消去",
+        title: "メッセージの配信状況が不明です",
+      },
       backgroundChatCompleted: "バックグラウンドチャットが完了しました",
       backgroundChatNeedsInput: "バックグラウンドチャットに入力が必要です",
       backgroundChatStatus: "バックグラウンドチャットの状態",
@@ -74,11 +104,64 @@ export const ja = {
       noProject: "プロジェクトなし",
       projectSelect: "プロジェクト",
       settings: "設定",
+      setup: {
+        approvalUnavailable:
+          "再試行する前に、現在のセットアップスクリプトを確認して承認してください。",
+        continueAnyway: "このまま続行",
+        discard: "ワークスペースを破棄",
+        discardConfirm: "ワークスペースを破棄",
+        discardConfirmDescription:
+          "このチャット、worktree、ブランチを完全に削除します。この操作は元に戻せません。",
+        discardConfirmTitle: "このワークスペースを破棄しますか？",
+        failedStep:
+          "ステップ {{step}}/{{total}} が失敗しました ({{exitCode}}): {{command}}",
+        failedTitle: "ワークスペースのセットアップに失敗しました",
+        noLog: "セットアップ出力はまだありません。",
+        ready: "ワークスペースの準備ができました",
+        retry: "セットアップを再試行",
+        running:
+          "ワークスペースをセットアップ中… 完了後、最初のメッセージが自動送信されます。",
+        runningStep: "ステップ {{step}}/{{total}}: {{command}}",
+        viewLog: "セットアップログを表示",
+      },
       statsBranch: "ブランチ",
       statsChanges: "変更",
       statsLastActive: "最終アクティブ",
+
       tools: {
+        checks: {
+          fixFailures: "失敗を修正",
+          fixNeedsChat: "修正ターンを送るにはチャットを開いてください。",
+          fixStarted:
+            "切り詰められた失敗ログ要約付きで修正ターンを開始しました。",
+          fixing: "修正を開始中…",
+          openCheck: "チェック詳細を開く",
+          openPullRequest: "プルリクエストを開く",
+          refresh: "チェックを更新",
+          summaryFail: "{{count}} 失敗",
+          summaryPass: "{{count}} 成功",
+          summaryPending: "{{count}} 実行中",
+        },
         addToChat: "チャットに追加",
+        comments: {
+          delete: "削除",
+          lineComment: "{{line}} 行目",
+          needsBody: "送信するにはメモを入力してください",
+          placeholder: "エージェントへのレビューメモ…",
+          reopen: "再開",
+          resolve: "解決済み",
+          select: "送信に含める",
+          sending: "送信中…",
+          sendToAgent: "{{count}} 件をエージェントへ送信",
+          sideNew: "新",
+          sideOld: "旧",
+          status: {
+            open: "未送信",
+            pending: "送信済み",
+            resolved: "解決済み",
+          },
+          title: "レビューコメント {{count}} 件",
+        },
         commit: {
           committing: "コミット中…",
           commitTo: "{{target}} にコミット",
@@ -86,14 +169,42 @@ export const ja = {
           filesSelected: "{{total}} 件中 {{selected}} 件を選択",
           summaryPlaceholder: "概要",
         },
+        diffBase: {
+          branch: "既定ブランチとの差分",
+          fallback: {
+            anchorMissing:
+              "{{base}} の基準 {{sha}} は存在しません。一時的に{{fallback}}を表示します。",
+            anchorUnavailable:
+              "このチャットでは{{base}}を利用できません。一時的に{{fallback}}を表示します。",
+            defaultBranchUnavailable:
+              "既定ブランチを解決できません。一時的に{{fallback}}を表示します。",
+            gitRefUnavailable:
+              "Git 参照 {{ref}} を利用できません。一時的に{{fallback}}を表示します。",
+            noMergeBase:
+              "{{ref}} と HEAD のマージベースがありません。一時的に{{fallback}}を表示します。",
+            notRepository:
+              "このワークスペースは Git リポジトリではありません。",
+          },
+          fileCount: "{{count}} ファイル",
+          label: "差分ベース",
+          session: "セッション開始以降",
+          turn: "前のターン以降",
+          unstaged: "未ステージのみ",
+          worktree: "未コミットの変更",
+        },
         dockInSidebar: "サイドバーにドック",
         empty: {
+          checksUnavailable: "チェックを利用できません",
           fileTreeUnavailable: "ファイルツリーを利用できません",
           fileUnavailable: "ファイルを利用できません",
           gitUnavailable: "Git を利用できません",
           noChanges: "変更はありません",
+          noChecks: "このプルリクエストに報告されたチェックはありません",
           noDiffForFile: "このファイルに差分はありません",
           noProcesses: "実行中のエージェントサブプロセスはありません",
+          noPullRequest: "このブランチにはプルリクエストがありません",
+          noPullRequestDetail:
+            "現在のブランチで PR を開くか紐付けると CI チェックを読み込みます。",
           noWorkspace: "このチャットにはワークスペースがありません",
           notGitRepository: "Git リポジトリではありません",
           processesUnavailable: "プロセス情報を利用できません",
@@ -107,6 +218,16 @@ export const ja = {
           dirty: "{{value}} 件の変更",
           noCommits: "コミットがありません",
           noUpstream: "上流ブランチなし",
+          changes: "変更",
+          currentBranch: "現在のブランチ",
+          history: "履歴",
+          noBranches: "ローカルブランチがありません",
+          noHistory: "まだコミットがありません",
+          pull: "{{remote}} をプル",
+          pullCount: "{{remote}} から {{count}} 件プル",
+          pulling: "プル中…",
+          pushCount: "{{remote}} へ {{count}} 件プッシュ",
+          viewTabs: "Git パネルの表示",
           publish: "ブランチを公開",
           push: "プッシュ",
           pushHint: {
@@ -125,6 +246,7 @@ export const ja = {
         resizeGitList: "変更リストの幅を調整",
         subprocesses: "サブプロセス",
         tabs: {
+          checks: "チェック",
           files: "ファイル",
           gitChanges: "Git の変更",
           newTab: "新しいタブ",
@@ -189,6 +311,44 @@ export const ja = {
         waitingForYou: "あなたの入力待ち",
       },
       title: "フリート",
+      viewMode: "フリート表示",
+      views: {
+        board: "ボード表示",
+        list: "リスト表示",
+      },
+    },
+    schedule: scheduleTranslation,
+    pullRequests: {
+      commentPlaceholder: "Write a comment…",
+      comments: "Comments ({{count}})",
+      create: "Create PR",
+      createAsDraft: "Create as draft",
+      createSubmit: "Create pull request",
+      createTitle: "Create pull request",
+      description: "Description",
+      empty: "No pull requests match this filter.",
+      emptyBody: "(empty)",
+      fieldBase: "Base branch",
+      fieldBasePlaceholder: "Leave empty for repository default",
+      fieldBody: "Body",
+      fieldTitle: "Title",
+      filterState: "Filter by state",
+      noComments: "No comments yet.",
+      openOnGitHub: "Open on GitHub",
+      openWorkspace: "Open workspace",
+      postComment: "Post comment",
+      search: "Search pull requests…",
+      selectPrompt: "Select a pull request to view details.",
+      states: {
+        all: "All",
+        closed: "Closed",
+        merged: "Merged",
+        open: "Open",
+      },
+      subtitle: "{{project}}",
+      templateApplied: "Template: {{name}}",
+      title: "Pull requests",
+      unknownAuthor: "unknown",
     },
     sidebar: {
       addProject: "プロジェクトを追加",
@@ -344,6 +504,37 @@ export const ja = {
         data: "データ",
         general: "一般",
       },
+      keyboard: {
+        addShortcut: "Add shortcut",
+        bindEscape: "Bind Escape",
+        conflictAmbiguous: "Ambiguous conflict — last registration wins",
+        conflictChordPrefix: "Chord prefix conflict",
+        conflictShadowed: "Shadowed by a higher-priority binding",
+        emptySearch: "No commands match this search.",
+        filterAll: "All",
+        filterConflicts: "Conflicts",
+        filterModified: "Modified",
+        hintsLink: "Shortcut hints visibility is under Appearance.",
+        loadFailedDescription:
+          "Using default keybindings until the file is fixed or reset.",
+        loadFailedTitle: "Could not load keybindings.json",
+        openConfig: "Open config file",
+        recordingChordThen: "then…",
+        recordingHint: "Press a new shortcut · Esc to cancel",
+        remove: "Remove",
+        resetAll: "Reset all to defaults…",
+        resetAllConfirm:
+          "Reset all custom keybindings? A local backup will be kept.",
+        resetBroken: "Reset broken config",
+        resetCategory: "Reset category defaults",
+        resetCommand: "Reset command",
+        searchPlaceholder: "Search commands or keys…",
+        sourceConflict: "Conflict",
+        sourceDefault: "Default",
+        sourceUser: "User",
+        sourceUserOverride: "User · overridden",
+        warningsCount: "{{count}} warning(s) while loading keybindings",
+      },
       mobile: {
         copied: "コピーしました",
         copy: "コピー",
@@ -377,6 +568,7 @@ export const ja = {
         urlTitle: "モバイル URL",
       },
       tabDescriptions: {
+        keyboard: "Change keyboard shortcuts and resolve conflicts.",
         agents:
           "セレクターに表示するコーディングエージェントと、その並び順を選びます。",
         appearance: "デスクトップアプリのテーマと表示言語です。",
@@ -393,6 +585,7 @@ export const ja = {
       tabs: {
         agents: "Agents",
         appearance: "外観",
+        keyboard: "Keyboard shortcuts",
         archived: "アーカイブ",
         danger: "詳細",
         mobile: "モバイル表示",
@@ -428,10 +621,18 @@ export const ja = {
         dirtyPromptSwitchLabel:
           "dirty リポジトリから worktree を作成する前に警告する",
         dirtyPromptTitle: "dirty リポジトリ警告",
+        osNotificationsDescription:
+          "バックグラウンドのチャットが完了・失敗・入力待ちのときに OS 通知を表示します。オフでもアプリ内履歴は残ります。",
+        osNotificationsSwitchLabel: "OS 通知を表示",
+        osNotificationsTitle: "OS 通知",
         sendWithModEnterDescription:
           "有効にすると、Enter で改行し、{{shortcut}} で送信します。",
         sendWithModEnterSwitchLabel: "{{shortcut}} でメッセージを送信",
         sendWithModEnterTitle: "{{shortcut}} で送信",
+        trayEnabledDescription:
+          "メニューバーに対応が必要なセッション数と一覧を表示し、アプリ内を探さずに開けます。",
+        trayEnabledSwitchLabel: "メニューバーの艦隊サマリーを表示",
+        trayEnabledTitle: "メニューバーの艦隊サマリー",
       },
     },
     usage: {
@@ -622,6 +823,7 @@ export const ja = {
         userInput: "質問",
       },
       exportMarkdown: "Markdown をエクスポート",
+      forkSession: "ここからセッションを分岐",
       handoff: "引き継ぐ",
       handoffMenuLabel: "実装を委任…",
       handoffPromptIntro: "以下の計画を実装してください。",
@@ -630,6 +832,7 @@ export const ja = {
       response: "応答",
       startImplementation: "実行を開始",
       toasts: {
+        couldNotForkSession: "セッションを分岐できませんでした",
         couldNotHandoffPlan: "計画を引き継げませんでした",
         couldNotStartImplementation: "実行を開始できませんでした",
       },
@@ -644,6 +847,21 @@ export const ja = {
     },
     dialog: {
       chatName: "チャット名",
+      confirm: {
+        deleteCustomAgentDetail_one:
+          "関連するチャット {{count}} 件も削除されます。",
+        deleteCustomAgentDetail_other:
+          "関連するチャット {{count}} 件も削除されます。",
+        deleteCustomAgentDetailNone:
+          "このカスタムエージェントを使用しているチャットはありません。",
+        deleteCustomAgentTitle: "{{label}} を削除しますか？",
+        discard: "破棄",
+        dontSave: "保存しない",
+        kill: "終了",
+        killProcessTitle: "{{name}}（{{pid}}）を終了しますか？",
+        saveFileChangesDetail: "保存しないと変更内容は失われます。",
+        saveFileChangesTitle: "{{path}} の変更を保存しますか？",
+      },
       importSession: {
         cwdLabel: "ディレクトリ: {{cwd}}",
         description:
@@ -661,8 +879,37 @@ export const ja = {
         title: "セッションをインポート",
       },
       renameChat: "チャット名を変更",
+      sessionHandoff: {
+        contextPackLabel: "コンテキストパック",
+        description:
+          "同じワークスペースで新しいセッションを開始し、このチャットの要約を引き継ぎます。元のセッションは一覧から引き続き閲覧できます。",
+        dirtyDescription:
+          "ワークスペースに未コミットの変更があります{{branch}}。新しいセッションでも残ります。",
+        dirtyTitle: "dirty なワーキングツリー",
+        keyFilesCount: "参照された主要ファイル: {{count}}",
+        loadFailed: "引き継ぎ用のチャット履歴を読み込めませんでした。",
+        loadingContext: "コンテキストパックを作成中…",
+        notesLabel: "次のセッションへのメモ",
+        notesPlaceholder: "任意: 次のエージェントに続けてほしい内容",
+        otherAgentsSection: "別のエージェントに引き継ぐ",
+        sameAgentHint: "同じ harness · 新しいセッション · 同じワークスペース",
+        sameAgentSection: "同じエージェントで続ける",
+        sameAgentUnavailable:
+          "このエージェントは現在のエージェント一覧にありません。",
+        submitFailed: "引き継ぎセッションを開始できませんでした。",
+        title: "セッションを引き継ぐ",
+        titleFrom: "引き継ぎ: {{title}}",
+        titleUntitled: "引き継ぎセッション",
+      },
     },
     notifications: {
+      agentFailedNoDetail: "Agent がエラーで停止しました。",
+      centerClear: "すべてクリア",
+      centerEmpty: "通知はまだありません",
+      centerOpenChat: "チャットを開く",
+      centerTitle: "通知",
+      centerUnread: "未読 {{count}} 件",
+      failed: "{{chatTitle}} が失敗しました",
       chatsDeleted: "チャットを削除しました",
       chatsDeletedDescription_one: "{{count}} 件のチャットを削除しました。",
       chatsDeletedDescription_other: "{{count}} 件のチャットを削除しました。",
@@ -687,6 +934,49 @@ export const ja = {
       undo: "元に戻す",
       updateReady: "更新の準備ができました",
       updateReadyDescription: "{{version}} のダウンロードが完了しました。",
+    },
+    tray: {
+      disable: "メニューバーアイコンを隠す",
+      empty: "今は対応が必要なものはありません",
+      needsYouCount: "{{count}} 件の対応が必要",
+      openApp: "Angel Engine を開く",
+      tooltip: "Angel Engine",
+      tooltipNeedsYou: "Angel Engine — {{count}} 件の対応が必要",
+    },
+    projectImport: {
+      addFromFolder: "ローカルフォルダーから…",
+      addFromGit: "Git からクローン…",
+      archivedBadge: "アーカイブ済み",
+      clone: "クローン",
+      cloneTo: "{{path}} にクローンしています",
+      description: "GitHub からリポジトリを選ぶか、git URL を貼り付けます。",
+      failedTitle: "クローンに失敗しました",
+      forkBadge: "フォーク",
+      loadingOwners: "アカウントを読み込んでいます…",
+      loadingRepositories: "リポジトリを読み込んでいます…",
+      noMatches: "「{{query}}」に一致するリポジトリはありません",
+      noOwners: "利用できる GitHub アカウントがありません",
+      noRepositories: "リポジトリがありません",
+      openProject: "プロジェクトを開く",
+      owners: "アカウント",
+      ownersFailed: "GitHub アカウントを読み込めませんでした",
+      readyTitle: "リポジトリの準備が完了しました",
+      privateBadge: "プライベート",
+      progressTitle: "リポジトリをクローン中",
+      repositoriesFailed: "リポジトリを読み込めませんでした",
+      retry: "再試行",
+      reusedExisting: "このパスにある既存のチェックアウトを再利用しました。",
+      searchPlaceholder: "リポジトリを検索",
+      stageCloning: "リポジトリをクローン",
+      stageCompleted: "完了",
+      stagePreparing: "保存先を準備",
+      stageRegistering: "プロジェクトを登録",
+      tabGitHub: "GitHub",
+      tabUrl: "Git URL",
+      title: "リポジトリをクローン",
+      urlHint: "https、ssh、または owner/repo",
+      urlLabel: "リポジトリ URL",
+      urlPlaceholder: "https://github.com/owner/repo",
     },
     projects: {
       chooseFolder: "プロジェクトフォルダーを選択",

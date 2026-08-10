@@ -7,7 +7,7 @@ import {
   GearSix as SettingsIcon,
   Plus as PlusIcon,
 } from "@phosphor-icons/react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Command,
@@ -18,9 +18,10 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { COMMAND_IDS } from "@shared/keybindings";
 import { displayChatTitle } from "@/app/workspace/workspace-display";
-import { isCommandPaletteShortcut } from "@/features/command-palette/command-palette-shortcut";
 import { createTitleSearch } from "@/features/command-palette/title-search";
+import { useCommand, useContextKey } from "@/platform/keymap/provider";
 
 const MAX_PALETTE_ITEMS = 20;
 
@@ -81,21 +82,17 @@ export const WorkspaceCommandPalette: FC<WorkspaceCommandPaletteProps> = ({
   const actionResults = results.filter((entry) => entry.kind === "action");
   const sessionResults = results.filter((entry) => entry.kind === "session");
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (
-        !isCommandPaletteShortcut(event, window.desktopEnvironment.platform)
-      ) {
-        return;
-      }
-
-      event.preventDefault();
-      setOpen((current) => !current);
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+  useContextKey("palette.open", open);
+  useCommand(COMMAND_IDS.paletteOpen, () => {
+    setOpen((current) => !current);
+    return true;
   }, []);
+  useCommand(COMMAND_IDS.paletteClose, () => {
+    if (!open) return false;
+    setOpen(false);
+    setQuery("");
+    return true;
+  }, [open]);
 
   const selectEntry = (entry: CommandPaletteEntry) => {
     setOpen(false);

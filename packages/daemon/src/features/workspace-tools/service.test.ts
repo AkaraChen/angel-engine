@@ -6,8 +6,10 @@ import {
   symlink,
   writeFile,
 } from "node:fs/promises";
+import { execFile } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
+import { promisify } from "node:util";
 import { Cause, Effect, Exit } from "effect";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -19,12 +21,52 @@ import {
   parseGitStatusOutput,
 } from "./git";
 import {
+  workspaceGitBranches,
+  workspaceGitCheckout,
   workspaceGitDiff,
+  workspaceGitLog,
   workspaceGitPush,
   workspaceWriteFile,
 } from "./service";
 
 const tempRoots: string[] = [];
+const execFileAsync = promisify(execFile);
+
+async function git(root: string, ...args: string[]) {
+  const result = await execFileAsync("git", ["-C", root, ...args]);
+  return result.stdout.trim();
+}
+
+async function makeGitWorkspace() {
+  const root = await makeTempDir();
+  await git(root, "init", "--initial-branch=main");
+  await git(root, "config", "user.email", "test@example.com");
+  await git(root, "config", "user.name", "Test User");
+  await writeFile(path.join(root, "tracked.txt"), "main\n");
+  await git(root, "add", "tracked.txt");
+  await git(root, "commit", "-m", "initial");
+  return root;
+}
+
+async function runWorkspaceGitDiff(
+  root: string,
+  baseKind?: "branch" | "session" | "turn" | "unstaged" | "worktree",
+  baseRef?: string,
+  chatId?: string,
+  anchorSha?: string,
+) {
+  const exit = await Effect.runPromiseExit(
+    workspaceGitDiff(
+      { baseKind, baseRef, chatId, root },
+      (_requestedChatId, kind) =>
+        Effect.succeed(
+          anchorSha ? { ref: `${kind}-anchor`, sha: anchorSha } : undefined,
+        ),
+    ),
+  );
+  if (Exit.isSuccess(exit)) return exit.value;
+  throw Cause.squash(exit.cause);
+}
 
 // Each git-backed case shells out a dozen times; the 5s default is too tight
 // on a loaded machine.
@@ -152,6 +194,131 @@ describe("buildUntrackedPatch", () => {
       },
     ]);
   });
+});
+
+describe("workspaceGitDiff", () => {
+  it(
+    "keeps worktree and unstaged bases distinct",
+    async () => {
+      const root = await makeGitWorkspace();
+      await writeFile(path.join(root, "tracked.txt"), "staged\n");
+      await git(root, "add", "tracked.txt");
+      await writeFile(path.join(root, "tracked.txt"), "unstaged\nsecond\n");
+      await writeFile(path.join(root, "new.txt"), "new\n");
+
+      const worktree = await runWorkspaceGitDiff(root, "worktree");
+      const unstaged = await runWorkspaceGitDiff(root, "unstaged");
+
+      expect(worktree.patch).toContain("-main");
+      expect(worktree.patch).toContain("+staged");
+      expect(worktree.patch).toContain("+unstaged");
+      expect(worktree.patch).toContain("b/new.txt");
+      expect(unstaged.patch).not.toContain("-main");
+      expect(unstaged.patch).toContain("-staged");
+      expect(unstaged.patch).toContain("+unstaged");
+      expect(unstaged.patch).toContain("b/new.txt");
+      expect(worktree.numstat).toEqual([
+        { additions: 1, deletions: 0, path: "new.txt" },
+        { additions: 2, deletions: 1, path: "tracked.txt" },
+      ]);
+      expect(unstaged.numstat).toEqual([
+        { additions: 1, deletions: 0, path: "new.txt" },
+        { additions: 2, deletions: 1, path: "tracked.txt" },
+      ]);
+    },
+    gitTestTimeoutMs,
+  );
+
+  it(
+    "uses the merge base when the default branch advances",
+    async () => {
+      const root = await makeGitWorkspace();
+      await git(root, "checkout", "-b", "feature");
+      await writeFile(path.join(root, "feature.txt"), "feature\n");
+      await git(root, "add", "feature.txt");
+      await git(root, "commit", "-m", "feature");
+      await git(root, "checkout", "main");
+      await writeFile(path.join(root, "main-only.txt"), "main\n");
+      await git(root, "add", "main-only.txt");
+      await git(root, "commit", "-m", "main advances");
+      await git(root, "checkout", "feature");
+
+      const result = await runWorkspaceGitDiff(root, "branch");
+
+      expect(result.resolvedBase.kind).toBe("branch");
+      expect(result.resolvedBase.ref).toBe("main");
+      expect(result.patch).toContain("b/feature.txt");
+      expect(result.patch).not.toContain("main-only.txt");
+    },
+    gitTestTimeoutMs,
+  );
+
+  it(
+    "falls back explicitly when a requested branch ref is unavailable",
+    async () => {
+      const root = await makeGitWorkspace();
+      await writeFile(path.join(root, "tracked.txt"), "changed\n");
+
+      const result = await runWorkspaceGitDiff(root, "branch", "missing-ref");
+
+      expect(result.requestedBaseKind).toBe("branch");
+      expect(result.resolvedBase.kind).toBe("worktree");
+      expect(result.resolvedBase.unavailableReason).toEqual({
+        code: "no-merge-base",
+        ref: "missing-ref",
+      });
+      expect(result.patch).toContain("+changed");
+    },
+    gitTestTimeoutMs,
+  );
+
+  it(
+    "resolves a persisted session anchor without exposing Git refs to callers",
+    async () => {
+      const root = await makeGitWorkspace();
+      const sessionSha = await git(root, "rev-parse", "HEAD");
+      await writeFile(path.join(root, "after-session.txt"), "later\n");
+      await git(root, "add", "after-session.txt");
+      await git(root, "commit", "-m", "after session started");
+
+      const result = await runWorkspaceGitDiff(
+        root,
+        "session",
+        undefined,
+        "chat-1",
+        sessionSha,
+      );
+
+      expect(result.resolvedBase.kind).toBe("session");
+      expect(result.resolvedBase.fullSha).toBe(sessionSha);
+      expect(result.patch).toContain("b/after-session.txt");
+    },
+    gitTestTimeoutMs,
+  );
+
+  it(
+    "returns a structured reason when a persisted turn anchor is missing",
+    async () => {
+      const root = await makeGitWorkspace();
+
+      const result = await runWorkspaceGitDiff(
+        root,
+        "turn",
+        undefined,
+        "chat-1",
+        "0123456789abcdef",
+      );
+
+      expect(result.requestedBaseKind).toBe("turn");
+      expect(result.resolvedBase.kind).toBe("worktree");
+      expect(result.resolvedBase.unavailableReason).toEqual({
+        anchorKind: "turn",
+        code: "anchor-missing",
+        shortSha: "0123456",
+      });
+    },
+    gitTestTimeoutMs,
+  );
 });
 
 describe("parseGitStatusOutput", () => {
@@ -335,6 +502,48 @@ describe("workspaceGitPush", () => {
       );
 
       expect(error.code).toBe("workspace-git-push-rejected");
+    },
+    gitTestTimeoutMs,
+  );
+});
+
+describe("workspace git panel branches and history", () => {
+  it(
+    "lists local branches and checks out another branch",
+    async () => {
+      const workspace = await makeTempDir();
+      await gitOutput(workspace, ["init", "--initial-branch=main"]);
+      await configureGitIdentity(workspace);
+      await commitFile(workspace, "a.txt", "a");
+      await gitOutput(workspace, ["branch", "feature/panel"]);
+
+      const listed = await runEffect(workspaceGitBranches(workspace));
+      expect(listed.isGitRepository).toBe(true);
+      expect(listed.branchStatus.branch).toBe("main");
+      expect(listed.branches.map((branch) => branch.name)).toEqual(
+        expect.arrayContaining(["main", "feature/panel"]),
+      );
+
+      const checkout = await runEffect(
+        workspaceGitCheckout({ branch: "feature/panel", root: workspace }),
+      );
+      expect(checkout.branchStatus.branch).toBe("feature/panel");
+    },
+    gitTestTimeoutMs,
+  );
+
+  it(
+    "returns commit history",
+    async () => {
+      const workspace = await makeTempDir();
+      await gitOutput(workspace, ["init", "--initial-branch=main"]);
+      await configureGitIdentity(workspace);
+      await commitFile(workspace, "a.txt", "a");
+
+      const log = await runEffect(workspaceGitLog(workspace, 10));
+      expect(log.isGitRepository).toBe(true);
+      expect(log.commits.length).toBeGreaterThan(0);
+      expect(log.commits[0]?.subject).toContain("add a.txt");
     },
     gitTestTimeoutMs,
   );

@@ -423,6 +423,27 @@ export class DaemonError extends Data.TaggedError(
     return DaemonError.gitFailed(cause, "Git push failed.");
   }
 
+  static workspaceGitPullFailed(cause: unknown) {
+    const message = gitMessageFromCause(cause, "Git pull failed.");
+    if (isGitAuthFailure(message)) {
+      return new DaemonError({
+        cause,
+        code: "workspace-git-auth-failed",
+        message,
+        status: 403,
+      });
+    }
+    if (isGitNetworkFailure(message)) {
+      return new DaemonError({
+        cause,
+        code: "workspace-git-network-failed",
+        message,
+        status: 500,
+      });
+    }
+    return DaemonError.gitFailed(cause, "Git pull failed.");
+  }
+
   static processNotRegistered() {
     return new DaemonError({
       code: "process-not-registered",

@@ -7,6 +7,7 @@ import type { DaemonOptions } from "./types";
 
 import { randomBytes } from "node:crypto";
 import { chmod, mkdir, rename, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { serve } from "@hono/node-server";
 import { Effect, Layer, ManagedRuntime } from "effect";
@@ -27,6 +28,7 @@ import { registerApi } from "./api";
 import { chatEventsLayer, createChatEvents } from "./features/chat/chat-events";
 import { ChatEngine } from "./features/chat/engine-runtime";
 import { TerminalService } from "./features/terminal/manager";
+import { compileBlockedHostPatterns, isHostBlocked } from "./host-guard";
 import { Db, dbConfigLayer } from "./platform/db";
 import { DaemonError, daemonErrorPayload } from "./platform/errors";
 import { runDaemonApi } from "./platform/runtime";
@@ -115,6 +117,9 @@ function createDaemonRuntime(
 }
 
 export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
+  const blockedHostPatterns = compileBlockedHostPatterns(
+    options.blockedHostPatterns ?? [],
+  );
   const host = options.host ?? "127.0.0.1";
   const token = options.token ?? randomBytes(32).toString("base64url");
   const version = options.version ?? "0.1.0";
@@ -145,6 +150,13 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
   const runtime = createDaemonRuntime(options, chatEvents);
   const webSockets = new WebSocketServer({ noServer: true });
   let server: ServerType | undefined;
+
+  app.use("*", async (context, next) => {
+    if (isHostBlocked(context.req.header("host"), blockedHostPatterns)) {
+      return context.json({ error: "Forbidden host." }, 403);
+    }
+    await next();
+  });
 
   app.use(
     "/api/*",
@@ -327,6 +339,11 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
   });
 
   (server as HttpServer).on("upgrade", (request, socket, head) => {
+    if (isHostBlocked(request.headers.host, blockedHostPatterns)) {
+      socket.write("HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n");
+      socket.destroy();
+      return;
+    }
     const url = new URL(request.url ?? "/", `http://${host}`);
     if (mobileDevServerUrl !== undefined && !url.pathname.startsWith("/api/")) {
       proxyMobileDevWebSocket(request, socket, head, mobileDevServerUrl);
@@ -412,8 +429,30 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
 }
 
 async function writeDaemonInfo(dataDir: string, info: DaemonInfo) {
-  await mkdir(dataDir, { recursive: true });
-  const target = path.join(dataDir, "daemon.json");
+  await writeDaemonInfoFile(path.join(dataDir, "daemon.json"), info);
+  // Stable discovery path for host CLI / agents (KIT-830).
+  await writeDaemonInfoFile(wellKnownDaemonInfoPath(), info);
+}
+
+/**
+ * Well-known handshake file for host CLI discovery.
+ * Override root with `ANGEL_ENGINE_HOME` (tests / custom installs).
+ * Default: `~/.angel-engine/daemon.json`. Mode 0600; never log the token.
+ */
+export function wellKnownDaemonInfoPath(
+  homeDir: string = os.homedir(),
+  env: NodeJS.ProcessEnv = process.env,
+): string {
+  const root =
+    typeof env.ANGEL_ENGINE_HOME === "string" &&
+    env.ANGEL_ENGINE_HOME.trim().length > 0
+      ? env.ANGEL_ENGINE_HOME.trim()
+      : path.join(homeDir, ".angel-engine");
+  return path.join(root, "daemon.json");
+}
+
+async function writeDaemonInfoFile(target: string, info: DaemonInfo) {
+  await mkdir(path.dirname(target), { recursive: true });
   const temporary = `${target}.${process.pid}.tmp`;
   await writeFile(temporary, `${JSON.stringify(info)}\n`, { mode: 0o600 });
   await chmod(temporary, 0o600);

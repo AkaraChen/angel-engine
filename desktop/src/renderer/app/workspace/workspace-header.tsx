@@ -10,6 +10,7 @@ import { WorkspaceSidebarControlTarget } from "@/app/workspace/workspace-sidebar
 import { WorkspaceToolHeaderButton } from "@/app/workspace/workspace-tool-surface-header";
 import { useSidebar } from "@/components/ui/sidebar";
 import { UsageChip } from "@/features/usage/usage-chip";
+import { NotificationCenter } from "@/features/notifications/notification-center";
 
 interface WorkspaceHeaderProps {
   attention?: ChatAttentionState;
@@ -122,6 +123,7 @@ export function WorkspaceHeader({
         </span>
       ) : null}
       <UsageChip />
+      <NotificationCenter />
       {onToggleRightSidebar ? (
         <WorkspaceToolHeaderButton
           icon={

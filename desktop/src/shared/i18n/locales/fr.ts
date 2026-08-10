@@ -1,9 +1,33 @@
 import type { LocaleResource } from "./schema";
+import { scheduleTranslation } from "./schedule";
 
 export const fr = {
   translation: {
     app: {
       name: "Angel Engine",
+    },
+    commands: {
+      categories: {
+        app: "App",
+        chat: "Chat",
+        files: "Files",
+        view: "View",
+      },
+      chatFocusComposer: "Focus chat composer",
+      chatInterrupt: "Interrupt run",
+      chatNew: "New chat",
+      chatNewline: "Insert newline",
+      chatRemoveLastAttachment: "Remove last attachment",
+      chatSend: "Send message",
+      filesSave: "Save file",
+      paletteClose: "Close command palette",
+      paletteOpen: "Open command palette",
+      settingsOpen: "Open settings",
+      workspaceCloseTab: "Close tab",
+      workspaceNewTab: "New tab",
+      workspaceNextTab: "Next tab",
+      workspacePreviousTab: "Previous tab",
+      workspaceToggleSidebar: "Toggle sidebar",
     },
     common: {
       allow: "Autoriser",
@@ -62,6 +86,12 @@ export const fr = {
       open: "Ouvrir {{name}}",
     },
     workspace: {
+      ambiguousSend: {
+        description:
+          "Angel Engine a redémarré pendant l’envoi. Pour éviter un doublon, ce message n’a pas été renvoyé automatiquement.",
+        dismiss: "Effacer l’envoi en attente",
+        title: "La remise du message est incertaine",
+      },
       backgroundChatCompleted: "Discussion en arrière-plan terminée",
       backgroundChatNeedsInput:
         "La discussion en arrière-plan attend une saisie",
@@ -75,11 +105,64 @@ export const fr = {
       noProject: "Aucun projet",
       projectSelect: "Projet",
       settings: "Paramètres",
+      setup: {
+        approvalUnavailable:
+          "Vérifiez et approuvez le script de configuration actuel avant de réessayer.",
+        continueAnyway: "Continuer quand même",
+        discard: "Supprimer l’espace de travail",
+        discardConfirm: "Supprimer l’espace de travail",
+        discardConfirmDescription:
+          "Cette action supprime définitivement ce chat, son worktree et sa branche. Elle est irréversible.",
+        discardConfirmTitle: "Supprimer cet espace de travail ?",
+        failedStep:
+          "Échec de l’étape {{step}} sur {{total}} ({{exitCode}}) : {{command}}",
+        failedTitle: "Échec de la configuration de l’espace de travail",
+        noLog: "Aucune sortie de configuration pour le moment.",
+        ready: "Espace de travail prêt",
+        retry: "Réessayer la configuration",
+        running:
+          "Configuration de l’espace de travail… Le premier message sera envoyé automatiquement ensuite.",
+        runningStep: "Étape {{step}} sur {{total}} : {{command}}",
+        viewLog: "Afficher le journal de configuration",
+      },
       statsBranch: "Branche",
       statsChanges: "Modifications",
       statsLastActive: "Dernière activité",
+
       tools: {
+        checks: {
+          fixFailures: "Corriger les échecs",
+          fixNeedsChat: "Ouvrez un chat pour envoyer un tour de correction.",
+          fixStarted:
+            "Tour de correction démarré avec un résumé de logs tronqué.",
+          fixing: "Démarrage de la correction…",
+          openCheck: "Ouvrir les détails du check",
+          openPullRequest: "Ouvrir la pull request",
+          refresh: "Actualiser les checks",
+          summaryFail: "{{count}} en échec",
+          summaryPass: "{{count}} réussis",
+          summaryPending: "{{count}} en cours",
+        },
         addToChat: "Ajouter au chat",
+        comments: {
+          delete: "Supprimer",
+          lineComment: "Ligne {{line}}",
+          needsBody: "Ajoutez une note pour inclure ce commentaire",
+          placeholder: "Note de relecture pour l’agent…",
+          reopen: "Rouvrir",
+          resolve: "Résoudre",
+          select: "Inclure à l’envoi",
+          sending: "Envoi…",
+          sendToAgent: "Envoyer {{count}} à l’agent",
+          sideNew: "nouveau",
+          sideOld: "ancien",
+          status: {
+            open: "Ouvert",
+            pending: "En attente",
+            resolved: "Résolu",
+          },
+          title: "{{count}} commentaires de relecture",
+        },
         commit: {
           committing: "Commit en cours…",
           commitTo: "Commiter vers {{target}}",
@@ -87,14 +170,41 @@ export const fr = {
           filesSelected: "{{selected}} sur {{total}} fichiers sélectionnés",
           summaryPlaceholder: "Résumé",
         },
+        diffBase: {
+          branch: "Par rapport à la branche par défaut",
+          fallback: {
+            anchorMissing:
+              "La base {{sha}} de {{base}} n’existe plus. {{fallback}} est affiché temporairement.",
+            anchorUnavailable:
+              "{{base}} n’est pas disponible pour ce chat. {{fallback}} est affiché temporairement.",
+            defaultBranchUnavailable:
+              "La branche par défaut n’a pas pu être déterminée. {{fallback}} est affiché temporairement.",
+            gitRefUnavailable:
+              "La référence Git {{ref}} n’est pas disponible. {{fallback}} est affiché temporairement.",
+            noMergeBase:
+              "Il n’existe aucune base de fusion entre {{ref}} et HEAD. {{fallback}} est affiché temporairement.",
+            notRepository: "Cet espace de travail n’est pas un dépôt Git.",
+          },
+          fileCount: "{{count}} fichiers",
+          label: "Base du diff",
+          session: "Depuis le début de la session",
+          turn: "Depuis le tour précédent",
+          unstaged: "Non indexés uniquement",
+          worktree: "Modifications non validées",
+        },
         dockInSidebar: "Ancrer dans la barre latérale",
         empty: {
+          checksUnavailable: "Checks indisponibles",
           fileTreeUnavailable: "Arborescence indisponible",
           fileUnavailable: "Fichier indisponible",
           gitUnavailable: "Git indisponible",
           noChanges: "Aucune modification",
+          noChecks: "Aucun check signalé pour cette pull request",
           noDiffForFile: "Aucun diff pour ce fichier",
           noProcesses: "Aucun sous-processus d’agent en cours",
+          noPullRequest: "Aucune pull request pour cette branche",
+          noPullRequestDetail:
+            "Ouvrez ou liez une PR sur la branche actuelle pour charger les checks CI.",
           noWorkspace: "Aucun espace de travail pour cette conversation",
           notGitRepository: "Pas un dépôt Git",
           processesUnavailable: "Processus indisponibles",
@@ -108,6 +218,16 @@ export const fr = {
           dirty: "{{value}} modifiés",
           noCommits: "Aucun commit",
           noUpstream: "Aucun upstream",
+          changes: "Modifications",
+          currentBranch: "Branche actuelle",
+          history: "Historique",
+          noBranches: "Aucune branche locale",
+          noHistory: "Aucun commit pour l’instant",
+          pull: "Tirer {{remote}}",
+          pullCount: "Tirer {{count}} depuis {{remote}}",
+          pulling: "Tirage…",
+          pushCount: "Pousser {{count}} vers {{remote}}",
+          viewTabs: "Vues du panneau Git",
           publish: "Publier la branche",
           push: "Push",
           pushHint: {
@@ -126,6 +246,7 @@ export const fr = {
         resizeGitList: "Redimensionner la liste des changements",
         subprocesses: "Sous-processus",
         tabs: {
+          checks: "Checks",
           files: "Fichiers",
           gitChanges: "Changements Git",
           newTab: "Nouvel onglet",
@@ -190,6 +311,44 @@ export const fr = {
         waitingForYou: "En attente de vous",
       },
       title: "Flotte",
+      viewMode: "Vue de la flotte",
+      views: {
+        board: "Vue en tableau",
+        list: "Vue en liste",
+      },
+    },
+    schedule: scheduleTranslation,
+    pullRequests: {
+      commentPlaceholder: "Write a comment…",
+      comments: "Comments ({{count}})",
+      create: "Create PR",
+      createAsDraft: "Create as draft",
+      createSubmit: "Create pull request",
+      createTitle: "Create pull request",
+      description: "Description",
+      empty: "No pull requests match this filter.",
+      emptyBody: "(empty)",
+      fieldBase: "Base branch",
+      fieldBasePlaceholder: "Leave empty for repository default",
+      fieldBody: "Body",
+      fieldTitle: "Title",
+      filterState: "Filter by state",
+      noComments: "No comments yet.",
+      openOnGitHub: "Open on GitHub",
+      openWorkspace: "Open workspace",
+      postComment: "Post comment",
+      search: "Search pull requests…",
+      selectPrompt: "Select a pull request to view details.",
+      states: {
+        all: "All",
+        closed: "Closed",
+        merged: "Merged",
+        open: "Open",
+      },
+      subtitle: "{{project}}",
+      templateApplied: "Template: {{name}}",
+      title: "Pull requests",
+      unknownAuthor: "unknown",
     },
     sidebar: {
       addProject: "Ajouter un projet",
@@ -344,6 +503,37 @@ export const fr = {
         data: "Données",
         general: "Général",
       },
+      keyboard: {
+        addShortcut: "Add shortcut",
+        bindEscape: "Bind Escape",
+        conflictAmbiguous: "Ambiguous conflict — last registration wins",
+        conflictChordPrefix: "Chord prefix conflict",
+        conflictShadowed: "Shadowed by a higher-priority binding",
+        emptySearch: "No commands match this search.",
+        filterAll: "All",
+        filterConflicts: "Conflicts",
+        filterModified: "Modified",
+        hintsLink: "Shortcut hints visibility is under Appearance.",
+        loadFailedDescription:
+          "Using default keybindings until the file is fixed or reset.",
+        loadFailedTitle: "Could not load keybindings.json",
+        openConfig: "Open config file",
+        recordingChordThen: "then…",
+        recordingHint: "Press a new shortcut · Esc to cancel",
+        remove: "Remove",
+        resetAll: "Reset all to defaults…",
+        resetAllConfirm:
+          "Reset all custom keybindings? A local backup will be kept.",
+        resetBroken: "Reset broken config",
+        resetCategory: "Reset category defaults",
+        resetCommand: "Reset command",
+        searchPlaceholder: "Search commands or keys…",
+        sourceConflict: "Conflict",
+        sourceDefault: "Default",
+        sourceUser: "User",
+        sourceUserOverride: "User · overridden",
+        warningsCount: "{{count}} warning(s) while loading keybindings",
+      },
       mobile: {
         copied: "Copié",
         copy: "Copier",
@@ -377,6 +567,7 @@ export const fr = {
         urlTitle: "URL mobile",
       },
       tabDescriptions: {
+        keyboard: "Change keyboard shortcuts and resolve conflicts.",
         agents:
           "Choisissez les agents de code affichés dans le sélecteur, et leur ordre.",
         appearance: "Thème et langue d’affichage de l’application de bureau.",
@@ -395,6 +586,7 @@ export const fr = {
       tabs: {
         agents: "Agents",
         appearance: "Apparence",
+        keyboard: "Keyboard shortcuts",
         archived: "Archivées",
         danger: "Avancé",
         mobile: "Vue mobile",
@@ -430,10 +622,19 @@ export const fr = {
         dirtyPromptSwitchLabel:
           "Avertir avant de créer des worktrees depuis des dépôts dirty",
         dirtyPromptTitle: "Avertissement de dépôt dirty",
+        osNotificationsDescription:
+          "Affiche des bannières système quand un chat en arrière-plan se termine, échoue ou a besoin de vous. L’historique in-app reste disponible.",
+        osNotificationsSwitchLabel: "Afficher les notifications OS",
+        osNotificationsTitle: "Notifications OS",
         sendWithModEnterDescription:
           "Si activé, Entrée insère une nouvelle ligne et {{shortcut}} envoie.",
         sendWithModEnterSwitchLabel: "Envoyer les messages avec {{shortcut}}",
         sendWithModEnterTitle: "Envoyer avec {{shortcut}}",
+        trayEnabledDescription:
+          "Affiche dans la barre de menus le nombre de sessions qui vous attendent et une liste pour les ouvrir sans chercher dans l'app.",
+        trayEnabledSwitchLabel:
+          "Afficher le résumé de flotte dans la barre de menus",
+        trayEnabledTitle: "Résumé de flotte dans la barre de menus",
       },
     },
     usage: {
@@ -627,6 +828,7 @@ export const fr = {
         userInput: "Question",
       },
       exportMarkdown: "Exporter en Markdown",
+      forkSession: "Créer une branche de session ici",
       handoff: "Transférer",
       handoffMenuLabel: "Implémenter avec…",
       handoffPromptIntro: "Implémente le plan suivant.",
@@ -635,6 +837,7 @@ export const fr = {
       response: "Réponse",
       startImplementation: "Démarrer l’exécution",
       toasts: {
+        couldNotForkSession: "Impossible de créer la branche de session",
         couldNotHandoffPlan: "Impossible de transférer le plan",
         couldNotStartImplementation: "Impossible de démarrer l’exécution",
       },
@@ -649,6 +852,22 @@ export const fr = {
     },
     dialog: {
       chatName: "Nom de la discussion",
+      confirm: {
+        deleteCustomAgentDetail_one:
+          "Cela supprimera également {{count}} conversation associée.",
+        deleteCustomAgentDetail_other:
+          "Cela supprimera également {{count}} conversations associées.",
+        deleteCustomAgentDetailNone:
+          "Aucune conversation n'utilise cet agent personnalisé.",
+        deleteCustomAgentTitle: "Supprimer {{label}} ?",
+        discard: "Abandonner",
+        dontSave: "Ne pas enregistrer",
+        kill: "Arrêter",
+        killProcessTitle: "Arrêter {{name}} ({{pid}}) ?",
+        saveFileChangesDetail:
+          "Vos modifications seront perdues si vous ne les enregistrez pas.",
+        saveFileChangesTitle: "Enregistrer les modifications de {{path}} ?",
+      },
       importSession: {
         cwdLabel: "Répertoire : {{cwd}}",
         description:
@@ -664,8 +883,37 @@ export const fr = {
         title: "Importer une session",
       },
       renameChat: "Renommer la discussion",
+      sessionHandoff: {
+        contextPackLabel: "Pack de contexte",
+        description:
+          "Démarre une nouvelle session dans le même espace de travail avec un résumé de cette discussion. La session d’origine reste disponible.",
+        dirtyDescription:
+          "Cet espace de travail a des modifications non validées{{branch}}. Elles resteront présentes dans la nouvelle session.",
+        dirtyTitle: "Arbre de travail dirty",
+        keyFilesCount: "{{count}} fichier(s) clé référencé(s)",
+        loadFailed: "Impossible de charger l’historique pour le transfert.",
+        loadingContext: "Préparation du pack de contexte…",
+        notesLabel: "Notes pour la prochaine session",
+        notesPlaceholder: "Facultatif : que doit continuer le prochain agent ?",
+        otherAgentsSection: "Transférer à un autre agent",
+        sameAgentHint: "Même harness · nouvelle session · même workspace",
+        sameAgentSection: "Continuer avec le même agent",
+        sameAgentUnavailable:
+          "Cet agent n’est pas disponible dans votre liste d’agents.",
+        submitFailed: "Impossible de démarrer la session de transfert.",
+        title: "Transférer la session",
+        titleFrom: "Transfert : {{title}}",
+        titleUntitled: "Session de transfert",
+      },
     },
     notifications: {
+      agentFailedNoDetail: "L’agent s’est arrêté avec une erreur.",
+      centerClear: "Tout effacer",
+      centerEmpty: "Aucune notification",
+      centerOpenChat: "Ouvrir le chat",
+      centerTitle: "Notifications",
+      centerUnread: "{{count}} non lues",
+      failed: "{{chatTitle}} a échoué",
       chatsDeleted: "Discussions supprimées",
       chatsDeletedDescription_one: "{{count}} discussion supprimée.",
       chatsDeletedDescription_other: "{{count}} discussions supprimées.",
@@ -690,6 +938,49 @@ export const fr = {
       undo: "Annuler",
       updateReady: "Mise à jour prête",
       updateReadyDescription: "{{version}} a été téléchargée.",
+    },
+    tray: {
+      disable: "Masquer l'icône de la barre de menus",
+      empty: "Rien ne nécessite votre attention",
+      needsYouCount: "{{count}} vous attendent",
+      openApp: "Ouvrir Angel Engine",
+      tooltip: "Angel Engine",
+      tooltipNeedsYou: "Angel Engine — {{count}} vous attendent",
+    },
+    projectImport: {
+      addFromFolder: "Depuis un dossier local…",
+      addFromGit: "Cloner depuis Git…",
+      archivedBadge: "Archivé",
+      clone: "Cloner",
+      cloneTo: "Clonage vers {{path}}",
+      description: "Choisissez un dépôt GitHub ou collez une URL git.",
+      failedTitle: "Échec du clonage",
+      forkBadge: "Fork",
+      loadingOwners: "Chargement des comptes…",
+      loadingRepositories: "Chargement des dépôts…",
+      noMatches: "Aucun dépôt ne correspond à « {{query}} »",
+      noOwners: "Aucun compte GitHub disponible",
+      noRepositories: "Aucun dépôt",
+      openProject: "Ouvrir le projet",
+      owners: "Comptes",
+      ownersFailed: "Impossible de charger les comptes GitHub",
+      readyTitle: "Dépôt prêt",
+      privateBadge: "Privé",
+      progressTitle: "Clonage du dépôt",
+      repositoriesFailed: "Impossible de charger les dépôts",
+      retry: "Réessayer",
+      reusedExisting: "La copie existante à cet emplacement a été réutilisée.",
+      searchPlaceholder: "Rechercher des dépôts",
+      stageCloning: "Clonage du dépôt",
+      stageCompleted: "Terminé",
+      stagePreparing: "Préparation de la destination",
+      stageRegistering: "Enregistrement du projet",
+      tabGitHub: "GitHub",
+      tabUrl: "URL Git",
+      title: "Cloner un dépôt",
+      urlHint: "https, ssh ou owner/repo",
+      urlLabel: "URL du dépôt",
+      urlPlaceholder: "https://github.com/owner/repo",
     },
     projects: {
       chooseFolder: "Choisir le dossier du projet",

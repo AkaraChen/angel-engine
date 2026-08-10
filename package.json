@@ -28,6 +28,8 @@
     "desktop:make": "turbo run make --filter desktop",
     "desktop:typecheck": "turbo run typecheck --filter desktop",
     "desktop:rebuild-native": "bun run --filter desktop rebuild:native",
+    "host-cli:build": "turbo run build --filter @angel-engine/host-cli",
+    "host-cli:test": "turbo run test --filter @angel-engine/host-cli",
     "claude-client:build": "turbo run build --filter @angel-engine/claude-client",
     "claude-client:test": "turbo run test --filter @angel-engine/claude-client",
     "js-client:build": "turbo run build --filter @angel-engine/js-client",

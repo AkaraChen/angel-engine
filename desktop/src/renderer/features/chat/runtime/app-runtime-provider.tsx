@@ -23,7 +23,13 @@ import { useMemo } from "react";
 import { ChatEnvironmentProvider } from "@/features/chat/runtime/chat-environment-context";
 import { ChatRuntimeActionsProvider } from "@/features/chat/runtime/chat-runtime-actions-context";
 import { useEngineRuntime } from "@/features/chat/runtime/engine-model-adapter";
+import { createForkSessionMessage } from "@/features/chat/runtime/chat-session-fork";
 import { useAgentSkills } from "@/features/chat/state/use-agent-skills";
+import {
+  useChatRunMessages,
+  useChatRunStore,
+} from "@/features/chat/state/chat-run-store";
+import { engineMessagesToHistoryMessages } from "@/features/chat/state/chat-run-history";
 
 interface AppRuntimeProviderProps {
   chatId?: string;
@@ -45,6 +51,7 @@ interface AppRuntimeProviderProps {
     messages?: ChatHistoryMessage[],
     config?: ChatRuntimeConfig,
   ) => void;
+  onForkChatCreated?: (chat: Chat) => void;
   prewarmId?: string;
   projectId?: string | null;
   permissionMode?: string;
@@ -77,6 +84,7 @@ export function AppRuntimeProvider({
   onChatCreated,
   onChatMessagesUpdated,
   onChatUpdated,
+  onForkChatCreated,
   prewarmId,
   projectId,
   permissionMode,
@@ -86,6 +94,8 @@ export function AppRuntimeProvider({
   runtimeConfig,
   slotKey,
 }: AppRuntimeProviderProps) {
+  const messages = useChatRunMessages(slotKey);
+  const startRun = useChatRunStore((state) => state.startRun);
   const adapters = useMemo(
     () => ({
       attachments: new CompositeAttachmentAdapter([
@@ -143,10 +153,67 @@ export function AppRuntimeProvider({
       runtimeConfig,
     ],
   );
+  const forkSession = useMemo(() => {
+    if (!is.nonEmptyString(chatId) || !onForkChatCreated) return undefined;
+
+    return async (messageId: string) => {
+      const forkSlotKey = `fork-${crypto.randomUUID()}`;
+      await startRun({
+        callbacks: {
+          onChatCreated: onForkChatCreated,
+          onChatMessagesUpdated,
+          onChatUpdated,
+        },
+        input: {
+          creationLocation,
+          cwd,
+          model: model ?? runtimeConfig?.currentModel ?? undefined,
+          mode:
+            mode ??
+            runtimeConfig?.agentState?.currentMode ??
+            runtimeConfig?.currentMode ??
+            undefined,
+          permissionMode:
+            permissionMode ??
+            runtimeConfig?.agentState?.currentPermissionMode ??
+            runtimeConfig?.currentPermissionMode ??
+            undefined,
+          projectId: projectId ?? undefined,
+          reasoningEffort:
+            reasoningEffort ??
+            runtimeConfig?.currentReasoningEffort ??
+            undefined,
+          runtime: selectedRuntime,
+        },
+        message: createForkSessionMessage(
+          engineMessagesToHistoryMessages(messages),
+          messageId,
+          chatId,
+        ),
+        slotKey: forkSlotKey,
+      });
+    };
+  }, [
+    chatId,
+    creationLocation,
+    cwd,
+    messages,
+    mode,
+    model,
+    onChatMessagesUpdated,
+    onChatUpdated,
+    onForkChatCreated,
+    permissionMode,
+    projectId,
+    reasoningEffort,
+    runtimeConfig,
+    selectedRuntime,
+    startRun,
+  ]);
 
   return (
     <ChatEnvironmentProvider value={chatEnvironment}>
-      <ChatRuntimeActionsProvider slotKey={slotKey}>
+      <ChatRuntimeActionsProvider forkSession={forkSession} slotKey={slotKey}>
         <AssistantRuntimeProvider runtime={assistantRuntime}>
           {children}
         </AssistantRuntimeProvider>
