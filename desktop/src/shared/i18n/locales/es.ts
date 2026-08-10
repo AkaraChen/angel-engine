@@ -95,6 +95,23 @@ export const es = {
       backgroundChatCompleted: "Chat en segundo plano completado",
       backgroundChatNeedsInput: "El chat en segundo plano necesita entrada",
       backgroundChatStatus: "Estado del chat en segundo plano",
+      browser: {
+        back: "Atrás",
+        copyUrl: "Copiar URL",
+        errors: {
+          navigationFailed: "No se pudo cargar la página.",
+          offline: "Falló la conexión con este sitio.",
+          unknown: "Algo salió mal al cargar esta página.",
+          unsupportedUrl: "Solo se admiten URL http(s).",
+        },
+        loadFailedDescription:
+          "El historial no ha cambiado. Reintenta, abre la URL externamente o cópiala.",
+        loadFailedTitle: "No se pudo cargar la página",
+        loading: "Cargando página",
+        openExternally: "Abrir externamente",
+        retry: "Reintentar",
+      },
+      chatTabs: "Pestañas de chat",
       closeTab: "Cerrar pestaña",
       creationLocationProject: "Proyecto",
       creationLocationSelect: "Crear en",
@@ -273,6 +290,11 @@ export const es = {
     fleet: {
       allProjects: "Todos los proyectos",
       disconnected: "No se puede conectar con el backend.",
+      disconnectedDescription:
+        "Los chats existentes siguen disponibles. La actividad en vivo de Fleet no se actualizará hasta que se recupere la conexión.",
+      disconnectedStale:
+        "Mostrando la última actividad confiable. Las actualizaciones en vivo están en pausa.",
+      disconnectedTitle: "Fleet desconectado",
       emptySegments: {
         all: "No hay agentes activos.",
         attention: "Ahora mismo nada necesita tu atención.",
@@ -288,6 +310,7 @@ export const es = {
       },
       loading: "Cargando actividad",
       noMatches: "Ninguna sesión coincide con tu búsqueda.",
+      retry: "Reintentar",
       reasons: {
         approval: "Esperando aprobación",
         processExited: "El proceso terminó",
@@ -396,6 +419,14 @@ export const es = {
       agents: {
         enabledLabel: "Agent {{agent}}",
         minimumEnabled: "Debe permanecer activo al menos un Agent.",
+        readiness: {
+          "authentication-required": "Autenticación requerida",
+          checking: "Comprobando…",
+          error: "Error",
+          prefix: "Estado:",
+          ready: "Listo",
+          unavailable: "No disponible",
+        },
         title: "Agents",
       },
       appearance: {
@@ -548,16 +579,19 @@ export const es = {
         passwordDialogDescription:
           "Introduce la contraseña que usará un teléfono para emparejarse con este ordenador.",
         passwordDialogTitle: "Establecer contraseña de emparejamiento",
+        passwordRequired: "Introduce una contraseña.",
         passwordReset: "Restablecer contraseña",
         passwordSet: "Establecer contraseña",
         passwordTitle: "Contraseña de emparejamiento",
         portDescription:
           "Puerto TCP de escucha. Usa 0 para elegirlo automáticamente.",
+        portInvalid: "Introduce un número de puerto entero entre 0 y 65535.",
         portTitle: "Puerto de escucha",
         qrCode: "Código QR",
         qrDialogDescription:
           "Escanéalo con la cámara de tu teléfono. Debe estar en la misma red y se te pedirá la contraseña de emparejamiento.",
         qrDialogTitle: "Abrir en el teléfono",
+        saveFailed: "No se pudo guardar ese ajuste. Inténtalo de nuevo.",
         urlDisabled:
           "Activa la vista móvil para obtener un enlace que puedas abrir en tu teléfono.",
         urlNeedsPassword:
@@ -623,6 +657,18 @@ export const es = {
         dirtyPromptTitle: "Aviso de repositorio dirty",
         osNotificationsDescription:
           "Muestra avisos del sistema cuando un chat en segundo plano termina, falla o te necesita. El historial en la app sigue disponible.",
+        osNotificationsNeedsInputDescription:
+          "Avisar cuando un chat en segundo plano espera permiso o entrada.",
+        osNotificationsNeedsInputLabel: "Necesita entrada",
+        osNotificationsRunCompletedDescription:
+          "Avisar cuando un chat en segundo plano termina correctamente.",
+        osNotificationsRunCompletedLabel: "Ejecución completada",
+        osNotificationsSaveFailed:
+          "No se pudieron guardar las preferencias de notificación.",
+        osNotificationsSaved: "Preferencias de notificación guardadas.",
+        osNotificationsSoundDescription:
+          "Reproducir el sonido del sistema con los banners del SO.",
+        osNotificationsSoundLabel: "Sonido",
         osNotificationsSwitchLabel: "Mostrar notificaciones del SO",
         osNotificationsTitle: "Notificaciones del SO",
         sendWithModEnterDescription:
@@ -716,6 +762,11 @@ export const es = {
           "¿Qué quieres que haga Angel Engine en <project>{{projectName}}</project>?",
       },
       quote: "Citar",
+      restoreBack: "Volver al inicio",
+      restoreFailedDescription:
+        "El historial no ha cambiado. Reintenta la hidratación del runtime.",
+      restoreFailedTitle: "No se pudo restaurar el chat",
+      restoreRetry: "Reintentar restauración",
       restoring: "Restaurando chat",
     },
     composer: {
@@ -863,6 +914,9 @@ export const es = {
         saveFileChangesDetail: "Perderás los cambios si no los guardas.",
         saveFileChangesTitle: "¿Guardar los cambios en {{path}}?",
       },
+      confirmDeleteChatDetail:
+        "Esto elimina permanentemente el chat de Angel Engine. Esta acción no se puede deshacer.",
+      confirmDeleteChatTitle: "¿Eliminar «{{title}}»?",
       importSession: {
         cwdLabel: "Directorio: {{cwd}}",
         description:
@@ -979,6 +1033,16 @@ export const es = {
     },
     projects: {
       chooseFolder: "Elegir carpeta del proyecto",
+      confirmDeleteDetail:
+        "Esto elimina permanentemente el proyecto de Angel Engine y borra {{count}} chats vinculados. Los archivos de la carpeta del proyecto se conservan. Esta acción no se puede deshacer.",
+      confirmDeleteDetailNone:
+        "Esto elimina permanentemente el proyecto de Angel Engine. No se eliminarán chats vinculados. Los archivos de la carpeta del proyecto se conservan. Esta acción no se puede deshacer.",
+      confirmDeleteDetailOne:
+        "Esto elimina permanentemente el proyecto de Angel Engine y borra 1 chat vinculado. Los archivos de la carpeta del proyecto se conservan. Esta acción no se puede deshacer.",
+      confirmDeleteTitle: "¿Eliminar «{{name}}»?",
+      deleteConflictDetail:
+        "El proyecto cambió después de preparar esta confirmación, por lo que no se eliminó nada. Vuelve a abrir la confirmación para revisar el impacto actualizado.",
+      deleteConflictTitle: "El proyecto cambió",
       openInFinder: "Abrir en Finder",
       settings: "Ajustes",
       settingsLoadFailed: "No se pudieron cargar los ajustes del proyecto",

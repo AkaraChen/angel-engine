@@ -1,16 +1,13 @@
 import { useTranslation } from "react-i18next";
 
+import { AboutSection } from "@/features/settings/about-section";
+import { AgentsSection } from "@/features/settings/agents-section";
 import { AppearanceSection } from "@/features/settings/appearance-section";
+import { ConnectionSection } from "@/features/settings/connection-section";
 import { CustomAgentsSection } from "@/features/settings/custom-agents-section";
 import { ProjectsSection } from "@/features/settings/projects-section";
-import {
-  SettingsRow,
-  SettingsSection,
-} from "@/features/settings/settings-section";
 
 export function SettingsPage() {
-  const { t } = useTranslation();
-
   return (
     <div className="h-full overflow-y-auto">
       <div
@@ -19,19 +16,12 @@ export function SettingsPage() {
           pb-[max(1rem,env(safe-area-inset-bottom))]
         "
       >
+        <ConnectionSection />
+        <AgentsSection />
         <ProjectsSection />
         <CustomAgentsSection />
         <AppearanceSection />
-
-        <SettingsSection
-          description={t("settings.about.description")}
-          title={t("settings.about.title")}
-        >
-          <SettingsRow
-            description={t("settings.about.appDescription")}
-            title={t("settings.about.appName")}
-          />
-        </SettingsSection>
+        <AboutSection />
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import type {
+  AgentOption,
   AgentRuntime,
   CreateCustomAgentInput,
   CustomAgent,
@@ -17,7 +18,7 @@ import {
   X,
 } from "@phosphor-icons/react";
 import { Reorder } from "framer-motion";
-import { useCallback, useId, useReducer, useState } from "react";
+import { useCallback, useId, useMemo, useReducer, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ import { confirmAction } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { AgentReadinessBadge } from "@/features/settings/agent-readiness";
 import {
   AgentEnabledSwitch,
   ReorderableAgentRow,
@@ -79,6 +81,7 @@ function customAgentFormReducer(
 }
 
 function CustomAgentsSettingsGroup({
+  availableAgentOptions,
   customAgents,
   enabledRuntimeSet,
   visibleEnabledCount,
@@ -90,6 +93,7 @@ function CustomAgentsSettingsGroup({
   onDeleteCustomAgentImpact,
   onUpdateCustomAgent,
 }: {
+  availableAgentOptions: AgentOption[];
   customAgents: CustomAgent[];
   enabledRuntimeSet: Set<AgentRuntime>;
   visibleEnabledCount: number;
@@ -106,6 +110,13 @@ function CustomAgentsSettingsGroup({
   const { t } = useTranslation();
   const [editingAgent, setEditingAgent] = useState<CustomAgent | null>(null);
   const [creating, setCreating] = useState(false);
+  const readinessById = useMemo(() => {
+    const map = new Map<string, AgentOption>();
+    for (const option of availableAgentOptions) {
+      map.set(option.id, option);
+    }
+    return map;
+  }, [availableAgentOptions]);
   const deleteAgent = useCallback(
     async (agent: CustomAgent) => {
       const impact = await onDeleteCustomAgentImpact(agent.id);
@@ -156,6 +167,14 @@ function CustomAgentsSettingsGroup({
         {displayedCustomAgents.map((agent) => {
           const enabled = enabledRuntimeSet.has(agent.id);
           const isOnlyEnabled = enabled && visibleEnabledCount <= 1;
+          const catalogOption = readinessById.get(agent.id) ?? {
+            description: `${agent.command} ${agent.args.join(" ")}`.trim(),
+            id: agent.id,
+            label: agent.label,
+            readiness: agent.needAuth
+              ? { status: "authentication-required" as const }
+              : { status: "checking" as const },
+          };
 
           return (
             <ReorderableAgentRow
@@ -216,6 +235,7 @@ function CustomAgentsSettingsGroup({
                 <span className="block truncate text-sm font-medium">
                   {agent.label}
                 </span>
+                <AgentReadinessBadge agent={catalogOption} className="mt-0.5" />
                 <span
                   className="
                     mt-0.5 block truncate font-mono text-[0.6875rem]
@@ -292,7 +312,19 @@ function CustomAgentForm({
     needAuth,
     saving,
   } = formState;
-  const canSave = label.trim().length > 0 && command.trim().length > 0;
+  const isDirty = agent
+    ? label !== agent.label ||
+      command !== agent.command ||
+      args !== agent.args.join("\n") ||
+      needAuth !== agent.needAuth ||
+      autoAuthenticate !== agent.autoAuthenticate ||
+      environment !==
+        agent.environment
+          .map((entry) => `${entry.name}=${entry.value}`)
+          .join("\n")
+    : label.trim().length > 0 || command.trim().length > 0;
+  const canSave =
+    isDirty && label.trim().length > 0 && command.trim().length > 0;
   const save = useCallback(async () => {
     dispatchForm({ saving: true, type: "saving" });
     const input = {

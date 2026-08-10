@@ -32,19 +32,27 @@ describe("listAvailableAgents", () => {
     expect(agents.map((agent) => agent.id)).not.toContain("cursor");
   });
 
-  it("advertises pi only when the cli exists", async () => {
+  it("advertises pi with an honest readiness for the cli probe", async () => {
     vi.mocked(which).mockImplementation(async (command) =>
       command === "pi" ? (null as unknown as string) : "/usr/bin/fake-agent",
     );
 
-    await expect(runListAvailableAgents()).resolves.not.toContainEqual(
-      expect.objectContaining({ id: "pi" }),
+    // Unavailable built-ins stay in the catalog so Settings can explain the
+    // missing binary instead of silently dropping the runtime.
+    await expect(runListAvailableAgents()).resolves.toContainEqual(
+      expect.objectContaining({
+        id: "pi",
+        readiness: expect.objectContaining({ status: "unavailable" }),
+      }),
     );
 
     vi.mocked(which).mockResolvedValue("/usr/bin/pi");
 
     await expect(runListAvailableAgents()).resolves.toContainEqual(
-      expect.objectContaining({ id: "pi" }),
+      expect.objectContaining({
+        id: "pi",
+        readiness: expect.objectContaining({ status: "ready" }),
+      }),
     );
   });
 });

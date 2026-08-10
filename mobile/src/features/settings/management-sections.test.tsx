@@ -26,6 +26,7 @@ const mocks = vi.hoisted(() => ({
   deleteCustomAgent: vi.fn(),
   deleteCustomAgentImpact: vi.fn(),
   deleteProject: vi.fn(),
+  deleteProjectImpact: vi.fn(),
   listArchivedChats: vi.fn(),
   listChats: vi.fn(),
   listCustomAgents: vi.fn(),
@@ -49,6 +50,7 @@ const daemon = {
   projects: {
     create: mocks.createProject,
     delete: mocks.deleteProject,
+    deleteImpact: mocks.deleteProjectImpact,
     list: mocks.listProjects,
     update: mocks.updateProject,
   },
@@ -57,6 +59,9 @@ const daemon = {
 vi.mock("@/platform/daemon-provider", () => ({
   useDaemonClient: () => daemon,
 }));
+
+const toastError = vi.hoisted(() => vi.fn());
+vi.mock("sonner", () => ({ toast: { error: toastError } }));
 
 const customAgent = {
   args: ["acp"],
@@ -93,7 +98,14 @@ beforeEach(async () => {
     id: "project-1",
     path: "/workspace/renamed-project",
   });
-  mocks.deleteProject.mockResolvedValue({ ok: true });
+  mocks.deleteProject.mockResolvedValue({
+    deletedChatCount: 2,
+    deletedWorktreeCount: 0,
+  });
+  mocks.deleteProjectImpact.mockResolvedValue({
+    chatCount: 2,
+    revision: "rev-project-1",
+  });
   mocks.listChats.mockResolvedValue([
     { id: "chat-1", projectId: "project-1" },
     { id: "chat-2", projectId: null },
@@ -138,13 +150,18 @@ describe("ProjectsSection", () => {
       expect(screen.queryByRole("dialog")).toBeNull();
     });
     fireEvent.click(screen.getByRole("button", { name: "Edit old-project" }));
+    // Pristine edit: Save stays disabled until a real valid change exists.
+    expect(
+      (screen.getByRole("button", { name: "Save" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+    fireEvent.change(screen.getByLabelText("Folder path"), {
+      target: { value: "/workspace/renamed-project" },
+    });
     expect(
       (screen.getByRole("button", { name: "Save" }) as HTMLButtonElement)
         .disabled,
     ).toBe(false);
-    fireEvent.change(screen.getByLabelText("Folder path"), {
-      target: { value: "/workspace/renamed-project" },
-    });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => {
       expect(mocks.updateProject).toHaveBeenCalledWith({
@@ -165,26 +182,29 @@ describe("ProjectsSection", () => {
       within(deleteDialog).getByRole("button", { name: "Delete" }),
     );
     await waitFor(() => {
-      expect(mocks.deleteProject).toHaveBeenCalledWith("project-1");
+      expect(mocks.deleteProject).toHaveBeenCalledWith({
+        expectedRevision: "rev-project-1",
+        id: "project-1",
+      });
     });
   });
 
   it.each([
     {
-      activeChats: [],
-      archivedChats: [],
+      chatCount: 0,
       message: /This project has no linked chats\./,
       name: "no linked chats",
     },
     {
-      activeChats: [{ id: "chat-1", projectId: "project-1" }],
-      archivedChats: [],
+      chatCount: 1,
       message: /permanently delete 1 linked chat\./,
       name: "one linked chat",
     },
   ])("shows the correct delete impact for $name", async (testCase) => {
-    mocks.listChats.mockResolvedValue(testCase.activeChats);
-    mocks.listArchivedChats.mockResolvedValue(testCase.archivedChats);
+    mocks.deleteProjectImpact.mockResolvedValue({
+      chatCount: testCase.chatCount,
+      revision: "rev-project-1",
+    });
 
     renderWithQueryClient(<ProjectsSection />);
     await screen.findByText("old-project");
@@ -195,6 +215,69 @@ describe("ProjectsSection", () => {
         testCase.message,
       ),
     ).toBeDefined();
+  });
+
+  it("shows a conflict notice and re-reads the impact when the project changed", async () => {
+    mocks.deleteProject.mockRejectedValueOnce(
+      DaemonRequestError.http(
+        409,
+        "project-delete-conflict",
+        "The project changed after the delete impact was read.",
+      ),
+    );
+
+    renderWithQueryClient(<ProjectsSection />);
+    await screen.findByText("old-project");
+    fireEvent.click(screen.getByRole("button", { name: "Delete old-project" }));
+    const deleteDialog = await screen.findByRole("alertdialog");
+    await within(deleteDialog).findByText(/2 linked chats/);
+    fireEvent.click(
+      within(deleteDialog).getByRole("button", { name: "Delete" }),
+    );
+
+    await waitFor(() => {
+      expect(toastError).toHaveBeenCalledWith(
+        expect.stringContaining("changed"),
+      );
+    });
+    // The dialog stays open and the impact is re-read for a fresh revision.
+    expect(screen.queryByRole("alertdialog")).not.toBeNull();
+    await waitFor(() => {
+      expect(mocks.deleteProjectImpact).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it("keeps Save disabled for a pristine edit and names missing fields on blur", async () => {
+    renderWithQueryClient(<ProjectsSection />);
+    await screen.findByText("old-project");
+    fireEvent.click(screen.getByRole("button", { name: "Add project" }));
+
+    const pathInput = screen.getByLabelText("Folder path");
+    // Pristine create: disabled with no error until the field is touched.
+    expect(
+      (screen.getByRole("button", { name: "Save" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+    expect(screen.queryByRole("alert")).toBeNull();
+
+    // Blurring an untouched empty field shows the associated inline error.
+    fireEvent.blur(pathInput);
+    expect(await screen.findByRole("alert")).toHaveProperty(
+      "textContent",
+      "Enter a folder path.",
+    );
+    expect(pathInput.getAttribute("aria-invalid")).toBe("true");
+    expect(pathInput.getAttribute("aria-describedby")).toBe(
+      "project-path-error",
+    );
+
+    // Correction clears the error and enables Save.
+    fireEvent.change(pathInput, { target: { value: "/workspace/new" } });
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(
+      (screen.getByRole("button", { name: "Save" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(false);
   });
 
   it("shows project path validation inline and keeps the form open", async () => {
@@ -307,6 +390,79 @@ describe("CustomAgentsSection", () => {
     );
     await waitFor(() => {
       expect(mocks.deleteCustomAgent).toHaveBeenCalledWith("custom:test");
+    });
+  });
+
+  it("keeps Save disabled for a pristine agent edit until a real change", async () => {
+    renderWithQueryClient(<CustomAgentsSection />);
+    await screen.findByText("Test agent");
+    fireEvent.click(screen.getByRole("button", { name: "Edit Test agent" }));
+
+    expect(
+      (screen.getByRole("button", { name: "Save" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+    fireEvent.change(screen.getByLabelText("Command"), {
+      target: { value: "renamed-agent" },
+    });
+    expect(
+      (screen.getByRole("button", { name: "Save" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(false);
+  });
+
+  it("names missing agent fields on blur and keeps the precise daemon error near Save", async () => {
+    mocks.createCustomAgent.mockRejectedValueOnce(
+      DaemonRequestError.http(
+        400,
+        "custom-agent-field-required",
+        "Label is required.",
+      ),
+    );
+
+    renderWithQueryClient(<CustomAgentsSection />);
+    await screen.findByText("Test agent");
+    fireEvent.click(screen.getByRole("button", { name: "Add custom agent" }));
+
+    const commandInput = screen.getByLabelText("Command");
+    // Blur validation names the missing field and links it to the input.
+    fireEvent.blur(commandInput);
+    const commandError = await screen.findByRole("alert");
+    expect(commandError.textContent).toBe("Enter a command.");
+    expect(commandInput.getAttribute("aria-invalid")).toBe("true");
+    expect(commandInput.getAttribute("aria-describedby")).toBe(
+      "custom-agent-command-error",
+    );
+
+    // Correction clears the field error; entered data is preserved.
+    fireEvent.change(commandInput, { target: { value: "local-agent" } });
+    expect(screen.queryByRole("alert")).toBeNull();
+
+    fireEvent.change(screen.getByLabelText("Name"), {
+      target: { value: "Local agent" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    // The precise daemon message stays near the action for correction/retry.
+    expect(await screen.findByRole("alert")).toHaveProperty(
+      "textContent",
+      "Label is required.",
+    );
+    expect(screen.getByRole("dialog")).toBeDefined();
+    expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe(
+      "Local agent",
+    );
+
+    // Retry succeeds and closes the drawer.
+    await waitFor(() => {
+      expect(mocks.createCustomAgent).toHaveBeenCalledOnce();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => {
+      expect(mocks.createCustomAgent).toHaveBeenCalledTimes(2);
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).toBeNull();
     });
   });
 

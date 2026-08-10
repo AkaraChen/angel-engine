@@ -32,16 +32,44 @@ export function appendMessageToEngineMessage(
   message: AppendMessage,
   id: string,
 ): EngineMessage {
+  const sentAt = new Date();
   return {
     ...message,
     attachments: message.attachments,
     content: message.content,
-    createdAt: new Date(),
+    createdAt: sentAt,
     id,
-    metadata: message.metadata,
+    metadata: {
+      ...message.metadata,
+      custom: {
+        ...(message.metadata?.custom ?? {}),
+        // The genuine client send moment — the only timestamp this path owns.
+        canonicalCreatedAt: sentAt.toISOString(),
+      },
+    },
     role: message.role,
     status: message.status,
   } as EngineMessage;
+}
+
+/**
+ * The canonical timestamp carried through assistant-ui metadata. assistant-ui
+ * fills a missing `createdAt` with `new Date()`, so the field itself is never
+ * evidence: renders read only this marker. `null` records that the canonical
+ * source genuinely had no timestamp (rather than "not converted here").
+ */
+export type CanonicalCreatedAtMarker = string | null;
+
+export function canonicalCreatedAtOf(
+  message: EngineMessage,
+): CanonicalCreatedAtMarker | undefined {
+  const custom = message.metadata?.custom as
+    | { canonicalCreatedAt?: CanonicalCreatedAtMarker }
+    | undefined;
+  if (custom === undefined || !("canonicalCreatedAt" in custom)) {
+    return undefined;
+  }
+  return custom.canonicalCreatedAt;
 }
 
 export function historyMessageToEngineMessage(
@@ -50,18 +78,24 @@ export function historyMessageToEngineMessage(
   const createdAt = is.nonEmptyString(message.createdAt)
     ? new Date(message.createdAt)
     : undefined;
-  const normalizedCreatedAt =
-    createdAt && Number.isFinite(createdAt.getTime()) ? createdAt : new Date();
+  const hasCanonicalCreatedAt =
+    createdAt !== undefined && Number.isFinite(createdAt.getTime());
+  // assistant-ui requires a Date; without a canonical value this is internal
+  // ordering data only — never rendered, never written back to history.
+  const internalCreatedAt = hasCanonicalCreatedAt ? createdAt : new Date();
+  const canonicalCreatedAt: CanonicalCreatedAtMarker = hasCanonicalCreatedAt
+    ? createdAt.toISOString()
+    : null;
   const content = message.content.map(cloneChatHistoryPart);
 
   if (message.role === "assistant") {
     const backendFailure = backendFailureText(content);
     return {
       content: content.map(historyPartToEngineMessagePart),
-      createdAt: normalizedCreatedAt,
+      createdAt: internalCreatedAt,
       id: message.id,
       metadata: {
-        custom: {},
+        custom: { canonicalCreatedAt },
         steps: [],
         unstable_annotations: [],
         unstable_data: [],
@@ -85,10 +119,10 @@ export function historyMessageToEngineMessage(
   if (message.role === "system") {
     return {
       content: [{ text: chatPartsText(content, "text"), type: "text" }],
-      createdAt: normalizedCreatedAt,
+      createdAt: internalCreatedAt,
       id: message.id,
       metadata: {
-        custom: {},
+        custom: { canonicalCreatedAt },
       },
       role: "system",
     };
@@ -102,10 +136,10 @@ export function historyMessageToEngineMessage(
   return {
     attachments: userMessage.attachments,
     content: userMessage.content,
-    createdAt: normalizedCreatedAt,
+    createdAt: internalCreatedAt,
     id: message.id,
     metadata: {
-      custom: {},
+      custom: { canonicalCreatedAt },
     },
     role: "user",
   } as EngineMessage;
@@ -141,9 +175,17 @@ function engineMessageToHistoryMessage(
     message.attachments,
     contentParts,
   );
+  // Never write an assistant-ui fallback Date back into canonical history:
+  // only the marker (or a genuinely-owned Date on marker-less live messages)
+  // may leave the renderer.
+  const marker = canonicalCreatedAtOf(message);
+  const createdAt =
+    marker !== undefined
+      ? (marker ?? undefined)
+      : message.createdAt?.toISOString();
   return {
     content: [...contentParts, ...attachmentParts],
-    createdAt: message.createdAt?.toISOString(),
+    createdAt,
     id: message.id,
     role: message.role,
   };

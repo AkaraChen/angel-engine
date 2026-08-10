@@ -95,6 +95,23 @@ export const de = {
       backgroundChatCompleted: "Hintergrundchat abgeschlossen",
       backgroundChatNeedsInput: "Hintergrundchat benötigt Eingabe",
       backgroundChatStatus: "Status des Hintergrundchats",
+      browser: {
+        back: "Zurück",
+        copyUrl: "URL kopieren",
+        errors: {
+          navigationFailed: "Die Seite konnte nicht geladen werden.",
+          offline: "Die Verbindung zu dieser Website ist fehlgeschlagen.",
+          unknown: "Beim Laden dieser Seite ist etwas schiefgelaufen.",
+          unsupportedUrl: "Nur http(s)-URLs werden unterstützt.",
+        },
+        loadFailedDescription:
+          "Der Verlauf ist unverändert. Erneut versuchen, die URL extern öffnen oder kopieren.",
+        loadFailedTitle: "Seite konnte nicht geladen werden",
+        loading: "Seite wird geladen",
+        openExternally: "Extern öffnen",
+        retry: "Erneut versuchen",
+      },
+      chatTabs: "Chat-Tabs",
       closeTab: "Tab schließen",
       creationLocationProject: "Projekt",
       creationLocationSelect: "Erstellen in",
@@ -274,6 +291,11 @@ export const de = {
     fleet: {
       allProjects: "Alle Projekte",
       disconnected: "Backend nicht erreichbar.",
+      disconnectedDescription:
+        "Vorhandene Chats bleiben verfügbar. Live-Fleet-Aktivität kann erst nach Wiederherstellung der Verbindung aktualisiert werden.",
+      disconnectedStale:
+        "Es wird die letzte vertrauenswürdige Aktivität angezeigt. Live-Updates sind pausiert.",
+      disconnectedTitle: "Fleet getrennt",
       emptySegments: {
         all: "Keine Agenten aktiv.",
         attention: "Gerade braucht dich nichts.",
@@ -289,6 +311,7 @@ export const de = {
       },
       loading: "Aktivität wird geladen",
       noMatches: "Keine Sitzung passt zu deiner Suche.",
+      retry: "Erneut versuchen",
       reasons: {
         approval: "Wartet auf Freigabe",
         processExited: "Prozess beendet",
@@ -397,6 +420,14 @@ export const de = {
       agents: {
         enabledLabel: "{{agent}}-Agent",
         minimumEnabled: "Mindestens ein Agent muss aktiviert bleiben.",
+        readiness: {
+          "authentication-required": "Authentifizierung erforderlich",
+          checking: "Wird geprüft…",
+          error: "Fehler",
+          prefix: "Status:",
+          ready: "Bereit",
+          unavailable: "Nicht verfügbar",
+        },
         title: "Agents",
       },
       appearance: {
@@ -549,16 +580,20 @@ export const de = {
         passwordDialogDescription:
           "Geben Sie das Passwort ein, mit dem sich ein Telefon mit diesem Computer koppelt.",
         passwordDialogTitle: "Kopplungspasswort festlegen",
+        passwordRequired: "Gib ein Passwort ein.",
         passwordReset: "Passwort zurücksetzen",
         passwordSet: "Passwort festlegen",
         passwordTitle: "Kopplungspasswort",
         portDescription:
           "TCP-Port, auf dem gelauscht wird. 0 wählt automatisch einen Port.",
+        portInvalid: "Gib eine ganze Portnummer zwischen 0 und 65535 ein.",
         portTitle: "Listen-Port",
         qrCode: "QR-Code",
         qrDialogDescription:
           "Mit der Handykamera scannen. Das Telefon muss im selben Netzwerk sein, und das Kopplungspasswort wird abgefragt.",
         qrDialogTitle: "Auf dem Telefon öffnen",
+        saveFailed:
+          "Die Einstellung konnte nicht gespeichert werden. Versuche es erneut.",
         urlDisabled:
           "Aktivieren Sie die mobile Ansicht, um einen Link zu erhalten, den Sie auf Ihrem Telefon öffnen können.",
         urlNeedsPassword:
@@ -622,6 +657,18 @@ export const de = {
         dirtyPromptTitle: "Dirty-Repository-Warnung",
         osNotificationsDescription:
           "Systembanner anzeigen, wenn ein Hintergrund-Chat fertig ist, fehlschlägt oder dich braucht. Der In-App-Verlauf bleibt verfügbar.",
+        osNotificationsNeedsInputDescription:
+          "Benachrichtigen, wenn ein Hintergrund-Chat auf Freigabe oder Eingabe wartet.",
+        osNotificationsNeedsInputLabel: "Eingabe erforderlich",
+        osNotificationsRunCompletedDescription:
+          "Benachrichtigen, wenn ein Hintergrund-Chat erfolgreich endet.",
+        osNotificationsRunCompletedLabel: "Lauf abgeschlossen",
+        osNotificationsSaveFailed:
+          "Benachrichtigungseinstellungen konnten nicht gespeichert werden.",
+        osNotificationsSaved: "Benachrichtigungseinstellungen gespeichert.",
+        osNotificationsSoundDescription:
+          "Systemton bei OS-Benachrichtigungen abspielen.",
+        osNotificationsSoundLabel: "Ton",
         osNotificationsSwitchLabel: "OS-Benachrichtigungen anzeigen",
         osNotificationsTitle: "OS-Benachrichtigungen",
         sendWithModEnterDescription:
@@ -717,6 +764,11 @@ export const de = {
           "Was soll Angel Engine in <project>{{projectName}}</project> tun?",
       },
       quote: "Zitieren",
+      restoreBack: "Zurück zur Startseite",
+      restoreFailedDescription:
+        "Der Verlauf ist unverändert. Runtime-Hydrate erneut versuchen.",
+      restoreFailedTitle: "Chat konnte nicht wiederhergestellt werden",
+      restoreRetry: "Wiederherstellung erneut versuchen",
       restoring: "Chat wird wiederhergestellt",
     },
     composer: {
@@ -866,6 +918,9 @@ export const de = {
           "Ihre Änderungen gehen verloren, wenn Sie sie nicht sichern.",
         saveFileChangesTitle: "Änderungen an {{path}} sichern?",
       },
+      confirmDeleteChatDetail:
+        "Dadurch wird der Chat dauerhaft aus Angel Engine gelöscht. Dies kann nicht rückgängig gemacht werden.",
+      confirmDeleteChatTitle: "„{{title}}“ löschen?",
       importSession: {
         cwdLabel: "Verzeichnis: {{cwd}}",
         description:
@@ -986,6 +1041,16 @@ export const de = {
     },
     projects: {
       chooseFolder: "Projektordner auswählen",
+      confirmDeleteDetail:
+        "Dadurch wird das Projekt dauerhaft aus Angel Engine entfernt und {{count}} verknüpfte Chats gelöscht. Dateien im Projektordner bleiben erhalten. Dies kann nicht rückgängig gemacht werden.",
+      confirmDeleteDetailNone:
+        "Dadurch wird das Projekt dauerhaft aus Angel Engine entfernt. Es werden keine verknüpften Chats gelöscht. Dateien im Projektordner bleiben erhalten. Dies kann nicht rückgängig gemacht werden.",
+      confirmDeleteDetailOne:
+        "Dadurch wird das Projekt dauerhaft aus Angel Engine entfernt und 1 verknüpfter Chat gelöscht. Dateien im Projektordner bleiben erhalten. Dies kann nicht rückgängig gemacht werden.",
+      confirmDeleteTitle: "„{{name}}“ löschen?",
+      deleteConflictDetail:
+        "Das Projekt wurde geändert, nachdem diese Bestätigung vorbereitet wurde. Es wurde nichts gelöscht. Öffne die Löschbestätigung erneut, um die aktualisierten Auswirkungen zu prüfen.",
+      deleteConflictTitle: "Projekt wurde geändert",
       openInFinder: "Im Finder öffnen",
       settings: "Einstellungen",
       settingsLoadFailed: "Projekteinstellungen konnten nicht geladen werden",

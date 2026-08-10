@@ -176,13 +176,18 @@ describe("fleetPage", () => {
     listActivity.mockResolvedValue({ items: [] });
     renderFleet({ chats: [], isMetadataError: true });
 
-    expect(await screen.findByText("fleet.disconnected")).toBeDefined();
+    expect(await screen.findByText("fleet.disconnectedTitle")).toBeDefined();
+    expect(screen.getByText("fleet.disconnectedDescription")).toBeDefined();
+    expect(screen.getByTestId("fleet-retry")).toBeDefined();
     expect(screen.queryByText("fleet.emptySegments.all")).toBeNull();
   });
 
   it.each([
     { isMetadataError: false, text: "fleet.emptySegments.all" },
-    { isMetadataError: true, text: "fleet.disconnected" },
+    {
+      isMetadataError: true,
+      text: "fleet.disconnectedTitle",
+    },
   ])("keeps the board $text state at list width", async (state) => {
     window.localStorage.setItem(FLEET_VIEW_STORAGE_KEY, "board");
     listActivity.mockResolvedValue({ items: [] });
@@ -230,6 +235,51 @@ describe("fleetPage", () => {
 
     expectContainedBoardScroller(board);
     expect(board.className).toBe(skeleton.className);
+  });
+
+  it("retries activity and metadata when the fleet is disconnected", async () => {
+    listActivity
+      .mockRejectedValueOnce(new Error("backend down"))
+      .mockResolvedValueOnce({ items: [DONE_ACTIVITY] });
+    const { queryClient } = renderFleet();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    expect(await screen.findByText("fleet.disconnectedTitle")).toBeDefined();
+    fireEvent.click(screen.getByTestId("fleet-retry"));
+
+    await vi.waitFor(() => {
+      expect(invalidateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queryKey: queryKeys.chatActivity.all(),
+        }),
+      );
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ queryKey: queryKeys.chats.list() }),
+    );
+    expect(invalidateSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ queryKey: queryKeys.projects.list() }),
+    );
+  });
+
+  it("keeps trustworthy rows when activity disconnects after a successful load", async () => {
+    listActivity
+      .mockResolvedValueOnce({ items: [DONE_ACTIVITY] })
+      .mockRejectedValue(new Error("backend down"));
+    const { queryClient } = renderFleet();
+
+    expect(
+      await screen.findByRole("button", { name: /Done chat/ }),
+    ).toBeDefined();
+
+    await queryClient.invalidateQueries({
+      queryKey: queryKeys.chatActivity.all(),
+    });
+
+    expect(await screen.findByText("fleet.disconnectedTitle")).toBeDefined();
+    expect(screen.getByText("fleet.disconnectedStale")).toBeDefined();
+    expect(screen.getByRole("button", { name: /Done chat/ })).toBeDefined();
+    expect(screen.getByTestId("fleet-retry")).toBeDefined();
   });
 
   it("waits for chat metadata before calling the fleet empty", async () => {

@@ -1,7 +1,7 @@
 import type { FC, FormEvent, ReactNode } from "react";
 import type { CreateChatFormState } from "./create-chat-form";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
 
@@ -50,6 +50,8 @@ export const CreateChatDrawer: FC<CreateChatDrawerProps> = ({ children }) => {
   const [form, setForm] = useState<CreateChatFormState>(
     INITIAL_CREATE_CHAT_FORM,
   );
+  const [promptTouched, setPromptTouched] = useState(false);
+  const promptInputRef = useRef<HTMLTextAreaElement>(null);
   const [, navigate] = useLocation();
 
   const projectsQuery = useProjectList();
@@ -80,12 +82,19 @@ export const CreateChatDrawer: FC<CreateChatDrawerProps> = ({ children }) => {
 
   function reset() {
     setForm(INITIAL_CREATE_CHAT_FORM);
+    setPromptTouched(false);
     createChat.reset();
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!canSubmitCreateChat(form)) return;
+    if (!canSubmitCreateChat(form)) {
+      // Enter submits even while Create is disabled; make the reason visible
+      // and move focus to the prompt.
+      setPromptTouched(true);
+      promptInputRef.current?.focus();
+      return;
+    }
 
     try {
       const chat = await createChat.mutateAsync(buildCreateChatInput(form));
@@ -100,11 +109,16 @@ export const CreateChatDrawer: FC<CreateChatDrawerProps> = ({ children }) => {
   }
 
   const canSubmit = canSubmitCreateChat(form) && !createChat.isPending;
+  const showPromptError = form.prompt.trim().length === 0 && promptTouched;
 
   return (
     <Drawer
       open={open}
+      // Block backdrop / swipe / Escape while a create is in flight so a
+      // pending mutation cannot be dismissed and double-submitted.
+      dismissible={!createChat.isPending}
       onOpenChange={(next) => {
+        if (!next && createChat.isPending) return;
         setOpen(next);
         if (!next) reset();
       }}
@@ -117,6 +131,7 @@ export const CreateChatDrawer: FC<CreateChatDrawerProps> = ({ children }) => {
         </DrawerHeader>
 
         <form
+          aria-busy={createChat.isPending}
           className="flex min-h-0 flex-1 flex-col"
           onSubmit={(event) => void handleSubmit(event)}
         >
@@ -126,13 +141,28 @@ export const CreateChatDrawer: FC<CreateChatDrawerProps> = ({ children }) => {
               label={t("createChat.promptLabel")}
             >
               <Textarea
+                aria-describedby={
+                  showPromptError ? "new-chat-prompt-error" : undefined
+                }
+                aria-invalid={showPromptError}
                 autoFocus
                 id="new-chat-prompt"
+                onBlur={() => setPromptTouched(true)}
                 placeholder={t("createChat.promptPlaceholder")}
+                ref={promptInputRef}
                 rows={3}
                 value={form.prompt}
                 onChange={(event) => update("prompt", event.target.value)}
               />
+              {showPromptError ? (
+                <p
+                  className="text-xs text-destructive"
+                  id="new-chat-prompt-error"
+                  role="alert"
+                >
+                  {t("createChat.promptRequired")}
+                </p>
+              ) : null}
             </Field>
 
             <Field
@@ -277,9 +307,14 @@ export const CreateChatDrawer: FC<CreateChatDrawerProps> = ({ children }) => {
             ) : null}
           </div>
 
-          <DrawerFooter className="flex-row gap-2 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <DrawerFooter className="flex-row gap-2">
             <DrawerClose asChild>
-              <Button className="flex-1" type="button" variant="outline">
+              <Button
+                className="flex-1"
+                disabled={createChat.isPending}
+                type="button"
+                variant="outline"
+              >
                 {t("common.cancel")}
               </Button>
             </DrawerClose>

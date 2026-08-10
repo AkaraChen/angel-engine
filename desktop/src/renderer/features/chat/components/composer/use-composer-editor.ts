@@ -7,15 +7,22 @@ import type {
   ComposerCatalog,
   ComposerInteractionRefs,
 } from "@/features/chat/components/composer/composer-editor-extensions";
+import type { ComposerDraftSnapshot } from "@/features/chat/components/composer/composer-draft";
 import type { ComposerGitHubAttachment } from "@/features/chat/components/composer/github-attachments";
 import { useEditor, useEditorState } from "@tiptap/react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { createComposerExtensions } from "@/features/chat/components/composer/composer-editor-extensions";
 import { composerMentionsFromDocument } from "@/features/chat/components/composer/composer-editor-model";
+import {
+  restoreComposerDraft,
+  snapshotComposerDraft,
+} from "@/features/chat/components/composer/composer-draft";
 import { appendComposerMarkdown } from "@/features/chat/components/composer/terminal-selection-to-composer";
 import { useChatEnvironment } from "@/features/chat/runtime/chat-environment-context";
 import { useApi } from "@/platform/use-api";
+
+export type { ComposerDraftSnapshot };
 
 export interface ComposerEditorInteractions {
   blockSubmit: boolean;
@@ -40,9 +47,11 @@ export interface ComposerEditorController {
   removeMention: (id: string) => void;
   removePasteSourceUrl: (sourceUrl: string) => void;
   reset: () => void;
+  restoreDraft: (snapshot: ComposerDraftSnapshot) => void;
   selectedSkills: ComposerMentionedSkill[];
   setInteractions: (interactions: ComposerEditorInteractions) => void;
   setTextInput: (setInput: (value: string) => void) => void;
+  snapshotDraft: () => ComposerDraftSnapshot;
 }
 
 export function useComposerEditor({
@@ -183,6 +192,20 @@ export function useComposerEditor({
     setPasteSourceUrls([]);
     setGitHubAttachments([]);
   }, [editor]);
+  const snapshotDraft = useCallback(
+    (): ComposerDraftSnapshot =>
+      snapshotComposerDraft({ editor, githubAttachments, pasteSourceUrls }),
+    [editor, githubAttachments, pasteSourceUrls],
+  );
+  const restoreDraft = useCallback(
+    (snapshot: ComposerDraftSnapshot) => {
+      restoreComposerDraft(snapshot, editor, {
+        setGitHubAttachments,
+        setPasteSourceUrls,
+      });
+    },
+    [editor],
+  );
   const removeMention = useCallback(
     (id: string) => {
       if (editor === null) return;
@@ -232,8 +255,10 @@ export function useComposerEditor({
     removeMention,
     removePasteSourceUrl,
     reset,
+    restoreDraft,
     selectedSkills,
     setInteractions,
     setTextInput,
+    snapshotDraft,
   };
 }

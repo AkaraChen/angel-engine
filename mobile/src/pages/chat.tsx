@@ -2,14 +2,18 @@ import type { FormEvent, KeyboardEvent } from "react";
 import type { ConversationMessage } from "@/platform/chat-types";
 
 import {
+  ArrowClockwise,
   ArrowDown,
   ArrowUp,
   ChatCircle,
+  File as FileIcon,
+  Paperclip,
   Square,
   Warning,
   WarningOctagon,
+  X,
 } from "@phosphor-icons/react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -48,6 +52,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { CollapsibleMessageBody } from "@/features/chat/collapsible-message-body";
 import { ElicitationPrompt } from "@/features/chat/elicitation-prompt";
 import { MarkdownMessage } from "@/features/chat/markdown-message";
+import { MessageMetadata } from "@/features/chat/message-metadata";
 import { PlanMessage } from "@/features/chat/plan-message";
 import { ToolCallGroup } from "@/features/chat/tool-call-group";
 import { useReadTerminalActivity } from "@/features/chat/use-activity";
@@ -55,6 +60,10 @@ import {
   type Conversation,
   useConversation,
 } from "@/features/chat/use-conversation";
+import {
+  MOBILE_ATTACHMENT_ACCEPT,
+  useComposerAttachments,
+} from "@/features/chat/use-composer-attachments";
 import { useKeyboardInset } from "@/features/chat/use-keyboard-inset";
 import { cn } from "@/lib/utils";
 
@@ -180,6 +189,7 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
   const isError = message.status === "error";
   const hasTools = message.toolCalls.length > 0;
   const hasPlans = message.plans.length > 0;
+  const hasAttachments = message.attachments.length > 0;
   // Fall back to reasoning when a turn produced only reasoning (no prose) so the
   // bubble is never empty; show "Thinking…" only before any token has arrived.
   const body = message.text.length > 0 ? message.text : message.reasoning;
@@ -191,7 +201,8 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
     message.status === "streaming" &&
     body.length === 0 &&
     !hasTools &&
-    !hasPlans;
+    !hasPlans &&
+    !hasAttachments;
   // A pure tool-call/plan turn has cards but no prose/error/typing: skip the
   // bubble.
   const showBubble = isUser || isError || isTyping || body.length > 0;
@@ -206,6 +217,36 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
     <MessageGroup>
       <Message align={isUser ? "end" : "start"}>
         <MessageContent className="flex flex-col gap-2">
+          <MessageMetadata message={message} />
+          {hasAttachments ? (
+            <div
+              className={cn(
+                "flex flex-wrap gap-2",
+                isUser ? "justify-end" : "justify-start",
+              )}
+            >
+              {message.attachments.map((attachment) => (
+                <div
+                  className="
+                    flex max-w-[12rem] items-center gap-2 rounded-xl border
+                    border-border-subtle bg-card px-2 py-1.5 text-xs
+                  "
+                  key={attachment.id}
+                >
+                  {attachment.type === "image" && attachment.dataUrl ? (
+                    <img
+                      alt={attachment.name}
+                      className="size-10 rounded-md object-cover"
+                      src={attachment.dataUrl}
+                    />
+                  ) : (
+                    <FileIcon className="size-4 shrink-0" weight="duotone" />
+                  )}
+                  <span className="truncate">{attachment.name}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
           {!isUser && hasTools ? (
             <ToolCallGroup
               calls={message.toolCalls}
@@ -284,15 +325,48 @@ function MessageBubble({ message }: { message: ConversationMessage }) {
 function Composer({ conversation }: { conversation: Conversation }) {
   const { t } = useTranslation();
   const [value, setValue] = useState("");
+  const [sendPending, setSendPending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+  const draft = useComposerAttachments();
   const keyboardInset = useKeyboardInset();
   const isStreaming = conversation.isStreaming;
-  const canSend = value.trim().length > 0 && !isStreaming;
+  // Attachment-only messages are valid; a reading or failed tile blocks Send
+  // so a subset is never sent silently behind the user's back.
+  const canSend =
+    (value.trim().length > 0 || draft.readyAttachments.length > 0) &&
+    !isStreaming &&
+    !sendPending &&
+    !draft.isReading &&
+    !draft.hasErroredAttachment;
 
-  function submit(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault();
     if (!canSend) return;
-    conversation.send(value);
-    setValue("");
+    const text = value;
+    setSendPending(true);
+    setSendError(null);
+    try {
+      const result = await conversation.send(text, draft.toInputs());
+      if (!mountedRef.current) return;
+      if (result.accepted) {
+        setValue("");
+        draft.clear();
+        return;
+      }
+      if (result.error !== null) {
+        setSendError(t("chat.sendFailed"));
+      }
+    } finally {
+      if (mountedRef.current) setSendPending(false);
+    }
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
@@ -300,22 +374,104 @@ function Composer({ conversation }: { conversation: Conversation }) {
     // composer on keyboards that expose a hardware/return key).
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
-      submit(event);
+      void submit(event);
     }
   }
+
+  const attachmentErrorLabel =
+    draft.error === "accept"
+      ? t("chat.attachmentErrors.accept")
+      : draft.error === "max_file_size"
+        ? t("chat.attachmentErrors.maxFileSize")
+        : draft.error === "max_files"
+          ? t("chat.attachmentErrors.maxFiles")
+          : draft.error === "file_read"
+            ? t("chat.attachmentErrors.fileRead")
+            : null;
 
   return (
     <form
       className="
         shrink-0 px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]
       "
-      onSubmit={submit}
+      onSubmit={(event) => void submit(event)}
       // The keyboard overlays the layout viewport instead of shrinking it, so
       // the safe-area padding alone would leave the composer behind it.
       style={
         keyboardInset > 0 ? { paddingBottom: keyboardInset + 8 } : undefined
       }
     >
+      {draft.attachments.length > 0 ? (
+        <ul
+          className="mb-2 flex flex-wrap gap-2"
+          aria-label={t("chat.attachments")}
+        >
+          {draft.attachments.map((attachment) => (
+            <li
+              className={cn(
+                "flex max-w-[10rem] items-center gap-1.5 rounded-full border",
+                "border-border-subtle bg-card py-1 pr-1 pl-2 text-xs",
+                attachment.status === "error" &&
+                  "border-status-danger-border bg-status-danger-soft",
+              )}
+              key={attachment.id}
+            >
+              {attachment.status === "reading" ? (
+                <Spinner className="size-3.5 shrink-0" />
+              ) : null}
+              <span className="truncate">{attachment.name}</span>
+              {attachment.status === "error" ? (
+                <Button
+                  aria-label={t("chat.retryAttachment", {
+                    name: attachment.name,
+                  })}
+                  className="size-8 shrink-0 rounded-full"
+                  onClick={() => void draft.retry(attachment.id)}
+                  size="icon"
+                  type="button"
+                  variant="ghost"
+                >
+                  <ArrowClockwise size={14} weight="bold" />
+                </Button>
+              ) : null}
+              <Button
+                aria-label={t("chat.removeAttachment", {
+                  name: attachment.name,
+                })}
+                className="size-8 shrink-0 rounded-full"
+                onClick={() => draft.remove(attachment.id)}
+                size="icon"
+                type="button"
+                variant="ghost"
+              >
+                <X size={14} weight="bold" />
+              </Button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {attachmentErrorLabel ? (
+        <p className="text-status-danger mb-2 text-xs" role="alert">
+          {attachmentErrorLabel}
+        </p>
+      ) : null}
+      {sendError ? (
+        <p className="text-status-danger mb-2 text-xs" role="alert">
+          {sendError}
+        </p>
+      ) : null}
+      <input
+        ref={fileInputRef}
+        accept={MOBILE_ATTACHMENT_ACCEPT}
+        className="sr-only"
+        multiple
+        onChange={(event) => {
+          const files = event.currentTarget.files;
+          if (files) void draft.addFiles(files);
+          event.currentTarget.value = "";
+        }}
+        type="file"
+      />
       <InputGroup
         className="
           rounded-2xl border-border-subtle bg-card shadow-panel
@@ -325,12 +481,25 @@ function Composer({ conversation }: { conversation: Conversation }) {
         <InputGroupTextarea
           aria-label={t("chat.messagePlaceholder")}
           className="max-h-40 min-h-11 text-sm"
-          onChange={(event) => setValue(event.target.value)}
+          onChange={(event) => {
+            setValue(event.target.value);
+            if (sendError !== null) setSendError(null);
+          }}
           onKeyDown={onKeyDown}
           placeholder={t("chat.messagePlaceholder")}
           value={value}
         />
         <InputGroupAddon align="block-end" className="justify-end gap-2">
+          <InputGroupButton
+            aria-label={t("chat.attachAria")}
+            className="size-11 rounded-full p-0"
+            disabled={isStreaming || sendPending}
+            onClick={() => fileInputRef.current?.click()}
+            type="button"
+            variant="ghost"
+          >
+            <Paperclip size={18} weight="bold" />
+          </InputGroupButton>
           {isStreaming ? (
             <InputGroupButton
               aria-label={t("chat.stopAria")}
@@ -351,7 +520,11 @@ function Composer({ conversation }: { conversation: Conversation }) {
               type="submit"
               variant="default"
             >
-              <ArrowUp size={18} weight="bold" />
+              {sendPending ? (
+                <Spinner className="size-4" />
+              ) : (
+                <ArrowUp size={18} weight="bold" />
+              )}
             </InputGroupButton>
           )}
         </InputGroupAddon>

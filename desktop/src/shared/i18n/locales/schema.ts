@@ -221,11 +221,31 @@ export interface LocaleResourceTranslationWorkspaceAmbiguousSend {
   title: string;
 }
 
+export interface LocaleResourceTranslationWorkspaceBrowserErrors {
+  navigationFailed: string;
+  offline: string;
+  unknown: string;
+  unsupportedUrl: string;
+}
+
+export interface LocaleResourceTranslationWorkspaceBrowser {
+  back: string;
+  copyUrl: string;
+  errors: LocaleResourceTranslationWorkspaceBrowserErrors;
+  loadFailedDescription: string;
+  loadFailedTitle: string;
+  loading: string;
+  openExternally: string;
+  retry: string;
+}
+
 export interface LocaleResourceTranslationWorkspace {
   ambiguousSend: LocaleResourceTranslationWorkspaceAmbiguousSend;
   backgroundChatCompleted: string;
   backgroundChatNeedsInput: string;
   backgroundChatStatus: string;
+  browser: LocaleResourceTranslationWorkspaceBrowser;
+  chatTabs: string;
   closeTab: string;
   creationLocationProject: string;
   creationLocationSelect: string;
@@ -305,6 +325,9 @@ export interface LocaleResourceTranslationFleetViews {
 export interface LocaleResourceTranslationFleet {
   allProjects: string;
   disconnected: string;
+  disconnectedDescription: string;
+  disconnectedStale: string;
+  disconnectedTitle: string;
   emptySegments: LocaleResourceTranslationFleetEmptySegments;
   filterProject: string;
   filterSegments: string;
@@ -312,6 +335,7 @@ export interface LocaleResourceTranslationFleet {
   loading: string;
   noMatches: string;
   reasons: LocaleResourceTranslationFleetReasons;
+  retry: string;
   search: string;
   segments: LocaleResourceTranslationFleetSegments;
   standaloneProject: string;
@@ -471,6 +495,14 @@ export interface LocaleResourceTranslationSidebar {
 export interface LocaleResourceTranslationSettingsAgents {
   enabledLabel: string;
   minimumEnabled: string;
+  readiness: {
+    "authentication-required": string;
+    checking: string;
+    error: string;
+    prefix: string;
+    ready: string;
+    unavailable: string;
+  };
   title: string;
 }
 
@@ -653,14 +685,17 @@ export interface LocaleResourceTranslationSettingsMobile {
   passwordDescription: string;
   passwordDialogDescription: string;
   passwordDialogTitle: string;
+  passwordRequired: string;
   passwordReset: string;
   passwordSet: string;
   passwordTitle: string;
   portDescription: string;
+  portInvalid: string;
   portTitle: string;
   qrCode: string;
   qrDialogDescription: string;
   qrDialogTitle: string;
+  saveFailed: string;
   urlDisabled: string;
   urlNeedsPassword: string;
   urlOpen: string;
@@ -729,6 +764,14 @@ export interface LocaleResourceTranslationSettingsWorkspace {
   dirtyPromptSwitchLabel: string;
   dirtyPromptTitle: string;
   osNotificationsDescription: string;
+  osNotificationsNeedsInputDescription: string;
+  osNotificationsNeedsInputLabel: string;
+  osNotificationsRunCompletedDescription: string;
+  osNotificationsRunCompletedLabel: string;
+  osNotificationsSaveFailed: string;
+  osNotificationsSaved: string;
+  osNotificationsSoundDescription: string;
+  osNotificationsSoundLabel: string;
   osNotificationsSwitchLabel: string;
   osNotificationsTitle: string;
   sendWithModEnterDescription: string;
@@ -821,6 +864,10 @@ export interface LocaleResourceTranslationThreadEmpty {
 export interface LocaleResourceTranslationThread {
   empty: LocaleResourceTranslationThreadEmpty;
   quote: string;
+  restoreBack: string;
+  restoreFailedDescription: string;
+  restoreFailedTitle: string;
+  restoreRetry: string;
   restoring: string;
 }
 
@@ -971,6 +1018,8 @@ export interface LocaleResourceTranslationMessages {
 export interface LocaleResourceTranslationDialog {
   chatName: string;
   confirm: LocaleResourceTranslationDialogConfirm;
+  confirmDeleteChatDetail: string;
+  confirmDeleteChatTitle: string;
   importSession: LocaleResourceTranslationDialogImportSession;
   renameChat: string;
   sessionHandoff: LocaleResourceTranslationDialogSessionHandoff;
@@ -1094,6 +1143,12 @@ export interface LocaleResourceTranslationProjectImport {
 
 export interface LocaleResourceTranslationProjects {
   chooseFolder: string;
+  confirmDeleteDetail: string;
+  confirmDeleteDetailNone: string;
+  confirmDeleteDetailOne: string;
+  confirmDeleteTitle: string;
+  deleteConflictDetail: string;
+  deleteConflictTitle: string;
   openInFinder: string;
   settings: string;
   settingsLoadFailed: string;

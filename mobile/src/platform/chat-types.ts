@@ -34,7 +34,7 @@ export type DaemonChat = ApiChat;
 export type DaemonProject = ApiProject;
 export type DaemonAgentOption = Pick<
   ApiAgentOption,
-  "description" | "id" | "label"
+  "description" | "id" | "label" | "readiness"
 >;
 export type ChatCreationLocation = ApiChatCreationLocation;
 export type CreateChatInput = Pick<
@@ -110,6 +110,16 @@ export type ProjectedConversationToolCall = ConversationToolCall & {
   historyPart: DaemonToolCallPart;
 };
 
+/** Restored image/file parts projected for mobile transcript tiles. */
+export interface ConversationAttachment {
+  /** Data URL or remote URL when available; omitted for name-only restore. */
+  dataUrl?: string;
+  id: string;
+  mimeType?: string;
+  name: string;
+  type: "file" | "image";
+}
+
 /** Rendered conversation row derived from history plus live stream state. */
 export interface ConversationMessage {
   id: string;
@@ -120,4 +130,10 @@ export interface ConversationMessage {
   error?: string;
   toolCalls: ConversationToolCall[];
   plans: ApiChatPlanData[];
+  /**
+   * Canonical timestamp when the history/source provided one. Never fabricated
+   * with `new Date()` — omit the visual time when missing.
+   */
+  createdAt?: string;
+  attachments: ConversationAttachment[];
 }

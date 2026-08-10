@@ -170,6 +170,8 @@ describe("homePage", () => {
         const url = String(input);
         if (url.endsWith("/api/projects"))
           return Promise.resolve(jsonResponse([]));
+        if (url.endsWith("/api/chat-activity"))
+          return Promise.resolve(jsonResponse({ items: [] }));
         if (url.endsWith("/api/chats"))
           return Promise.resolve(jsonResponse([]));
         return Promise.reject(new Error(`unexpected fetch: ${url}`));
@@ -179,6 +181,8 @@ describe("homePage", () => {
     renderHome();
 
     expect(await screen.findByText("No chats yet")).toBeDefined();
+    // One dominant New chat control — empty-state CTA only, no floating FAB.
+    expect(screen.getAllByRole("button", { name: "New chat" })).toHaveLength(1);
   });
 
   it("shows daemon-owned five-state badges and orders them by urgency", async () => {

@@ -24,9 +24,14 @@ export const es = {
         "Introduce la contraseña de emparejamiento configurada en tu app de escritorio para conectar este dispositivo.",
       passwordLabel: "Contraseña",
       passwordPlaceholder: "Contraseña de emparejamiento",
+      passwordHelp: "Las contraseñas distinguen mayúsculas y minúsculas.",
+      showPassword: "Mostrar contraseña",
+      hidePassword: "Ocultar contraseña",
       incorrectPassword: "Contraseña incorrecta. Inténtalo de nuevo.",
       connectionError:
         "No se pudo contactar con la app de escritorio. Comprueba tu conexión e inténtalo de nuevo.",
+      recoveryHint:
+        "Si necesitas una nueva contraseña de emparejamiento, restablécela en Ajustes de escritorio → Vista móvil y vuelve aquí.",
       connecting: "Conectando…",
       connect: "Conectar",
     },
@@ -37,6 +42,9 @@ export const es = {
     },
     sidebar: {
       home: "Inicio",
+      navigationTitle: "Navegación",
+      navigationDescription: "Destinos principales en Angel Engine.",
+      close: "Cerrar navegación",
     },
     daemonStatus: {
       unreachable: "Demonio inaccesible",
@@ -76,6 +84,20 @@ export const es = {
       messagePlaceholder: "Mensaje",
       sendAria: "Enviar",
       stopAria: "Detener",
+      attachAria: "Adjuntar archivos",
+      attachments: "Archivos adjuntos",
+      removeAttachment: "Quitar {{name}}",
+      retryAttachment: "Reintentar {{name}}",
+      roleUser: "Tú",
+      roleAssistant: "Asistente",
+      sendFailed:
+        "No se pudo enviar ese mensaje. Tu borrador sigue aquí — inténtalo de nuevo.",
+      attachmentErrors: {
+        accept: "Ese tipo de archivo no es compatible.",
+        maxFileSize: "Cada archivo debe pesar 10 MB o menos.",
+        maxFiles: "Puedes adjuntar hasta 5 archivos.",
+        fileRead: "No se pudo leer ese archivo. Inténtalo de nuevo o quítalo.",
+      },
       plan: "Plan",
       todo: "Tareas",
       build: "Build",
@@ -107,6 +129,7 @@ export const es = {
       description: "Inicia una sesión de agente en un proyecto o worktree.",
       promptLabel: "Instrucción inicial",
       promptPlaceholder: "¿En qué debería trabajar el agente?",
+      promptRequired: "Escribe primero un mensaje.",
       projectLabel: "Proyecto",
       noProject: "Sin proyecto (ad hoc)",
       agentLabel: "Agente",
@@ -150,6 +173,27 @@ export const es = {
           es: "Español",
         },
       },
+      connection: {
+        title: "Conexión",
+        description:
+          "Este navegador está emparejado con un demonio local de Angel Engine. Desconectar solo borra el token de este dispositivo.",
+        server: "Servidor emparejado",
+        sameOrigin: "Origen de esta página",
+        status: "Estado",
+        statusOnline: "Conectado",
+        statusConnecting: "Conectando…",
+        statusUnreachable: "Inaccesible",
+        daemonVersion: "Versión del demonio",
+        versionUnknown: "Desconocida",
+        disconnectSectionTitle: "Este dispositivo",
+        disconnectDescription:
+          "Desconectar solo elimina el token de emparejamiento de este navegador. No restablece la contraseña de escritorio ni borra chats.",
+        disconnect: "Desconectar este dispositivo",
+        disconnectConfirmTitle: "¿Desconectar este dispositivo?",
+        disconnectConfirmDescription:
+          "Necesitarás la contraseña de emparejamiento para volver a conectar. Los chats y la contraseña de escritorio no cambian.",
+        disconnectConfirm: "Desconectar",
+      },
       projects: {
         actionError:
           "No se pudo completar esa acción del proyecto. Inténtalo de nuevo.",
@@ -157,6 +201,8 @@ export const es = {
         createTitle: "Añadir proyecto",
         deleteAria: "Eliminar {{name}}",
         deleteChecking: "Comprobando chats vinculados…",
+        deleteConflict:
+          "El proyecto cambió desde que se abrió este diálogo. Revisa el impacto actualizado e inténtalo de nuevo.",
         deleteImpact:
           "Al eliminar este proyecto se borrarán permanentemente {{count}} chats vinculados.",
         deleteImpactOne:
@@ -177,6 +223,7 @@ export const es = {
         pathInvalid: "Introduce la ruta de una carpeta existente.",
         pathLabel: "Ruta de la carpeta",
         pathPlaceholder: "/ruta/al/proyecto",
+        pathRequired: "Introduce una ruta de carpeta.",
         title: "Proyectos",
       },
       customAgents: {
@@ -187,6 +234,7 @@ export const es = {
         argsPlaceholder: "Un argumento por línea",
         autoAuthenticateLabel: "Autenticar automáticamente",
         commandLabel: "Comando",
+        commandRequired: "Introduce un comando.",
         createTitle: "Añadir agente personalizado",
         deleteAria: "Eliminar {{name}}",
         deleteChecking: "Comprobando chats vinculados…",
@@ -211,15 +259,21 @@ export const es = {
           "Configura el comando y los argumentos opcionales para iniciar este agente.",
         loadError: "No se pudieron cargar los agentes personalizados.",
         nameLabel: "Nombre",
+        nameRequired: "Introduce un nombre.",
         needAuthLabel: "Requiere autenticación",
         title: "Agentes personalizados",
       },
       about: {
-        title: "Acerca de",
+        appDescription: "Compañero móvil de la app de escritorio Angel Engine.",
+        appName: "Angel Engine Mobile",
+        build: "Versión",
+        copied: "Copiado",
+        copyDiagnostics: "Copiar diagnóstico",
+        copyFailed: "No se pudo copiar. Copia los datos a mano.",
         description:
           "Estos ajustes solo afectan a este dispositivo y se mantienen separados de la configuración de la app de escritorio.",
-        appName: "Angel Engine Mobile",
-        appDescription: "Compañero móvil de la app de escritorio Angel Engine.",
+        diagnostics: "Diagnóstico",
+        title: "Acerca de",
       },
     },
   },

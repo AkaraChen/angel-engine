@@ -4,7 +4,7 @@ import type { FC, FormEvent } from "react";
 import { DaemonRequestError } from "@angel-engine/daemon-client";
 import { Folder, PencilSimple, Plus, Trash } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -187,13 +187,28 @@ const ProjectFormDrawer: FC<ProjectFormDrawerProps> = ({
 }) => {
   const { t } = useTranslation();
   const project = target.mode === "edit" ? target.project : null;
+  const pathInputRef = useRef<HTMLInputElement>(null);
   const [path, setPath] = useState(project?.path ?? "");
   const [pathError, setPathError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [pathTouched, setPathTouched] = useState(false);
   const normalizedPath = path.trim();
-  const canSave = normalizedPath.length > 0 && !pending;
+  // Save requires a real, valid change: pristine edits stay disabled.
+  const isDirty = normalizedPath !== (project?.path ?? "");
+  const showRequiredError =
+    normalizedPath.length === 0 && (pathTouched || pathError !== null);
+  const canSave = normalizedPath.length > 0 && isDirty && !pending;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setFormError(null);
+    if (normalizedPath.length === 0) {
+      // Enter submits even while Save is disabled; make the reason visible.
+      setPathTouched(true);
+      setPathError(null);
+      pathInputRef.current?.focus();
+      return;
+    }
     if (!canSave) return;
     try {
       await onSave(normalizedPath);
@@ -203,14 +218,22 @@ const ProjectFormDrawer: FC<ProjectFormDrawerProps> = ({
         error.code === "project-path-invalid"
       ) {
         setPathError(t("settings.projects.pathInvalid"));
+        pathInputRef.current?.focus();
         return;
       }
-      toast.error(t("settings.projects.actionError"));
+      // Keep the precise daemon/API message near the action for correction
+      // and retry instead of collapsing to a generic toast.
+      setFormError(
+        error instanceof Error && error.message.length > 0
+          ? error.message
+          : t("settings.projects.actionError"),
+      );
     }
   }
 
   return (
     <Drawer
+      dismissible={!pending}
       open
       onOpenChange={(open) => {
         if (!open && !pending) onClose();
@@ -234,29 +257,38 @@ const ProjectFormDrawer: FC<ProjectFormDrawerProps> = ({
             </Label>
             <Input
               aria-describedby={
-                pathError === null ? undefined : "project-path-error"
+                pathError === null && !showRequiredError
+                  ? undefined
+                  : "project-path-error"
               }
-              aria-invalid={pathError !== null}
+              aria-invalid={pathError !== null || showRequiredError}
               autoCapitalize="off"
               autoComplete="off"
               autoCorrect="off"
               autoFocus
               id="project-path"
+              onBlur={() => setPathTouched(true)}
               onChange={(event) => {
                 setPath(event.currentTarget.value);
                 setPathError(null);
               }}
               placeholder={t("settings.projects.pathPlaceholder")}
+              ref={pathInputRef}
               spellCheck={false}
               value={path}
             />
-            {pathError === null ? null : (
+            {pathError !== null || showRequiredError ? (
               <p
                 className="mt-1.5 text-xs text-destructive"
                 id="project-path-error"
                 role="alert"
               >
-                {pathError}
+                {pathError ?? t("settings.projects.pathRequired")}
+              </p>
+            ) : null}
+            {formError === null ? null : (
+              <p className="mt-2 text-xs text-destructive" role="alert">
+                {formError}
               </p>
             )}
           </div>
@@ -301,11 +333,22 @@ const ProjectDeleteDialog: FC<ProjectDeleteDialogProps> = ({
   );
 
   async function removeProject() {
-    if (project === null) return;
+    if (project === null || impactQuery.data === undefined) return;
     try {
-      await deleteProject.mutateAsync(project.id);
+      await deleteProject.mutateAsync({
+        expectedRevision: impactQuery.data.revision,
+        id: project.id,
+      });
       onClose();
-    } catch {
+    } catch (error) {
+      if (
+        error instanceof DaemonRequestError &&
+        error.code === "project-delete-conflict"
+      ) {
+        toast.error(t("settings.projects.deleteConflict"));
+        await impactQuery.refetch();
+        return;
+      }
       toast.error(t("settings.projects.actionError"));
     }
   }
@@ -346,7 +389,7 @@ const ProjectDeleteDialog: FC<ProjectDeleteDialogProps> = ({
             {t("common.cancel")}
           </AlertDialogCancel>
           <AlertDialogAction
-            disabled={impactQuery.isPending || deleteProject.isPending}
+            disabled={!impactQuery.data || deleteProject.isPending}
             onClick={(event) => {
               event.preventDefault();
               void removeProject();

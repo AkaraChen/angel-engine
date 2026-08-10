@@ -20,6 +20,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import piIconUrl from "@/features/agents/pi-coding-agent.svg";
+import { AgentReadinessBadge } from "@/features/settings/agent-readiness";
 import {
   AgentEnabledSwitch,
   ReorderableAgentRow,
@@ -130,6 +131,7 @@ function BuiltinAgentsSettingsGroup({
                 <span className="block truncate text-sm font-medium">
                   {agent.label}
                 </span>
+                <AgentReadinessBadge agent={agent} className="mt-0.5" />
               </span>
             </ReorderableAgentRow>
           );

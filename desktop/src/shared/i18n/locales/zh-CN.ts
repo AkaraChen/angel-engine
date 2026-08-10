@@ -95,6 +95,23 @@ export const zhCN = {
       backgroundChatCompleted: "后台聊天已完成",
       backgroundChatNeedsInput: "后台聊天需要输入",
       backgroundChatStatus: "后台聊天状态",
+      browser: {
+        back: "返回",
+        copyUrl: "复制 URL",
+        errors: {
+          navigationFailed: "无法加载该页面。",
+          offline: "无法连接到此网站。",
+          unknown: "加载此页面时出错。",
+          unsupportedUrl: "仅支持 http(s) URL。",
+        },
+        loadFailedDescription:
+          "历史记录未更改。请重试、在外部打开，或复制 URL。",
+        loadFailedTitle: "无法加载页面",
+        loading: "正在加载页面",
+        openExternally: "在外部打开",
+        retry: "重试",
+      },
+      chatTabs: "聊天标签",
       closeTab: "关闭标签页",
       creationLocationProject: "项目本地",
       creationLocationSelect: "创建位置",
@@ -265,6 +282,10 @@ export const zhCN = {
     fleet: {
       allProjects: "全部项目",
       disconnected: "无法连接后端。",
+      disconnectedDescription:
+        "现有聊天仍可使用。在连接恢复前，无法刷新 Fleet 实时动态。",
+      disconnectedStale: "正在显示最后可信的动态。实时更新已暂停。",
+      disconnectedTitle: "舰队已断开",
       emptySegments: {
         all: "当前没有活动的 Agent。",
         attention: "当前没有需要你处理的会话。",
@@ -280,6 +301,7 @@ export const zhCN = {
       },
       loading: "正在加载动态",
       noMatches: "没有匹配的会话。",
+      retry: "重试",
       reasons: {
         approval: "等待授权",
         processExited: "进程已退出",
@@ -388,6 +410,14 @@ export const zhCN = {
       agents: {
         enabledLabel: "{{agent}} Agent",
         minimumEnabled: "至少需要启用一个 Agent。",
+        readiness: {
+          "authentication-required": "需要身份验证",
+          checking: "检查中…",
+          error: "错误",
+          prefix: "状态：",
+          ready: "就绪",
+          unavailable: "不可用",
+        },
         title: "Agents",
       },
       appearance: {
@@ -533,15 +563,18 @@ export const zhCN = {
           "手机与守护进程配对并获取访问令牌时需要输入的密码。",
         passwordDialogDescription: "输入手机与这台电脑配对时使用的密码。",
         passwordDialogTitle: "设置配对密码",
+        passwordRequired: "请输入密码。",
         passwordReset: "重置密码",
         passwordSet: "设置密码",
         passwordTitle: "配对密码",
         portDescription: "守护进程监听的 TCP 端口。输入 0 可自动选择。",
+        portInvalid: "请输入 0 到 65535 之间的整数端口号。",
         portTitle: "监听端口",
         qrCode: "二维码",
         qrDialogDescription:
           "用手机相机扫描。手机需要连接同一网络，并需要输入配对密码。",
         qrDialogTitle: "在手机上打开",
+        saveFailed: "无法保存该设置。请重试。",
         urlDisabled: "开启移动端访问后即可获得可在手机上打开的链接。",
         urlNeedsPassword: "设置配对密码后即可启用移动端访问。",
         urlOpen: "在浏览器中打开",
@@ -596,6 +629,14 @@ export const zhCN = {
         dirtyPromptTitle: "未提交更改提醒",
         osNotificationsDescription:
           "在后台会话完成、失败或需要你处理时显示系统通知。关闭后仍可在应用内查看历史。",
+        osNotificationsNeedsInputDescription: "后台对话等待许可或输入时通知。",
+        osNotificationsNeedsInputLabel: "需要输入",
+        osNotificationsRunCompletedDescription: "后台对话成功完成时通知。",
+        osNotificationsRunCompletedLabel: "运行完成",
+        osNotificationsSaveFailed: "无法保存通知偏好。",
+        osNotificationsSaved: "已保存通知偏好。",
+        osNotificationsSoundDescription: "系统通知横幅播放提示音。",
+        osNotificationsSoundLabel: "声音",
         osNotificationsSwitchLabel: "显示系统通知",
         osNotificationsTitle: "系统通知",
         sendWithModEnterDescription:
@@ -681,6 +722,10 @@ export const zhCN = {
           "希望 Angel Engine 在 <project>{{projectName}}</project> 做些什么？",
       },
       quote: "引用",
+      restoreBack: "返回首页",
+      restoreFailedDescription: "历史记录未更改。请重试运行时恢复。",
+      restoreFailedTitle: "无法恢复聊天",
+      restoreRetry: "重试恢复",
       restoring: "正在恢复聊天",
     },
     composer: {
@@ -821,6 +866,9 @@ export const zhCN = {
         saveFileChangesDetail: "如果不保存，你的更改将会丢失。",
         saveFileChangesTitle: "要保存对 {{path}} 的更改吗？",
       },
+      confirmDeleteChatDetail:
+        "这将从 Angel Engine 永久删除该聊天。此操作无法撤销。",
+      confirmDeleteChatTitle: "删除“{{title}}”？",
       importSession: {
         cwdLabel: "目录：{{cwd}}",
         description:
@@ -935,6 +983,16 @@ export const zhCN = {
     },
     projects: {
       chooseFolder: "选择项目文件夹",
+      confirmDeleteDetail:
+        "这将从 Angel Engine 永久移除该项目，并删除 {{count}} 个关联对话。项目文件夹中的文件会保留。此操作无法撤销。",
+      confirmDeleteDetailNone:
+        "这将从 Angel Engine 永久移除该项目。不会删除关联对话。项目文件夹中的文件会保留。此操作无法撤销。",
+      confirmDeleteDetailOne:
+        "这将从 Angel Engine 永久移除该项目，并删除 1 个关联对话。项目文件夹中的文件会保留。此操作无法撤销。",
+      confirmDeleteTitle: "删除“{{name}}”？",
+      deleteConflictDetail:
+        "准备此确认后项目已发生变化，因此未删除任何内容。请重新打开删除确认以查看更新后的影响。",
+      deleteConflictTitle: "项目已更改",
       openInFinder: "在 Finder 中打开",
       settings: "设置",
       settingsLoadFailed: "无法加载项目设置",

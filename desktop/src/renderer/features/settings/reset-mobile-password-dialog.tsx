@@ -29,18 +29,39 @@ export const ResetMobilePasswordDialog: FC<ResetMobilePasswordDialogProps> = ({
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const [password, setPassword] = useState("");
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const showRequiredError = password.length === 0 && submitAttempted;
 
   const setOpen = (next: boolean) => {
-    if (!next) setPassword("");
+    if (!next) {
+      setPassword("");
+      setSubmitAttempted(false);
+      setSaveError(null);
+    }
     onOpenChange(next);
   };
   const submit: FormEventHandler<HTMLFormElement> = (event) => {
     event.preventDefault();
-    if (password.length === 0 || isSaving) return;
+    setSaveError(null);
+    if (password.length === 0) {
+      // Name the missing field instead of silently ignoring the attempt.
+      setSubmitAttempted(true);
+      inputRef.current?.focus();
+      return;
+    }
+    if (isSaving) return;
     void onSave(password)
       .then(() => setOpen(false))
-      .catch(() => {
-        // Keep the dialog open so the user can retry.
+      .catch((error: unknown) => {
+        // Keep the dialog open with the precise reason so the user can
+        // correct and retry; the entered password is preserved.
+        setSaveError(
+          error instanceof Error && error.message.length > 0
+            ? error.message
+            : t("settings.mobile.saveFailed"),
+        );
       });
   };
 
@@ -60,15 +81,35 @@ export const ResetMobilePasswordDialog: FC<ResetMobilePasswordDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
         <form className="grid gap-4" onSubmit={submit}>
-          <Input
-            aria-label={t("settings.mobile.passwordTitle")}
-            autoComplete="new-password"
-            disabled={isSaving}
-            onChange={(event) => setPassword(event.currentTarget.value)}
-            ref={inputRef}
-            type="password"
-            value={password}
-          />
+          <div className="grid gap-1.5">
+            <Input
+              aria-describedby={
+                showRequiredError ? "mobile-password-error" : undefined
+              }
+              aria-invalid={showRequiredError}
+              aria-label={t("settings.mobile.passwordTitle")}
+              autoComplete="new-password"
+              disabled={isSaving}
+              onChange={(event) => setPassword(event.currentTarget.value)}
+              ref={inputRef}
+              type="password"
+              value={password}
+            />
+            {showRequiredError ? (
+              <p
+                className="text-xs text-destructive"
+                id="mobile-password-error"
+                role="alert"
+              >
+                {t("settings.mobile.passwordRequired")}
+              </p>
+            ) : null}
+            {saveError === null ? null : (
+              <p className="text-xs text-destructive" role="alert">
+                {saveError}
+              </p>
+            )}
+          </div>
           <DialogFooter>
             <Button
               disabled={isSaving}
@@ -78,7 +119,7 @@ export const ResetMobilePasswordDialog: FC<ResetMobilePasswordDialogProps> = ({
             >
               {t("common.cancel")}
             </Button>
-            <Button disabled={password.length === 0 || isSaving} type="submit">
+            <Button disabled={isSaving} type="submit">
               {isSaving ? t("common.saving") : t("common.save")}
             </Button>
           </DialogFooter>

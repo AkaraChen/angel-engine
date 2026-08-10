@@ -170,11 +170,11 @@ export function HomePage() {
         )}
       </ScrollArea>
 
-      {/* The primary action floats over the list rather than sitting at the end
-          of it: on a long transcript list it would otherwise be unreachable
-          without scrolling to the bottom. While the daemon cannot serve chats,
-          the button stays visible but disabled so it does not look available. */}
-      {chatsUnavailable ? (
+      {/* One dominant New chat control per state: empty home owns its CTA
+          inside EmptyState; populated / filtered / offline lists keep the FAB
+          so the action stays reachable without scrolling. Never mount both. */}
+      {chatsQuery.isSuccess &&
+      chatsQuery.data.length === 0 ? null : chatsUnavailable ? (
         <Button
           aria-label={`${t("common.newChat")}. ${t("common.daemonOfflineHint")}`}
           className={newChatButtonClassName}
@@ -184,7 +184,7 @@ export function HomePage() {
           <Plus size={18} weight="bold" />
           {t("common.newChat")}
         </Button>
-      ) : (
+      ) : chatsQuery.isPending || activityQuery.isPending ? null : (
         <CreateChatDrawer>
           <Button className={newChatButtonClassName}>
             <Plus size={18} weight="bold" />

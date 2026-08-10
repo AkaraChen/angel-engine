@@ -4,6 +4,7 @@ import {
   parseWorkspaceBrowserBounds,
   parseWorkspaceBrowserCreateInput,
   parseWorkspaceBrowserNavigateInput,
+  parseWorkspaceBrowserOpenExternalInput,
 } from "./ipc";
 
 vi.mock("electron", () => ({
@@ -59,5 +60,18 @@ describe("workspace browser IPC input parsing", () => {
         y: 0,
       }),
     ).toThrow();
+    expect(() =>
+      parseWorkspaceBrowserOpenExternalInput({ url: " " }),
+    ).toThrow();
+  });
+
+  it("accepts open-external http(s) urls", () => {
+    expect(
+      parseWorkspaceBrowserOpenExternalInput({
+        url: " https://docs.example.test/path ",
+      }),
+    ).toEqual({
+      url: "https://docs.example.test/path",
+    });
   });
 });

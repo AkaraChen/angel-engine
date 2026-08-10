@@ -112,10 +112,21 @@ export function ChatComposer({
             ? beforeSubmitResult
             : undefined,
       };
+      const draftSnapshot = controller.snapshotDraft();
       reset();
-      await send(submission);
+      try {
+        await send(submission);
+      } catch (error) {
+        // The send was never accepted: put the exact draft back — text,
+        // mentions, skills, GitHub attachments, and pasted refs — and let
+        // PromptInput surface the submit error. Restore is a no-op when the
+        // editor was unmounted by a mid-turn navigation.
+        controller.restoreDraft(draftSnapshot);
+        throw error;
+      }
     },
     [
+      controller,
       githubAttachments,
       mentionedFiles,
       onBeforeSubmit,

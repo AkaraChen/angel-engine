@@ -9,6 +9,11 @@ import { Effect } from "effect";
 import which from "which";
 import { AGENT_OPTIONS } from "@angel-engine/daemon-api/agents";
 import { listCustomAgents } from "./repository";
+import {
+  readinessForCustomAgent,
+  readinessFromBinaryPresence,
+  withReadiness,
+} from "./readiness";
 
 const runtimeCommands: Record<AgentRuntime, () => string> = {
   claude: () =>
@@ -31,30 +36,67 @@ export function listAvailableAgents(): Effect.Effect<
   return Effect.gen(function* () {
     const availability = yield* Effect.all(
       AGENT_OPTIONS.map((agent) =>
-        Effect.map(commandExists(runtimeCommands[agent.id]()), (available) => ({
+        Effect.map(commandProbe(runtimeCommands[agent.id]()), (probe) => ({
           agent,
-          available,
+          probe,
         })),
       ),
       { concurrency: "unbounded" },
     );
 
-    const builtinAgents = availability.flatMap(({ agent, available }) =>
-      available ? [agent] : [],
+    // Keep unavailable built-ins in the catalog so Settings can explain readiness
+    // instead of silently dropping them when the binary is missing.
+    const builtinAgents = availability.map(({ agent, probe }) =>
+      withReadiness(
+        agent,
+        readinessFromBinaryPresence({
+          available: probe.available,
+          command: probe.command,
+          probeError: probe.error,
+        }),
+      ),
     );
     const availableCustomAgents = yield* listCustomAgents();
-    const customAgents = availableCustomAgents.map((agent) => ({
-      description: `${agent.command} ${agent.args.join(" ")}`.trim(),
-      id: agent.id,
-      label: agent.label,
-    }));
+    const customAgents = yield* Effect.all(
+      availableCustomAgents.map((agent) =>
+        Effect.map(commandProbe(agent.command), (probe) =>
+          withReadiness(
+            {
+              description: `${agent.command} ${agent.args.join(" ")}`.trim(),
+              id: agent.id,
+              label: agent.label,
+            },
+            readinessForCustomAgent({
+              agent,
+              available: probe.available,
+              probeError: probe.error,
+            }),
+          ),
+        ),
+      ),
+      { concurrency: "unbounded" },
+    );
 
     return [...builtinAgents, ...customAgents];
   });
 }
 
-function commandExists(command: string): Effect.Effect<boolean> {
+function commandProbe(
+  command: string,
+): Effect.Effect<{ available: boolean; command: string; error?: string }> {
   return Effect.promise(async () => {
-    return (await which(command, { nothrow: true })) !== null;
+    try {
+      const resolved = await which(command, { nothrow: true });
+      return {
+        available: resolved !== null,
+        command,
+      };
+    } catch (error: unknown) {
+      return {
+        available: false,
+        command,
+        error: error instanceof Error ? error.message : "Command probe failed.",
+      };
+    }
   });
 }

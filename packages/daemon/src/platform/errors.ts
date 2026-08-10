@@ -195,6 +195,15 @@ export class DaemonError extends Data.TaggedError(
     });
   }
 
+  static projectDeleteConflict() {
+    return new DaemonError({
+      code: "project-delete-conflict",
+      message:
+        "The project changed after the delete impact was read. Read the impact again before deleting.",
+      status: 409,
+    });
+  }
+
   static projectIdRequired() {
     return new DaemonError({
       code: "project-id-required",

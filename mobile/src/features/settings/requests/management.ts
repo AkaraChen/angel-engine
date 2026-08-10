@@ -5,6 +5,7 @@ import type {
 } from "@angel-engine/daemon-api/agents";
 import type {
   CreateProjectInput,
+  ProjectDeleteInput,
   UpdateProjectInput,
 } from "@angel-engine/daemon-api/projects";
 import type { DaemonClient } from "@angel-engine/daemon-client";
@@ -59,6 +60,20 @@ export function customAgentListQueryOptions({
   });
 }
 
+/** Built-in + custom catalog with protocol-neutral readiness. */
+export function availableAgentListQueryOptions({
+  daemon,
+  enabled = true,
+  staleTime = 30_000,
+}: QueryParams) {
+  return queryOptions({
+    enabled,
+    queryFn: async () => daemon.agents.listAvailable(),
+    queryKey: queryKeys.agents.list,
+    staleTime,
+  });
+}
+
 export function projectDeleteImpactQueryOptions({
   daemon,
   enabled = true,
@@ -69,15 +84,7 @@ export function projectDeleteImpactQueryOptions({
     enabled: enabled && projectId !== null,
     queryFn: async () => {
       if (projectId === null) throw new Error("No project selected.");
-      const [activeChats, archivedChats] = await Promise.all([
-        daemon.chats.list(),
-        daemon.chats.archivedList(),
-      ]);
-      return {
-        chatCount: [...activeChats, ...archivedChats].filter(
-          (chat) => chat.projectId === projectId,
-        ).length,
-      };
+      return daemon.projects.deleteImpact(projectId);
     },
     queryKey: queryKeys.projects.deleteImpact(projectId),
     retry: false,
@@ -134,7 +141,8 @@ export function deleteProjectMutationOptions({
   queryClient,
 }: MutationParams) {
   return mutationOptions({
-    mutationFn: async (projectId: string) => daemon.projects.delete(projectId),
+    mutationFn: async (input: ProjectDeleteInput) =>
+      daemon.projects.delete(input),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.projects.all }),

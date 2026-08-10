@@ -49,6 +49,7 @@ import {
   createProjectInputSchema,
   managedWorktreeDeleteInputSchema,
   projectCloneInputSchema,
+  projectDeleteInputSchema,
   projectSetupRetryInputSchema,
   updateProjectConfigInputSchema,
   updateProjectInputSchema,
@@ -127,8 +128,9 @@ import { cloneProject } from "./features/projects/clone";
 import { searchProjectFiles } from "./features/projects/file-search";
 import {
   createProject,
-  deleteProject,
+  deleteProjectWithChats,
   getProject,
+  getProjectDeleteImpact,
   listProjects,
   updateProject,
 } from "./features/projects/repository";
@@ -841,34 +843,47 @@ export function registerApi(
       throw DaemonError.invalidRequest("Project input is invalid.");
     return context.json(await run(updateProject(input)));
   });
+  app.get("/api/projects/:id/delete-impact", async (context) =>
+    context.json(await run(getProjectDeleteImpact(context.req.param("id")))),
+  );
   app.delete("/api/projects/:id", async (context) => {
-    const projectId = context.req.param("id");
-    const deletedChatIds = await run(
+    const body = await context.req
+      .json<Record<string, unknown>>()
+      .catch(() => ({}));
+    const input = projectDeleteInputSchema({
+      ...body,
+      id: context.req.param("id"),
+    });
+    if (input instanceof arkType.errors) {
+      throw DaemonError.invalidRequest(
+        "Project delete confirmation is required.",
+      );
+    }
+    const { deletedChatIds, removedWorktrees } = await run(
       Effect.gen(function* () {
-        const targets = [
-          ...(yield* listChats()),
-          ...(yield* listArchivedChats()),
-        ].filter((chat) => chat.projectId === projectId);
+        const deletedChats = yield* deleteProjectWithChats(input);
         const chatEngine = yield* ChatEngine;
-        for (const chat of targets) {
+        for (const chat of deletedChats) {
           chatRuns.discardChat(chat.id);
           yield* chatEngine.cancelWorktreeCreationForDelete(chat.id);
           yield* chatEngine.closeChatSession(chat.id);
         }
-        const settledTargets = yield* Effect.all(
-          targets.map((chat) => requireChat(chat.id)),
-        );
-        yield* removeWorktreesForDeletedChats(settledTargets);
-        yield* deleteProject(projectId);
-        for (const chat of settledTargets) {
+        const removed = yield* removeWorktreesForDeletedChats(deletedChats);
+        for (const chat of deletedChats) {
           yield* chatEngine.finishChatDeletion(chat.id);
         }
-        return targets.map((chat) => chat.id);
+        return {
+          deletedChatIds: deletedChats.map((chat) => chat.id),
+          removedWorktrees: removed,
+        };
       }),
     );
     for (const chatId of deletedChatIds) activity.clearChat(chatId);
     chatEvents.metadataChanged(deletedChatIds);
-    return context.json({ ok: true });
+    return context.json({
+      deletedChatCount: deletedChatIds.length,
+      deletedWorktreeCount: removedWorktrees.length,
+    });
   });
   app.get("/api/projects/:id/config", async (context) =>
     context.json(

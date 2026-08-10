@@ -215,12 +215,40 @@ describe("createDaemon", () => {
     const listResponse = await daemonFetch(daemon, "/api/projects");
     await expect(listResponse.json()).resolves.toContainEqual(project);
 
-    const deleteResponse = await daemonFetch(
+    const impactResponse = await daemonFetch(
+      daemon,
+      `/api/projects/${project.id}/delete-impact`,
+    );
+    expect(impactResponse.status).toBe(200);
+    const impact = (await impactResponse.json()) as {
+      chatCount: number;
+      revision: string;
+    };
+    expect(impact.chatCount).toBe(0);
+    expect(typeof impact.revision).toBe("string");
+    expect(impact.revision.length).toBeGreaterThan(0);
+
+    const missingRevisionResponse = await daemonFetch(
       daemon,
       `/api/projects/${project.id}`,
       { method: "DELETE" },
     );
+    expect(missingRevisionResponse.status).toBe(400);
+
+    const deleteResponse = await daemonFetch(
+      daemon,
+      `/api/projects/${project.id}`,
+      {
+        body: JSON.stringify({ expectedRevision: impact.revision }),
+        headers: { "content-type": "application/json" },
+        method: "DELETE",
+      },
+    );
     expect(deleteResponse.status).toBe(200);
+    await expect(deleteResponse.json()).resolves.toEqual({
+      deletedChatCount: 0,
+      deletedWorktreeCount: 0,
+    });
 
     const finalListResponse = await daemonFetch(daemon, "/api/projects");
     await expect(finalListResponse.json()).resolves.toEqual([]);

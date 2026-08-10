@@ -25,7 +25,14 @@ import type {
   ChatToolCallPart as JsChatToolCallPart,
 } from "@angel-engine/js-client";
 import { type as arkType } from "arktype";
-import { normalizeChatAttachmentsInput } from "@angel-engine/js-client/utils/attachments";
+import {
+  base64ByteSize,
+  CHAT_ATTACHMENT_ACCEPT,
+  CHAT_ATTACHMENT_MAX_FILE_BYTES,
+  CHAT_ATTACHMENT_MAX_FILES,
+  chatAttachmentTypeAccepted,
+  normalizeChatAttachmentsInput,
+} from "@angel-engine/js-client/utils/attachments";
 import {
   cloneChatElicitation as cloneJsChatElicitation,
   isChatElicitationData as isJsChatElicitationData,
@@ -583,7 +590,68 @@ export function upsertChatElicitationPart(
   upsertJsChatElicitationPart(parts as JsChatHistoryMessagePart[], elicitation);
 }
 
-export { normalizeChatAttachmentsInput };
+export {
+  base64ByteSize,
+  CHAT_ATTACHMENT_ACCEPT,
+  CHAT_ATTACHMENT_MAX_FILE_BYTES,
+  CHAT_ATTACHMENT_MAX_FILES,
+  chatAttachmentTypeAccepted,
+  normalizeChatAttachmentsInput,
+};
+
+/**
+ * The canonical user-message content produced when a run start is accepted:
+ * the text plus every normalized attachment, in order. The daemon echoes this
+ * in run snapshots and history, so optimistic client projections reconcile
+ * against exactly this shape.
+ */
+export function chatRunUserMessageContent(
+  input: ChatRunStartInput,
+): ChatHistoryMessagePart[] {
+  const content: ChatHistoryMessagePart[] =
+    input.text.length > 0 ? [{ text: input.text, type: "text" }] : [];
+  for (const attachment of normalizeChatAttachmentsInput(input.attachments)) {
+    switch (attachment.type) {
+      case "image":
+        content.push({
+          filename: attachment.name ?? undefined,
+          image: imageDataUrl(attachment.data, attachment.mimeType),
+          mimeType: attachment.mimeType,
+          type: "image",
+        });
+        break;
+      case "file":
+        content.push({
+          data: attachment.data,
+          filename: attachment.name ?? undefined,
+          mimeType: attachment.mimeType,
+          type: "file",
+        });
+        break;
+      case "fileMention":
+        content.push({
+          data: attachment.path,
+          filename: attachment.name ?? undefined,
+          mention: true,
+          mimeType: attachment.mimeType ?? "application/octet-stream",
+          path: attachment.path,
+          type: "file",
+        });
+        break;
+      case "skillMention":
+        content.push({
+          data: attachment.path,
+          filename: attachment.name,
+          mention: true,
+          mimeType: "text/plain",
+          path: attachment.path,
+          type: "file",
+        });
+        break;
+    }
+  }
+  return content;
+}
 
 const chatId = arkType("string > 0");
 

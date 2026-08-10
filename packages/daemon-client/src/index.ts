@@ -96,6 +96,9 @@ import type {
   Project,
   ProjectConfigInput,
   ProjectConfigResult,
+  ProjectDeleteInput,
+  ProjectDeleteImpact,
+  ProjectDeleteResult,
   ProjectGitStatusInput,
   ProjectGitStatusResult,
   ProjectSetupLifecycleView,
@@ -625,10 +628,15 @@ export function createDaemonClient(options: DaemonClientOptions) {
         ),
       create: (input: CreateProjectInput) =>
         request<Project>("/api/projects", json("POST", input)),
-      delete: (id: string) =>
-        request<{ ok: boolean }>(`/api/projects/${encodeURIComponent(id)}`, {
-          method: "DELETE",
-        }),
+      delete: (input: ProjectDeleteInput) =>
+        request<ProjectDeleteResult>(
+          `/api/projects/${encodeURIComponent(input.id)}`,
+          json("DELETE", { expectedRevision: input.expectedRevision }),
+        ),
+      deleteImpact: (id: string) =>
+        request<ProjectDeleteImpact>(
+          `/api/projects/${encodeURIComponent(id)}/delete-impact`,
+        ),
       get: (id: string) =>
         request<Project | null>(`/api/projects/${encodeURIComponent(id)}`),
       gitStatus: (input: ProjectGitStatusInput) =>

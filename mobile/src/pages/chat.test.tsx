@@ -9,6 +9,10 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import {
+  chatRunUserMessageContent,
+  type ChatAttachmentInput,
+} from "@angel-engine/daemon-api/chat";
 import { AuthProvider } from "@/features/auth/auth-provider";
 import { stashNewChatPrompt } from "@/features/chat/new-chat-prompt";
 import { DaemonProvider } from "@/platform/daemon-provider";
@@ -81,6 +85,7 @@ function controllableSse(url: string, init?: RequestInit): SseHandle {
   let controller!: ReadableStreamDefaultController<Uint8Array>;
   let sequence = 0;
   const input = JSON.parse(requestBody(init)) as {
+    attachments?: ChatAttachmentInput[];
     chatId: string;
     text: string;
   };
@@ -107,7 +112,15 @@ function controllableSse(url: string, init?: RequestInit): SseHandle {
               status: "running",
               updatedAt: timestamp,
               userMessage: {
-                content: [{ text: input.text, type: "text" }],
+                // The daemon echoes accepted attachments via this same
+                // canonical function.
+                content: chatRunUserMessageContent({
+                  chatId: input.chatId,
+                  text: input.text,
+                  ...(input.attachments
+                    ? { attachments: input.attachments }
+                    : {}),
+                }),
                 createdAt: timestamp,
                 id: `${runId}:user`,
                 role: "user",
@@ -603,5 +616,162 @@ describe("ChatPage", () => {
 
     await waitFor(() => expect(screen.queryByLabelText("Stop")).toBeNull());
     expect(screen.getByLabelText("Send")).toBeDefined();
+  });
+
+  it("keeps the draft and shows an actionable error when the start is rejected", async () => {
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/load")) {
+        return jsonResponse({
+          chat: { id: "fail-chat", title: "Fail chat" },
+          messages: [],
+        });
+      }
+      if (url.includes("/api/chat-runs/") && method === "POST") {
+        return new Response(
+          JSON.stringify({
+            code: "chat-input-required",
+            error: "Chat text or attachment is required.",
+          }),
+          {
+            status: 400,
+            headers: { "content-type": "application/json" },
+          },
+        );
+      }
+      return jsonResponse({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderChat("fail-chat");
+    const textarea = (await screen.findByLabelText(
+      "Message",
+    )) as HTMLTextAreaElement;
+    await act(async () => {
+      fireEvent.change(textarea, { target: { value: "keep my draft" } });
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText("Send"));
+    });
+
+    // The composer keeps the complete draft and names the failure in place.
+    await screen.findByRole("alert");
+    expect(screen.getByRole("alert").textContent).toContain(
+      "Couldn't send that message",
+    );
+    expect(textarea.value).toBe("keep my draft");
+    expect(screen.queryByText("Thinking…")).toBeNull();
+  });
+
+  it("sends an attachment-only message", async () => {
+    let sse: SseHandle | undefined;
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/load")) {
+        return jsonResponse({
+          chat: { id: "attach-chat", title: "Attach chat" },
+          messages: [],
+        });
+      }
+      if (
+        url.includes("/api/chat-runs/") &&
+        !url.endsWith("/elicitation") &&
+        method === "POST"
+      ) {
+        sse = controllableSse(url, init);
+        return sse.response;
+      }
+      return jsonResponse({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { container } = renderChat("attach-chat");
+    await screen.findByLabelText("Message");
+    const fileInput = container.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    expect(fileInput).not.toBeNull();
+    const file = new File([new Uint8Array([1, 2, 3])], "shot.png", {
+      type: "image/png",
+    });
+    await act(async () => {
+      fireEvent.change(fileInput, { target: { files: [file] } });
+    });
+
+    // The tile reads in, and Send enables with no text at all.
+    await screen.findByText("shot.png");
+    const sendButton = (await screen.findByLabelText(
+      "Send",
+    )) as HTMLButtonElement;
+    await waitFor(() => expect(sendButton.disabled).toBe(false));
+
+    await act(async () => {
+      fireEvent.click(sendButton);
+    });
+    await waitFor(() => expect(sse).toBeDefined());
+    // The accepted run renders the attachment tile in the transcript…
+    await waitFor(() =>
+      expect(screen.getAllByAltText("shot.png").length).toBeGreaterThan(0),
+    );
+    // …and the composer draft was consumed only after acceptance.
+    await waitFor(() =>
+      expect(screen.queryByLabelText("Remove shot.png")).toBeNull(),
+    );
+  });
+
+  it("blocks Send while an attachment failed to read, keeping retry and remove", async () => {
+    class FailingReader {
+      onerror: (() => void) | null = null;
+      onload: (() => void) | null = null;
+      result: string | null = null;
+      readAsDataURL() {
+        queueMicrotask(() => this.onerror?.());
+      }
+    }
+    vi.stubGlobal("FileReader", FailingReader);
+    const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => {
+      if (url.endsWith("/load")) {
+        return jsonResponse({
+          chat: { id: "err-chat", title: "Err chat" },
+          messages: [],
+        });
+      }
+      return jsonResponse({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { container } = renderChat("err-chat");
+    const textarea = await screen.findByLabelText("Message");
+    const fileInput = container.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    const file = new File([new Uint8Array([1])], "notes.txt", {
+      type: "text/plain",
+    });
+    await act(async () => {
+      fireEvent.change(fileInput, { target: { files: [file] } });
+    });
+    await act(async () => {
+      fireEvent.change(textarea, { target: { value: "draft text" } });
+    });
+
+    // The failed tile stays with retry/remove; Send must not fire a subset.
+    await screen.findByLabelText("Retry notes.txt");
+    const sendButton = screen.getByLabelText("Send") as HTMLButtonElement;
+    expect(sendButton.disabled).toBe(true);
+    expect(
+      fetchMock.mock.calls.some(
+        ([url, init]) =>
+          typeof url === "string" &&
+          url.includes("/api/chat-runs/") &&
+          (init as RequestInit | undefined)?.method === "POST",
+      ),
+    ).toBe(false);
+
+    // Removing the failed tile unblocks the normal text send path.
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText("Remove notes.txt"));
+    });
+    await waitFor(() => expect(sendButton.disabled).toBe(false));
   });
 });

@@ -17,6 +17,11 @@ import {
   DESKTOP_OPEN_CHAT_FROM_NOTIFICATION_CHANNEL,
 } from "../../shared/desktop-window";
 import {
+  DEFAULT_NOTIFICATION_PREFERENCES,
+  mergeNotificationPreferences,
+  shouldShowOsNotification,
+} from "../../shared/notification-preferences";
+import {
   clearNotificationHistory,
   listNotificationHistory,
   markNotificationHistoryRead,
@@ -85,16 +90,14 @@ export function getNotificationPreferences(): DesktopNotificationPreferences {
 export function setNotificationPreferences(
   input: unknown,
 ): DesktopNotificationPreferences {
-  const osEnabled =
-    is.plainObject(input) && input.osEnabled === false ? false : true;
-  preferences = { osEnabled };
+  preferences = mergeNotificationPreferences(currentPreferences(), input);
   writeNotificationPreferences(preferences);
   return { ...preferences };
 }
 
 function currentPreferences(): DesktopNotificationPreferences {
   preferences ??= readNotificationPreferences();
-  return preferences;
+  return preferences ?? { ...DEFAULT_NOTIFICATION_PREFERENCES };
 }
 
 export function configureDesktopWindowNotifications(window: BrowserWindow) {
@@ -207,6 +210,7 @@ function deliverChatNotification(input: {
   showBackgroundChatNotification({
     body: input.body,
     chat: input.chat,
+    kind: input.kind,
     title: input.title,
     window: input.window,
   });
@@ -215,10 +219,12 @@ function deliverChatNotification(input: {
 function showBackgroundChatNotification(input: {
   body: string;
   chat: Chat;
+  kind: DesktopNotificationKind;
   title: string;
   window?: BrowserWindow | null;
 }) {
-  if (!currentPreferences().osEnabled) return;
+  const prefs = currentPreferences();
+  if (!shouldShowOsNotification(prefs, input.kind)) return;
 
   const window = input.window;
   if (!window || window.isDestroyed() || !isWindowBackgrounded(window)) {
@@ -228,7 +234,7 @@ function showBackgroundChatNotification(input: {
 
   const notification = new Notification({
     body: input.body,
-    silent: false,
+    silent: !prefs.sound,
     title: input.title,
   });
   retainedNotifications.add(notification);

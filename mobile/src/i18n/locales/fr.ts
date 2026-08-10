@@ -23,9 +23,14 @@ export const fr = {
         "Saisissez le mot de passe d'appairage défini dans votre application de bureau pour connecter cet appareil.",
       passwordLabel: "Mot de passe",
       passwordPlaceholder: "Mot de passe d'appairage",
+      passwordHelp: "Les mots de passe respectent la casse.",
+      showPassword: "Afficher le mot de passe",
+      hidePassword: "Masquer le mot de passe",
       incorrectPassword: "Mot de passe incorrect. Réessayez.",
       connectionError:
         "Impossible de joindre l'application de bureau. Vérifiez votre connexion et réessayez.",
+      recoveryHint:
+        "Si vous avez besoin d'un nouveau mot de passe d'appairage, réinitialisez-le dans Paramètres bureau → Vue mobile, puis revenez ici.",
       connecting: "Connexion…",
       connect: "Se connecter",
     },
@@ -36,6 +41,9 @@ export const fr = {
     },
     sidebar: {
       home: "Accueil",
+      navigationTitle: "Navigation",
+      navigationDescription: "Destinations principales dans Angel Engine.",
+      close: "Fermer la navigation",
     },
     daemonStatus: {
       unreachable: "Démon injoignable",
@@ -76,6 +84,20 @@ export const fr = {
       messagePlaceholder: "Message",
       sendAria: "Envoyer",
       stopAria: "Arrêter",
+      attachAria: "Joindre des fichiers",
+      attachments: "Pièces jointes",
+      removeAttachment: "Retirer {{name}}",
+      retryAttachment: "Réessayer {{name}}",
+      roleUser: "Vous",
+      roleAssistant: "Assistant",
+      sendFailed:
+        "Impossible d'envoyer ce message. Votre brouillon est toujours là — réessayez.",
+      attachmentErrors: {
+        accept: "Ce type de fichier n'est pas pris en charge.",
+        maxFileSize: "Chaque fichier doit faire 10 Mo ou moins.",
+        maxFiles: "Vous pouvez joindre jusqu'à 5 fichiers.",
+        fileRead: "Impossible de lire ce fichier. Réessayez ou retirez-le.",
+      },
       plan: "Plan",
       todo: "Tâches",
       build: "Build",
@@ -108,6 +130,7 @@ export const fr = {
         "Démarrez une session d'agent dans un projet ou un worktree.",
       promptLabel: "Invite initiale",
       promptPlaceholder: "Sur quoi l'agent doit-il travailler ?",
+      promptRequired: "Écrivez d'abord un message.",
       projectLabel: "Projet",
       noProject: "Aucun projet (ponctuel)",
       agentLabel: "Agent",
@@ -152,6 +175,27 @@ export const fr = {
           es: "Español",
         },
       },
+      connection: {
+        title: "Connexion",
+        description:
+          "Ce navigateur est appairé à un démon Angel Engine local. La déconnexion n'efface que le jeton de cet appareil.",
+        server: "Serveur appairé",
+        sameOrigin: "Origine de cette page",
+        status: "État",
+        statusOnline: "Connecté",
+        statusConnecting: "Connexion…",
+        statusUnreachable: "Injoignable",
+        daemonVersion: "Version du démon",
+        versionUnknown: "Inconnue",
+        disconnectSectionTitle: "Cet appareil",
+        disconnectDescription:
+          "La déconnexion retire uniquement le jeton d'appairage de ce navigateur. Elle ne réinitialise pas le mot de passe bureau ni ne supprime les discussions.",
+        disconnect: "Déconnecter cet appareil",
+        disconnectConfirmTitle: "Déconnecter cet appareil ?",
+        disconnectConfirmDescription:
+          "Vous aurez besoin du mot de passe d'appairage pour vous reconnecter. Les discussions et le mot de passe bureau restent inchangés.",
+        disconnectConfirm: "Déconnecter",
+      },
       projects: {
         actionError:
           "Impossible d'effectuer cette action sur le projet. Veuillez réessayer.",
@@ -159,6 +203,8 @@ export const fr = {
         createTitle: "Ajouter un projet",
         deleteAria: "Supprimer {{name}}",
         deleteChecking: "Vérification des discussions liées…",
+        deleteConflict:
+          "Le projet a changé depuis l'ouverture de cette boîte de dialogue. Vérifiez l'impact actualisé puis réessayez.",
         deleteImpact:
           "La suppression de ce projet supprimera définitivement {{count}} discussions liées.",
         deleteImpactOne:
@@ -179,6 +225,7 @@ export const fr = {
         pathInvalid: "Saisissez le chemin d'un dossier existant.",
         pathLabel: "Chemin du dossier",
         pathPlaceholder: "/chemin/du/projet",
+        pathRequired: "Saisissez un chemin de dossier.",
         title: "Projets",
       },
       customAgents: {
@@ -189,6 +236,7 @@ export const fr = {
         argsPlaceholder: "Un argument par ligne",
         autoAuthenticateLabel: "S'authentifier automatiquement",
         commandLabel: "Commande",
+        commandRequired: "Saisissez une commande.",
         createTitle: "Ajouter un agent personnalisé",
         deleteAria: "Supprimer {{name}}",
         deleteChecking: "Vérification des discussions liées…",
@@ -213,16 +261,22 @@ export const fr = {
           "Configurez la commande et les arguments facultatifs utilisés pour démarrer cet agent.",
         loadError: "Impossible de charger les agents personnalisés.",
         nameLabel: "Nom",
+        nameRequired: "Saisissez un nom.",
         needAuthLabel: "Authentification requise",
         title: "Agents personnalisés",
       },
       about: {
-        title: "À propos",
-        description:
-          "Ces paramètres n'affectent que cet appareil et restent distincts de la configuration de l'application de bureau.",
-        appName: "Angel Engine Mobile",
         appDescription:
           "Compagnon mobile de l'application de bureau Angel Engine.",
+        appName: "Angel Engine Mobile",
+        build: "Version",
+        copied: "Copié",
+        copyDiagnostics: "Copier les diagnostics",
+        copyFailed: "Échec de la copie. Copiez les informations à la main.",
+        description:
+          "Ces paramètres n'affectent que cet appareil et restent distincts de la configuration de l'application de bureau.",
+        diagnostics: "Diagnostics",
+        title: "À propos",
       },
     },
   },

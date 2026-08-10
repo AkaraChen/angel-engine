@@ -68,6 +68,9 @@ function assistantMessageFromContent(
     id,
     metadata: {
       custom: {
+        // Only a daemon-supplied timestamp is canonical; while streaming the
+        // assistant turn has none, so the marker stays null and no time renders.
+        canonicalCreatedAt: accumulator.createdAt ?? null,
         model: accumulator.result?.model ?? "angel-engine-client",
         turnId: accumulator.result?.turnId,
       },

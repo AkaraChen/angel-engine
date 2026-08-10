@@ -1,9 +1,11 @@
+import type { ChatAttachmentInput } from "@angel-engine/daemon-api/chat";
 import type {
   ChatActiveRunSnapshot,
   ChatElicitationResponse,
   ChatLoadResult,
   ChatRunObserverEvent,
   ChatRunStartInput,
+  ConversationAttachment,
   ConversationMessage,
   DaemonElicitation,
   DaemonMessagePart,
@@ -20,6 +22,7 @@ import { useDaemonClient } from "@/platform/daemon-provider";
 import { queryKeys } from "@/platform/query-keys";
 
 import {
+  partsToAttachments,
   partsToPlans,
   partsToText,
   partsToToolCalls,
@@ -35,13 +38,20 @@ import {
   upsertPlan,
 } from "./plan-utils";
 
+export type ConversationSendResult =
+  | { accepted: true }
+  | { accepted: false; error: string | null };
+
 export interface Conversation {
   messages: ConversationMessage[];
   isPending: boolean;
   isError: boolean;
   refetch: () => void;
   isStreaming: boolean;
-  send: (text: string) => void;
+  send: (
+    text: string,
+    attachments?: ChatAttachmentInput[],
+  ) => Promise<ConversationSendResult>;
   stop: () => void;
   pendingElicitation: DaemonElicitation | null;
   respondElicitation: (response: ChatElicitationResponse) => void;
@@ -55,6 +65,9 @@ interface LiveTurn {
   userId: string;
   assistantId: string;
   userText: string;
+  userAttachments: ConversationAttachment[];
+  userCreatedAt?: string;
+  assistantCreatedAt?: string;
   assistantText: string;
   assistantReasoning: string;
   assistantToolCalls: ProjectedConversationToolCall[];
@@ -65,6 +78,7 @@ const EMPTY_TURN: LiveTurn = {
   userId: "",
   assistantId: "",
   userText: "",
+  userAttachments: [],
   assistantText: "",
   assistantReasoning: "",
   assistantToolCalls: [],
@@ -114,6 +128,9 @@ export function useConversation(chatId: string): Conversation {
   const stopRequestedRef = useRef(false);
   const isStreamingRef = useRef(false);
   const isBootstrappingRef = useRef(true);
+  // A stashed first prompt gets exactly one automatic send attempt per mount;
+  // a rejected start leaves the stash for the next visit instead of looping.
+  const attemptedInitialPromptRef = useRef<string | null>(null);
   const [, forceRender] = useReducer((value: number) => value + 1, 0);
 
   const isCurrent = useCallback(
@@ -243,16 +260,28 @@ export function useConversation(chatId: string): Conversation {
     async (
       controller: AbortController,
       firstStream: () => AsyncIterable<ChatRunObserverEvent>,
+      settlement?: {
+        accept: () => void;
+        rejected: (error: string | null) => void;
+      },
     ) => {
       let openStream = firstStream;
       let sawSnapshot = false;
       let lastFailure: unknown;
+      let accepted = false;
+      let failedAcceptanceChecks = 0;
+      const markAccepted = () => {
+        if (accepted) return;
+        accepted = true;
+        settlement?.accept();
+      };
 
       while (isCurrent(controller)) {
         let terminal = false;
         try {
           for await (const message of openStream()) {
             if (!isCurrent(controller)) return;
+            markAccepted();
             if (message.type === "snapshot") {
               sawSnapshot = true;
               applySnapshot(message.snapshot, controller);
@@ -273,11 +302,27 @@ export function useConversation(chatId: string): Conversation {
         try {
           active = await daemon.chatRuns.active(chatId);
         } catch {
+          // Before acceptance an unreachable daemon means the run was never
+          // started: bound the probes, then report the rejection.
+          if (!accepted && settlement) {
+            failedAcceptanceChecks += 1;
+            if (failedAcceptanceChecks >= 3) {
+              settlement.rejected(errorMessage(lastFailure));
+              return;
+            }
+          }
           await retryDelay(controller.signal);
           continue;
         }
         if (!isCurrent(controller)) return;
         if (active.run === null) {
+          if (!accepted && settlement) {
+            // The daemon answered but has no run: the start was rejected.
+            settlement.rejected(
+              stopRequestedRef.current ? null : errorMessage(lastFailure),
+            );
+            return;
+          }
           if (!sawSnapshot && !stopRequestedRef.current) {
             streamErrorRef.current = errorMessage(lastFailure);
           }
@@ -287,6 +332,7 @@ export function useConversation(chatId: string): Conversation {
 
         sawSnapshot = true;
         const activeRun = active.run;
+        markAccepted();
         applySnapshot(activeRun, controller);
         openStream = () =>
           daemon.chatRuns.observe(activeRun.runId, controller.signal);
@@ -353,6 +399,7 @@ export function useConversation(chatId: string): Conversation {
     stopRequestedRef.current = false;
     isStreamingRef.current = false;
     isBootstrappingRef.current = true;
+    attemptedInitialPromptRef.current = null;
 
     void observeActiveRun(controller);
 
@@ -433,16 +480,18 @@ export function useConversation(chatId: string): Conversation {
   );
 
   const send = useCallback(
-    (raw: string) => {
+    async (
+      raw: string,
+      attachments: ChatAttachmentInput[] = [],
+    ): Promise<ConversationSendResult> => {
       const text = raw.trim();
       if (
-        text.length === 0 ||
+        (text.length === 0 && attachments.length === 0) ||
         observerRef.current !== null ||
         isBootstrappingRef.current
       ) {
-        return;
+        return { accepted: false, error: null };
       }
-      clearNewChatPrompt(chatId);
       const runId = newRunId();
       const controller = new AbortController();
       const config = queryClient.getQueryData<ChatLoadResult>(
@@ -451,6 +500,7 @@ export function useConversation(chatId: string): Conversation {
       const input: ChatRunStartInput = {
         chatId,
         text,
+        ...(attachments.length > 0 ? { attachments } : {}),
         ...(config?.currentMode ? { mode: config.currentMode } : {}),
         ...(config?.currentPermissionMode
           ? { permissionMode: config.currentPermissionMode }
@@ -464,6 +514,28 @@ export function useConversation(chatId: string): Conversation {
         userId: `${runId}:user`,
         assistantId: `${runId}:assistant`,
         userText: text,
+        userAttachments: attachments.map((attachment, index) => ({
+          dataUrl:
+            "data" in attachment && typeof attachment.data === "string"
+              ? attachment.data
+              : undefined,
+          id: `${runId}:att:${index}`,
+          mimeType:
+            "mimeType" in attachment && typeof attachment.mimeType === "string"
+              ? attachment.mimeType
+              : undefined,
+          name:
+            "name" in attachment && typeof attachment.name === "string"
+              ? attachment.name
+              : "Attachment",
+          type:
+            attachment.type === "image" ||
+            ("mimeType" in attachment &&
+              typeof attachment.mimeType === "string" &&
+              attachment.mimeType.startsWith("image/"))
+              ? "image"
+              : "file",
+        })),
         assistantText: "",
         assistantReasoning: "",
         assistantToolCalls: [],
@@ -474,9 +546,37 @@ export function useConversation(chatId: string): Conversation {
       stopRequestedRef.current = false;
       isStreamingRef.current = true;
       forceRender();
-      void consumeRun(controller, () =>
-        daemon.chatRuns.start(runId, input, controller.signal),
-      );
+
+      // The optimistic turn stays on screen until the daemon has actually
+      // accepted the run; a rejected start rolls every optimistic ref back so
+      // the composer's draft and attachments survive untouched.
+      return new Promise<ConversationSendResult>((resolve) => {
+        void consumeRun(
+          controller,
+          () => daemon.chatRuns.start(runId, input, controller.signal),
+          {
+            accept: () => {
+              clearNewChatPrompt(chatId);
+              resolve({ accepted: true });
+            },
+            rejected: (error) => {
+              if (observerRef.current === controller) {
+                observerRef.current = null;
+                runIdRef.current = null;
+                liveChatIdRef.current = "";
+                liveTurnRef.current = EMPTY_TURN;
+                elicitationRef.current = null;
+                streamErrorRef.current = null;
+                stopRequestedRef.current = false;
+                isStreamingRef.current = false;
+                isBootstrappingRef.current = false;
+                forceRender();
+              }
+              resolve({ accepted: false, error });
+            },
+          },
+        );
+      });
     },
     [chatId, consumeRun, daemon, queryClient],
   );
@@ -492,6 +592,7 @@ export function useConversation(chatId: string): Conversation {
     if (liveTurnRef.current.userId.length > 0) return;
     const prompt = readNewChatPrompt(chatId);
     if (prompt === undefined) return;
+    if (attemptedInitialPromptRef.current === prompt) return;
 
     initialPromptTimeoutRef.current = setTimeout(() => {
       initialPromptTimeoutRef.current = null;
@@ -501,8 +602,8 @@ export function useConversation(chatId: string): Conversation {
       ) {
         return;
       }
-      clearNewChatPrompt(chatId);
-      send(prompt);
+      attemptedInitialPromptRef.current = prompt;
+      void send(prompt);
     }, 0);
 
     return () => {
@@ -593,7 +694,10 @@ export function useConversation(chatId: string): Conversation {
   const persisted = history.data ? toConversation(history.data.messages) : [];
   const visibleTurn =
     liveChatIdRef.current === chatId ? liveTurnRef.current : EMPTY_TURN;
-  const hasStashedPrompt = readNewChatPrompt(chatId) !== undefined;
+  const stashedPrompt = readNewChatPrompt(chatId);
+  const hasStashedPrompt =
+    stashedPrompt !== undefined &&
+    attemptedInitialPromptRef.current !== stashedPrompt;
   const live = buildLiveMessages(
     visibleTurn,
     isStreaming,
@@ -632,6 +736,14 @@ function liveTurnFromSnapshot(snapshot: ChatActiveRunSnapshot): LiveTurn {
     userId: snapshot.userMessage.id,
     assistantId: snapshot.assistantMessage.id,
     userText: partsToText(snapshot.userMessage.content, "text"),
+    // The daemon echoes the accepted attachments back in the snapshot; the
+    // optimistic tiles reconcile against this canonical projection.
+    userAttachments: partsToAttachments(
+      snapshot.userMessage.content,
+      snapshot.userMessage.id,
+    ),
+    userCreatedAt: snapshot.userMessage.createdAt,
+    assistantCreatedAt: snapshot.assistantMessage.createdAt,
     assistantText: partsToText(snapshot.assistantMessage.content, "text"),
     assistantReasoning: partsToText(
       snapshot.assistantMessage.content,
@@ -676,6 +788,8 @@ function buildLiveMessages(
       status: "complete",
       toolCalls: [],
       plans: [],
+      createdAt: turn.userCreatedAt,
+      attachments: turn.userAttachments,
     },
   ];
   if (
@@ -695,6 +809,8 @@ function buildLiveMessages(
       error: error ?? undefined,
       toolCalls: turn.assistantToolCalls,
       plans: turn.assistantPlans,
+      createdAt: turn.assistantCreatedAt,
+      attachments: [],
     });
   }
   return messages;

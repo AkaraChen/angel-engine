@@ -69,8 +69,9 @@ export function SettingsNav({
   return (
     <aside
       className="
-        flex w-56 shrink-0 flex-col overflow-y-auto border-r border-border-subtle
-        bg-sidebar px-2.5 pb-4
+        flex w-40 shrink-0 flex-col overflow-y-auto border-r border-border-subtle
+        bg-sidebar px-2 pb-4
+        min-[720px]:w-56 min-[720px]:px-2.5
       "
       data-electron-drag
       style={{ paddingTop: isMacOS ? 44 : 16 }}

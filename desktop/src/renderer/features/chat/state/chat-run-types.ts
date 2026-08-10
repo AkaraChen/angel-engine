@@ -67,6 +67,8 @@ export interface ChatAttentionState {
 
 export interface AssistantAccumulator {
   chunkCount: number;
+  /** Canonical assistant timestamp adopted from the daemon snapshot, if any. */
+  createdAt?: string;
   error?: string;
   parts: ChatHistoryMessagePart[];
   result?: ChatSendResult;

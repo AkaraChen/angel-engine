@@ -210,6 +210,24 @@ describe("projection", () => {
     });
   });
 
+  it("never fabricates restored timestamps the engine boundary does not carry", () => {
+    // DisplayMessageSnapshot has no timestamp field; a restored message must
+    // surface with `createdAt` absent so clients omit the visual time instead
+    // of inventing "now".
+    const snapshot = conversationSnapshot({
+      messages: [
+        {
+          content: [{ text: "restored", type: "text" }],
+          id: "message-1",
+          role: "user",
+        },
+      ],
+    });
+
+    const [message] = conversationMessages(snapshot);
+    expect(message.createdAt).toBeUndefined();
+  });
+
   it("projects turn results and events through the same chat shape", () => {
     const result = projectTurnRunResult({
       conversation: conversationSnapshot({

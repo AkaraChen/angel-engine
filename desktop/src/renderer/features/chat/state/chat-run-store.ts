@@ -290,6 +290,7 @@ async function attachToActiveRun(
     const handles = createRunHandles(runId);
     const accumulator: AssistantAccumulator = {
       chunkCount: 0,
+      createdAt: run.assistantMessage.createdAt,
       parts: [],
       status: { type: "running" },
     };

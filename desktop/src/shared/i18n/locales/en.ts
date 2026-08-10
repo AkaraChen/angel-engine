@@ -95,6 +95,23 @@ export const en = {
       backgroundChatCompleted: "Background chat completed",
       backgroundChatNeedsInput: "Background chat needs input",
       backgroundChatStatus: "Background chat status",
+      browser: {
+        back: "Back",
+        copyUrl: "Copy URL",
+        errors: {
+          navigationFailed: "The page could not be loaded.",
+          offline: "The connection to this site failed.",
+          unknown: "Something went wrong loading this page.",
+          unsupportedUrl: "Only http(s) URLs are supported.",
+        },
+        loadFailedDescription:
+          "History is unchanged. Retry, open the URL externally, or copy it.",
+        loadFailedTitle: "Page could not load",
+        loading: "Loading page",
+        openExternally: "Open externally",
+        retry: "Retry",
+      },
+      chatTabs: "Chat tabs",
       closeTab: "Close tab",
       creationLocationProject: "Project",
       creationLocationSelect: "Create in",
@@ -272,6 +289,11 @@ export const en = {
     fleet: {
       allProjects: "All projects",
       disconnected: "Cannot reach the backend.",
+      disconnectedDescription:
+        "Existing chats remain available. Live Fleet activity cannot refresh until the connection recovers.",
+      disconnectedStale:
+        "Showing the last trustworthy activity. Live updates are paused.",
+      disconnectedTitle: "Fleet disconnected",
       emptySegments: {
         all: "No agents are active.",
         attention: "Nothing needs you right now.",
@@ -293,6 +315,7 @@ export const en = {
         question: "Asked a question",
         runtimeError: "Runtime error",
       },
+      retry: "Retry",
       search: "Search sessions",
       segments: {
         all: "All",
@@ -394,6 +417,14 @@ export const en = {
       agents: {
         enabledLabel: "{{agent}} agent",
         minimumEnabled: "At least one agent must stay enabled.",
+        readiness: {
+          "authentication-required": "Authentication required",
+          checking: "Checking…",
+          error: "Error",
+          prefix: "Status:",
+          ready: "Ready",
+          unavailable: "Unavailable",
+        },
         title: "Agents",
       },
       appearance: {
@@ -544,16 +575,19 @@ export const en = {
         passwordDialogDescription:
           "Enter the password a phone will use to pair with this computer.",
         passwordDialogTitle: "Set pairing password",
+        passwordRequired: "Enter a password.",
         passwordReset: "Reset password",
         passwordSet: "Set password",
         passwordTitle: "Pairing password",
         portDescription:
           "TCP port to listen on. Use 0 to choose automatically.",
+        portInvalid: "Enter a whole port number between 0 and 65535.",
         portTitle: "Listen port",
         qrCode: "QR code",
         qrDialogDescription:
           "Scan with your phone's camera. It must be on the same network, and you will be asked for the pairing password.",
         qrDialogTitle: "Open on your phone",
+        saveFailed: "Couldn't save that setting. Try again.",
         urlDisabled:
           "Turn on the mobile view to get a link you can open on your phone.",
         urlNeedsPassword: "Set a pairing password to enable mobile access.",
@@ -616,6 +650,17 @@ export const en = {
         dirtyPromptTitle: "Dirty repository warning",
         osNotificationsDescription:
           "Show system banners when a background chat finishes, fails, or needs you. In-app history stays available either way.",
+        osNotificationsNeedsInputDescription:
+          "Notify when a background chat is waiting for permission or input.",
+        osNotificationsNeedsInputLabel: "Needs input",
+        osNotificationsRunCompletedDescription:
+          "Notify when a background chat finishes successfully.",
+        osNotificationsRunCompletedLabel: "Run completed",
+        osNotificationsSaveFailed: "Could not save notification preferences.",
+        osNotificationsSaved: "Notification preferences saved.",
+        osNotificationsSoundDescription:
+          "Play the system notification sound with OS banners.",
+        osNotificationsSoundLabel: "Sound",
         osNotificationsSwitchLabel: "Show OS notifications",
         osNotificationsTitle: "OS notifications",
         sendWithModEnterDescription:
@@ -707,6 +752,11 @@ export const en = {
           "What would you like Angel Engine to do in <project>{{projectName}}</project>?",
       },
       quote: "Quote",
+      restoreBack: "Back to home",
+      restoreFailedDescription:
+        "History is unchanged. Retry the runtime hydrate.",
+      restoreFailedTitle: "Chat could not be restored",
+      restoreRetry: "Retry restore",
       restoring: "Restoring chat",
     },
     composer: {
@@ -856,6 +906,9 @@ export const en = {
           "Your changes will be lost if you don't save them.",
         saveFileChangesTitle: "Save changes to {{path}}?",
       },
+      confirmDeleteChatDetail:
+        "This permanently deletes the chat from Angel Engine. This cannot be undone.",
+      confirmDeleteChatTitle: 'Delete "{{title}}"?',
       importSession: {
         cwdLabel: "Directory: {{cwd}}",
         description:
@@ -971,6 +1024,16 @@ export const en = {
     },
     projects: {
       chooseFolder: "Choose project folder",
+      confirmDeleteDetail:
+        "This permanently removes the project from Angel Engine and deletes {{count}} linked chats. Files in the project folder will be kept. This cannot be undone.",
+      confirmDeleteDetailNone:
+        "This permanently removes the project from Angel Engine. No linked chats will be deleted. Files in the project folder will be kept. This cannot be undone.",
+      confirmDeleteDetailOne:
+        "This permanently removes the project from Angel Engine and deletes 1 linked chat. Files in the project folder will be kept. This cannot be undone.",
+      confirmDeleteTitle: 'Delete "{{name}}"?',
+      deleteConflictDetail:
+        "The project changed after this confirmation was prepared, so nothing was deleted. Open the delete confirmation again to review the updated impact.",
+      deleteConflictTitle: "Project changed",
       openInFinder: "Open in Finder",
       settings: "Settings",
       settingsLoadFailed: "Could not load project settings",

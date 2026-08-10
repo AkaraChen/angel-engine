@@ -13,6 +13,12 @@ import type {
   RefObject,
 } from "react";
 import {
+  CHAT_ATTACHMENT_ACCEPT,
+  CHAT_ATTACHMENT_MAX_FILE_BYTES,
+  CHAT_ATTACHMENT_MAX_FILES,
+  chatAttachmentTypeAccepted,
+} from "@angel-engine/daemon-api/chat";
+import {
   KeyReturn as CornerDownLeftIcon,
   Image as ImageIcon,
   Monitor,
@@ -542,11 +548,11 @@ export type PromptInputProps = Omit<
 export function PromptInput({
   className,
   inputGroupClassName,
-  accept,
+  accept = CHAT_ATTACHMENT_ACCEPT,
   multiple,
   globalDrop,
-  maxFiles,
-  maxFileSize,
+  maxFiles = CHAT_ATTACHMENT_MAX_FILES,
+  maxFileSize = CHAT_ATTACHMENT_MAX_FILE_BYTES,
   onError,
   onSubmit,
   children,
@@ -593,10 +599,23 @@ export function PromptInput({
       if (!accept) {
         return true;
       }
+      // The shared upload contract is decided by one receiving-boundary
+      // matcher, not a second implementation here (extension patterns like
+      // `.pdf`/`.txt` included).
+      if (accept === CHAT_ATTACHMENT_ACCEPT) {
+        return chatAttachmentTypeAccepted({
+          mimeType: f.type || "application/octet-stream",
+          name: f.name,
+        });
+      }
 
       const patterns = accept.split(",").filter(Boolean);
+      const name = f.name.toLowerCase();
 
       return patterns.some((pattern) => {
+        if (pattern.startsWith(".")) {
+          return name.endsWith(pattern.toLowerCase());
+        }
         if (pattern.endsWith("/*")) {
           // e.g: image/* -> image/
           const prefix = pattern.slice(0, -1);
@@ -612,22 +631,36 @@ export function PromptInput({
     (fileList: File[] | FileList) => {
       const incoming = [...fileList];
       const accepted = incoming.filter((f) => matchesAccept(f));
-      if (incoming.length && accepted.length === 0) {
+      const withinSize = (f: File) =>
+        maxFileSize ? f.size <= maxFileSize : true;
+      const sized = accepted.filter(withinSize);
+      // Mixed batches keep the good items and still name what was dropped.
+      const rejectedType = incoming.length - accepted.length;
+      const rejectedSize = accepted.length - sized.length;
+      if (incoming.length > 0 && sized.length === 0) {
+        onError?.(
+          rejectedType > 0
+            ? {
+                code: "accept",
+                message: t("composer.attachmentErrors.accept"),
+              }
+            : {
+                code: "max_file_size",
+                message: t("composer.attachmentErrors.maxFileSize"),
+              },
+        );
+        return;
+      }
+      if (rejectedType > 0) {
         onError?.({
           code: "accept",
           message: t("composer.attachmentErrors.accept"),
         });
-        return;
-      }
-      const withinSize = (f: File) =>
-        maxFileSize ? f.size <= maxFileSize : true;
-      const sized = accepted.filter(withinSize);
-      if (accepted.length > 0 && sized.length === 0) {
+      } else if (rejectedSize > 0) {
         onError?.({
           code: "max_file_size",
           message: t("composer.attachmentErrors.maxFileSize"),
         });
-        return;
       }
 
       setItems((prev) => {
@@ -678,22 +711,35 @@ export function PromptInput({
     (fileList: File[] | FileList) => {
       const incoming = [...fileList];
       const accepted = incoming.filter((f) => matchesAccept(f));
-      if (incoming.length && accepted.length === 0) {
+      const withinSize = (f: File) =>
+        maxFileSize ? f.size <= maxFileSize : true;
+      const sized = accepted.filter(withinSize);
+      const rejectedType = incoming.length - accepted.length;
+      const rejectedSize = accepted.length - sized.length;
+      if (incoming.length > 0 && sized.length === 0) {
+        onError?.(
+          rejectedType > 0
+            ? {
+                code: "accept",
+                message: t("composer.attachmentErrors.accept"),
+              }
+            : {
+                code: "max_file_size",
+                message: t("composer.attachmentErrors.maxFileSize"),
+              },
+        );
+        return;
+      }
+      if (rejectedType > 0) {
         onError?.({
           code: "accept",
           message: t("composer.attachmentErrors.accept"),
         });
-        return;
-      }
-      const withinSize = (f: File) =>
-        maxFileSize ? f.size <= maxFileSize : true;
-      const sized = accepted.filter(withinSize);
-      if (accepted.length > 0 && sized.length === 0) {
+      } else if (rejectedSize > 0) {
         onError?.({
           code: "max_file_size",
           message: t("composer.attachmentErrors.maxFileSize"),
         });
-        return;
       }
 
       const currentCount = files.length;

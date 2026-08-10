@@ -14,9 +14,9 @@ import type { ChatStreamControls } from "./runtime";
 
 import {
   appendChatTextPart,
+  chatRunUserMessageContent,
   chatToolActionToPart,
   cloneChatHistoryPart,
-  imageDataUrl,
   normalizeChatAttachmentsInput,
   upsertChatElicitationPart,
   upsertChatPlanPart,
@@ -149,7 +149,7 @@ export class ChatRunRegistry {
         status: "running",
         updatedAt: startedAt,
         userMessage: {
-          content: userMessageContent(normalizedInput),
+          content: chatRunUserMessageContent(normalizedInput),
           createdAt: startedAt,
           id: `${runId}:user`,
           role: "user",
@@ -472,54 +472,6 @@ function upsertToolPart(
   );
   if (index === -1) parts.push(next);
   else parts[index] = next;
-}
-
-function userMessageContent(
-  input: ChatRunStartInput,
-): ChatHistoryMessagePart[] {
-  const content: ChatHistoryMessagePart[] =
-    input.text.length > 0 ? [{ text: input.text, type: "text" }] : [];
-  for (const attachment of normalizeChatAttachmentsInput(input.attachments)) {
-    switch (attachment.type) {
-      case "image":
-        content.push({
-          filename: attachment.name ?? undefined,
-          image: imageDataUrl(attachment.data, attachment.mimeType),
-          mimeType: attachment.mimeType,
-          type: "image",
-        });
-        break;
-      case "file":
-        content.push({
-          data: attachment.data,
-          filename: attachment.name ?? undefined,
-          mimeType: attachment.mimeType,
-          type: "file",
-        });
-        break;
-      case "fileMention":
-        content.push({
-          data: attachment.path,
-          filename: attachment.name ?? undefined,
-          mention: true,
-          mimeType: attachment.mimeType ?? "application/octet-stream",
-          path: attachment.path,
-          type: "file",
-        });
-        break;
-      case "skillMention":
-        content.push({
-          data: attachment.path,
-          filename: attachment.name,
-          mention: true,
-          mimeType: "text/plain",
-          path: attachment.path,
-          type: "file",
-        });
-        break;
-    }
-  }
-  return content;
 }
 
 function cloneSnapshot(snapshot: ChatActiveRunSnapshot): ChatActiveRunSnapshot {

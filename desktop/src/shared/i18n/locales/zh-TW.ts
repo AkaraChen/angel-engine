@@ -95,6 +95,23 @@ export const zhTW = {
       backgroundChatCompleted: "背景聊天已完成",
       backgroundChatNeedsInput: "背景聊天需要輸入",
       backgroundChatStatus: "背景聊天狀態",
+      browser: {
+        back: "返回",
+        copyUrl: "複製 URL",
+        errors: {
+          navigationFailed: "無法載入該頁面。",
+          offline: "無法連線到此網站。",
+          unknown: "載入此頁面時發生錯誤。",
+          unsupportedUrl: "僅支援 http(s) URL。",
+        },
+        loadFailedDescription:
+          "歷史記錄未變更。請重試、在外部開啟，或複製 URL。",
+        loadFailedTitle: "無法載入頁面",
+        loading: "正在載入頁面",
+        openExternally: "在外部開啟",
+        retry: "重試",
+      },
+      chatTabs: "聊天分頁",
       closeTab: "關閉標籤頁",
       creationLocationProject: "專案本機",
       creationLocationSelect: "建立位置",
@@ -265,6 +282,10 @@ export const zhTW = {
     fleet: {
       allProjects: "全部專案",
       disconnected: "無法連線後端。",
+      disconnectedDescription:
+        "現有聊天仍可使用。在連線恢復前，無法重新整理 Fleet 即時動態。",
+      disconnectedStale: "正在顯示最後可信的動態。即時更新已暫停。",
+      disconnectedTitle: "艦隊已中斷連線",
       emptySegments: {
         all: "目前沒有進行中的 Agent。",
         attention: "目前沒有需要你處理的工作階段。",
@@ -280,6 +301,7 @@ export const zhTW = {
       },
       loading: "正在載入動態",
       noMatches: "沒有符合的工作階段。",
+      retry: "重試",
       reasons: {
         approval: "等待授權",
         processExited: "處理程序已結束",
@@ -388,6 +410,14 @@ export const zhTW = {
       agents: {
         enabledLabel: "{{agent}} Agent",
         minimumEnabled: "至少需要啟用一個 Agent。",
+        readiness: {
+          "authentication-required": "需要身分驗證",
+          checking: "檢查中…",
+          error: "錯誤",
+          prefix: "狀態：",
+          ready: "就緒",
+          unavailable: "無法使用",
+        },
         title: "Agents",
       },
       appearance: {
@@ -535,15 +565,18 @@ export const zhTW = {
           "手機與守護程序配對並取得存取權杖時需要輸入的密碼。",
         passwordDialogDescription: "輸入手機與這台電腦配對時使用的密碼。",
         passwordDialogTitle: "設定配對密碼",
+        passwordRequired: "請輸入密碼。",
         passwordReset: "重設密碼",
         passwordSet: "設定密碼",
         passwordTitle: "配對密碼",
         portDescription: "守護程序監聽的 TCP 連接埠。輸入 0 可自動選擇。",
+        portInvalid: "請輸入 0 到 65535 之間的整數連接埠號。",
         portTitle: "監聽連接埠",
         qrCode: "QR Code",
         qrDialogDescription:
           "用手機相機掃描。手機需連接同一網路，並需要輸入配對密碼。",
         qrDialogTitle: "在手機上開啟",
+        saveFailed: "無法儲存該設定。請重試。",
         urlDisabled: "開啟行動版存取後即可取得可在手機上開啟的連結。",
         urlNeedsPassword: "設定配對密碼後即可啟用行動版存取。",
         urlOpen: "在瀏覽器中開啟",
@@ -598,6 +631,14 @@ export const zhTW = {
         dirtyPromptTitle: "未提交變更提醒",
         osNotificationsDescription:
           "在背景工作階段完成、失敗或需要你處理時顯示系統通知。關閉後仍可在應用內查看歷史。",
+        osNotificationsNeedsInputDescription: "背景對話等待許可或輸入時通知。",
+        osNotificationsNeedsInputLabel: "需要輸入",
+        osNotificationsRunCompletedDescription: "背景對話成功完成時通知。",
+        osNotificationsRunCompletedLabel: "執行完成",
+        osNotificationsSaveFailed: "無法儲存通知偏好。",
+        osNotificationsSaved: "已儲存通知偏好。",
+        osNotificationsSoundDescription: "系統通知橫幅播放提示音。",
+        osNotificationsSoundLabel: "聲音",
         osNotificationsSwitchLabel: "顯示系統通知",
         osNotificationsTitle: "系統通知",
         sendWithModEnterDescription:
@@ -684,6 +725,10 @@ export const zhTW = {
           "希望 Angel Engine 在 <project>{{projectName}}</project> 做些什麼？",
       },
       quote: "引用",
+      restoreBack: "返回首頁",
+      restoreFailedDescription: "歷史記錄未變更。請重試執行階段還原。",
+      restoreFailedTitle: "無法還原聊天",
+      restoreRetry: "重試還原",
       restoring: "正在還原聊天",
     },
     composer: {
@@ -824,6 +869,9 @@ export const zhTW = {
         saveFileChangesDetail: "如果不儲存，你的變更將會遺失。",
         saveFileChangesTitle: "要儲存對 {{path}} 的變更嗎？",
       },
+      confirmDeleteChatDetail:
+        "這會從 Angel Engine 永久刪除此聊天。此操作無法復原。",
+      confirmDeleteChatTitle: "刪除「{{title}}」？",
       importSession: {
         cwdLabel: "目錄：{{cwd}}",
         description:
@@ -938,6 +986,16 @@ export const zhTW = {
     },
     projects: {
       chooseFolder: "選擇專案資料夾",
+      confirmDeleteDetail:
+        "這會從 Angel Engine 永久移除此專案，並刪除 {{count}} 個關聯對話。專案資料夾中的檔案會保留。此操作無法復原。",
+      confirmDeleteDetailNone:
+        "這會從 Angel Engine 永久移除此專案。不會刪除關聯對話。專案資料夾中的檔案會保留。此操作無法復原。",
+      confirmDeleteDetailOne:
+        "這會從 Angel Engine 永久移除此專案，並刪除 1 個關聯對話。專案資料夾中的檔案會保留。此操作無法復原。",
+      confirmDeleteTitle: "刪除「{{name}}」？",
+      deleteConflictDetail:
+        "準備此確認後專案已發生變更，因此未刪除任何內容。請重新開啟刪除確認以查看更新後的影響。",
+      deleteConflictTitle: "專案已變更",
       openInFinder: "在 Finder 中開啟",
       settings: "設定",
       settingsLoadFailed: "無法載入專案設定",

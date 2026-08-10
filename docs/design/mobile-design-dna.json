@@ -1,0 +1,29 @@
+{
+  "meta": {
+    "name": "Angel Engine Mobile",
+    "description": "Intentional deviations of the mobile companion from the desktop design-system contract. Shared semantic colors, type families, radius, status, and chart meaning match desktop grass/DM Sans; this file records only platform-specific density and chrome differences.",
+    "source_references": [
+      "docs/design/shared-semantic-tokens.json",
+      "mobile/src/index.css",
+      "desktop/src/renderer/index-foundation.css"
+    ],
+    "created_at": "2026-08-10",
+    "canonical_shared": "docs/design/shared-semantic-tokens.json"
+  },
+  "intentional_deviations": {
+    "density": {
+      "touch_target": "2.75rem (44px) minimum hit target via --touch-target; desktop pointer chrome is denser",
+      "workspace_mode_ladder": "Not used on mobile; no [data-workspace-mode] type compression",
+      "safe_area": "Uses env(safe-area-inset-*) on shell, drawers, FAB, and footers"
+    },
+    "chrome": {
+      "macos_sidebar": "No --macos-sidebar-background; mobile uses standard sidebar tokens only",
+      "workspace_composer_tokens": "Desktop-only composer sizing tokens are omitted"
+    },
+    "shared_meaning": {
+      "primary": "Same grass #59802c light / #8dbb56 dark as desktop",
+      "background": "Same paper #f5f8ee light / #0c0d0b dark as desktop",
+      "azure": "Retained only for status-info and non-accent chart roles, not product primary"
+    }
+  }
+}

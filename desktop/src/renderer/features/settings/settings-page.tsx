@@ -396,14 +396,27 @@ function WorkspaceSettings() {
 
 function OsNotificationSettings() {
   const { t } = useTranslation();
-  const [osEnabled, setOsEnabled] = useState(true);
+  const [preferences, setPreferences] = useState({
+    needsInput: true,
+    osEnabled: true,
+    runCompleted: true,
+    sound: true,
+  });
   const [ready, setReady] = useState(false);
+  const [saveState, setSaveState] = useState<"idle" | "saved" | "failed">(
+    "idle",
+  );
 
   useEffect(() => {
     let cancelled = false;
     void window.desktopWindow.getNotificationPreferences().then((prefs) => {
       if (cancelled) return;
-      setOsEnabled(prefs.osEnabled);
+      setPreferences({
+        needsInput: prefs.needsInput,
+        osEnabled: prefs.osEnabled,
+        runCompleted: prefs.runCompleted,
+        sound: prefs.sound,
+      });
       setReady(true);
     });
     return () => {
@@ -411,24 +424,106 @@ function OsNotificationSettings() {
     };
   }, []);
 
+  const persist = async (
+    patch: Partial<{
+      needsInput: boolean;
+      osEnabled: boolean;
+      runCompleted: boolean;
+      sound: boolean;
+    }>,
+  ) => {
+    const next = { ...preferences, ...patch };
+    setPreferences(next);
+    setSaveState("idle");
+    try {
+      const saved = await window.desktopWindow.setNotificationPreferences(next);
+      setPreferences({
+        needsInput: saved.needsInput,
+        osEnabled: saved.osEnabled,
+        runCompleted: saved.runCompleted,
+        sound: saved.sound,
+      });
+      setSaveState("saved");
+    } catch {
+      setSaveState("failed");
+    }
+  };
+
   return (
-    <SettingsRow
-      after={
-        <Switch
-          aria-label={t("settings.workspace.osNotificationsSwitchLabel")}
-          checked={osEnabled}
-          disabled={!ready}
-          onCheckedChange={(checked) => {
-            setOsEnabled(checked);
-            void window.desktopWindow.setNotificationPreferences({
-              osEnabled: checked,
-            });
-          }}
-        />
-      }
-      description={t("settings.workspace.osNotificationsDescription")}
-      title={t("settings.workspace.osNotificationsTitle")}
-    />
+    <>
+      <SettingsRow
+        after={
+          <Switch
+            aria-label={t("settings.workspace.osNotificationsSwitchLabel")}
+            checked={preferences.osEnabled}
+            disabled={!ready}
+            onCheckedChange={(checked) => {
+              void persist({ osEnabled: checked });
+            }}
+          />
+        }
+        description={t("settings.workspace.osNotificationsDescription")}
+        title={t("settings.workspace.osNotificationsTitle")}
+      />
+      <SettingsRow
+        after={
+          <Switch
+            aria-label={t("settings.workspace.osNotificationsNeedsInputLabel")}
+            checked={preferences.needsInput}
+            disabled={!ready}
+            onCheckedChange={(checked) => {
+              void persist({ needsInput: checked });
+            }}
+          />
+        }
+        description={t(
+          "settings.workspace.osNotificationsNeedsInputDescription",
+        )}
+        title={t("settings.workspace.osNotificationsNeedsInputLabel")}
+      />
+      <SettingsRow
+        after={
+          <Switch
+            aria-label={t(
+              "settings.workspace.osNotificationsRunCompletedLabel",
+            )}
+            checked={preferences.runCompleted}
+            disabled={!ready}
+            onCheckedChange={(checked) => {
+              void persist({ runCompleted: checked });
+            }}
+          />
+        }
+        description={t(
+          "settings.workspace.osNotificationsRunCompletedDescription",
+        )}
+        title={t("settings.workspace.osNotificationsRunCompletedLabel")}
+      />
+      <SettingsRow
+        after={
+          <Switch
+            aria-label={t("settings.workspace.osNotificationsSoundLabel")}
+            checked={preferences.sound}
+            disabled={!ready}
+            onCheckedChange={(checked) => {
+              void persist({ sound: checked });
+            }}
+          />
+        }
+        description={t("settings.workspace.osNotificationsSoundDescription")}
+        title={t("settings.workspace.osNotificationsSoundLabel")}
+      />
+      {saveState === "saved" ? (
+        <p className="text-muted-foreground px-1 text-xs" role="status">
+          {t("settings.workspace.osNotificationsSaved")}
+        </p>
+      ) : null}
+      {saveState === "failed" ? (
+        <p className="text-status-danger px-1 text-xs" role="alert">
+          {t("settings.workspace.osNotificationsSaveFailed")}
+        </p>
+      ) : null}
+    </>
   );
 }
 
@@ -519,6 +614,7 @@ function AgentsSettings({
         visibleEnabledCount={visibleEnabledCount}
       />
       <CustomAgentsSettingsGroup
+        availableAgentOptions={availableAgentOptions}
         customAgents={visibleCustomAgents}
         enabledRuntimeSet={enabledRuntimeSet}
         onAgentEnabledChange={onAgentEnabledChange}

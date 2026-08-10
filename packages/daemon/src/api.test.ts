@@ -9,14 +9,29 @@ import type { DaemonRuntime } from "./platform/runtime";
 
 import { Effect, Layer, ManagedRuntime } from "effect";
 import { Hono } from "hono";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { createClient } from "@libsql/client";
+import { drizzle } from "drizzle-orm/libsql";
+import { mkdtemp, rm } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { registerApi } from "./api";
+import { chats, customAgents, projects } from "./db/schema";
 import { createChatEvents } from "./features/chat/chat-events";
 import { ChatEngine } from "./features/chat/engine-runtime";
 import { TerminalService } from "./features/terminal/manager";
-import { Db } from "./platform/db";
+import { type AppDatabase, Db } from "./platform/db";
 import { DaemonError } from "./platform/errors";
 import { ProcessRegistryService } from "./processes";
+
+const tempDirs: string[] = [];
+
+afterEach(async () => {
+  await Promise.all(
+    tempDirs.splice(0).map((dir) => rm(dir, { force: true, recursive: true })),
+  );
+});
 
 const chat: Chat = {
   archived: false,
@@ -654,6 +669,157 @@ describe("daemon chat runs", () => {
   });
 });
 
+describe("project deletion", () => {
+  const projectRow = { id: "project-1", path: "/tmp/project-1" };
+  const linkedChatRow = {
+    archived: false,
+    createdAt: "2026-07-13T00:00:00.000Z",
+    cwd: null,
+    id: "chat-linked",
+    pinned: false,
+    projectId: "project-1",
+    remoteThreadId: null,
+    runtime: "codex",
+    title: "Linked",
+    updatedAt: "2026-07-13T00:00:00.000Z",
+  };
+
+  async function projectDatabase() {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "angel-api-projects-"));
+    tempDirs.push(dir);
+    const client = createClient({
+      url: pathToFileURL(path.join(dir, "test.sqlite")).href,
+    });
+    await client.execute("PRAGMA foreign_keys = ON");
+    await client.execute(
+      "CREATE TABLE projects (id TEXT PRIMARY KEY, path TEXT NOT NULL UNIQUE)",
+    );
+    await client.execute(`CREATE TABLE chats (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      project_id TEXT REFERENCES projects(id) ON DELETE CASCADE,
+      cwd TEXT,
+      runtime TEXT NOT NULL,
+      remote_thread_id TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      archived INTEGER NOT NULL DEFAULT 0,
+      pinned INTEGER NOT NULL DEFAULT 0
+    )`);
+    const database = drizzle(client, {
+      schema: { chats, customAgents, projects },
+    }) as AppDatabase;
+    await database.insert(projects).values(projectRow);
+    await database.insert(chats).values(linkedChatRow);
+    return database;
+  }
+
+  function projectDeleteApp(
+    database: AppDatabase,
+    overrides: Partial<ChatEngineValue>,
+    publish: (event: DaemonGlobalEvent) => void,
+  ) {
+    const app = new Hono();
+    app.onError((error, context) =>
+      error instanceof DaemonError
+        ? context.json({ code: error.code }, error.status)
+        : context.json({ code: "internal" }, 500),
+    );
+    registerApi(
+      app,
+      fakeDaemonRuntime(overrides, database),
+      createChatEvents({ publish }),
+    );
+    return app;
+  }
+
+  it("requires the confirmation revision before deleting anything", async () => {
+    const database = await projectDatabase();
+    const app = projectDeleteApp(database, {}, vi.fn());
+
+    const response = await app.request(`/api/projects/${projectRow.id}`, {
+      method: "DELETE",
+    });
+
+    expect(response.status).toBe(400);
+    await expect(database.select().from(projects).all()).resolves.toHaveLength(
+      1,
+    );
+    await expect(database.select().from(chats).all()).resolves.toHaveLength(1);
+  });
+
+  it("rejects a stale revision and closes no sessions", async () => {
+    const database = await projectDatabase();
+    const closeChatSession = vi.fn(() => Effect.void);
+    const finishChatDeletion = vi.fn(() => Effect.void);
+    const app = projectDeleteApp(
+      database,
+      { closeChatSession, finishChatDeletion },
+      vi.fn(),
+    );
+
+    const response = await app.request(`/api/projects/${projectRow.id}`, {
+      body: JSON.stringify({ expectedRevision: "stale-revision" }),
+      headers: { "content-type": "application/json" },
+      method: "DELETE",
+    });
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      code: "project-delete-conflict",
+    });
+    expect(closeChatSession).not.toHaveBeenCalled();
+    expect(finishChatDeletion).not.toHaveBeenCalled();
+    await expect(database.select().from(projects).all()).resolves.toHaveLength(
+      1,
+    );
+    await expect(database.select().from(chats).all()).resolves.toHaveLength(1);
+  });
+
+  it("deletes the linked chats, closes their sessions, and publishes metadata", async () => {
+    const database = await projectDatabase();
+    const closeChatSession = vi.fn((_chatId?: string) => Effect.void);
+    const finishChatDeletion = vi.fn((_chatId: string) => Effect.void);
+    const publish = vi.fn();
+    const app = projectDeleteApp(
+      database,
+      { closeChatSession, finishChatDeletion },
+      publish,
+    );
+
+    const impactResponse = await app.request(
+      `/api/projects/${projectRow.id}/delete-impact`,
+    );
+    expect(impactResponse.status).toBe(200);
+    const impact = (await impactResponse.json()) as {
+      chatCount: number;
+      revision: string;
+    };
+    expect(impact.chatCount).toBe(1);
+
+    const response = await app.request(`/api/projects/${projectRow.id}`, {
+      body: JSON.stringify({ expectedRevision: impact.revision }),
+      headers: { "content-type": "application/json" },
+      method: "DELETE",
+    });
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      deletedChatCount: 1,
+      deletedWorktreeCount: 0,
+    });
+    expect(closeChatSession).toHaveBeenCalledWith(linkedChatRow.id);
+    expect(finishChatDeletion).toHaveBeenCalledWith(linkedChatRow.id);
+    await expect(database.select().from(projects).all()).resolves.toHaveLength(
+      0,
+    );
+    await expect(database.select().from(chats).all()).resolves.toHaveLength(0);
+    expect(publish).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "chat-metadata-changed" }),
+    );
+  });
+});
+
 describe("managed worktrees", () => {
   it("rejects deleting a path outside the managed worktree root", async () => {
     const app = new Hono();
@@ -693,6 +859,7 @@ type ChatEngineValue = Omit<Effect.Effect.Success<typeof ChatEngine>, "_tag">;
 
 function fakeDaemonRuntime(
   overrides: Partial<ChatEngineValue> = {},
+  database?: AppDatabase,
 ): DaemonRuntime {
   const unsupported = () =>
     Effect.die(DaemonError.internal(new Error("Not used in this test.")));
@@ -732,10 +899,14 @@ function fakeDaemonRuntime(
   return ManagedRuntime.make(
     Layer.mergeAll(
       Layer.succeed(ChatEngine, new ChatEngine(engine)),
-      // The fake engine never touches the database.
       Layer.succeed(
         Db,
-        new Db({ database: Effect.die("Database is not used in this test.") }),
+        new Db({
+          database: database
+            ? Effect.succeed(database)
+            : // The fake engine never touches the database.
+              Effect.die("Database is not used in this test."),
+        }),
       ),
       ProcessRegistryService.Default,
       TerminalService.Default,

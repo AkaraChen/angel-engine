@@ -8,6 +8,7 @@ import type { WorktreeDraftGuard } from "@/app/workspace/use-worktree-draft-guar
 import is from "@sindresorhus/is";
 import { Suspense, useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { ChatRestoreErrorBoundary } from "@/app/workspace/chat-restore-error-boundary";
 import { ChatRestoreLoading } from "@/app/workspace/chat-restore-loading";
 import { DraftCreationLocationSelect } from "@/app/workspace/draft-project-select";
 import { NewChatThread } from "@/app/workspace/new-chat-thread";
@@ -15,9 +16,14 @@ import { PowerWorktreeHistoryPage } from "@/app/workspace/power-worktree-history
 import { PowerWorktreeTabBar } from "@/app/workspace/power-worktree-tab-bar";
 import {
   ActiveChatThread,
-  ChatRestoreErrorBoundary,
   RestoredChatThread,
 } from "@/app/workspace/workspace-chat-thread";
+import {
+  POWER_CHAT_TAB_PANEL_ID,
+  powerChatTabId,
+  POWER_CHAT_TAB_DRAFT_ID,
+  POWER_CHAT_TAB_HOME_ID,
+} from "@/features/chat/components/chat-tab-bar";
 import { draftAgentConfigFromExplicitOverrides } from "@/app/workspace/workspace-draft-agent-config";
 import { WorkspaceHeader } from "@/app/workspace/workspace-header";
 import { WorkspaceKeymapBindings } from "@/app/workspace/workspace-keymap-bindings";
@@ -475,6 +481,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                 chats={chatTabChats}
                 draftTabActive={powerDraftTabActive}
                 homeTabActive={powerHomePageContext !== undefined}
+                tabPanelId={POWER_CHAT_TAB_PANEL_ID}
                 onCloseChat={closeChatTab}
                 onCloseDraftTab={closeDraftTab}
                 onNewChat={openDraftTabFromTabBar}
@@ -484,8 +491,29 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
             ) : null}
             <main className="flex min-h-0 flex-1 overflow-hidden">
               <section
+                aria-labelledby={
+                  powerModeActive && powerHomeTabContext !== undefined
+                    ? powerChatTabId(
+                        powerHomePageContext !== undefined
+                          ? POWER_CHAT_TAB_HOME_ID
+                          : powerDraftTabActive
+                            ? POWER_CHAT_TAB_DRAFT_ID
+                            : (selectedChatId ?? POWER_CHAT_TAB_HOME_ID),
+                      )
+                    : undefined
+                }
                 className="flex min-h-0 min-w-0 flex-1 flex-col"
                 data-workspace-mode={workspaceMode}
+                id={
+                  powerModeActive && powerHomeTabContext !== undefined
+                    ? POWER_CHAT_TAB_PANEL_ID
+                    : undefined
+                }
+                role={
+                  powerModeActive && powerHomeTabContext !== undefined
+                    ? "tabpanel"
+                    : undefined
+                }
               >
                 {scheduleActive ? (
                   <SchedulePage projects={projects} />
@@ -543,7 +571,17 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                       setPersistedChatRuntime={setPersistedChatRuntime}
                     />
                   ) : (
-                    <ChatRestoreErrorBoundary key={selectedChatId}>
+                    <ChatRestoreErrorBoundary
+                      key={selectedChatId}
+                      onBack={() =>
+                        navigateToDraft(routeProjectId, { replace: true })
+                      }
+                      onRetry={() =>
+                        queryClient.resetQueries({
+                          queryKey: queryKeys.chats.detail(selectedChatId),
+                        })
+                      }
+                    >
                       <Suspense fallback={<ChatRestoreLoading />}>
                         <RestoredChatThread
                           api={api}

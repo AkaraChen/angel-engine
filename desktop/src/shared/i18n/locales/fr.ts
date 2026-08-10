@@ -96,6 +96,24 @@ export const fr = {
       backgroundChatNeedsInput:
         "La discussion en arrière-plan attend une saisie",
       backgroundChatStatus: "État de la discussion en arrière-plan",
+      browser: {
+        back: "Retour",
+        copyUrl: "Copier l’URL",
+        errors: {
+          navigationFailed: "La page n’a pas pu être chargée.",
+          offline: "La connexion à ce site a échoué.",
+          unknown:
+            "Une erreur s’est produite lors du chargement de cette page.",
+          unsupportedUrl: "Seules les URL http(s) sont prises en charge.",
+        },
+        loadFailedDescription:
+          "L’historique est inchangé. Réessayez, ouvrez l’URL en externe ou copiez-la.",
+        loadFailedTitle: "Impossible de charger la page",
+        loading: "Chargement de la page",
+        openExternally: "Ouvrir en externe",
+        retry: "Réessayer",
+      },
+      chatTabs: "Onglets de discussion",
       closeTab: "Fermer l'onglet",
       creationLocationProject: "Projet",
       creationLocationSelect: "Créer dans",
@@ -274,6 +292,11 @@ export const fr = {
     fleet: {
       allProjects: "Tous les projets",
       disconnected: "Backend injoignable.",
+      disconnectedDescription:
+        "Les discussions existantes restent disponibles. L’activité Fleet en direct ne peut pas se rafraîchir tant que la connexion n’est pas rétablie.",
+      disconnectedStale:
+        "Affichage de la dernière activité fiable. Les mises à jour en direct sont en pause.",
+      disconnectedTitle: "Fleet déconnecté",
       emptySegments: {
         all: "Aucun agent actif.",
         attention: "Rien n'attend votre action pour le moment.",
@@ -289,6 +312,7 @@ export const fr = {
       },
       loading: "Chargement de l'activité",
       noMatches: "Aucune session ne correspond à votre recherche.",
+      retry: "Réessayer",
       reasons: {
         approval: "En attente d'approbation",
         processExited: "Processus terminé",
@@ -397,6 +421,14 @@ export const fr = {
       agents: {
         enabledLabel: "Agent {{agent}}",
         minimumEnabled: "Au moins un agent doit rester activé.",
+        readiness: {
+          "authentication-required": "Authentification requise",
+          checking: "Vérification…",
+          error: "Erreur",
+          prefix: "État :",
+          ready: "Prêt",
+          unavailable: "Indisponible",
+        },
         title: "Agents",
       },
       appearance: {
@@ -548,16 +580,19 @@ export const fr = {
         passwordDialogDescription:
           "Saisissez le mot de passe qu’un téléphone utilisera pour s’appairer avec cet ordinateur.",
         passwordDialogTitle: "Définir le mot de passe d’appairage",
+        passwordRequired: "Saisissez un mot de passe.",
         passwordReset: "Réinitialiser le mot de passe",
         passwordSet: "Définir le mot de passe",
         passwordTitle: "Mot de passe d’appairage",
         portDescription:
           "Port TCP d’écoute. Utilisez 0 pour le choisir automatiquement.",
+        portInvalid: "Saisissez un numéro de port entier entre 0 et 65535.",
         portTitle: "Port d’écoute",
         qrCode: "QR code",
         qrDialogDescription:
           "Scannez avec l’appareil photo de votre téléphone. Il doit être sur le même réseau, et le mot de passe d’appairage vous sera demandé.",
         qrDialogTitle: "Ouvrir sur votre téléphone",
+        saveFailed: "Impossible d’enregistrer ce réglage. Réessayez.",
         urlDisabled:
           "Activez la vue mobile pour obtenir un lien à ouvrir sur votre téléphone.",
         urlNeedsPassword:
@@ -624,6 +659,18 @@ export const fr = {
         dirtyPromptTitle: "Avertissement de dépôt dirty",
         osNotificationsDescription:
           "Affiche des bannières système quand un chat en arrière-plan se termine, échoue ou a besoin de vous. L’historique in-app reste disponible.",
+        osNotificationsNeedsInputDescription:
+          "Notifier lorsqu'un chat en arrière-plan attend une permission ou une saisie.",
+        osNotificationsNeedsInputLabel: "Saisie requise",
+        osNotificationsRunCompletedDescription:
+          "Notifier lorsqu'un chat en arrière-plan se termine avec succès.",
+        osNotificationsRunCompletedLabel: "Exécution terminée",
+        osNotificationsSaveFailed:
+          "Impossible d'enregistrer les préférences de notification.",
+        osNotificationsSaved: "Préférences de notification enregistrées.",
+        osNotificationsSoundDescription:
+          "Jouer le son système avec les bannières OS.",
+        osNotificationsSoundLabel: "Son",
         osNotificationsSwitchLabel: "Afficher les notifications OS",
         osNotificationsTitle: "Notifications OS",
         sendWithModEnterDescription:
@@ -719,6 +766,11 @@ export const fr = {
           "Que voulez-vous qu’Angel Engine fasse dans <project>{{projectName}}</project> ?",
       },
       quote: "Citer",
+      restoreBack: "Retour à l’accueil",
+      restoreFailedDescription:
+        "L’historique est inchangé. Réessayez l’hydratation du runtime.",
+      restoreFailedTitle: "Impossible de restaurer la discussion",
+      restoreRetry: "Réessayer la restauration",
       restoring: "Restauration de la discussion",
     },
     composer: {
@@ -868,6 +920,9 @@ export const fr = {
           "Vos modifications seront perdues si vous ne les enregistrez pas.",
         saveFileChangesTitle: "Enregistrer les modifications de {{path}} ?",
       },
+      confirmDeleteChatDetail:
+        "Cela supprime définitivement la discussion d’Angel Engine. Cette action est irréversible.",
+      confirmDeleteChatTitle: "Supprimer « {{title}} » ?",
       importSession: {
         cwdLabel: "Répertoire : {{cwd}}",
         description:
@@ -984,6 +1039,16 @@ export const fr = {
     },
     projects: {
       chooseFolder: "Choisir le dossier du projet",
+      confirmDeleteDetail:
+        "Cela retire définitivement le projet d’Angel Engine et supprime {{count}} discussions liées. Les fichiers du dossier du projet sont conservés. Cette action est irréversible.",
+      confirmDeleteDetailNone:
+        "Cela retire définitivement le projet d’Angel Engine. Aucune discussion liée ne sera supprimée. Les fichiers du dossier du projet sont conservés. Cette action est irréversible.",
+      confirmDeleteDetailOne:
+        "Cela retire définitivement le projet d’Angel Engine et supprime 1 discussion liée. Les fichiers du dossier du projet sont conservés. Cette action est irréversible.",
+      confirmDeleteTitle: "Supprimer « {{name}} » ?",
+      deleteConflictDetail:
+        "Le projet a changé après la préparation de cette confirmation ; rien n'a été supprimé. Rouvrez la confirmation de suppression pour vérifier l'impact actualisé.",
+      deleteConflictTitle: "Le projet a changé",
       openInFinder: "Ouvrir dans le Finder",
       settings: "Paramètres",
       settingsLoadFailed: "Impossible de charger les paramètres du projet",

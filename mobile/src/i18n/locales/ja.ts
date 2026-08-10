@@ -24,10 +24,15 @@ export const ja = {
         "このデバイスを接続するには、デスクトップアプリで設定したペアリングパスワードを入力してください。",
       passwordLabel: "パスワード",
       passwordPlaceholder: "ペアリングパスワード",
+      passwordHelp: "パスワードは大文字と小文字を区別します。",
+      showPassword: "パスワードを表示",
+      hidePassword: "パスワードを隠す",
       incorrectPassword:
         "パスワードが正しくありません。もう一度お試しください。",
       connectionError:
         "デスクトップアプリに接続できませんでした。接続を確認して再試行してください。",
+      recoveryHint:
+        "新しいペアリングパスワードが必要な場合は、デスクトップの設定 → モバイル表示でリセットしてから、ここに戻ってください。",
       connecting: "接続中…",
       connect: "接続",
     },
@@ -38,6 +43,9 @@ export const ja = {
     },
     sidebar: {
       home: "ホーム",
+      navigationTitle: "ナビゲーション",
+      navigationDescription: "Angel Engine の主な移動先。",
+      close: "ナビゲーションを閉じる",
     },
     daemonStatus: {
       unreachable: "デーモンに到達できません",
@@ -78,6 +86,21 @@ export const ja = {
       messagePlaceholder: "メッセージ",
       sendAria: "送信",
       stopAria: "停止",
+      attachAria: "ファイルを添付",
+      attachments: "添付ファイル",
+      removeAttachment: "{{name}} を削除",
+      retryAttachment: "{{name}} を再試行",
+      roleUser: "あなた",
+      roleAssistant: "アシスタント",
+      sendFailed:
+        "メッセージを送信できませんでした。下書きは残っています — もう一度お試しください。",
+      attachmentErrors: {
+        accept: "そのファイル形式はサポートされていません。",
+        maxFileSize: "各ファイルは 10 MB 以下にしてください。",
+        maxFiles: "添付できるファイルは 5 件までです。",
+        fileRead:
+          "ファイルを読み取れませんでした。再試行するか削除してください。",
+      },
       plan: "プラン",
       todo: "Todo",
       build: "ビルド",
@@ -110,6 +133,7 @@ export const ja = {
         "プロジェクトまたはワークツリーでエージェントセッションを開始します。",
       promptLabel: "最初のプロンプト",
       promptPlaceholder: "エージェントに何をさせますか？",
+      promptRequired: "まずプロンプトを入力してください。",
       projectLabel: "プロジェクト",
       noProject: "プロジェクトなし（アドホック）",
       agentLabel: "エージェント",
@@ -154,6 +178,27 @@ export const ja = {
           es: "Español",
         },
       },
+      connection: {
+        title: "接続",
+        description:
+          "このブラウザはローカルの Angel Engine デーモンとペアリングされています。切断すると、この端末のトークンのみが削除されます。",
+        server: "ペアリング済みサーバー",
+        sameOrigin: "このページのオリジン",
+        status: "状態",
+        statusOnline: "接続済み",
+        statusConnecting: "接続中…",
+        statusUnreachable: "到達不可",
+        daemonVersion: "デーモンのバージョン",
+        versionUnknown: "不明",
+        disconnectSectionTitle: "このデバイス",
+        disconnectDescription:
+          "切断すると、このブラウザのペアリングトークンのみが削除されます。デスクトップのパスワードやチャットは変更されません。",
+        disconnect: "このデバイスを切断",
+        disconnectConfirmTitle: "このデバイスを切断しますか？",
+        disconnectConfirmDescription:
+          "再接続にはペアリングパスワードが必要です。チャットとデスクトップのパスワードは変わりません。",
+        disconnectConfirm: "切断",
+      },
       projects: {
         actionError:
           "プロジェクトの操作を完了できませんでした。再試行してください。",
@@ -161,6 +206,8 @@ export const ja = {
         createTitle: "プロジェクトを追加",
         deleteAria: "{{name}}を削除",
         deleteChecking: "関連チャットを確認しています…",
+        deleteConflict:
+          "このダイアログを開いてからプロジェクトが変更されました。最新の影響を確認してもう一度お試しください。",
         deleteImpact:
           "このプロジェクトを削除すると、関連する {{count}} 件のチャットも完全に削除されます。",
         deleteImpactOne:
@@ -181,6 +228,7 @@ export const ja = {
         pathInvalid: "既存のフォルダーへのパスを入力してください。",
         pathLabel: "フォルダーのパス",
         pathPlaceholder: "/path/to/project",
+        pathRequired: "フォルダパスを入力してください。",
         title: "プロジェクト",
       },
       customAgents: {
@@ -191,6 +239,7 @@ export const ja = {
         argsPlaceholder: "1 行に 1 つの引数",
         autoAuthenticateLabel: "自動的に認証",
         commandLabel: "コマンド",
+        commandRequired: "コマンドを入力してください。",
         createTitle: "カスタムエージェントを追加",
         deleteAria: "{{name}}を削除",
         deleteChecking: "関連チャットを確認しています…",
@@ -213,16 +262,22 @@ export const ja = {
           "このエージェントの起動に使用するコマンドと任意の引数を設定します。",
         loadError: "カスタムエージェントを読み込めませんでした。",
         nameLabel: "名前",
+        nameRequired: "名前を入力してください。",
         needAuthLabel: "認証が必要",
         title: "カスタムエージェント",
       },
       about: {
-        title: "情報",
-        description:
-          "これらの設定はこのデバイスにのみ適用され、デスクトップアプリの構成とは別に保持されます。",
-        appName: "Angel Engine Mobile",
         appDescription:
           "Angel Engine デスクトップアプリのモバイルコンパニオン。",
+        appName: "Angel Engine Mobile",
+        build: "ビルド",
+        copied: "コピーしました",
+        copyDiagnostics: "診断情報をコピー",
+        copyFailed: "コピーできませんでした。手動でコピーしてください。",
+        description:
+          "これらの設定はこのデバイスにのみ適用され、デスクトップアプリの構成とは別に保持されます。",
+        diagnostics: "診断情報",
+        title: "情報",
       },
     },
   },

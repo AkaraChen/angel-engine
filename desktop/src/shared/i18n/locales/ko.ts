@@ -95,6 +95,23 @@ export const ko = {
       backgroundChatCompleted: "백그라운드 채팅 완료",
       backgroundChatNeedsInput: "백그라운드 채팅에 입력 필요",
       backgroundChatStatus: "백그라운드 채팅 상태",
+      browser: {
+        back: "뒤로",
+        copyUrl: "URL 복사",
+        errors: {
+          navigationFailed: "페이지를 불러올 수 없습니다.",
+          offline: "이 사이트에 연결하지 못했습니다.",
+          unknown: "이 페이지를 불러오는 중 문제가 발생했습니다.",
+          unsupportedUrl: "http(s) URL만 지원됩니다.",
+        },
+        loadFailedDescription:
+          "기록은 변경되지 않았습니다. 다시 시도하거나 외부에서 열거나 URL을 복사하세요.",
+        loadFailedTitle: "페이지를 불러올 수 없음",
+        loading: "페이지 불러오는 중",
+        openExternally: "외부에서 열기",
+        retry: "다시 시도",
+      },
+      chatTabs: "채팅 탭",
       closeTab: "탭 닫기",
       creationLocationProject: "프로젝트",
       creationLocationSelect: "생성 위치",
@@ -270,6 +287,11 @@ export const ko = {
     fleet: {
       allProjects: "모든 프로젝트",
       disconnected: "백엔드에 연결할 수 없습니다.",
+      disconnectedDescription:
+        "기존 채팅은 계속 사용할 수 있습니다. 연결이 복구될 때까지 Fleet 실시간 활동을 새로 고칠 수 없습니다.",
+      disconnectedStale:
+        "마지막으로 신뢰할 수 있는 활동을 표시합니다. 실시간 업데이트가 일시 중지되었습니다.",
+      disconnectedTitle: "Fleet 연결 끊김",
       emptySegments: {
         all: "활성 에이전트가 없습니다.",
         attention: "지금 확인이 필요한 항목이 없습니다.",
@@ -285,6 +307,7 @@ export const ko = {
       },
       loading: "활동을 불러오는 중",
       noMatches: "검색과 일치하는 세션이 없습니다.",
+      retry: "다시 시도",
       reasons: {
         approval: "승인 대기 중",
         processExited: "프로세스 종료됨",
@@ -393,6 +416,14 @@ export const ko = {
       agents: {
         enabledLabel: "{{agent}} Agent",
         minimumEnabled: "최소 하나의 Agent는 활성화되어 있어야 합니다.",
+        readiness: {
+          "authentication-required": "인증 필요",
+          checking: "확인 중…",
+          error: "오류",
+          prefix: "상태:",
+          ready: "준비됨",
+          unavailable: "사용 불가",
+        },
         title: "Agents",
       },
       appearance: {
@@ -543,16 +574,19 @@ export const ko = {
         passwordDialogDescription:
           "휴대폰이 이 컴퓨터와 페어링할 때 사용할 비밀번호를 입력하세요.",
         passwordDialogTitle: "페어링 비밀번호 설정",
+        passwordRequired: "비밀번호를 입력하세요.",
         passwordReset: "비밀번호 재설정",
         passwordSet: "비밀번호 설정",
         passwordTitle: "페어링 비밀번호",
         portDescription:
           "수신할 TCP 포트입니다. 0을 사용하면 자동으로 선택합니다.",
+        portInvalid: "0에서 65535 사이의 정수 포트 번호를 입력하세요.",
         portTitle: "수신 포트",
         qrCode: "QR 코드",
         qrDialogDescription:
           "휴대폰 카메라로 스캔하세요. 같은 네트워크에 연결되어 있어야 하며, 페어링 비밀번호를 입력해야 합니다.",
         qrDialogTitle: "휴대폰에서 열기",
+        saveFailed: "해당 설정을 저장하지 못했습니다. 다시 시도하세요.",
         urlDisabled:
           "모바일 보기를 켜면 휴대폰에서 열 수 있는 링크가 표시됩니다.",
         urlNeedsPassword:
@@ -611,6 +645,17 @@ export const ko = {
         dirtyPromptTitle: "dirty 저장소 경고",
         osNotificationsDescription:
           "백그라운드 채팅이 완료·실패하거나 입력이 필요할 때 OS 알림을 표시합니다. 꺼도 앱 내 기록은 유지됩니다.",
+        osNotificationsNeedsInputDescription:
+          "백그라운드 채팅이 권한이나 입력을 기다릴 때 알립니다.",
+        osNotificationsNeedsInputLabel: "입력 필요",
+        osNotificationsRunCompletedDescription:
+          "백그라운드 채팅이 성공적으로 끝났을 때 알립니다.",
+        osNotificationsRunCompletedLabel: "실행 완료",
+        osNotificationsSaveFailed: "알림 설정을 저장하지 못했습니다.",
+        osNotificationsSaved: "알림 설정을 저장했습니다.",
+        osNotificationsSoundDescription:
+          "OS 배너와 함께 시스템 알림 소리를 재생합니다.",
+        osNotificationsSoundLabel: "소리",
         osNotificationsSwitchLabel: "OS 알림 표시",
         osNotificationsTitle: "OS 알림",
         sendWithModEnterDescription:
@@ -703,6 +748,11 @@ export const ko = {
           "<project>{{projectName}}</project>에서 Angel Engine이 무엇을 하길 원하시나요?",
       },
       quote: "인용",
+      restoreBack: "홈으로 돌아가기",
+      restoreFailedDescription:
+        "기록은 변경되지 않았습니다. 런타임 하이드레이트를 다시 시도하세요.",
+      restoreFailedTitle: "채팅을 복원할 수 없음",
+      restoreRetry: "복원 다시 시도",
       restoring: "채팅 복원 중",
     },
     composer: {
@@ -849,6 +899,9 @@ export const ko = {
         saveFileChangesDetail: "저장하지 않으면 변경 내용이 사라집니다.",
         saveFileChangesTitle: "{{path}}의 변경 내용을 저장할까요?",
       },
+      confirmDeleteChatDetail:
+        "이 작업은 Angel Engine에서 채팅을 영구적으로 삭제합니다. 되돌릴 수 없습니다.",
+      confirmDeleteChatTitle: '"{{title}}"을(를) 삭제할까요?',
       importSession: {
         cwdLabel: "디렉터리: {{cwd}}",
         description: "선택한 에이전트의 세션을 검색해 Angel Engine에서 엽니다.",
@@ -963,6 +1016,16 @@ export const ko = {
     },
     projects: {
       chooseFolder: "프로젝트 폴더 선택",
+      confirmDeleteDetail:
+        "이 작업은 Angel Engine에서 프로젝트를 영구적으로 제거하고 연결된 채팅 {{count}}개를 삭제합니다. 프로젝트 폴더의 파일은 유지됩니다. 되돌릴 수 없습니다.",
+      confirmDeleteDetailNone:
+        "이 작업은 Angel Engine에서 프로젝트를 영구적으로 제거합니다. 연결된 채팅은 삭제되지 않습니다. 프로젝트 폴더의 파일은 유지됩니다. 되돌릴 수 없습니다.",
+      confirmDeleteDetailOne:
+        "이 작업은 Angel Engine에서 프로젝트를 영구적으로 제거하고 연결된 채팅 1개를 삭제합니다. 프로젝트 폴더의 파일은 유지됩니다. 되돌릴 수 없습니다.",
+      confirmDeleteTitle: '"{{name}}"을(를) 삭제할까요?',
+      deleteConflictDetail:
+        "이 확인을 준비한 후 프로젝트가 변경되어 아무것도 삭제되지 않았습니다. 삭제 확인을 다시 열어 업데이트된 영향을 확인하세요.",
+      deleteConflictTitle: "프로젝트가 변경됨",
       openInFinder: "Finder에서 열기",
       settings: "설정",
       settingsLoadFailed: "프로젝트 설정을 불러오지 못했습니다",

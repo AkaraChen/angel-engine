@@ -95,6 +95,23 @@ export const ja = {
       backgroundChatCompleted: "バックグラウンドチャットが完了しました",
       backgroundChatNeedsInput: "バックグラウンドチャットに入力が必要です",
       backgroundChatStatus: "バックグラウンドチャットの状態",
+      browser: {
+        back: "戻る",
+        copyUrl: "URL をコピー",
+        errors: {
+          navigationFailed: "ページを読み込めませんでした。",
+          offline: "このサイトへの接続に失敗しました。",
+          unknown: "このページの読み込み中に問題が発生しました。",
+          unsupportedUrl: "http(s) URL のみサポートされています。",
+        },
+        loadFailedDescription:
+          "履歴は変更されていません。再試行、外部で開く、または URL をコピーしてください。",
+        loadFailedTitle: "ページを読み込めませんでした",
+        loading: "ページを読み込み中",
+        openExternally: "外部で開く",
+        retry: "再試行",
+      },
+      chatTabs: "チャットタブ",
       closeTab: "タブを閉じる",
       creationLocationProject: "プロジェクト",
       creationLocationSelect: "作成先",
@@ -274,6 +291,11 @@ export const ja = {
     fleet: {
       allProjects: "すべてのプロジェクト",
       disconnected: "バックエンドに接続できません。",
+      disconnectedDescription:
+        "既存のチャットはそのまま利用できます。接続が回復するまで Fleet のライブ更新はできません。",
+      disconnectedStale:
+        "最後に信頼できるアクティビティを表示しています。ライブ更新は一時停止中です。",
+      disconnectedTitle: "Fleet が切断されました",
       emptySegments: {
         all: "稼働中のエージェントはありません。",
         attention: "今は対応が必要なものはありません。",
@@ -289,6 +311,7 @@ export const ja = {
       },
       loading: "アクティビティを読み込み中",
       noMatches: "検索条件に一致するセッションはありません。",
+      retry: "再試行",
       reasons: {
         approval: "承認待ち",
         processExited: "プロセスが終了",
@@ -398,6 +421,14 @@ export const ja = {
         enabledLabel: "{{agent}} Agent",
         minimumEnabled:
           "少なくとも 1 つの Agent を有効にしておく必要があります。",
+        readiness: {
+          "authentication-required": "認証が必要",
+          checking: "確認中…",
+          error: "エラー",
+          prefix: "状態:",
+          ready: "準備完了",
+          unavailable: "利用不可",
+        },
         title: "Agents",
       },
       appearance: {
@@ -549,16 +580,19 @@ export const ja = {
         passwordDialogDescription:
           "スマートフォンがこのコンピューターとペアリングするときに使用するパスワードを入力します。",
         passwordDialogTitle: "ペアリングパスワードを設定",
+        passwordRequired: "パスワードを入力してください。",
         passwordReset: "パスワードをリセット",
         passwordSet: "パスワードを設定",
         passwordTitle: "ペアリングパスワード",
         portDescription:
           "待ち受ける TCP ポート。0 を指定すると自動的に選択されます。",
+        portInvalid: "0 から 65535 の整数のポート番号を入力してください。",
         portTitle: "リッスンポート",
         qrCode: "QR コード",
         qrDialogDescription:
           "スマートフォンのカメラで読み取ってください。同じネットワークに接続している必要があり、ペアリングパスワードの入力を求められます。",
         qrDialogTitle: "スマートフォンで開く",
+        saveFailed: "その設定を保存できませんでした。もう一度お試しください。",
         urlDisabled:
           "モバイル表示を有効にすると、スマートフォンで開けるリンクが表示されます。",
         urlNeedsPassword:
@@ -623,6 +657,17 @@ export const ja = {
         dirtyPromptTitle: "dirty リポジトリ警告",
         osNotificationsDescription:
           "バックグラウンドのチャットが完了・失敗・入力待ちのときに OS 通知を表示します。オフでもアプリ内履歴は残ります。",
+        osNotificationsNeedsInputDescription:
+          "バックグラウンドのチャットが許可や入力を待っているときに通知します。",
+        osNotificationsNeedsInputLabel: "入力が必要",
+        osNotificationsRunCompletedDescription:
+          "バックグラウンドのチャットが正常に終了したときに通知します。",
+        osNotificationsRunCompletedLabel: "実行完了",
+        osNotificationsSaveFailed: "通知設定を保存できませんでした。",
+        osNotificationsSaved: "通知設定を保存しました。",
+        osNotificationsSoundDescription:
+          "OS バナーと一緒にシステム音を再生します。",
+        osNotificationsSoundLabel: "サウンド",
         osNotificationsSwitchLabel: "OS 通知を表示",
         osNotificationsTitle: "OS 通知",
         sendWithModEnterDescription:
@@ -716,6 +761,11 @@ export const ja = {
           "<project>{{projectName}}</project> で Angel Engine に何をさせますか？",
       },
       quote: "引用",
+      restoreBack: "ホームに戻る",
+      restoreFailedDescription:
+        "履歴は変更されていません。ランタイムのハイドレートを再試行してください。",
+      restoreFailedTitle: "チャットを復元できませんでした",
+      restoreRetry: "復元を再試行",
       restoring: "チャットを復元中",
     },
     composer: {
@@ -862,6 +912,9 @@ export const ja = {
         saveFileChangesDetail: "保存しないと変更内容は失われます。",
         saveFileChangesTitle: "{{path}} の変更を保存しますか？",
       },
+      confirmDeleteChatDetail:
+        "この操作により、チャットが Angel Engine から完全に削除されます。元に戻すことはできません。",
+      confirmDeleteChatTitle: "「{{title}}」を削除しますか？",
       importSession: {
         cwdLabel: "ディレクトリ: {{cwd}}",
         description:
@@ -980,6 +1033,16 @@ export const ja = {
     },
     projects: {
       chooseFolder: "プロジェクトフォルダーを選択",
+      confirmDeleteDetail:
+        "この操作により、プロジェクトが Angel Engine から完全に削除され、関連する {{count}} 件のチャットも削除されます。プロジェクトフォルダー内のファイルは保持されます。元に戻すことはできません。",
+      confirmDeleteDetailNone:
+        "この操作により、プロジェクトが Angel Engine から完全に削除されます。関連チャットは削除されません。プロジェクトフォルダー内のファイルは保持されます。元に戻すことはできません。",
+      confirmDeleteDetailOne:
+        "この操作により、プロジェクトが Angel Engine から完全に削除され、関連する 1 件のチャットも削除されます。プロジェクトフォルダー内のファイルは保持されます。元に戻すことはできません。",
+      confirmDeleteTitle: "「{{name}}」を削除しますか？",
+      deleteConflictDetail:
+        "この確認を準備した後にプロジェクトが変更されたため、何も削除されませんでした。削除の確認をもう一度開いて、最新の影響を確認してください。",
+      deleteConflictTitle: "プロジェクトが変更されました",
       openInFinder: "Finder で開く",
       settings: "設定",
       settingsLoadFailed: "プロジェクト設定を読み込めませんでした",

@@ -7,7 +7,14 @@ const mocks = vi.hoisted(() => ({
   listHistory: vi.fn(() => ({ items: [] })),
   markRead: vi.fn(() => ({ items: [] })),
   notificationCtor: vi.fn(),
-  readPreferences: vi.fn(() => ({ osEnabled: true })),
+  readPreferences: vi.fn(() => ({
+    needsInput: true,
+    osEnabled: true,
+    runCompleted: true,
+    runFailed: true,
+    sound: true,
+    version: 1 as const,
+  })),
   recordHistory: vi.fn((input: unknown) => ({ items: [input] })),
   writePreferences: vi.fn(),
 }));
@@ -97,8 +104,21 @@ describe("desktop notifications", () => {
     mocks.notificationCtor.mockClear();
     mocks.recordHistory.mockClear();
     mocks.writePreferences.mockClear();
-    mocks.readPreferences.mockReturnValue({ osEnabled: true });
-    setNotificationPreferences({ osEnabled: true });
+    mocks.readPreferences.mockReturnValue({
+      needsInput: true,
+      osEnabled: true,
+      runCompleted: true,
+      runFailed: true,
+      sound: true,
+      version: 1,
+    });
+    setNotificationPreferences({
+      needsInput: true,
+      osEnabled: true,
+      runCompleted: true,
+      runFailed: true,
+      sound: true,
+    });
   });
 
   it("records completed, needsInput, and failed history entries", () => {
@@ -151,7 +171,51 @@ describe("desktop notifications", () => {
 
     expect(mocks.recordHistory).toHaveBeenCalledTimes(1);
     expect(mocks.notificationCtor).not.toHaveBeenCalled();
-    expect(getNotificationPreferences()).toEqual({ osEnabled: false });
-    expect(mocks.writePreferences).toHaveBeenCalledWith({ osEnabled: false });
+    expect(getNotificationPreferences().osEnabled).toBe(false);
+    expect(mocks.writePreferences).toHaveBeenCalledWith(
+      expect.objectContaining({ osEnabled: false }),
+    );
+  });
+
+  it("honors category and sound preferences when constructing OS banners", () => {
+    setNotificationPreferences({
+      needsInput: false,
+      osEnabled: true,
+      runCompleted: true,
+      runFailed: false,
+      sound: false,
+    });
+    const window = backgroundWindow();
+
+    notifyChatTurnCompleted({
+      attentionId: "run-5:done",
+      body: "ok",
+      chat,
+      window,
+    });
+    notifyChatNeedsInput({
+      attentionId: "run-6:input:e1",
+      chat,
+      elicitation: {
+        body: "Continue?",
+        id: "e1",
+        kind: "approval",
+        phase: "open",
+        title: "Permission",
+      },
+      window,
+    });
+    notifyChatFailed({
+      attentionId: "run-7:failed",
+      body: "boom",
+      chat,
+      window,
+    });
+
+    expect(mocks.recordHistory).toHaveBeenCalledTimes(3);
+    expect(mocks.notificationCtor).toHaveBeenCalledTimes(1);
+    expect(mocks.notificationCtor).toHaveBeenCalledWith(
+      expect.objectContaining({ silent: true }),
+    );
   });
 });

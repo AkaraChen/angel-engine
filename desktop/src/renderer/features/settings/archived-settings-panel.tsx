@@ -80,6 +80,7 @@ export function ArchivedSettingsPanel() {
     () => new Map(projects.map((project) => [project.id, project])),
     [projects],
   );
+  const filtersActive = timeFilter !== "all" || projectFilter !== "all";
   const filteredChats = useMemo(
     () =>
       archivedChats.filter(
@@ -89,6 +90,10 @@ export function ArchivedSettingsPanel() {
       ),
     [archivedChats, projectFilter, timeFilter],
   );
+  const clearFilters = useCallback(() => {
+    setTimeFilter("all");
+    setProjectFilter("all");
+  }, []);
   const selectedChats = useMemo(
     () => filteredChats.filter((chat) => selectedIds.has(chat.id)),
     [filteredChats, selectedIds],
@@ -251,7 +256,27 @@ export function ArchivedSettingsPanel() {
               </NativeSelectOption>
             ))}
           </ArchivedFilterSelect>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            {archivedChats.length > 0 ? (
+              <span className="text-xs text-muted-foreground" role="status">
+                {t("settings.archived.resultCount", {
+                  count: filteredChats.length,
+                  defaultValue: "{{count}} matching",
+                })}
+              </span>
+            ) : null}
+            {filtersActive ? (
+              <Button
+                onClick={clearFilters}
+                size="sm"
+                type="button"
+                variant="ghost"
+              >
+                {t("settings.archived.clearFilters", {
+                  defaultValue: "Clear filters",
+                })}
+              </Button>
+            ) : null}
             <Button
               onClick={toggleBulkMode}
               size="sm"
@@ -335,9 +360,15 @@ export function ArchivedSettingsPanel() {
                 {t("common.reload")}
               </Button>
             </div>
-          ) : filteredChats.length === 0 ? (
+          ) : archivedChats.length === 0 ? (
             <SettingsListNotice>
               {t("settings.archived.empty")}
+            </SettingsListNotice>
+          ) : filteredChats.length === 0 ? (
+            <SettingsListNotice>
+              {t("settings.archived.noMatches", {
+                defaultValue: "No archived sessions match these filters.",
+              })}
             </SettingsListNotice>
           ) : (
             <>

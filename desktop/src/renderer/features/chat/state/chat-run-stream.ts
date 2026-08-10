@@ -120,6 +120,7 @@ export async function consumeRunStream({
   const applySnapshot = (snapshot: ChatActiveRunSnapshot) => {
     accumulator.parts =
       snapshot.assistantMessage.content.map(cloneChatHistoryPart);
+    accumulator.createdAt = snapshot.assistantMessage.createdAt;
     assistantMaterializationCache.engineParts = [];
     markDirty(0);
   };

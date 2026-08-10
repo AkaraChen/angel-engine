@@ -92,10 +92,28 @@ export const updateCustomAgentInputSchema = arkType({
   "needAuth?": "boolean | undefined",
 });
 
+/**
+ * Closed, protocol-neutral agent readiness. Produced by the daemon availability
+ * probe — never provider wire payloads or secret-bearing stderr.
+ */
+export type AgentReadinessStatus =
+  | "ready"
+  | "authentication-required"
+  | "unavailable"
+  | "checking"
+  | "error";
+
+export interface AgentReadiness {
+  /** Safe one-line detail (command path, missing binary, probe error). */
+  detail?: string;
+  status: AgentReadinessStatus;
+}
+
 export interface AgentOption {
   description: string;
   id: AgentRuntime;
   label: string;
+  readiness?: AgentReadiness;
   skillDirectories?: AgentSkillDirectoryRules;
 }
 

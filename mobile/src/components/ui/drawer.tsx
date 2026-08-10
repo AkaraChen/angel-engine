@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Drawer as DrawerPrimitive } from "vaul";
 
+import { useKeyboardInset } from "@/features/chat/use-keyboard-inset";
 import { cn } from "@/lib/utils";
 
 function Drawer({
@@ -46,8 +47,14 @@ function DrawerOverlay({
 function DrawerContent({
   className,
   children,
+  style,
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Content>) {
+  // iOS Safari does not shrink the layout viewport for the soft keyboard; only
+  // visualViewport reports the overlap. Lift bottom drawers so headers, scroll
+  // regions, and footers stay reachable above the keyboard and home indicator.
+  const keyboardInset = useKeyboardInset();
+
   return (
     <DrawerPortal data-slot="drawer-portal">
       <DrawerOverlay />
@@ -57,6 +64,17 @@ function DrawerContent({
           "group/drawer-content fixed z-50 flex h-auto flex-col bg-popover text-sm text-popover-foreground data-[vaul-drawer-direction=bottom]:inset-x-0 data-[vaul-drawer-direction=bottom]:bottom-0 data-[vaul-drawer-direction=bottom]:mt-24 data-[vaul-drawer-direction=bottom]:max-h-[80vh] data-[vaul-drawer-direction=bottom]:rounded-t-xl data-[vaul-drawer-direction=bottom]:border-t data-[vaul-drawer-direction=left]:inset-y-0 data-[vaul-drawer-direction=left]:left-0 data-[vaul-drawer-direction=left]:w-3/4 data-[vaul-drawer-direction=left]:rounded-r-xl data-[vaul-drawer-direction=left]:border-r data-[vaul-drawer-direction=right]:inset-y-0 data-[vaul-drawer-direction=right]:right-0 data-[vaul-drawer-direction=right]:w-3/4 data-[vaul-drawer-direction=right]:rounded-l-xl data-[vaul-drawer-direction=right]:border-l data-[vaul-drawer-direction=top]:inset-x-0 data-[vaul-drawer-direction=top]:top-0 data-[vaul-drawer-direction=top]:mb-24 data-[vaul-drawer-direction=top]:max-h-[80vh] data-[vaul-drawer-direction=top]:rounded-b-xl data-[vaul-drawer-direction=top]:border-b data-[vaul-drawer-direction=left]:sm:max-w-sm data-[vaul-drawer-direction=right]:sm:max-w-sm",
           className,
         )}
+        style={{
+          ...(keyboardInset > 0
+            ? {
+                // Cap height to the visible viewport and pad the bottom so the
+                // footer sits above the soft keyboard rather than under it.
+                maxHeight: `min(92vh, calc(100dvh - ${keyboardInset}px))`,
+                paddingBottom: keyboardInset,
+              }
+            : undefined),
+          ...style,
+        }}
         {...props}
       >
         <div className="mx-auto mt-4 hidden h-1 w-[100px] shrink-0 rounded-full bg-muted group-data-[vaul-drawer-direction=bottom]/drawer-content:block" />
@@ -83,7 +101,10 @@ function DrawerFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="drawer-footer"
-      className={cn("mt-auto flex flex-col gap-2 p-4", className)}
+      className={cn(
+        "mt-auto flex flex-col gap-2 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]",
+        className,
+      )}
       {...props}
     />
   );

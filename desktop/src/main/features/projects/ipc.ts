@@ -41,16 +41,21 @@ export const projectPlatformIpcRouter = {
               MainIpcError.notFound("Project not found."),
             );
           }
-          return yield* Effect.promise(() =>
-            showProjectContextMenu(
-              project,
-              {
-                delete: translate("common.delete"),
-                settings: translate("projects.settings"),
-              },
-              BrowserWindow.fromWebContents(context.sender) ?? undefined,
-            ),
-          );
+          return yield* Effect.tryPromise({
+            catch: (cause) =>
+              cause instanceof DaemonRequestError
+                ? MainIpcError.daemonRequestFailed(cause.message)
+                : MainIpcError.operationFailed(cause),
+            try: () =>
+              showProjectContextMenu(
+                project,
+                {
+                  delete: translate("common.delete"),
+                  settings: translate("projects.settings"),
+                },
+                BrowserWindow.fromWebContents(context.sender) ?? undefined,
+              ),
+          });
         }),
       ),
     ),

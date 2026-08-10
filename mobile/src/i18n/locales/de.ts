@@ -24,9 +24,14 @@ export const de = {
         "Gib das in der Desktop-App festgelegte Kopplungspasswort ein, um dieses Gerät zu verbinden.",
       passwordLabel: "Passwort",
       passwordPlaceholder: "Kopplungspasswort",
+      passwordHelp: "Passwörter unterscheiden Groß- und Kleinschreibung.",
+      showPassword: "Passwort anzeigen",
+      hidePassword: "Passwort verbergen",
       incorrectPassword: "Falsches Passwort. Versuche es erneut.",
       connectionError:
         "Die Desktop-App konnte nicht erreicht werden. Prüfe deine Verbindung und versuche es erneut.",
+      recoveryHint:
+        "Wenn du ein neues Kopplungspasswort brauchst, setze es unter Desktop-Einstellungen → Mobile-Ansicht zurück und kehre dann hierher zurück.",
       connecting: "Verbinden…",
       connect: "Verbinden",
     },
@@ -37,6 +42,9 @@ export const de = {
     },
     sidebar: {
       home: "Start",
+      navigationTitle: "Navigation",
+      navigationDescription: "Wichtige Ziele in Angel Engine.",
+      close: "Navigation schließen",
     },
     daemonStatus: {
       unreachable: "Daemon nicht erreichbar",
@@ -78,6 +86,21 @@ export const de = {
       messagePlaceholder: "Nachricht",
       sendAria: "Senden",
       stopAria: "Stoppen",
+      attachAria: "Dateien anhängen",
+      attachments: "Anhänge",
+      removeAttachment: "{{name}} entfernen",
+      retryAttachment: "{{name}} erneut versuchen",
+      roleUser: "Du",
+      roleAssistant: "Assistent",
+      sendFailed:
+        "Die Nachricht konnte nicht gesendet werden. Dein Entwurf ist noch da – versuche es erneut.",
+      attachmentErrors: {
+        accept: "Dieser Dateityp wird nicht unterstützt.",
+        maxFileSize: "Jede Datei darf höchstens 10 MB groß sein.",
+        maxFiles: "Du kannst bis zu 5 Dateien anhängen.",
+        fileRead:
+          "Die Datei konnte nicht gelesen werden. Erneut versuchen oder entfernen.",
+      },
       plan: "Plan",
       todo: "Todo",
       build: "Build",
@@ -109,6 +132,7 @@ export const de = {
       description: "Starte eine Agent-Sitzung in einem Projekt oder Worktree.",
       promptLabel: "Erste Eingabe",
       promptPlaceholder: "Woran soll der Agent arbeiten?",
+      promptRequired: "Schreibe zuerst einen Prompt.",
       projectLabel: "Projekt",
       noProject: "Kein Projekt (ad hoc)",
       agentLabel: "Agent",
@@ -153,6 +177,27 @@ export const de = {
           es: "Español",
         },
       },
+      connection: {
+        title: "Verbindung",
+        description:
+          "Dieser Browser ist mit einem lokalen Angel-Engine-Daemon gekoppelt. Trennen löscht nur das Token auf diesem Gerät.",
+        server: "Gekoppelter Server",
+        sameOrigin: "Ursprung dieser Seite",
+        status: "Status",
+        statusOnline: "Verbunden",
+        statusConnecting: "Verbinden…",
+        statusUnreachable: "Nicht erreichbar",
+        daemonVersion: "Daemon-Version",
+        versionUnknown: "Unbekannt",
+        disconnectSectionTitle: "Dieses Gerät",
+        disconnectDescription:
+          "Trennen entfernt nur das Kopplungstoken dieses Browsers. Das Desktop-Passwort und Chats bleiben unverändert.",
+        disconnect: "Dieses Gerät trennen",
+        disconnectConfirmTitle: "Dieses Gerät trennen?",
+        disconnectConfirmDescription:
+          "Zum erneuten Verbinden brauchst du das Kopplungspasswort. Chats und das Desktop-Passwort bleiben unverändert.",
+        disconnectConfirm: "Trennen",
+      },
       projects: {
         actionError:
           "Die Projektaktion konnte nicht abgeschlossen werden. Versuche es erneut.",
@@ -160,6 +205,8 @@ export const de = {
         createTitle: "Projekt hinzufügen",
         deleteAria: "{{name}} löschen",
         deleteChecking: "Verknüpfte Chats werden geprüft…",
+        deleteConflict:
+          "Das Projekt wurde inzwischen geändert. Bitte erneut prüfen.",
         deleteImpact:
           "Beim Löschen dieses Projekts werden {{count}} verknüpfte Chats dauerhaft gelöscht.",
         deleteImpactOne:
@@ -180,6 +227,7 @@ export const de = {
         pathInvalid: "Gib den Pfad zu einem vorhandenen Ordner ein.",
         pathLabel: "Ordnerpfad",
         pathPlaceholder: "/pfad/zum/projekt",
+        pathRequired: "Gib einen Ordnerpfad ein.",
         title: "Projekte",
       },
       customAgents: {
@@ -190,6 +238,7 @@ export const de = {
         argsPlaceholder: "Ein Argument pro Zeile",
         autoAuthenticateLabel: "Automatisch authentifizieren",
         commandLabel: "Befehl",
+        commandRequired: "Gib einen Befehl ein.",
         createTitle: "Benutzerdefinierten Agent hinzufügen",
         deleteAria: "{{name}} löschen",
         deleteChecking: "Verknüpfte Chats werden geprüft…",
@@ -213,15 +262,22 @@ export const de = {
           "Konfiguriere den Befehl und optionale Argumente zum Starten dieses Agents.",
         loadError: "Benutzerdefinierte Agents konnten nicht geladen werden.",
         nameLabel: "Name",
+        nameRequired: "Gib einen Namen ein.",
         needAuthLabel: "Authentifizierung erforderlich",
         title: "Benutzerdefinierte Agents",
       },
       about: {
-        title: "Über",
+        appDescription: "Mobiler Begleiter für die Angel-Engine-Desktop-App.",
+        appName: "Angel Engine Mobile",
+        build: "Build",
+        copied: "Kopiert",
+        copyDiagnostics: "Diagnosedaten kopieren",
+        copyFailed:
+          "Kopieren fehlgeschlagen. Kopiere die Angaben stattdessen von Hand.",
         description:
           "Diese Einstellungen betreffen nur dieses Gerät und bleiben von der Konfiguration der Desktop-App getrennt.",
-        appName: "Angel Engine Mobile",
-        appDescription: "Mobiler Begleiter für die Angel-Engine-Desktop-App.",
+        diagnostics: "Diagnose",
+        title: "Über",
       },
     },
   },

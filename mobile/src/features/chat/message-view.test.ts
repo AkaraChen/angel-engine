@@ -10,8 +10,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   formatToolPhase,
+  partsToAttachments,
   partsToText,
   toConversation,
+  toConversationMessage,
   toolCallFromAction,
   toolCallFromPart,
   toolGroupLabel,
@@ -298,5 +300,65 @@ describe("formatToolPhase", () => {
   it("maps the upstream closed phase union to human labels", () => {
     expect(formatToolPhase("completed")).toBe("Done");
     expect(formatToolPhase("awaitingDecision")).toBe("Awaiting approval");
+  });
+});
+
+describe("partsToAttachments / timestamps", () => {
+  it("projects image and file parts without inventing timestamps", () => {
+    const attachments = partsToAttachments(
+      [
+        {
+          type: "image",
+          image: "data:image/png;base64,AA==",
+          filename: "shot.png",
+          mimeType: "image/png",
+        },
+        {
+          type: "file",
+          data: "dGVzdA==",
+          filename: "notes.txt",
+          mimeType: "text/plain",
+        },
+      ],
+      "msg-1",
+    );
+    expect(attachments).toEqual([
+      {
+        dataUrl: "data:image/png;base64,AA==",
+        id: "msg-1:att:0",
+        mimeType: "image/png",
+        name: "shot.png",
+        type: "image",
+      },
+      {
+        dataUrl: "data:text/plain;base64,dGVzdA==",
+        id: "msg-1:att:1",
+        mimeType: "text/plain",
+        name: "notes.txt",
+        type: "file",
+      },
+    ]);
+  });
+
+  it("preserves createdAt when present and omits when absent", () => {
+    const withTime = toConversationMessage(
+      message({
+        id: "u1",
+        role: "user",
+        createdAt: "2026-08-01T12:00:00.000Z",
+        content: [{ type: "text", text: "hi" }],
+      }),
+    );
+    expect(withTime.createdAt).toBe("2026-08-01T12:00:00.000Z");
+    expect(withTime.attachments).toEqual([]);
+
+    const withoutTime = toConversationMessage(
+      message({
+        id: "u2",
+        role: "user",
+        content: [{ type: "text", text: "hi" }],
+      }),
+    );
+    expect(withoutTime.createdAt).toBeUndefined();
   });
 });

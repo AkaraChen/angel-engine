@@ -31,6 +31,8 @@ import { useToast } from "@/components/ui/toast";
 import { CollapsibleMessageBody } from "@/features/chat/components/collapsible-message-body";
 import { ChatComposer } from "@/features/chat/components/composer/chat-composer";
 import { useComposerEditor } from "@/features/chat/components/composer/use-composer-editor";
+import { canonicalCreatedAtOf } from "@/features/chat/state/chat-run-history";
+import type { EngineMessage } from "@/features/chat/state/chat-run-types";
 import {
   AssistantTextMessagePart,
   FileMessagePart,
@@ -46,6 +48,7 @@ import {
   messageActionFooterClass,
   workspaceContentColumnClass,
 } from "@/features/chat/components/thread-styles";
+import { MessageMetadata } from "@/features/chat/components/message-metadata";
 import { ToolActionMessagePart } from "@/features/chat/components/tool-action-message";
 import { useChatRuntimeActions } from "@/features/chat/runtime/use-chat-runtime-actions";
 import { getErrorMessage } from "@/app/workspace/workspace-display";
@@ -84,6 +87,12 @@ export function UserMessage() {
     state.message.parts.some(isUserBubblePart),
   );
   const isThreadRunning = useAuiState((state) => state.thread.isRunning);
+  // Only the canonical metadata marker is evidence of a timestamp; assistant-ui
+  // fills missing `createdAt` with `new Date()`, so that field is never read.
+  const messageCreatedAt = useAuiState((state) => {
+    const marker = canonicalCreatedAtOf(state.message as EngineMessage);
+    return marker === undefined || marker === null ? null : marker;
+  });
 
   return (
     <MessagePrimitive.Root
@@ -96,6 +105,9 @@ export function UserMessage() {
       data-workspace-mode={workspaceMode}
     >
       <div className={userMessageColumnClassName}>
+        <div className="flex justify-end">
+          <MessageMetadata createdAt={messageCreatedAt} role="user" />
+        </div>
         <MessagePrimitive.Attachments>
           {({ attachment }) => (
             <MessageAttachment attachment={attachment} key={attachment.id} />
@@ -216,6 +228,10 @@ export function AssistantMessage() {
   const { t } = useTranslation();
   const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
   const isThreadRunning = useAuiState((state) => state.thread.isRunning);
+  const messageCreatedAt = useAuiState((state) => {
+    const marker = canonicalCreatedAtOf(state.message as EngineMessage);
+    return marker === undefined || marker === null ? null : marker;
+  });
 
   return (
     <MessagePrimitive.Root
@@ -228,6 +244,7 @@ export function AssistantMessage() {
       data-workspace-mode={workspaceMode}
     >
       <div className="flex w-full flex-col items-start gap-1.5 text-sm/6">
+        <MessageMetadata createdAt={messageCreatedAt} role="assistant" />
         <div className="w-full">
           <AssistantMessageErrorBanner />
           <AssistantMessageParts />

@@ -4,7 +4,9 @@ import type {
   WorkspaceBrowserCommandInput,
   WorkspaceBrowserCreateInput,
   WorkspaceBrowserDetachInput,
+  WorkspaceBrowserError,
   WorkspaceBrowserNavigateInput,
+  WorkspaceBrowserOpenExternalInput,
   WorkspaceBrowserSetBoundsInput,
   WorkspaceBrowserState,
 } from "../../../shared/workspace-browser";
@@ -22,10 +24,17 @@ import {
   WORKSPACE_BROWSER_GO_BACK_CHANNEL,
   WORKSPACE_BROWSER_GO_FORWARD_CHANNEL,
   WORKSPACE_BROWSER_NAVIGATE_CHANNEL,
+  WORKSPACE_BROWSER_OPEN_EXTERNAL_CHANNEL,
   WORKSPACE_BROWSER_RELOAD_CHANNEL,
   WORKSPACE_BROWSER_SET_BOUNDS_CHANNEL,
   workspaceBrowserEventChannel,
 } from "../../../shared/workspace-browser";
+
+import {
+  normalizeWorkspaceBrowserLoadFailure,
+  normalizeWorkspaceBrowserNavigateFailure,
+  sanitizeBrowserUrl,
+} from "./normalize-error";
 
 interface WorkspaceBrowserAttachment {
   attachmentId: string;
@@ -35,6 +44,8 @@ interface WorkspaceBrowserAttachment {
 interface WorkspaceBrowserInstance {
   attachment?: WorkspaceBrowserAttachment;
   browserViewId: string;
+  error: WorkspaceBrowserError | null;
+  loading: boolean;
   ready: boolean;
   title: string;
   url: string;
@@ -96,6 +107,11 @@ const workspaceBrowserCommandInput = type({
 const workspaceBrowserNavigateInput = type({
   "+": "ignore",
   browserViewId: nonEmptyTrimmedString,
+  url: nonEmptyTrimmedString,
+});
+
+const workspaceBrowserOpenExternalInput = type({
+  "+": "ignore",
   url: nonEmptyTrimmedString,
 });
 
@@ -194,9 +210,26 @@ export function registerWorkspaceBrowserIpc() {
     const instance = getWorkspaceBrowserInstance(
       parseWorkspaceBrowserCommandInput(input).browserViewId,
     );
+    instance.error = null;
+    instance.loading = true;
+    instance.ready = false;
     instance.view.webContents.reload();
+    emitWorkspaceBrowserState(instance);
     return workspaceBrowserState(instance);
   });
+
+  ipcMain.handle(
+    WORKSPACE_BROWSER_OPEN_EXTERNAL_CHANNEL,
+    async (_event, input: unknown) => {
+      const request = parseWorkspaceBrowserOpenExternalInput(input);
+      const url = sanitizeBrowserUrl(request.url);
+      if (url === undefined) {
+        throw new Error("Workspace browser only supports http(s) URLs.");
+      }
+      await shell.openExternal(url);
+      return { ok: true as const };
+    },
+  );
 }
 
 function ensureWorkspaceBrowserInstance({
@@ -216,6 +249,8 @@ function ensureWorkspaceBrowserInstance({
   });
   const instance: WorkspaceBrowserInstance = {
     browserViewId,
+    error: null,
+    loading: true,
     ready: false,
     title: "",
     url: initialUrl,
@@ -243,22 +278,46 @@ function configureWorkspaceBrowserWebContents(
   });
   webContents.on("dom-ready", () => {
     instance.ready = true;
+    instance.loading = false;
     emitWorkspaceBrowserState(instance);
   });
   webContents.on("did-start-loading", () => {
     instance.ready = false;
+    instance.loading = true;
+    instance.error = null;
     emitWorkspaceBrowserState(instance);
   });
   webContents.on("did-finish-load", () => {
     instance.ready = true;
+    instance.loading = false;
+    instance.error = null;
     refreshWorkspaceBrowserLocation(instance);
     emitWorkspaceBrowserState(instance);
   });
-  webContents.on("did-fail-load", () => {
-    instance.ready = true;
-    refreshWorkspaceBrowserLocation(instance);
-    emitWorkspaceBrowserState(instance);
-  });
+  webContents.on(
+    "did-fail-load",
+    (
+      _event,
+      errorCode: number,
+      errorDescription: string,
+      validatedURL: string,
+      isMainFrame: boolean,
+    ) => {
+      const normalized = normalizeWorkspaceBrowserLoadFailure({
+        errorCode,
+        errorDescription,
+        isMainFrame,
+        validatedURL,
+      });
+      instance.ready = true;
+      instance.loading = false;
+      if (normalized !== null) {
+        instance.error = normalized;
+      }
+      refreshWorkspaceBrowserLocation(instance);
+      emitWorkspaceBrowserState(instance);
+    },
+  );
   webContents.on("did-navigate", (_event, url) => {
     instance.url = url;
     emitWorkspaceBrowserState(instance);
@@ -327,15 +386,31 @@ function loadWorkspaceBrowserUrl(
   instance: WorkspaceBrowserInstance,
   url: string,
 ) {
-  const nextUrl = workspaceBrowserLoadUrl(url);
+  let nextUrl: string;
+  try {
+    nextUrl = workspaceBrowserLoadUrl(url);
+  } catch (error: unknown) {
+    instance.error = normalizeWorkspaceBrowserNavigateFailure(error, url);
+    instance.loading = false;
+    instance.ready = true;
+    emitWorkspaceBrowserState(instance);
+    return;
+  }
 
   instance.url = nextUrl;
+  instance.error = null;
+  instance.loading = true;
+  instance.ready = false;
+  emitWorkspaceBrowserState(instance);
   void instance.view.webContents.loadURL(nextUrl).catch((error: unknown) => {
     console.error("Failed to load workspace browser URL.", {
       browserViewId: instance.browserViewId,
-      error,
       url: nextUrl,
     });
+    instance.error = normalizeWorkspaceBrowserNavigateFailure(error, nextUrl);
+    instance.loading = false;
+    instance.ready = true;
+    emitWorkspaceBrowserState(instance);
   });
 }
 
@@ -373,10 +448,13 @@ function workspaceBrowserState(
   instance: WorkspaceBrowserInstance,
 ): WorkspaceBrowserState {
   const { webContents } = instance.view;
+  const loading = instance.loading || webContents.isLoading();
   return {
     canGoBack: webContents.canGoBack(),
     canGoForward: webContents.canGoForward(),
-    ready: instance.ready || !webContents.isLoading(),
+    error: instance.error,
+    loading,
+    ready: instance.ready || !loading,
     title: instance.title || webContents.getTitle(),
     url: webContents.getURL() || instance.url,
   };
@@ -444,6 +522,16 @@ export function parseWorkspaceBrowserNavigateInput(
   input: unknown,
 ): WorkspaceBrowserNavigateInput {
   const value = workspaceBrowserNavigateInput(input);
+  if (value instanceof type.errors) {
+    throw new TypeError(value.summary);
+  }
+  return value;
+}
+
+export function parseWorkspaceBrowserOpenExternalInput(
+  input: unknown,
+): WorkspaceBrowserOpenExternalInput {
+  const value = workspaceBrowserOpenExternalInput(input);
   if (value instanceof type.errors) {
     throw new TypeError(value.summary);
   }

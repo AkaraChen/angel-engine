@@ -1,7 +1,7 @@
 import type { FormEvent } from "react";
 
-import { LockKey } from "@phosphor-icons/react";
-import { useState } from "react";
+import { Eye, EyeSlash, LockKey } from "@phosphor-icons/react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { SketchUnderline } from "@/components/sketch-underline";
@@ -22,8 +22,20 @@ export function LoginPage() {
   const { t } = useTranslation();
   const { signIn } = useAuth();
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const errorId = useId();
+  const helpId = useId();
+  const recoveryId = useId();
+  const hasError = error !== null;
+
+  // Focus the field after a failed attempt so the user can correct in place.
+  useEffect(() => {
+    if (!hasError) return;
+    passwordRef.current?.focus();
+  }, [hasError, error]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -32,6 +44,7 @@ export function LoginPage() {
     setIsSubmitting(true);
     try {
       await signIn(password);
+      // Successful pairing unmounts this page via AuthProvider; leave busy.
     } catch (cause) {
       setError(
         cause instanceof PairingError && cause.reason === "invalid-password"
@@ -41,6 +54,10 @@ export function LoginPage() {
       setIsSubmitting(false);
     }
   };
+
+  const describedBy = hasError
+    ? `${helpId} ${errorId} ${recoveryId}`
+    : `${helpId} ${recoveryId}`;
 
   return (
     // Pairing is the one screen with nothing to do but look like the product,
@@ -74,6 +91,7 @@ export function LoginPage() {
           </CardHeader>
           <CardContent>
             <form
+              aria-busy={isSubmitting}
               className="flex flex-col gap-4"
               onSubmit={(event) => void handleSubmit(event)}
             >
@@ -81,22 +99,73 @@ export function LoginPage() {
                 <Label htmlFor="pairing-password">
                   {t("login.passwordLabel")}
                 </Label>
-                <Input
-                  autoComplete="current-password"
-                  autoFocus
-                  // 16px text: anything smaller makes iOS Safari zoom the page
-                  // in on focus, and it never zooms back out.
-                  className="h-12 rounded-full px-4 text-base"
-                  id="pairing-password"
-                  onChange={(event) => setPassword(event.currentTarget.value)}
-                  placeholder={t("login.passwordPlaceholder")}
-                  type="password"
-                  value={password}
-                />
+                <div className="relative">
+                  <Input
+                    ref={passwordRef}
+                    aria-describedby={describedBy}
+                    aria-invalid={hasError}
+                    autoComplete="current-password"
+                    autoFocus
+                    // 16px text: anything smaller makes iOS Safari zoom the page
+                    // in on focus, and it never zooms back out.
+                    className="h-12 rounded-full px-4 pr-14 text-base"
+                    disabled={isSubmitting}
+                    id="pairing-password"
+                    name="password"
+                    onChange={(event) => {
+                      setPassword(event.currentTarget.value);
+                      // Clear the announced error so a later failure is spoken
+                      // once again, not as a no-op re-render of the same text.
+                      if (error !== null) setError(null);
+                    }}
+                    placeholder={t("login.passwordPlaceholder")}
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                  />
+                  <Button
+                    aria-controls="pairing-password"
+                    aria-label={
+                      showPassword
+                        ? t("login.hidePassword")
+                        : t("login.showPassword")
+                    }
+                    aria-pressed={showPassword}
+                    className="
+                      absolute top-1/2 right-1 size-11 -translate-y-1/2
+                      rounded-full
+                    "
+                    disabled={isSubmitting}
+                    onClick={() => setShowPassword((previous) => !previous)}
+                    size="icon"
+                    type="button"
+                    variant="ghost"
+                  >
+                    {showPassword ? (
+                      <EyeSlash className="size-5" weight="regular" />
+                    ) : (
+                      <Eye className="size-5" weight="regular" />
+                    )}
+                  </Button>
+                </div>
+                <p className="px-1 text-xs text-muted-foreground" id={helpId}>
+                  {t("login.passwordHelp")}
+                </p>
+                {hasError ? (
+                  <p
+                    className="px-1 text-sm text-status-danger"
+                    id={errorId}
+                    role="alert"
+                  >
+                    {error}
+                  </p>
+                ) : null}
+                <p
+                  className="px-1 text-xs text-muted-foreground"
+                  id={recoveryId}
+                >
+                  {t("login.recoveryHint")}
+                </p>
               </div>
-              {error !== null ? (
-                <p className="text-sm text-status-danger">{error}</p>
-              ) : null}
               <Button
                 className="
                   h-12 w-full rounded-full text-sm font-medium shadow-panel

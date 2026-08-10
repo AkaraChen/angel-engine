@@ -21,9 +21,11 @@ import { useMobileHosting } from "@/features/settings/use-mobile-hosting";
 export function MobileViewSettings() {
   const { t } = useTranslation();
   const {
+    dismissSaveError,
     enableWithPassword,
     isSaving,
     listenAddresses,
+    saveError,
     setEnabled,
     setHost,
     setPassword,
@@ -31,6 +33,7 @@ export function MobileViewSettings() {
     state,
   } = useMobileHosting();
   const [portDraft, setPortDraft] = useState(String(state.listenPort));
+  const [portError, setPortError] = useState(false);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const [enableAfterPassword, setEnableAfterPassword] = useState(false);
@@ -40,20 +43,26 @@ export function MobileViewSettings() {
   if (lastPortRef.current !== state.listenPort) {
     lastPortRef.current = state.listenPort;
     setPortDraft(String(state.listenPort));
+    setPortError(false);
   }
+
+  // Auto-save rows reject into the mutation's error state (surfaced below);
+  // swallowing the rejection here just avoids an unhandled promise.
+  const attempt = (action: Promise<void>) => void action.catch(() => {});
 
   const commitPort = () => {
     const next = Number(portDraft);
-    if (
-      !Number.isInteger(next) ||
-      next < 0 ||
-      next > 65_535 ||
-      next === state.listenPort
-    ) {
+    if (!Number.isInteger(next) || next < 0 || next > 65_535) {
+      // Keep the draft and say why instead of silently reverting.
+      setPortError(true);
+      return;
+    }
+    setPortError(false);
+    if (next === state.listenPort) {
       setPortDraft(String(state.listenPort));
       return;
     }
-    void setPort(next);
+    attempt(setPort(next));
   };
 
   /**
@@ -76,7 +85,7 @@ export function MobileViewSettings() {
       setPasswordDialogOpen(true);
       return;
     }
-    void setEnabled(enabled);
+    attempt(setEnabled(enabled));
   };
   const openPasswordDialog = () => {
     setEnableAfterPassword(false);
@@ -131,7 +140,7 @@ export function MobileViewSettings() {
             aria-label={t("settings.mobile.hostTitle")}
             className="w-56"
             disabled={isSaving || listenAddresses.length === 0}
-            onChange={(event) => void setHost(event.currentTarget.value)}
+            onChange={(event) => attempt(setHost(event.currentTarget.value))}
             size="sm"
             value={state.host}
           >
@@ -159,20 +168,36 @@ export function MobileViewSettings() {
       />
       <SettingsRow
         after={
-          <Input
-            aria-label={t("settings.mobile.portTitle")}
-            className="h-8 w-40 font-mono text-sm tabular-nums"
-            disabled={isSaving}
-            max={65_535}
-            min={0}
-            onBlur={commitPort}
-            onChange={(event) => setPortDraft(event.currentTarget.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") event.currentTarget.blur();
-            }}
-            type="number"
-            value={portDraft}
-          />
+          <span className="flex flex-col items-end gap-1">
+            <Input
+              aria-describedby={portError ? "mobile-port-error" : undefined}
+              aria-invalid={portError}
+              aria-label={t("settings.mobile.portTitle")}
+              className="h-8 w-40 font-mono text-sm tabular-nums"
+              disabled={isSaving}
+              max={65_535}
+              min={0}
+              onBlur={commitPort}
+              onChange={(event) => {
+                setPortDraft(event.currentTarget.value);
+                setPortError(false);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") event.currentTarget.blur();
+              }}
+              type="number"
+              value={portDraft}
+            />
+            {portError ? (
+              <span
+                className="text-xs text-destructive"
+                id="mobile-port-error"
+                role="alert"
+              >
+                {t("settings.mobile.portInvalid")}
+              </span>
+            ) : null}
+          </span>
         }
         description={t("settings.mobile.portDescription")}
         title={t("settings.mobile.portTitle")}
@@ -239,6 +264,24 @@ export function MobileViewSettings() {
         onSave={enableAfterPassword ? enableWithPassword : setPassword}
         open={passwordDialogOpen}
       />
+      {saveError !== null ? (
+        <div
+          className="mx-4 mb-3 flex items-center justify-between gap-3 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2"
+          role="alert"
+        >
+          <span className="text-xs text-destructive">
+            {t("settings.mobile.saveFailed")} {saveError}
+          </span>
+          <Button
+            onClick={dismissSaveError}
+            size="sm"
+            type="button"
+            variant="ghost"
+          >
+            {t("common.close")}
+          </Button>
+        </div>
+      ) : null}
     </SettingsGroup>
   );
 }

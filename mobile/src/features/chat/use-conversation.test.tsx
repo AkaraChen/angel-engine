@@ -1,5 +1,7 @@
 import type { PropsWithChildren } from "react";
 
+import { chatRunUserMessageContent } from "@angel-engine/daemon-api/chat";
+import type { ChatAttachmentInput } from "@angel-engine/daemon-api/chat";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -88,19 +90,30 @@ function elicitation(
 /** A live SSE stream whose events are pushed by the test; errors on abort. */
 function controllableSse(url: string, init?: RequestInit): SseHandle {
   const input = JSON.parse(requestBody(init)) as {
+    attachments?: ChatAttachmentInput[];
     chatId: string;
     text: string;
   };
   const runId = url.match(/\/api\/chat-runs\/([^/]+)$/)?.[1] ?? "test-run";
   return controllableObserverSse(
-    activeRunSnapshot(input.chatId, input.text, runId),
+    activeRunSnapshot(
+      {
+        attachments: input.attachments,
+        chatId: input.chatId,
+        text: input.text,
+      },
+      runId,
+    ),
     init?.signal ?? undefined,
   );
 }
 
 function activeRunSnapshot(
-  chatId: string,
-  text: string,
+  input: {
+    attachments?: ChatAttachmentInput[];
+    chatId: string;
+    text: string;
+  },
   runId = "test-run",
 ): ChatActiveRunSnapshot {
   const timestamp = "2026-07-25T00:00:00.000Z";
@@ -111,7 +124,7 @@ function activeRunSnapshot(
       id: `${runId}:assistant`,
       role: "assistant",
     },
-    chatId,
+    chatId: input.chatId,
     lastEventSequence: 0,
     pendingElicitation: null,
     runId,
@@ -119,7 +132,13 @@ function activeRunSnapshot(
     status: "running",
     updatedAt: timestamp,
     userMessage: {
-      content: [{ text, type: "text" }],
+      // Built with the same canonical function the daemon uses, so optimistic
+      // projections reconcile against the real echoed shape.
+      content: chatRunUserMessageContent({
+        chatId: input.chatId,
+        text: input.text,
+        ...(input.attachments ? { attachments: input.attachments } : {}),
+      }),
       createdAt: timestamp,
       id: `${runId}:user`,
       role: "user",
@@ -443,7 +462,9 @@ describe("useConversation", () => {
     const { result } = renderHook(() => useConversation("c1"), { wrapper });
     await waitFor(() => expect(result.current.isPending).toBe(false));
 
-    act(() => result.current.send("hi"));
+    await act(async () => {
+      await result.current.send("hi");
+    });
 
     // The user message + an empty streaming assistant row (Thinking) appear.
     await waitFor(() => expect(result.current.isStreaming).toBe(true));
@@ -496,7 +517,9 @@ describe("useConversation", () => {
     const { result } = renderHook(() => useConversation("c1"), { wrapper });
     await waitFor(() => expect(result.current.isPending).toBe(false));
 
-    act(() => result.current.send("run it"));
+    await act(async () => {
+      await result.current.send("run it");
+    });
     await waitFor(() => expect(result.current.isStreaming).toBe(true));
     await waitFor(() => expect(sse).toBeDefined());
 
@@ -595,7 +618,9 @@ describe("useConversation", () => {
     const { result } = renderHook(() => useConversation("c1"), { wrapper });
     await waitFor(() => expect(result.current.isPending).toBe(false));
 
-    act(() => result.current.send("run it"));
+    await act(async () => {
+      await result.current.send("run it");
+    });
     await waitFor(() => expect(sse).toBeDefined());
 
     act(() => sse!.push({ type: "delta", part: "text", text: "Done." }));
@@ -666,7 +691,9 @@ describe("useConversation", () => {
     const { result } = renderHook(() => useConversation("c1"), { wrapper });
     await waitFor(() => expect(result.current.isPending).toBe(false));
 
-    act(() => result.current.send("hi"));
+    await act(async () => {
+      await result.current.send("hi");
+    });
     await waitFor(() => expect(sse).toBeDefined());
     act(() => {
       sse!.push({ type: "delta", part: "text", text: "Partial" });
@@ -719,7 +746,9 @@ describe("useConversation", () => {
     });
     await waitFor(() => expect(result.current.isPending).toBe(false));
 
-    act(() => result.current.send("hi"));
+    await act(async () => {
+      await result.current.send("hi");
+    });
     await waitFor(() => expect(result.current.isStreaming).toBe(true));
 
     act(() =>
@@ -757,7 +786,10 @@ describe("useConversation", () => {
   });
 
   it("reattaches after a lock-screen lifecycle without stopping the run", async () => {
-    const baseSnapshot = activeRunSnapshot("c1", "hi", "run-lock");
+    const baseSnapshot = activeRunSnapshot(
+      { chatId: "c1", text: "hi" },
+      "run-lock",
+    );
     const snapshot: ChatActiveRunSnapshot = {
       ...baseSnapshot,
       assistantMessage: {
@@ -846,7 +878,10 @@ describe("useConversation", () => {
           text: string;
         };
         const runId = url.split("/").at(-1) ?? "run-1";
-        snapshot = activeRunSnapshot(input.chatId, input.text, runId);
+        snapshot = activeRunSnapshot(
+          { chatId: input.chatId, text: input.text },
+          runId,
+        );
         firstObserver = controllableObserverSse(
           snapshot,
           init?.signal ?? undefined,
@@ -867,7 +902,9 @@ describe("useConversation", () => {
 
     const { result } = renderHook(() => useConversation("c1"), { wrapper });
     await waitFor(() => expect(result.current.isPending).toBe(false));
-    act(() => result.current.send("hi"));
+    await act(async () => {
+      await result.current.send("hi");
+    });
     await waitFor(() => expect(firstObserver).toBeDefined());
 
     act(() =>
@@ -931,7 +968,9 @@ describe("useConversation", () => {
     const { result } = renderHook(() => useConversation("c1"), { wrapper });
     await waitFor(() => expect(result.current.isPending).toBe(false));
 
-    act(() => result.current.send("hi"));
+    await act(async () => {
+      await result.current.send("hi");
+    });
     await waitFor(() => expect(sse).toBeDefined());
     act(() =>
       sse!.push({
@@ -1010,7 +1049,9 @@ describe("useConversation", () => {
     const { result } = renderHook(() => useConversation("c1"), { wrapper });
     await waitFor(() => expect(result.current.isPending).toBe(false));
 
-    act(() => result.current.send("plan then implement"));
+    await act(async () => {
+      await result.current.send("plan then implement");
+    });
     await waitFor(() => expect(sse).toBeDefined());
     act(() =>
       sse!.push({
@@ -1080,7 +1121,9 @@ describe("useConversation", () => {
     await waitFor(() => expect(result.current.isPending).toBe(false));
     expect(result.current.runtimeConfig?.currentPermissionMode).toBe("plan");
 
-    act(() => result.current.send("plan then implement"));
+    await act(async () => {
+      await result.current.send("plan then implement");
+    });
     await waitFor(() => expect(sse).toBeDefined());
     act(() =>
       sse!.push({
@@ -1166,7 +1209,9 @@ describe("useConversation", () => {
     const { result } = renderHook(() => useConversation("c1"), { wrapper });
     await waitFor(() => expect(result.current.isPending).toBe(false));
 
-    act(() => result.current.send("hi"));
+    await act(async () => {
+      await result.current.send("hi");
+    });
     await waitFor(() => expect(sse).toBeDefined());
     act(() => sse!.push({ type: "delta", part: "text", text: "Partial" }));
     await waitFor(() =>
@@ -1235,7 +1280,9 @@ describe("useConversation", () => {
     await waitFor(() => expect(result.current.isPending).toBe(false));
     expect(result.current.runtimeConfig?.currentPermissionMode).toBe("plan");
 
-    act(() => result.current.send("make a plan"));
+    await act(async () => {
+      await result.current.send("make a plan");
+    });
     await waitFor(() => expect(sse).toBeDefined());
     const streamRequest = fetchMock.mock.calls.find(
       ([url]) =>
@@ -1443,7 +1490,9 @@ describe("useConversation", () => {
     await waitFor(() => expect(result.current.isPending).toBe(false));
     expect(result.current.messages[0]?.plans[0]?.presentation).toBeNull();
 
-    act(() => result.current.send("revise"));
+    await act(async () => {
+      await result.current.send("revise");
+    });
     await waitFor(() => expect(sse).toBeDefined());
     act(() =>
       sse!.push({
@@ -1459,5 +1508,240 @@ describe("useConversation", () => {
       expect(plans[1].presentation).toBeNull();
       expect(plans[1].text).toBe("New plan");
     });
+  });
+
+  it("accepts attachment-only sends and keeps attachments through reconciliation", async () => {
+    let sse: SseHandle | undefined;
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/load")) {
+        return jsonResponse({ chat: { id: "c1", title: "c1" }, messages: [] });
+      }
+      if (
+        url.includes("/api/chat-runs/") &&
+        !url.endsWith("/elicitation") &&
+        method === "POST"
+      ) {
+        sse = controllableSse(url, init);
+        return sse.response;
+      }
+      return jsonResponse({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useConversation("c1"), { wrapper });
+    await waitFor(() => expect(result.current.isPending).toBe(false));
+
+    const attachment: ChatAttachmentInput = {
+      data: "aGVsbG8=",
+      mimeType: "image/png",
+      name: "shot.png",
+      type: "image",
+    };
+    let sendResult: Awaited<ReturnType<typeof result.current.send>> | undefined;
+    await act(async () => {
+      sendResult = await result.current.send("", [attachment]);
+    });
+    expect(sendResult).toEqual({ accepted: true });
+    await waitFor(() => expect(sse).toBeDefined());
+
+    // The optimistic tile appears immediately…
+    await waitFor(() =>
+      expect(result.current.messages[0]?.attachments).toMatchObject([
+        { name: "shot.png", type: "image" },
+      ]),
+    );
+    // …and survives reconciliation against the canonical snapshot, which the
+    // daemon builds with the same echoed attachment content.
+    act(() =>
+      sse!.push({
+        type: "tool",
+        action: toolAction({ id: "act-1", kind: "command" }),
+      }),
+    );
+    await waitFor(() =>
+      expect(result.current.messages[0]?.attachments).toMatchObject([
+        { name: "shot.png", type: "image" },
+      ]),
+    );
+    expect(result.current.messages[0]?.createdAt).toBe(
+      "2026-07-25T00:00:00.000Z",
+    );
+
+    act(() => {
+      sse!.push(resultEvent(""));
+      sse!.push({ type: "done" });
+      sse!.close();
+    });
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+  });
+
+  it("rolls the optimistic turn back when the daemon rejects the start", async () => {
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/load")) {
+        return jsonResponse({ chat: { id: "c1", title: "c1" }, messages: [] });
+      }
+      if (url.endsWith("/active-run")) {
+        return jsonResponse({ run: null });
+      }
+      if (url.includes("/api/chat-runs/") && method === "POST") {
+        return new Response(
+          JSON.stringify({
+            code: "chat-input-required",
+            error: "Chat text or attachment is required.",
+          }),
+          {
+            status: 400,
+            headers: { "content-type": "application/json" },
+          },
+        );
+      }
+      return jsonResponse({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useConversation("c1"), { wrapper });
+    await waitFor(() => expect(result.current.isPending).toBe(false));
+
+    let sendResult: Awaited<ReturnType<typeof result.current.send>> | undefined;
+    await act(async () => {
+      sendResult = await result.current.send("keep this draft");
+    });
+
+    expect(sendResult?.accepted).toBe(false);
+    expect(
+      sendResult?.accepted === false ? sendResult.error : null,
+    ).not.toBeNull();
+    // Nothing optimistic survives the rejection: no ghost turn, no streaming.
+    await waitFor(() => {
+      expect(result.current.messages).toHaveLength(0);
+      expect(result.current.isStreaming).toBe(false);
+    });
+  });
+
+  it("reports rejection when the daemon is unreachable before acceptance", async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.endsWith("/load")) {
+        return jsonResponse({ chat: { id: "c1", title: "c1" }, messages: [] });
+      }
+      throw new TypeError("network disconnected");
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useConversation("c1"), { wrapper });
+    await waitFor(() => expect(result.current.isPending).toBe(false));
+
+    let sendResult: Awaited<ReturnType<typeof result.current.send>> | undefined;
+    await act(async () => {
+      sendResult = await result.current.send("offline draft");
+    });
+
+    expect(sendResult?.accepted).toBe(false);
+    expect(
+      sendResult?.accepted === false ? sendResult.error : null,
+    ).not.toBeNull();
+    await waitFor(() => {
+      expect(result.current.messages).toHaveLength(0);
+      expect(result.current.isStreaming).toBe(false);
+    });
+  }, 15_000);
+
+  it("resolves stop before acceptance without an error", async () => {
+    let streamController!: ReadableStreamDefaultController<Uint8Array>;
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/load")) {
+        return jsonResponse({ chat: { id: "c1", title: "c1" }, messages: [] });
+      }
+      if (url.endsWith("/active-run")) {
+        return jsonResponse({ run: null });
+      }
+      if (url.includes("/api/chat-runs/") && method === "POST") {
+        const stream = new ReadableStream<Uint8Array>({
+          start(controller) {
+            streamController = controller;
+          },
+        });
+        init?.signal?.addEventListener("abort", () => {
+          try {
+            streamController.close();
+          } catch {
+            // already closed
+          }
+        });
+        return new Response(stream, {
+          status: 200,
+          headers: { "content-type": "text/event-stream" },
+        });
+      }
+      if (url.includes("/api/chat-runs/") && method === "DELETE") {
+        queueMicrotask(() => streamController.close());
+        return jsonResponse({ ok: true });
+      }
+      return jsonResponse({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useConversation("c1"), { wrapper });
+    await waitFor(() => expect(result.current.isPending).toBe(false));
+
+    let sendPromise!: Promise<Awaited<ReturnType<typeof result.current.send>>>;
+    act(() => {
+      sendPromise = result.current.send("stop me");
+    });
+    await waitFor(() => expect(result.current.isStreaming).toBe(true));
+    act(() => result.current.stop());
+
+    await expect(sendPromise).resolves.toEqual({
+      accepted: false,
+      error: null,
+    });
+    await waitFor(() => {
+      expect(result.current.messages).toHaveLength(0);
+      expect(result.current.isStreaming).toBe(false);
+    });
+  });
+
+  it("refuses a second send while a run is already streaming", async () => {
+    let sse: SseHandle | undefined;
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/load")) {
+        return jsonResponse({ chat: { id: "c1", title: "c1" }, messages: [] });
+      }
+      if (
+        url.includes("/api/chat-runs/") &&
+        !url.endsWith("/elicitation") &&
+        method === "POST"
+      ) {
+        sse = controllableSse(url, init);
+        return sse.response;
+      }
+      return jsonResponse({ ok: true });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { result } = renderHook(() => useConversation("c1"), { wrapper });
+    await waitFor(() => expect(result.current.isPending).toBe(false));
+
+    await act(async () => {
+      await expect(result.current.send("first")).resolves.toEqual({
+        accepted: true,
+      });
+    });
+    await waitFor(() => expect(sse).toBeDefined());
+
+    await expect(result.current.send("second")).resolves.toEqual({
+      accepted: false,
+      error: null,
+    });
+
+    act(() => {
+      sse!.push(resultEvent("done"));
+      sse!.push({ type: "done" });
+      sse!.close();
+    });
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
   });
 });

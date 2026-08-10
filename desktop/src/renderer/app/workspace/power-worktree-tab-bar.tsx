@@ -2,7 +2,10 @@ import type { Chat } from "@angel-engine/daemon-api/chat";
 import type { ReactElement } from "react";
 
 import { useTranslation } from "react-i18next";
-import { ChatTabBar } from "@/features/chat/components/chat-tab-bar";
+import {
+  ChatTabBar,
+  POWER_CHAT_TAB_PANEL_ID,
+} from "@/features/chat/components/chat-tab-bar";
 
 type MaybeAsync = void | Promise<void>;
 
@@ -16,6 +19,7 @@ interface PowerWorktreeTabBarProps {
   onNewChat: () => MaybeAsync;
   onOpenChat: (chat: Chat) => MaybeAsync;
   onOpenHome: () => MaybeAsync;
+  tabPanelId?: string;
 }
 
 export function PowerWorktreeTabBar({
@@ -28,6 +32,7 @@ export function PowerWorktreeTabBar({
   onNewChat,
   onOpenChat,
   onOpenHome,
+  tabPanelId = POWER_CHAT_TAB_PANEL_ID,
 }: PowerWorktreeTabBarProps): ReactElement {
   const { t } = useTranslation();
 
@@ -38,6 +43,7 @@ export function PowerWorktreeTabBar({
       draftTabActive={draftTabActive}
       historyTabActive={homeTabActive}
       historyTabLabel={t("sidebar.powerWorktreeHome")}
+      tabPanelId={tabPanelId}
       onCloseChat={onCloseChat}
       onCloseDraftTab={onCloseDraftTab}
       onNewChat={onNewChat}

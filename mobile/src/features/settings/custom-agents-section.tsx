@@ -7,7 +7,7 @@ import type { FC, FormEvent } from "react";
 
 import { PencilSimple, Plus, Robot, Trash } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useReducer, useState } from "react";
+import { useMemo, useReducer, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -72,9 +72,6 @@ export function CustomAgentsSection() {
     null,
   );
   const [deleteTarget, setDeleteTarget] = useState<CustomAgent | null>(null);
-
-  const reportActionError = () =>
-    toast.error(t("settings.customAgents.actionError"));
 
   return (
     <>
@@ -165,19 +162,17 @@ export function CustomAgentsSection() {
           }
           onClose={() => setFormTarget(null)}
           onSave={async (input) => {
-            try {
-              if (formTarget.mode === "edit") {
-                await updateAgent.mutateAsync({
-                  ...input,
-                  id: formTarget.agent.id,
-                });
-              } else {
-                await createAgent.mutateAsync(input);
-              }
-              setFormTarget(null);
-            } catch {
-              reportActionError();
+            // Failures propagate to the drawer, which keeps the precise
+            // daemon message near the action for correction and retry.
+            if (formTarget.mode === "edit") {
+              await updateAgent.mutateAsync({
+                ...input,
+                id: formTarget.agent.id,
+              });
+            } else {
+              await createAgent.mutateAsync(input);
             }
+            setFormTarget(null);
           }}
           pending={createAgent.isPending || updateAgent.isPending}
           target={formTarget}
@@ -207,24 +202,58 @@ const CustomAgentFormDrawer: FC<CustomAgentFormDrawerProps> = ({
 }) => {
   const { t } = useTranslation();
   const agent = target.mode === "edit" ? target.agent : null;
+  const labelInputRef = useRef<HTMLInputElement>(null);
+  const commandInputRef = useRef<HTMLInputElement>(null);
   const [draft, updateDraft] = useReducer(
     customAgentDraftReducer,
     agent,
     createCustomAgentDraft,
   );
-  const canSave =
-    draft.label.trim().length > 0 &&
-    draft.command.trim().length > 0 &&
-    !pending;
+  const [touched, setTouched] = useState({
+    command: false,
+    label: false,
+  });
+  const [formError, setFormError] = useState<string | null>(null);
+  const initialInput = useMemo(
+    () => JSON.stringify(buildCustomAgentInput(createCustomAgentDraft(agent))),
+    [agent],
+  );
+  const labelValid = draft.label.trim().length > 0;
+  const commandValid = draft.command.trim().length > 0;
+  const showLabelError = !labelValid && touched.label;
+  const showCommandError = !commandValid && touched.command;
+  // Save requires a real, valid change: pristine edits stay disabled.
+  const isDirty = JSON.stringify(buildCustomAgentInput(draft)) !== initialInput;
+  const canSave = labelValid && commandValid && isDirty && !pending;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setFormError(null);
+    if (!labelValid || !commandValid) {
+      // Enter submits even while Save is disabled; name the missing field
+      // and move focus to the first invalid one.
+      setTouched({ command: true, label: true });
+      if (!labelValid) labelInputRef.current?.focus();
+      else commandInputRef.current?.focus();
+      return;
+    }
     if (!canSave) return;
-    await onSave(buildCustomAgentInput(draft));
+    try {
+      await onSave(buildCustomAgentInput(draft));
+    } catch (error) {
+      // Keep the precise daemon/API message near the action for correction
+      // and retry instead of collapsing to a generic toast.
+      setFormError(
+        error instanceof Error && error.message.length > 0
+          ? error.message
+          : t("settings.customAgents.actionError"),
+      );
+    }
   }
 
   return (
     <Drawer
+      dismissible={!pending}
       open
       onOpenChange={(open) => {
         if (!open && !pending) onClose();
@@ -251,25 +280,49 @@ const CustomAgentFormDrawer: FC<CustomAgentFormDrawerProps> = ({
                 {t("settings.customAgents.nameLabel")}
               </Label>
               <Input
+                aria-describedby={
+                  showLabelError ? "custom-agent-name-error" : undefined
+                }
+                aria-invalid={showLabelError}
                 autoFocus
                 id="custom-agent-name"
+                onBlur={() =>
+                  setTouched((current) => ({ ...current, label: true }))
+                }
                 onChange={(event) =>
                   updateDraft({
                     field: "label",
                     value: event.currentTarget.value,
                   })
                 }
+                ref={labelInputRef}
                 value={draft.label}
               />
+              {showLabelError ? (
+                <p
+                  className="mt-1.5 text-xs text-destructive"
+                  id="custom-agent-name-error"
+                  role="alert"
+                >
+                  {t("settings.customAgents.nameRequired")}
+                </p>
+              ) : null}
             </div>
             <div>
               <Label className="mb-1.5" htmlFor="custom-agent-command">
                 {t("settings.customAgents.commandLabel")}
               </Label>
               <Input
+                aria-describedby={
+                  showCommandError ? "custom-agent-command-error" : undefined
+                }
+                aria-invalid={showCommandError}
                 autoCapitalize="off"
                 autoCorrect="off"
                 id="custom-agent-command"
+                onBlur={() =>
+                  setTouched((current) => ({ ...current, command: true }))
+                }
                 onChange={(event) =>
                   updateDraft({
                     field: "command",
@@ -277,9 +330,19 @@ const CustomAgentFormDrawer: FC<CustomAgentFormDrawerProps> = ({
                   })
                 }
                 placeholder="my-agent"
+                ref={commandInputRef}
                 spellCheck={false}
                 value={draft.command}
               />
+              {showCommandError ? (
+                <p
+                  className="mt-1.5 text-xs text-destructive"
+                  id="custom-agent-command-error"
+                  role="alert"
+                >
+                  {t("settings.customAgents.commandRequired")}
+                </p>
+              ) : null}
             </div>
             <div>
               <Label className="mb-1.5" htmlFor="custom-agent-args">
@@ -363,6 +426,11 @@ const CustomAgentFormDrawer: FC<CustomAgentFormDrawerProps> = ({
             </div>
           </div>
           <DrawerFooter>
+            {formError === null ? null : (
+              <p className="mb-2 text-xs text-destructive" role="alert">
+                {formError}
+              </p>
+            )}
             <Button disabled={!canSave} type="submit">
               {pending ? <Spinner /> : null}
               {t("common.save")}

@@ -18,7 +18,7 @@
     "format:check": "biome format .",
     "lint": "turbo run lint",
     "test": "turbo run test",
-    "typecheck": "turbo run typecheck",
+    "typecheck": "bun run check:design-tokens && turbo run typecheck",
     "prepare": "husky",
     "precommit": "lint-staged --config lint-staged.config.mjs --relative",
     "napi:build": "turbo run build --filter @angel-engine/client-napi",
@@ -38,7 +38,8 @@
     "js-client:playground:build": "turbo run playground:build --filter @angel-engine/js-client",
     "js-client:test": "turbo run test --filter @angel-engine/js-client",
     "pi-client:build": "turbo run build --filter @angel-engine/pi-client",
-    "pi-client:test": "turbo run test --filter @angel-engine/pi-client"
+    "pi-client:test": "turbo run test --filter @angel-engine/pi-client",
+    "check:design-tokens": "node scripts/check-design-token-parity.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.3",

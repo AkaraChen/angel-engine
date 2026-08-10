@@ -29,6 +29,9 @@ export interface UseMobileHostingResult {
   state: MobileHostingState;
   listenAddresses: MobileHostingListenAddress[];
   isSaving: boolean;
+  /** Precise message of the last rejected save, or null when none failed. */
+  saveError: string | null;
+  dismissSaveError: () => void;
   setEnabled: (enabled: boolean) => Promise<void>;
   enableWithPassword: (password: string) => Promise<void>;
   setHost: (host: string) => Promise<void>;
@@ -103,9 +106,15 @@ export function useMobileHosting(): UseMobileHostingResult {
   };
 
   return {
+    dismissSaveError: () => updateMutation.reset(),
     enableWithPassword,
     isSaving: updateMutation.isPending,
     listenAddresses: listenAddressesQuery.data ?? [],
+    saveError:
+      updateMutation.error instanceof Error &&
+      updateMutation.error.message.length > 0
+        ? updateMutation.error.message
+        : null,
     setEnabled,
     setHost,
     setPassword,

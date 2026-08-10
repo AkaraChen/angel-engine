@@ -206,6 +206,27 @@ export interface UpdateProjectInput {
   path: string;
 }
 
+/**
+ * Server-owned snapshot of what deleting a project would destroy. `revision`
+ * is an opaque token identifying the exact linked-chat set at read time; the
+ * delete call must echo it back so a concurrently-created chat cannot be
+ * silently deleted after the confirmation dialog promised a different set.
+ */
+export interface ProjectDeleteImpact {
+  chatCount: number;
+  revision: string;
+}
+
+export interface ProjectDeleteInput {
+  expectedRevision: string;
+  id: string;
+}
+
+export interface ProjectDeleteResult {
+  deletedChatCount: number;
+  deletedWorktreeCount: number;
+}
+
 export interface ProjectCloneInput {
   /** Clone source: an https/ssh git remote or a bare `owner/repo` shorthand. */
   url: string;
@@ -306,6 +327,12 @@ export const updateProjectInputSchema = arkType({
   "+": "ignore",
   id: "string > 0",
   path: "string > 0",
+});
+
+export const projectDeleteInputSchema = arkType({
+  "+": "ignore",
+  expectedRevision: "string > 0",
+  id: "string > 0",
 });
 
 export function isProjectCloneEvent(

@@ -1,4 +1,5 @@
 import type {
+  ConversationAttachment,
   ConversationMessage,
   ConversationToolCall,
   DaemonHistoryMessage,
@@ -191,6 +192,67 @@ export function partsToPlans(parts: DaemonMessagePart[]): DaemonPlanData[] {
   return plans;
 }
 
+/**
+ * Project image/file history parts into mobile attachment tiles.
+ * Never invents timestamps or provider JSON — only normalized part fields.
+ */
+export function partsToAttachments(
+  parts: DaemonMessagePart[],
+  messageId: string,
+): ConversationAttachment[] {
+  const attachments: ConversationAttachment[] = [];
+  let index = 0;
+  for (const part of parts) {
+    if (part.type === "image") {
+      const name =
+        typeof part.filename === "string" && part.filename.length > 0
+          ? part.filename
+          : "Image";
+      const mimeType =
+        typeof part.mimeType === "string" && part.mimeType.length > 0
+          ? part.mimeType
+          : undefined;
+      const image = part.image;
+      const dataUrl =
+        image.startsWith("data:") || image.startsWith("http")
+          ? image
+          : mimeType
+            ? `data:${mimeType};base64,${image}`
+            : image.startsWith("/")
+              ? image
+              : undefined;
+      attachments.push({
+        dataUrl,
+        id: `${messageId}:att:${index}`,
+        mimeType,
+        name,
+        type: "image",
+      });
+      index += 1;
+      continue;
+    }
+    if (part.type === "file") {
+      const name =
+        typeof part.filename === "string" && part.filename.length > 0
+          ? part.filename
+          : "File";
+      const mimeType = part.mimeType;
+      const dataUrl = part.data.startsWith("data:")
+        ? part.data
+        : `data:${mimeType};base64,${part.data}`;
+      attachments.push({
+        dataUrl,
+        id: `${messageId}:att:${index}`,
+        mimeType,
+        name,
+        type: mimeType.startsWith("image/") ? "image" : "file",
+      });
+      index += 1;
+    }
+  }
+  return attachments;
+}
+
 /** Project a single daemon history message into a rendered conversation row. */
 export function toConversationMessage(
   message: DaemonHistoryMessage,
@@ -203,6 +265,12 @@ export function toConversationMessage(
     status: "complete",
     toolCalls: partsToToolCalls(message.content),
     plans: partsToPlans(message.content),
+    // Preserve absence: never invent a wall-clock time for restored rows.
+    createdAt:
+      typeof message.createdAt === "string" && message.createdAt.length > 0
+        ? message.createdAt
+        : undefined,
+    attachments: partsToAttachments(message.content, message.id),
   };
 }
 
@@ -226,7 +294,8 @@ export function toConversation(
           message.text.length > 0 ||
           message.reasoning.length > 0 ||
           message.toolCalls.length > 0 ||
-          message.plans.length > 0,
+          message.plans.length > 0 ||
+          message.attachments.length > 0,
       ),
   );
 }

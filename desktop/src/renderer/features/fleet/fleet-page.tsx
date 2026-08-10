@@ -26,6 +26,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 import { providerUsageAvailability } from "@angel-engine/usage-collector/correlate";
 import { useTranslation } from "react-i18next";
+import { RecoveryState } from "@/components/recovery-state";
 import { Button } from "@/components/ui/button";
 import {
   InputGroup,
@@ -233,8 +234,15 @@ export function FleetPage({
   );
   const boardColumns = useMemo(() => bucketFleetRows(scopedRows), [scopedRows]);
 
-  const isPending = activityQuery.isPending || isMetadataPending;
-  const isError = activityQuery.isError || isMetadataError;
+  /**
+   * Initial load only: once we have any trustworthy snapshot, keep it visible
+   * under an offline banner instead of swapping to a skeleton or empty state.
+   */
+  const isPending =
+    (activityQuery.isPending && activityQuery.data === undefined) ||
+    isMetadataPending;
+  const isDisconnected = activityQuery.isError || isMetadataError;
+  const hasTrustworthyRows = rows.length > 0;
   const hasSearch = search.trim() !== "";
   // Filtering an empty set is noise — only show the toolbar once there is
   // something to segment, search, or project-filter.
@@ -247,6 +255,26 @@ export function FleetPage({
     writeFleetViewPreference(nextView);
     setView(nextView);
   };
+
+  const retryFleet = useCallback(() => {
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.chatActivity.all(),
+    });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.chats.list() });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.projects.list() });
+  }, [queryClient]);
+
+  const retryAction = useMemo(
+    () => [
+      {
+        label: t("fleet.retry"),
+        onClick: retryFleet,
+        primary: true,
+        testId: "fleet-retry",
+      },
+    ],
+    [retryFleet, t],
+  );
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
@@ -389,8 +417,14 @@ export function FleetPage({
           ) : (
             <FleetSkeletonList />
           )
-        ) : isError ? (
-          <FleetNotice text={t("fleet.disconnected")} />
+        ) : isDisconnected && !hasTrustworthyRows ? (
+          <RecoveryState
+            actions={retryAction}
+            className="mt-8"
+            description={t("fleet.disconnectedDescription")}
+            title={t("fleet.disconnectedTitle")}
+            variant="offline"
+          />
         ) : isEmpty ? (
           <FleetEmptyState
             onNewChat={onNewChat}
@@ -403,13 +437,37 @@ export function FleetPage({
             }
           />
         ) : view === "board" ? (
-          <FleetBoard columns={boardColumns} onOpen={openRow} />
+          <>
+            {isDisconnected ? (
+              <RecoveryState
+                actions={retryAction}
+                className="mt-5 ml-6"
+                description={t("fleet.disconnectedStale")}
+                inline
+                title={t("fleet.disconnectedTitle")}
+                variant="offline"
+              />
+            ) : null}
+            <FleetBoard columns={boardColumns} onOpen={openRow} />
+          </>
         ) : (
-          <FleetList
-            onOpen={openRow}
-            sections={listSections}
-            usage={usageQuery.data}
-          />
+          <>
+            {isDisconnected ? (
+              <RecoveryState
+                actions={retryAction}
+                className="mt-5 ml-6"
+                description={t("fleet.disconnectedStale")}
+                inline
+                title={t("fleet.disconnectedTitle")}
+                variant="offline"
+              />
+            ) : null}
+            <FleetList
+              onOpen={openRow}
+              sections={listSections}
+              usage={usageQuery.data}
+            />
+          </>
         )}
       </div>
     </div>
@@ -778,19 +836,6 @@ function FleetSkeletonBoard(): ReactElement {
           </div>
         ))}
       </div>
-    </div>
-  );
-}
-
-function FleetNotice({ text }: { text: string }): ReactElement {
-  return (
-    <div
-      className="
-        mt-8 rounded-xl border border-border-subtle px-6 py-16 text-center
-        text-sm text-muted-foreground
-      "
-    >
-      {text}
     </div>
   );
 }

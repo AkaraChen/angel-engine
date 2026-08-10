@@ -5,17 +5,14 @@ import type {
   ChatRuntimeConfig,
 } from "@angel-engine/daemon-api/chat";
 import type { Project } from "@angel-engine/daemon-api/projects";
-import type { ErrorInfo, ReactNode } from "react";
-
 import type {
   ChatMessagesUpdateHandler,
   ChatUpdateHandler,
   DraftAgentConfig,
 } from "@/app/workspace/workspace-thread-types";
 import type { useApi } from "@/platform/use-api";
-import { WarningCircle as AlertCircle } from "@phosphor-icons/react";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import { Component, useCallback, useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Redirect } from "wouter";
 import {
@@ -26,10 +23,7 @@ import {
   selectedConfigOverride,
 } from "@/app/workspace/chat-runtime-options";
 import { useRuntimeValueLabelers } from "@/app/workspace/runtime-value-labels";
-import {
-  getErrorMessage,
-  getProjectDisplayName,
-} from "@/app/workspace/workspace-display";
+import { getProjectDisplayName } from "@/app/workspace/workspace-display";
 import { chatRoutePath } from "@/app/workspace/workspace-route-paths";
 import { chatRuntimeProviderKey } from "@/app/workspace/workspace-runtime-keys";
 import { EMPTY_MESSAGES } from "@/app/workspace/workspace-thread-types";
@@ -40,7 +34,6 @@ import {
 import { AssistantThread } from "@/features/chat/components/assistant-thread";
 import { AmbiguousSendBanner } from "@/features/chat/components/ambiguous-send-banner";
 import { SetupLifecycleBanner } from "@/features/projects/components/setup-lifecycle-banner";
-import { workspaceContentColumnClass } from "@/features/chat/components/thread-styles";
 import { AppRuntimeProvider } from "@/features/chat/runtime/app-runtime-provider";
 import { ChatOptionsProvider } from "@/features/chat/runtime/chat-options-context";
 import {
@@ -49,7 +42,6 @@ import {
   useChatRunMessages,
   useChatRunStore,
 } from "@/features/chat/state/chat-run-store";
-import i18n from "@/i18n";
 import { KeymapScope, useContextKey } from "@/platform/keymap/provider";
 
 interface ActiveChatThreadProps {
@@ -449,60 +441,6 @@ function ChatThreadRuntime({
       </ChatOptionsProvider>
     </KeymapScope>
   );
-}
-
-export class ChatRestoreErrorBoundary extends Component<
-  { children: ReactNode },
-  { error?: unknown; failed: boolean }
-> {
-  state: { error?: unknown; failed: boolean } = { failed: false };
-
-  static getDerivedStateFromError(error: unknown) {
-    return { error, failed: true };
-  }
-
-  componentDidCatch(error: unknown, errorInfo: ErrorInfo) {
-    console.error("Chat restore failed", error, errorInfo);
-  }
-
-  render(): ReactNode {
-    if (this.state.failed) {
-      return (
-        <div
-          className="
-            flex h-full min-h-0 flex-1 items-center justify-center bg-background
-            p-4
-          "
-        >
-          <div
-            className={`
-              ${workspaceContentColumnClass}
-              flex items-start gap-3 rounded-lg border
-              border-status-danger-border bg-status-danger-soft px-4 py-3
-              text-sm text-foreground shadow-xs
-            `}
-            role="alert"
-          >
-            <AlertCircle className="mt-0.5 size-4 shrink-0 text-status-danger" />
-            <div className="min-w-0">
-              <div className="font-medium">
-                {i18n.t("notifications.chatActionFailed")}
-              </div>
-              <div
-                className="
-                  mt-1 text-[13px]/5 whitespace-pre-wrap text-muted-foreground
-                "
-              >
-                {getErrorMessage(this.state.error)}
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    return this.props.children;
-  }
 }
 
 function chatProjectContext(

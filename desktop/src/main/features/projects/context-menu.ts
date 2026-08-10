@@ -2,13 +2,23 @@ import type { Project } from "@angel-engine/daemon-api/projects";
 import type { BrowserWindow } from "electron";
 import type { PathLauncherMenuResult } from "@shared/path-launcher";
 
+import { DaemonRequestError } from "@angel-engine/daemon-client";
 import { Menu } from "electron";
 import { daemonClient } from "../../daemon/client";
+import { translate } from "../../platform/i18n";
+import {
+  buildProjectDeleteConfirmDetail,
+  buildProjectDeleteConfirmMessage,
+  confirmDestructiveDelete,
+  projectDisplayName,
+  showDestructiveBlockedNotice,
+} from "../destructive-confirm";
 import { createPathLauncherMenuItems } from "../path-launcher/context-menu";
 import { resolvePathLauncherTarget } from "../path-launcher/target";
 
 export type ProjectContextMenuResult =
   | PathLauncherMenuResult
+  | "cancelled"
   | "deleted"
   | "settings";
 
@@ -46,9 +56,9 @@ export async function showProjectContextMenu(
           {
             click: () => {
               handled = true;
-              void daemonClient.projects.delete(project.id).then(
-                () => resolve("deleted"),
-                (error: unknown) => reject(error),
+              void confirmAndDeleteProject(project, window).then(
+                resolve,
+                reject,
               );
             },
             label: labels.delete,
@@ -62,4 +72,44 @@ export async function showProjectContextMenu(
         });
       });
   });
+}
+
+async function confirmAndDeleteProject(
+  project: Project,
+  window: BrowserWindow | undefined,
+): Promise<"cancelled" | "deleted"> {
+  const impact = await daemonClient.projects.deleteImpact(project.id);
+  const name = projectDisplayName(project.path);
+  const confirmed = await confirmDestructiveDelete(
+    {
+      detail: buildProjectDeleteConfirmDetail(impact.chatCount),
+      message: buildProjectDeleteConfirmMessage(name),
+    },
+    window,
+  );
+  if (!confirmed) return "cancelled";
+  try {
+    await daemonClient.projects.delete({
+      expectedRevision: impact.revision,
+      id: project.id,
+    });
+  } catch (error) {
+    if (
+      error instanceof DaemonRequestError &&
+      error.code === "project-delete-conflict"
+    ) {
+      // The confirmed chat set drifted; the daemon deleted nothing. Tell the
+      // user visibly instead of surfacing a generic failure.
+      await showDestructiveBlockedNotice(
+        {
+          detail: translate("projects.deleteConflictDetail"),
+          message: translate("projects.deleteConflictTitle"),
+        },
+        window,
+      );
+      return "cancelled";
+    }
+    throw error;
+  }
+  return "deleted";
 }

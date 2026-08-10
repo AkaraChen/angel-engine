@@ -1,5 +1,6 @@
 import type {
   WorkspaceBrowserBounds,
+  WorkspaceBrowserError,
   WorkspaceBrowserState,
 } from "@shared/workspace-browser";
 
@@ -11,18 +12,20 @@ export function WorkspaceBrowserNativeView({
   active,
   browserViewId,
   className,
+  onFailure,
   onStateChange,
   url,
 }: {
   active: boolean;
   browserViewId: string;
   className?: string;
+  onFailure?: (error: WorkspaceBrowserError) => void;
   onStateChange?: (state: WorkspaceBrowserState) => void;
   url: string;
 }) {
   const cleanupRef = useRef<() => void>(() => {});
-  const propsRef = useRef({ browserViewId, onStateChange, url });
-  propsRef.current = { browserViewId, onStateChange, url };
+  const propsRef = useRef({ browserViewId, onFailure, onStateChange, url });
+  propsRef.current = { browserViewId, onFailure, onStateChange, url };
 
   const setContainer = useCallback((container: HTMLDivElement | null) => {
     cleanupRef.current();
@@ -37,6 +40,9 @@ export function WorkspaceBrowserNativeView({
     const currentProps = propsRef.current;
     const emitState = (state: WorkspaceBrowserState) => {
       propsRef.current.onStateChange?.(state);
+    };
+    const emitFailure = (error: WorkspaceBrowserError) => {
+      propsRef.current.onFailure?.(error);
     };
     let stopTrackingBounds = () => {};
     const unsubscribe = window.workspaceBrowser.onEvent(
@@ -74,11 +80,14 @@ export function WorkspaceBrowserNativeView({
           });
         }
       })
-      .catch((error: unknown) => {
-        console.error("Failed to attach workspace browser view.", {
-          browserViewId: currentProps.browserViewId,
-          error,
-        });
+      .catch(() => {
+        // Surface a normalized failure; never forward host wire text.
+        if (!disposed) {
+          emitFailure({
+            code: "unknown",
+            url: currentProps.url,
+          });
+        }
       });
 
     cleanupRef.current = () => {
@@ -90,11 +99,8 @@ export function WorkspaceBrowserNativeView({
           attachmentId,
           browserViewId: currentProps.browserViewId,
         })
-        .catch((error: unknown) => {
-          console.error("Failed to detach workspace browser view.", {
-            browserViewId: currentProps.browserViewId,
-            error,
-          });
+        .catch(() => {
+          // Detach during teardown is best-effort.
         });
     };
   }, []);

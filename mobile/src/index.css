@@ -55,7 +55,7 @@
      tappable surface in this app sizes off this instead. */
   --touch-target: 2.75rem;
   /* Neutral ramp. Named `ink` because these are warm greys, not brand colors;
-     the accent ramp lives in `--azure-*`. */
+     the accent ramp lives in `--grass-*`. Azure remains for status-info only. */
   --ink-50: #fafaf9;
   --ink-100: #f5f5f4;
   --ink-200: #e7e5e4;
@@ -78,51 +78,57 @@
   --azure-800: #173db6;
   --azure-900: #19388f;
   --azure-950: #142357;
-  --background: #fbf9f4;
-  --foreground: #1a1a1a;
+  --grass-50: #f3f8ea;
+  --grass-100: #e6f1d3;
+  --grass-200: #cfe5ae;
+  --grass-300: #b0d382;
+  --grass-400: #8dbb56;
+  --grass-500: #71a03a;
+  --grass-600: #59802c;
+  --grass-700: #456425;
+  --grass-800: #364e20;
+  --grass-900: #2c3e1d;
+  --grass-950: #16220e;
+  --background: #f5f8ee;
+  --foreground: #1a1c17;
   --card: #ffffff;
-  --card-foreground: #1a1a1a;
+  --card-foreground: #1a1c17;
   --popover: #ffffff;
-  --popover-foreground: #1a1a1a;
-  --primary: #3784ff;
+  --popover-foreground: #1a1c17;
+  --primary: #59802c;
   --primary-foreground: #ffffff;
-  --primary-hover: #1b60f5;
-  --primary-active: #144be1;
-  /* `--primary` is a 3.56:1 blue on white: correct for the non-text jobs WCAG
-     scores at 3:1 (icons, borders, indicators, focus rings, fills) and wrong
-     for anything paired with text. `--primary-strong` is one step down the
-     azure ramp and is the accent to reach for whenever text is involved --
-     blue text on a light ground (5.2:1 on card) and white text on a blue fill
-     (5.2:1 as well). In dark both roles land on the same value, so the dark
-     theme is unchanged. */
-  --primary-strong: #1b60f5;
-  --primary-strong-hover: #144be1;
-  --primary-strong-active: #173db6;
-  --primary-soft: #d5e5ff;
-  --primary-soft-foreground: #29325c;
+  --primary-hover: #456425;
+  --primary-active: #364e20;
+  /* `--primary` is grass-600, 4.6:1 on card: non-text WCAG 3:1 jobs.
+     `--primary-strong` is for text on light grounds / white on grass fills. */
+  --primary-strong: #456425;
+  --primary-strong-hover: #364e20;
+  --primary-strong-active: #2c3e1d;
+  --primary-soft: #dcecc2;
+  --primary-soft-foreground: #2c3e1d;
   --secondary: var(--surface-1);
-  --secondary-foreground: #1a1a1a;
+  --secondary-foreground: #1a1c17;
   --muted: var(--surface-1);
-  /* Spec value is #71717a, which lands at 4.18:1 on the cream paper ground.
-     Darkened onto the warm neutral ramp to clear WCAG AA (5.5:1). */
-  --muted-foreground: #6b645d;
+  /* Spec value is #71717a, which lands at 4.18:1 on the paper ground. Darkened
+     and pulled onto the ground's hue to clear WCAG AA (5.1:1). */
+  --muted-foreground: #656b5c;
   --accent: var(--surface-1);
-  --accent-foreground: #1b60f5;
+  --accent-foreground: #456425;
   --destructive: #fb2c36;
   --destructive-foreground: #ffffff;
   --presence: #7c6df0;
-  --surface-1: #f4f1ea;
-  --surface-2: #ece8df;
-  --surface-3: #e2ded3;
+  --surface-1: #edf2e2;
+  --surface-2: #e5ebd7;
+  --surface-3: #dae2c8;
   --panel: rgb(255 255 255 / 0.76);
-  --overlay-hover: rgb(41 37 36 / 0.055);
-  --overlay-active: rgb(41 37 36 / 0.085);
-  --border: #e4e3e0;
-  --border-subtle: #edece8;
-  --border-strong: #d4d4d0;
-  --input: #e4e3e0;
-  --ring: #3784ff;
-  --dot-grid: #c4c8cc;
+  --overlay-hover: rgb(38 44 32 / 0.055);
+  --overlay-active: rgb(38 44 32 / 0.085);
+  --border: #e2e6da;
+  --border-subtle: #ebeee4;
+  --border-strong: #d2d7c7;
+  --input: #e2e6da;
+  --ring: #59802c;
+  --dot-grid: #c6cdb8;
   --status-success: #009767;
   --status-success-soft: #e6f6f0;
   --status-success-border: #c2e7da;
@@ -135,24 +141,24 @@
   --status-info: #1b60f5;
   --status-info-soft: #eef6ff;
   --status-info-border: #d9eaff;
-  --elevation-xs: 0 1px 2px rgb(15 23 42 / 0.05);
+  --elevation-xs: 0 1px 2px rgb(32 38 26 / 0.05);
   --elevation-panel:
-    0 1px 2px rgb(15 23 42 / 0.04), 0 2px 6px -2px rgb(15 23 42 / 0.06);
-  --elevation-popover: 0 18px 48px -24px rgb(35 31 32 / 0.18);
-  --elevation-overlay: 0 0 48px -16px rgb(35 31 32 / 0.18);
+    0 1px 2px rgb(32 38 26 / 0.04), 0 2px 6px -2px rgb(32 38 26 / 0.06);
+  --elevation-popover: 0 18px 48px -24px rgb(32 38 26 / 0.18);
+  --elevation-overlay: 0 0 48px -16px rgb(32 38 26 / 0.18);
   --chart-1: #3784ff;
   --chart-2: #7c6df0;
   --chart-3: #009767;
   --chart-4: #9a7b1a;
   --chart-5: #fb2c36;
-  --sidebar: #f4f1ea;
-  --sidebar-foreground: #52504b;
-  --sidebar-primary: #f4f1ea;
-  --sidebar-primary-foreground: #1a1a1a;
+  --sidebar: #edf2e2;
+  --sidebar-foreground: #515548;
+  --sidebar-primary: #edf2e2;
+  --sidebar-primary-foreground: #1a1c17;
   --sidebar-accent: var(--surface-2);
-  --sidebar-accent-foreground: #1a1a1a;
+  --sidebar-accent-foreground: #1a1c17;
   --sidebar-border: var(--border-subtle);
-  --sidebar-ring: #3784ff;
+  --sidebar-ring: #59802c;
 }
 
 :root[lang="zh-Hant"],
@@ -174,45 +180,45 @@
 
 .dark {
   color-scheme: dark;
-  --background: #0c0c0c;
-  --foreground: #f0f0ee;
-  --card: #171717;
-  --card-foreground: #f0f0ee;
-  --popover: #171717;
-  --popover-foreground: #f0f0ee;
-  --primary: #69a3ff;
-  --primary-foreground: #0c0c0c;
-  --primary-hover: #93c5fd;
-  --primary-active: #59a5ff;
+  --background: #0c0d0b;
+  --foreground: #eef0ea;
+  --card: #161814;
+  --card-foreground: #eef0ea;
+  --popover: #161814;
+  --popover-foreground: #eef0ea;
+  --primary: #8dbb56;
+  --primary-foreground: #0c0d0b;
+  --primary-hover: #b0d382;
+  --primary-active: #71a03a;
   /* 7.72:1 on the dark ground already, so the strong role is the same colour
      as the plain one and nothing shifts in dark. */
-  --primary-strong: #69a3ff;
-  --primary-strong-hover: #93c5fd;
-  --primary-strong-active: #59a5ff;
-  --primary-soft: rgb(105 163 255 / 0.14);
-  --primary-soft-foreground: #bcdbff;
+  --primary-strong: #8dbb56;
+  --primary-strong-hover: #b0d382;
+  --primary-strong-active: #71a03a;
+  --primary-soft: rgb(141 187 86 / 0.14);
+  --primary-soft-foreground: #cfe5ae;
   --secondary: var(--surface-1);
-  --secondary-foreground: #f0f0ee;
+  --secondary-foreground: #eef0ea;
   --muted: var(--surface-1);
   /* 5.9:1 on #0c0c0c — clears AA. */
-  --muted-foreground: #f0f0ee90;
+  --muted-foreground: #eef0ea90;
   --accent: var(--surface-1);
-  --accent-foreground: #f0f0ee;
+  --accent-foreground: #eef0ea;
   --destructive: #ff6467;
-  --destructive-foreground: #0c0c0c;
+  --destructive-foreground: #0c0d0b;
   --presence: #a99cff;
-  --surface-1: #141414;
-  --surface-2: #1c1c1c;
-  --surface-3: #242424;
+  --surface-1: #131512;
+  --surface-2: #1b1e19;
+  --surface-3: #232720;
   --panel: rgb(255 255 255 / 0.035);
-  --overlay-hover: rgb(235 235 234 / 0.07);
-  --overlay-active: rgb(235 235 234 / 0.1);
-  --border: #1e1e1e;
-  --border-subtle: #191919;
-  --border-strong: #2b2b2b;
-  --input: #1e1e1e;
-  --ring: #69a3ff;
-  --dot-grid: #2b2b2b;
+  --overlay-hover: rgb(233 236 228 / 0.07);
+  --overlay-active: rgb(233 236 228 / 0.1);
+  --border: #1d201b;
+  --border-subtle: #181b16;
+  --border-strong: #2a2e26;
+  --input: #1d201b;
+  --ring: #8dbb56;
+  --dot-grid: #2a2e26;
   --status-success: #00d294;
   --status-success-soft: rgb(0 210 148 / 0.12);
   --status-success-border: rgb(0 210 148 / 0.28);
@@ -238,14 +244,14 @@
   --chart-3: #00d294;
   --chart-4: #f0b100;
   --chart-5: #ff6467;
-  --sidebar: #0c0c0c;
-  --sidebar-foreground: #c9c9c6;
-  --sidebar-primary: #0c0c0c;
-  --sidebar-primary-foreground: #f0f0ee;
+  --sidebar: #0c0d0b;
+  --sidebar-foreground: #c7cac1;
+  --sidebar-primary: #0c0d0b;
+  --sidebar-primary-foreground: #eef0ea;
   --sidebar-accent: var(--surface-2);
-  --sidebar-accent-foreground: #f0f0ee;
+  --sidebar-accent-foreground: #eef0ea;
   --sidebar-border: var(--border-subtle);
-  --sidebar-ring: #69a3ff;
+  --sidebar-ring: #8dbb56;
 }
 
 @theme inline {
@@ -278,6 +284,17 @@
   --color-azure-800: var(--azure-800);
   --color-azure-900: var(--azure-900);
   --color-azure-950: var(--azure-950);
+  --color-grass-50: var(--grass-50);
+  --color-grass-100: var(--grass-100);
+  --color-grass-200: var(--grass-200);
+  --color-grass-300: var(--grass-300);
+  --color-grass-400: var(--grass-400);
+  --color-grass-500: var(--grass-500);
+  --color-grass-600: var(--grass-600);
+  --color-grass-700: var(--grass-700);
+  --color-grass-800: var(--grass-800);
+  --color-grass-900: var(--grass-900);
+  --color-grass-950: var(--grass-950);
   --color-presence: var(--presence);
   --color-surface-1: var(--surface-1);
   --color-surface-2: var(--surface-2);
@@ -390,10 +407,10 @@ body {
     font-family: inherit;
   }
   ::selection {
-    background-color: rgb(55 132 255 / 0.18);
+    background-color: rgb(89 128 44 / 0.18);
   }
   .dark ::selection {
-    background-color: rgb(105 163 255 / 0.24);
+    background-color: rgb(141 187 86 / 0.24);
   }
 }
 

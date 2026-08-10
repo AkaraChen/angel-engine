@@ -20,8 +20,12 @@ export interface LocaleResourceTranslationLogin {
   description: string;
   passwordLabel: string;
   passwordPlaceholder: string;
+  passwordHelp: string;
+  showPassword: string;
+  hidePassword: string;
   incorrectPassword: string;
   connectionError: string;
+  recoveryHint: string;
   connecting: string;
   connect: string;
 }
@@ -34,6 +38,9 @@ export interface LocaleResourceTranslationShell {
 
 export interface LocaleResourceTranslationSidebar {
   home: string;
+  navigationTitle: string;
+  navigationDescription: string;
+  close: string;
 }
 
 export interface LocaleResourceTranslationDaemonStatus {
@@ -81,6 +88,19 @@ export interface LocaleResourceTranslationChat {
   messagePlaceholder: string;
   sendAria: string;
   stopAria: string;
+  attachAria: string;
+  attachments: string;
+  removeAttachment: string;
+  retryAttachment: string;
+  roleUser: string;
+  roleAssistant: string;
+  sendFailed: string;
+  attachmentErrors: {
+    accept: string;
+    maxFileSize: string;
+    maxFiles: string;
+    fileRead: string;
+  };
   plan: string;
   todo: string;
   build: string;
@@ -122,6 +142,7 @@ export interface LocaleResourceTranslationCreateChat {
   description: string;
   promptLabel: string;
   promptPlaceholder: string;
+  promptRequired: string;
   projectLabel: string;
   noProject: string;
   agentLabel: string;
@@ -164,10 +185,34 @@ export interface LocaleResourceTranslationSettingsAppearance {
 }
 
 export interface LocaleResourceTranslationSettingsAbout {
+  appDescription: string;
+  appName: string;
+  build: string;
+  copied: string;
+  copyDiagnostics: string;
+  copyFailed: string;
+  description: string;
+  diagnostics: string;
+  title: string;
+}
+
+export interface LocaleResourceTranslationSettingsConnection {
   title: string;
   description: string;
-  appName: string;
-  appDescription: string;
+  server: string;
+  sameOrigin: string;
+  status: string;
+  statusOnline: string;
+  statusConnecting: string;
+  statusUnreachable: string;
+  daemonVersion: string;
+  versionUnknown: string;
+  disconnectSectionTitle: string;
+  disconnectDescription: string;
+  disconnect: string;
+  disconnectConfirmTitle: string;
+  disconnectConfirmDescription: string;
+  disconnectConfirm: string;
 }
 
 export interface LocaleResourceTranslationSettingsProjects {
@@ -176,6 +221,7 @@ export interface LocaleResourceTranslationSettingsProjects {
   createTitle: string;
   deleteAria: string;
   deleteChecking: string;
+  deleteConflict: string;
   deleteImpact: string;
   deleteImpactOne: string;
   deleteImpactUnknown: string;
@@ -191,6 +237,7 @@ export interface LocaleResourceTranslationSettingsProjects {
   pathInvalid: string;
   pathLabel: string;
   pathPlaceholder: string;
+  pathRequired: string;
   title: string;
 }
 
@@ -201,6 +248,7 @@ export interface LocaleResourceTranslationSettingsCustomAgents {
   argsPlaceholder: string;
   autoAuthenticateLabel: string;
   commandLabel: string;
+  commandRequired: string;
   createTitle: string;
   deleteAria: string;
   deleteChecking: string;
@@ -219,12 +267,14 @@ export interface LocaleResourceTranslationSettingsCustomAgents {
   formDescription: string;
   loadError: string;
   nameLabel: string;
+  nameRequired: string;
   needAuthLabel: string;
   title: string;
 }
 
 export interface LocaleResourceTranslationSettings {
   appearance: LocaleResourceTranslationSettingsAppearance;
+  connection: LocaleResourceTranslationSettingsConnection;
   customAgents: LocaleResourceTranslationSettingsCustomAgents;
   projects: LocaleResourceTranslationSettingsProjects;
   about: LocaleResourceTranslationSettingsAbout;

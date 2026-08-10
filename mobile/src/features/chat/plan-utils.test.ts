@@ -27,6 +27,7 @@ function conversationRow(
     status: "complete",
     toolCalls: [],
     plans,
+    attachments: [],
   };
 }
 

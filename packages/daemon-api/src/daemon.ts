@@ -72,6 +72,7 @@ export type DaemonErrorCode =
   | "process-not-registered"
   | "project-config-invalid"
   | "project-config-write-failed"
+  | "project-delete-conflict"
   | "project-id-required"
   | "project-not-found"
   | "project-not-git-repository"

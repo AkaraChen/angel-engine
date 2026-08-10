@@ -30,7 +30,14 @@ export function writeNotificationPreferences(
   try {
     writeFileSync(
       preferencesPath(),
-      `${JSON.stringify({ osEnabled: preferences.osEnabled })}\n`,
+      `${JSON.stringify({
+        needsInput: preferences.needsInput,
+        osEnabled: preferences.osEnabled,
+        runCompleted: preferences.runCompleted,
+        runFailed: preferences.runFailed,
+        sound: preferences.sound,
+        version: preferences.version,
+      })}\n`,
     );
   } catch (error: unknown) {
     // The preference still applies to this session; only persistence is lost.
