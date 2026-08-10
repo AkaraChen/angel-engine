@@ -433,6 +433,47 @@ export const es = {
         sendWithModEnterTitle: "Enviar con {{shortcut}}",
       },
     },
+    usage: {
+      activeBlock: "Bloque de facturación activo",
+      activeRuns: "Sesiones en ejecución",
+      burnRate: "Tasa actual",
+      burnRateThreshold: "Umbral de alerta",
+      burnRateWarning: "Alerta de tasa de consumo",
+      burnRateWarningActive: "La tasa actual supera {{threshold}}.",
+      burnRateWarningDescription:
+        "Resalta el indicador de uso cuando la tasa por hora supera el umbral.",
+      byAgent: "Por agente",
+      cacheCreationTokens: "Escritura de caché",
+      cacheReadTokens: "Lectura de caché",
+      collecting: "Recopilando uso local…",
+      contextNearLimit:
+        "El contexto está cerca de su límite. Considera iniciar un chat nuevo.",
+      contextUsed: "Contexto utilizado",
+      month: "Este mes",
+      noData: "No hay registros de uso local",
+      projected: "Proyección con la tasa actual",
+      inputTokens: "Entrada",
+      lastCollected: "Última recopilación a las {{time}}.",
+      outputTokens: "Salida",
+      refresh: "Actualizar",
+      source: "Fuente de datos",
+      sourceDescription:
+        "Estimado a partir de registros locales de agentes. Proveedores compatibles: {{agents}}; otros proveedores y los personalizados no están disponibles.",
+      sessionCost: "Coste",
+      today: "Hoy",
+      tokens: "tokens",
+      unavailable: "Uso no disponible",
+      unavailableReasons: {
+        "binary-missing":
+          "Uso no disponible: falta el binario ccusage incluido.",
+        "exec-failed": "Uso no disponible: ccusage ha fallado.",
+        "schema-mismatch":
+          "Uso no disponible: la salida de ccusage ha cambiado.",
+        timeout: "Uso no disponible: se agotó el tiempo de recopilación.",
+      },
+      warnings: "Alertas",
+      week: "Esta semana",
+    },
     updates: {
       checkFailed: "No se pudieron buscar actualizaciones",
       checkFailedDetail: "Inténtalo de nuevo más tarde.",

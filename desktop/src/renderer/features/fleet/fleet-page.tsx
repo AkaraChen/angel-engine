@@ -432,11 +432,9 @@ function FleetRowButton({
           <span className="text-muted-foreground"> · {detail}</span>
         ) : null}
       </span>
-      {sessionCost ? (
-        <span className="hidden w-16 shrink-0 text-right font-mono text-[11px] tabular-nums text-muted-foreground lg:block">
-          {sessionCost}
-        </span>
-      ) : null}
+      <span className="hidden w-16 shrink-0 text-right font-mono text-[11px] tabular-nums text-muted-foreground lg:block">
+        {sessionCost}
+      </span>
       {/* Relative times vary in width across locales, so the column is sized to
           hold the longest of them; `tabular-nums` keeps it from twitching as
           the numbers tick over. */}

@@ -1,4 +1,12 @@
-import { mkdir, mkdtemp, rm, stat, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  realpath,
+  rm,
+  stat,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -54,5 +62,45 @@ describe("ccusage binary resolution", () => {
     await expect(
       resolveCcusageBinary("darwin", "arm64", { resourcesPath }),
     ).resolves.toBe(binaryPath);
+  });
+
+  it("resolves a workspace dependency from the collector package in dev", async () => {
+    const workspace = await mkdtemp(
+      path.join(os.tmpdir(), "ccusage-workspace-"),
+    );
+    temporaryDirectories.push(workspace);
+    const desktopRoot = path.join(workspace, "desktop");
+    const collectorRoot = path.join(workspace, "packages/usage-collector");
+    const collectorLink = path.join(
+      desktopRoot,
+      "node_modules/@angel-engine/usage-collector",
+    );
+    const binaryPath = path.join(
+      collectorRoot,
+      "node_modules/@ccusage/ccusage-darwin-arm64/bin/ccusage",
+    );
+
+    await mkdir(path.join(collectorRoot, "dist"), { recursive: true });
+    await mkdir(path.dirname(collectorLink), { recursive: true });
+    await mkdir(path.dirname(binaryPath), { recursive: true });
+    await writeFile(path.join(desktopRoot, "package.json"), "{}");
+    await writeFile(
+      path.join(collectorRoot, "package.json"),
+      JSON.stringify({
+        exports: { ".": { default: "./dist/index.js" } },
+        name: "@angel-engine/usage-collector",
+        type: "module",
+      }),
+    );
+    await writeFile(path.join(collectorRoot, "dist/index.js"), "export {};");
+    await writeFile(binaryPath, "fixture", { mode: 0o644 });
+    await symlink(collectorRoot, collectorLink, "dir");
+
+    await expect(
+      resolveCcusageBinary("darwin", "arm64", {
+        developmentRoot: desktopRoot,
+      }),
+    ).resolves.toBe(await realpath(binaryPath));
+    expect((await stat(binaryPath)).mode & 0o111).not.toBe(0);
   });
 });

@@ -18,6 +18,7 @@ import {
   formatEstimatedCost,
   formatUsageTime,
   formatUsageTokens,
+  shouldShowEstimatedCost,
 } from "./format";
 
 export function UsageChip() {
@@ -41,6 +42,11 @@ export function UsageChip() {
     return null;
 
   const block = availability.report.activeBlock;
+  const tokenCount = Object.values(block.tokenCounts).reduce(
+    (total, count) => total + count,
+    0,
+  );
+  const showEstimatedCost = shouldShowEstimatedCost(block.costUsd, tokenCount);
   const progress = billingBlockProgress(block.startTime, block.endTime);
   const burnRateWarning = burnRateExceedsThreshold(
     block.burnRate.costPerHour,
@@ -58,7 +64,7 @@ export function UsageChip() {
           data-electron-no-drag
           type="button"
         >
-          {formatEstimatedCost(block.costUsd)} ·{" "}
+          {showEstimatedCost ? `${formatEstimatedCost(block.costUsd)} · ` : ""}
           {formatDurationMinutes(block.projection.remainingMinutes)}
         </button>
       </DropdownMenuTrigger>

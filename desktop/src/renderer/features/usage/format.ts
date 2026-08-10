@@ -49,3 +49,10 @@ export function formatUsageTokens(value: number): string {
     value,
   );
 }
+
+export function shouldShowEstimatedCost(
+  costUsd: number,
+  tokenCount: number,
+): boolean {
+  return costUsd > 0 || tokenCount <= 0;
+}

@@ -20,6 +20,7 @@ export function ccusageNativePackage(
 }
 
 interface BinaryResolutionOptions {
+  developmentRoot?: string;
   resolvePackagePath?: (specifier: string) => string;
   resourcesPath?: string;
 }
@@ -50,7 +51,12 @@ export async function resolveCcusageBinary(
   }
 
   const resolvePackagePath =
-    options.resolvePackagePath ?? resolveDevelopmentPackagePath;
+    options.resolvePackagePath ??
+    ((specifier: string) =>
+      resolveDevelopmentPackagePath(
+        specifier,
+        options.developmentRoot ?? process.cwd(),
+      ));
   try {
     const binaryPath = resolvePackagePath(`${packageName}/${subpath}`);
     return (await makeExecutable(binaryPath, platform))
@@ -61,9 +67,12 @@ export async function resolveCcusageBinary(
   }
 }
 
-function resolveDevelopmentPackagePath(specifier: string): string {
+function resolveDevelopmentPackagePath(
+  specifier: string,
+  developmentRoot: string,
+): string {
   const requireFromApp = createRequire(
-    path.join(process.cwd(), "package.json"),
+    path.join(developmentRoot, "package.json"),
   );
   try {
     return requireFromApp.resolve(specifier);

@@ -432,6 +432,47 @@ export const ja = {
         sendWithModEnterTitle: "{{shortcut}} で送信",
       },
     },
+    usage: {
+      activeBlock: "現在の課金ブロック",
+      activeRuns: "実行中のセッション",
+      burnRate: "現在のレート",
+      burnRateThreshold: "警告しきい値",
+      burnRateWarning: "消費レート警告",
+      burnRateWarningActive: "現在のレートが {{threshold}} を超えています。",
+      burnRateWarningDescription:
+        "1 時間あたりのレートがしきい値を超えたときに使用量インジケーターを強調します。",
+      byAgent: "エージェント別",
+      cacheCreationTokens: "キャッシュ書き込み",
+      cacheReadTokens: "キャッシュ読み取り",
+      collecting: "ローカル使用量を収集中…",
+      contextNearLimit:
+        "コンテキストが上限に近づいています。新しいチャットを検討してください。",
+      contextUsed: "使用済みコンテキスト",
+      month: "今月",
+      noData: "ローカル使用量の記録がありません",
+      projected: "現在のレートでの予測",
+      inputTokens: "入力",
+      lastCollected: "最終収集：{{time}}。",
+      outputTokens: "出力",
+      refresh: "更新",
+      source: "データソース",
+      sourceDescription:
+        "ローカルのエージェントログから推定。対応プロバイダー：{{agents}}。その他およびカスタムプロバイダーは利用できません。",
+      sessionCost: "コスト",
+      today: "今日",
+      tokens: "トークン",
+      unavailable: "使用量を取得できません",
+      unavailableReasons: {
+        "binary-missing":
+          "使用量を取得できません：同梱された ccusage バイナリがありません。",
+        "exec-failed": "使用量を取得できません：ccusage の実行に失敗しました。",
+        "schema-mismatch":
+          "使用量を取得できません：ccusage の出力形式が変更されました。",
+        timeout: "使用量を取得できません：収集がタイムアウトしました。",
+      },
+      warnings: "警告",
+      week: "今週",
+    },
     updates: {
       checkFailed: "アップデートを確認できませんでした",
       checkFailedDetail: "後でもう一度お試しください。",

@@ -432,6 +432,48 @@ export const de = {
         sendWithModEnterTitle: "Mit {{shortcut}} senden",
       },
     },
+    usage: {
+      activeBlock: "Aktiver Abrechnungsblock",
+      activeRuns: "Laufende Sitzungen",
+      burnRate: "Aktuelle Rate",
+      burnRateThreshold: "Warnschwelle",
+      burnRateWarning: "Verbrauchsratenwarnung",
+      burnRateWarningActive: "Die aktuelle Rate überschreitet {{threshold}}.",
+      burnRateWarningDescription:
+        "Hebt die Nutzungsanzeige hervor, wenn die aktuelle Stundenrate den Schwellenwert überschreitet.",
+      byAgent: "Nach Agent",
+      cacheCreationTokens: "Cache-Schreibvorgänge",
+      cacheReadTokens: "Cache-Lesevorgänge",
+      collecting: "Lokale Nutzung wird erfasst…",
+      contextNearLimit:
+        "Der Kontext nähert sich seinem Limit. Erwäge einen neuen Chat.",
+      contextUsed: "Verwendeter Kontext",
+      month: "Diesen Monat",
+      noData: "Keine lokalen Nutzungsdaten",
+      projected: "Hochrechnung mit aktueller Rate",
+      inputTokens: "Eingabe",
+      lastCollected: "Zuletzt erfasst um {{time}}.",
+      outputTokens: "Ausgabe",
+      refresh: "Aktualisieren",
+      source: "Datenquelle",
+      sourceDescription:
+        "Aus lokalen Agent-Protokollen geschätzt. Unterstützte Anbieter: {{agents}}; andere und benutzerdefinierte Anbieter sind nicht verfügbar.",
+      sessionCost: "Kosten",
+      today: "Heute",
+      tokens: "Token",
+      unavailable: "Nutzung nicht verfügbar",
+      unavailableReasons: {
+        "binary-missing":
+          "Nutzung nicht verfügbar: Das gebündelte ccusage-Binärprogramm fehlt.",
+        "exec-failed": "Nutzung nicht verfügbar: ccusage ist fehlgeschlagen.",
+        "schema-mismatch":
+          "Nutzung nicht verfügbar: Die ccusage-Ausgabe hat sich geändert.",
+        timeout:
+          "Nutzung nicht verfügbar: Zeitüberschreitung bei der Erfassung.",
+      },
+      warnings: "Warnungen",
+      week: "Diese Woche",
+    },
     updates: {
       checkFailed: "Updates konnten nicht gesucht werden",
       checkFailedDetail: "Versuche es später erneut.",

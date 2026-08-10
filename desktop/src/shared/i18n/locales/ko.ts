@@ -423,6 +423,47 @@ export const ko = {
         sendWithModEnterTitle: "{{shortcut}}로 전송",
       },
     },
+    usage: {
+      activeBlock: "현재 결제 블록",
+      activeRuns: "실행 중인 세션",
+      burnRate: "현재 사용률",
+      burnRateThreshold: "경고 임계값",
+      burnRateWarning: "사용률 경고",
+      burnRateWarningActive: "현재 사용률이 {{threshold}}을(를) 초과했습니다.",
+      burnRateWarningDescription:
+        "시간당 사용률이 임계값을 넘으면 사용량 표시기를 강조합니다.",
+      byAgent: "에이전트별",
+      cacheCreationTokens: "캐시 쓰기",
+      cacheReadTokens: "캐시 읽기",
+      collecting: "로컬 사용량 수집 중…",
+      contextNearLimit:
+        "컨텍스트가 한도에 가까워졌습니다. 새 채팅을 시작해 보세요.",
+      contextUsed: "사용한 컨텍스트",
+      month: "이번 달",
+      noData: "로컬 사용량 기록이 없습니다",
+      projected: "현재 사용률 기준 예상",
+      inputTokens: "입력",
+      lastCollected: "마지막 수집: {{time}}.",
+      outputTokens: "출력",
+      refresh: "새로 고침",
+      source: "데이터 소스",
+      sourceDescription:
+        "로컬 에이전트 로그에서 추정합니다. 지원 제공자: {{agents}}. 기타 및 사용자 지정 제공자는 사용할 수 없습니다.",
+      sessionCost: "비용",
+      today: "오늘",
+      tokens: "토큰",
+      unavailable: "사용량을 확인할 수 없음",
+      unavailableReasons: {
+        "binary-missing":
+          "사용량을 확인할 수 없음: 패키지된 ccusage 바이너리가 없습니다.",
+        "exec-failed": "사용량을 확인할 수 없음: ccusage 실행에 실패했습니다.",
+        "schema-mismatch":
+          "사용량을 확인할 수 없음: ccusage 출력 형식이 변경되었습니다.",
+        timeout: "사용량을 확인할 수 없음: 수집 시간이 초과되었습니다.",
+      },
+      warnings: "경고",
+      week: "이번 주",
+    },
     updates: {
       checkFailed: "업데이트를 확인할 수 없음",
       checkFailedDetail: "나중에 다시 시도하세요.",

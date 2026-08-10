@@ -4,6 +4,7 @@ import {
   burnRateExceedsThreshold,
   formatDurationMinutes,
   formatEstimatedCost,
+  shouldShowEstimatedCost,
 } from "./format";
 
 describe("usage formatting", () => {
@@ -30,5 +31,13 @@ describe("usage formatting", () => {
     expect(burnRateExceedsThreshold(50, true, 50)).toBe(true);
     expect(burnRateExceedsThreshold(49.99, true, 50)).toBe(false);
     expect(burnRateExceedsThreshold(100, false, 50)).toBe(false);
+  });
+});
+
+describe("shouldShowEstimatedCost", () => {
+  it("hides a zero estimate when tokens were used", () => {
+    expect(shouldShowEstimatedCost(0, 1_200)).toBe(false);
+    expect(shouldShowEstimatedCost(0.01, 1_200)).toBe(true);
+    expect(shouldShowEstimatedCost(0, 0)).toBe(true);
   });
 });
