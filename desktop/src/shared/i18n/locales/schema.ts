@@ -114,8 +114,31 @@ export interface LocaleResourceTranslationWorkspaceToolsTabs {
   workspaceTabs: string;
 }
 
+export interface LocaleResourceTranslationWorkspaceToolsCommentsStatus {
+  open: string;
+  pending: string;
+  resolved: string;
+}
+
+export interface LocaleResourceTranslationWorkspaceToolsComments {
+  delete: string;
+  lineComment: string;
+  needsBody: string;
+  placeholder: string;
+  reopen: string;
+  resolve: string;
+  select: string;
+  sending: string;
+  sendToAgent: string;
+  sideNew: string;
+  sideOld: string;
+  status: LocaleResourceTranslationWorkspaceToolsCommentsStatus;
+  title: string;
+}
+
 export interface LocaleResourceTranslationWorkspaceTools {
   addToChat: string;
+  comments: LocaleResourceTranslationWorkspaceToolsComments;
   commit: LocaleResourceTranslationWorkspaceToolsCommit;
   dockInSidebar: string;
   empty: LocaleResourceTranslationWorkspaceToolsEmpty;

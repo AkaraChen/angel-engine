@@ -145,6 +145,25 @@ export const es = {
       },
       tools: {
         addToChat: "Añadir al chat",
+        comments: {
+          delete: "Eliminar",
+          lineComment: "Línea {{line}}",
+          needsBody: "Añade una nota para incluir este comentario",
+          placeholder: "Nota de revisión para el agente…",
+          reopen: "Reabrir",
+          resolve: "Resolver",
+          select: "Incluir al enviar",
+          sending: "Enviando…",
+          sendToAgent: "Enviar {{count}} al agente",
+          sideNew: "nuevo",
+          sideOld: "antiguo",
+          status: {
+            open: "Abierto",
+            pending: "Pendiente",
+            resolved: "Resuelto",
+          },
+          title: "{{count}} comentarios de revisión",
+        },
         commit: {
           committing: "Confirmando…",
           commitTo: "Confirmar en {{target}}",
