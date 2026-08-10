@@ -42,9 +42,7 @@ import {
   githubCreatePullRequestInputSchema,
   githubCreateWorkspaceFromPullRequestInputSchema,
   githubListPullRequestsInputSchema,
-  githubPrChecksFixPromptInputSchema,
   githubPullRequestTemplateInputSchema,
-  githubResolveUrlInputSchema,
   githubViewPullRequestInputSchema,
 } from "@angel-engine/daemon-api/github";
 import { taskLinkResolveInputSchema } from "@angel-engine/daemon-api/links";

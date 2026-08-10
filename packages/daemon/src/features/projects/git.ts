@@ -145,25 +145,29 @@ export function createProjectWorktree(
       try: () => fs.mkdirSync(parent, { recursive: true }),
     });
 
-    const existingBranch = input.ref?.type === "existingBranch";
-    if (existingBranch) {
-      yield* validateBranch(root, input.ref.value);
+    const existingRef =
+      input.ref?.type === "existingBranch" ? input.ref : undefined;
+    if (existingRef !== undefined) {
+      yield* validateBranch(root, existingRef.value);
       const worktreeList = yield* gitOutput(root, [
         "worktree",
         "list",
         "--porcelain",
       ]);
-      const occupiedPath = worktreePathForBranch(worktreeList, input.ref.value);
+      const occupiedPath = worktreePathForBranch(
+        worktreeList,
+        existingRef.value,
+      );
       if (occupiedPath !== undefined) {
         const relatedChat = yield* findActiveChatByCwd(occupiedPath);
         return yield* Effect.fail(
-          DaemonError.worktreeBranchInUse(input.ref.value, relatedChat?.id),
+          DaemonError.worktreeBranchInUse(existingRef.value, relatedChat?.id),
         );
       }
     }
 
-    const fixedBranch = existingBranch
-      ? input.ref.value
+    const fixedBranch = existingRef
+      ? existingRef.value
       : is.nonEmptyString(input.branchName)
         ? input.branchName.trim()
         : undefined;
@@ -177,15 +181,15 @@ export function createProjectWorktree(
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const suffix = randomUUID().replaceAll("-", "").slice(0, 8);
       const cwd = path.join(parent, suffix);
-      const branch = existingBranch
-        ? input.ref.value
+      const branch = existingRef
+        ? existingRef.value
         : fixedBranch === undefined
           ? `${WORKTREE_BRANCH_PREFIX}/${projectSlug}-${suffix}`
           : attempt === 0
             ? fixedBranch
             : `${fixedBranch}-${suffix}`;
-      const remoteRef = existingBranch ? input.ref.remoteRef : undefined;
-      const branchPlan = existingBranch
+      const remoteRef = existingRef?.remoteRef;
+      const branchPlan = existingRef
         ? yield* prepareExistingBranch(root, branch, remoteRef, signal)
         : {
             createdBranch: true,
@@ -193,7 +197,7 @@ export function createProjectWorktree(
             localBranchExists: false,
           };
       const { createdBranch, localBranchExists } = branchPlan;
-      const addArgs = existingBranch
+      const addArgs = existingRef
         ? localBranchExists || is.nonEmptyString(remoteRef)
           ? ["worktree", "add", cwd, branch]
           : ["worktree", "add", "-b", branch, cwd, `origin/${branch}`]
