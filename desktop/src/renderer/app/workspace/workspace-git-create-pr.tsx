@@ -24,6 +24,7 @@ import {
   executeCreatePullRequestAction,
   type ExistingPullRequestTarget,
   openExistingPullRequest,
+  openPullRequestInSystemBrowser,
   useCreatePullRequestAction,
 } from "@/app/workspace/workspace-create-pr-action";
 import { WorkspacePullRequestPreviewDialog } from "@/app/workspace/workspace-pull-request-preview";
@@ -73,7 +74,7 @@ export function WorkspaceCreatePullRequestController({
   contextKey: string | null;
   root: string;
 }) {
-  const { openBrowserTab, selectTab } = useWorkspaceToolSurface();
+  const { selectTab } = useWorkspaceToolSurface();
   const [open, setOpen] = useState(false);
   const [previewTarget, setPreviewTarget] =
     useState<ExistingPullRequestTarget | null>(null);
@@ -112,7 +113,7 @@ export function WorkspaceCreatePullRequestController({
         contextKey={contextKey}
         open={open}
         root={root}
-        onOpenBrowser={openBrowserTab}
+        onOpenExternal={openPullRequestInSystemBrowser}
         onOpenChange={setOpen}
       />
       <WorkspacePullRequestPreviewDialog
@@ -120,7 +121,7 @@ export function WorkspaceCreatePullRequestController({
         open={previewTarget !== null}
         root={root}
         target={previewTarget}
-        onOpenBrowser={openBrowserTab}
+        onOpenExternal={openPullRequestInSystemBrowser}
         onOpenChange={(next) => {
           if (!next) setPreviewTarget(null);
         }}
@@ -192,14 +193,14 @@ function WorkspaceCreatePullRequestDialog({
   contextKey,
   open,
   root,
-  onOpenBrowser,
+  onOpenExternal,
   onOpenChange,
 }: {
   api: ApiClient;
   contextKey: string | null;
   open: boolean;
   root: string;
-  onOpenBrowser: (url: string) => void;
+  onOpenExternal: (url: string) => void;
   onOpenChange: (open: boolean) => void;
 }) {
   const { t } = useTranslation();
@@ -310,8 +311,8 @@ function WorkspaceCreatePullRequestDialog({
     });
     toast({
       action: {
-        label: t("workspace.tools.createPullRequest.openInApp"),
-        onClick: () => onOpenBrowser(result.record.url),
+        label: t("workspace.tools.createPullRequest.openInBrowser"),
+        onClick: () => onOpenExternal(result.record.url),
       },
       title: t(
         result.status === "existing"
@@ -325,7 +326,7 @@ function WorkspaceCreatePullRequestDialog({
   }, [
     createMutation,
     draftKey,
-    onOpenBrowser,
+    onOpenExternal,
     onOpenChange,
     queryClient,
     root,
@@ -392,12 +393,12 @@ function WorkspaceCreatePullRequestDialog({
                 onClick={() => {
                   openExistingPullRequest({
                     close: () => onOpenChange(false),
-                    openBrowser: onOpenBrowser,
+                    openExternal: onOpenExternal,
                     url: preflight.existing?.url ?? "",
                   });
                 }}
               >
-                {t("workspace.tools.createPullRequest.openInApp")}
+                {t("workspace.tools.createPullRequest.openInBrowser")}
               </Button>
             </DialogFooter>
           </div>

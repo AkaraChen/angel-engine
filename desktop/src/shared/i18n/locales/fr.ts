@@ -205,7 +205,7 @@ export const fr = {
             "Vérifiez les branches et la description avant publication.",
           existing: "La pull request #{{number}} existe déjà",
           noCommits: "Aucun commit entre les branches de base et de tête.",
-          openInApp: "Ouvrir dans l’application",
+          openInBrowser: "Ouvrir dans le navigateur",
           pushedRetry: "Branche poussée. Réessayez de créer la pull request.",
           pushing: "Envoi de la branche…",
           preview: {
@@ -216,7 +216,7 @@ export const fr = {
             copyLink: "Copier le lien",
             deletions: "Suppressions",
             description:
-              "Vérifiez la pull request avant de l’ouvrir dans l’application.",
+              "Vérifiez la pull request avant de l’ouvrir dans le navigateur.",
             emptyBody: "Aucune description fournie.",
             filesChanged: "Fichiers modifiés",
             loadFailed: "Impossible de charger les détails de la pull request.",

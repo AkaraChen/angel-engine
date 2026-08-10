@@ -1,26 +1,43 @@
+// @vitest-environment jsdom
+
 import { describe, expect, it, vi } from "vitest";
 
 import {
   createPullRequestAction,
   executeCreatePullRequestAction,
   openExistingPullRequest,
+  openPullRequestInSystemBrowser,
 } from "./workspace-create-pr-action";
 
 describe("openExistingPullRequest", () => {
   it("closes the modal before opening the existing pull request", () => {
     const calls: string[] = [];
     const close = vi.fn(() => calls.push("close"));
-    const openBrowser = vi.fn(() => calls.push("open"));
+    const openExternal = vi.fn(() => calls.push("open"));
+    const openBrowserTab = vi.fn();
 
     openExistingPullRequest({
       close,
-      openBrowser,
+      openExternal,
       url: "https://github.com/acme/widgets/pull/42",
     });
 
     expect(calls).toEqual(["close", "open"]);
-    expect(openBrowser).toHaveBeenCalledWith(
+    expect(openExternal).toHaveBeenCalledWith(
       "https://github.com/acme/widgets/pull/42",
+    );
+    expect(openBrowserTab).not.toHaveBeenCalled();
+  });
+
+  it("routes pull request URLs through the main-window external-open boundary", () => {
+    const open = vi.spyOn(window, "open").mockImplementation(() => null);
+
+    openPullRequestInSystemBrowser("https://github.com/acme/widgets/pull/42");
+
+    expect(open).toHaveBeenCalledWith(
+      "https://github.com/acme/widgets/pull/42",
+      "_blank",
+      "noopener,noreferrer",
     );
   });
 });

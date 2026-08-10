@@ -201,7 +201,7 @@ export const ko = {
           description: "게시하기 전에 브랜치와 설명을 확인하세요.",
           existing: "풀 리퀘스트 #{{number}}이 이미 있습니다",
           noCommits: "기본 브랜치와 헤드 브랜치 사이에 커밋이 없습니다.",
-          openInApp: "앱에서 열기",
+          openInBrowser: "브라우저에서 열기",
           pushedRetry:
             "브랜치를 푸시했습니다. 풀 리퀘스트 생성을 다시 시도하세요.",
           pushing: "브랜치 푸시 중…",
@@ -212,7 +212,7 @@ export const ko = {
             copied: "복사됨",
             copyLink: "링크 복사",
             deletions: "삭제",
-            description: "앱에서 열기 전에 풀 리퀘스트를 미리 봅니다.",
+            description: "브라우저에서 열기 전에 풀 리퀘스트를 미리 봅니다.",
             emptyBody: "설명이 없습니다.",
             filesChanged: "변경된 파일",
             loadFailed: "풀 리퀘스트 세부 정보를 불러올 수 없습니다.",

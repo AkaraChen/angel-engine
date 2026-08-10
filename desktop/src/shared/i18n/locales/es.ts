@@ -203,7 +203,7 @@ export const es = {
           description: "Revisa las ramas y la descripción antes de publicar.",
           existing: "El pull request #{{number}} ya existe",
           noCommits: "No hay commits entre las ramas base y principal.",
-          openInApp: "Abrir en la aplicación",
+          openInBrowser: "Abrir en el navegador",
           pushedRetry: "Rama enviada. Vuelve a intentar crear el pull request.",
           pushing: "Enviando rama…",
           preview: {
@@ -214,7 +214,7 @@ export const es = {
             copyLink: "Copiar enlace",
             deletions: "Eliminaciones",
             description:
-              "Revisa el pull request antes de abrirlo en la aplicación.",
+              "Revisa el pull request antes de abrirlo en el navegador.",
             emptyBody: "No se proporcionó descripción.",
             filesChanged: "Archivos modificados",
             loadFailed: "No se pudieron cargar los detalles del pull request.",

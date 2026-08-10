@@ -34,14 +34,14 @@ export function WorkspacePullRequestPreviewDialog({
   open,
   root,
   target,
-  onOpenBrowser,
+  onOpenExternal,
   onOpenChange,
 }: {
   api: ApiClient;
   open: boolean;
   root: string;
   target: ExistingPullRequestTarget | null;
-  onOpenBrowser: (url: string) => void;
+  onOpenExternal: (url: string) => void;
   onOpenChange: (open: boolean) => void;
 }) {
   const { t } = useTranslation();
@@ -195,12 +195,12 @@ export function WorkspacePullRequestPreviewDialog({
               if (!target) return;
               openExistingPullRequest({
                 close,
-                openBrowser: onOpenBrowser,
+                openExternal: onOpenExternal,
                 url: target.url,
               });
             }}
           >
-            {t("workspace.tools.createPullRequest.openInApp")}
+            {t("workspace.tools.createPullRequest.openInBrowser")}
           </Button>
         </DialogFooter>
       </DialogContent>

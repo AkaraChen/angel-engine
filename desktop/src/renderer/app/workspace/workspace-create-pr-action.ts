@@ -15,17 +15,21 @@ export const createPullRequestAction = {
   shortcut: "CommandOrControl+Shift+P",
 } as const;
 
+export function openPullRequestInSystemBrowser(url: string) {
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
 export function openExistingPullRequest({
   close,
-  openBrowser,
+  openExternal,
   url,
 }: {
   close?: () => void;
-  openBrowser: (url: string) => void;
+  openExternal: (url: string) => void;
   url: string;
 }) {
   close?.();
-  openBrowser(url);
+  openExternal(url);
 }
 
 export function executeCreatePullRequestAction({

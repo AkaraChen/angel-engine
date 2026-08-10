@@ -198,7 +198,7 @@ export const zhCN = {
           description: "发布前请确认分支与描述。",
           existing: "拉取请求 #{{number}} 已存在",
           noCommits: "基础分支与当前分支之间没有提交。",
-          openInApp: "在应用内打开",
+          openInBrowser: "在浏览器中打开",
           pushedRetry: "分支已推送。请重试创建拉取请求。",
           pushing: "正在推送分支…",
           preview: {
@@ -208,7 +208,7 @@ export const zhCN = {
             copied: "已复制",
             copyLink: "复制链接",
             deletions: "删除",
-            description: "在应用内打开前预览拉取请求。",
+            description: "在浏览器中打开前预览拉取请求。",
             emptyBody: "未提供描述。",
             filesChanged: "变更文件",
             loadFailed: "无法加载拉取请求详情。",

@@ -59,7 +59,8 @@ describe("WorkspacePullRequestPreviewDialog", () => {
   it("keeps loading visible, then renders draft and empty-body details", async () => {
     const request = deferred<GitHubPullRequestDetail>();
     const viewPullRequest = vi.fn(() => request.promise);
-    const onOpenBrowser = vi.fn();
+    const onOpenExternal = vi.fn();
+    const openBrowserTab = vi.fn();
     const onOpenChange = vi.fn();
     const writeText = vi.fn(() => Promise.resolve());
     Object.defineProperty(navigator, "clipboard", {
@@ -67,7 +68,7 @@ describe("WorkspacePullRequestPreviewDialog", () => {
       value: { writeText },
     });
 
-    renderPreview({ onOpenBrowser, onOpenChange, viewPullRequest });
+    renderPreview({ onOpenExternal, onOpenChange, viewPullRequest });
 
     expect(screen.getByRole("status")).toBeDefined();
     request.resolve(detail);
@@ -95,12 +96,13 @@ describe("WorkspacePullRequestPreviewDialog", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "workspace.tools.createPullRequest.openInApp",
+        name: "workspace.tools.createPullRequest.openInBrowser",
       }),
     );
     expect(onOpenChange).toHaveBeenCalledWith(false);
-    expect(onOpenBrowser).toHaveBeenCalledWith(detail.url);
-  });
+    expect(onOpenExternal).toHaveBeenCalledWith(detail.url);
+    expect(openBrowserTab).not.toHaveBeenCalled();
+  }, 10_000);
 
   it("retains the dialog on failure and retries the detail query", async () => {
     const viewPullRequest = vi
@@ -129,11 +131,11 @@ describe("WorkspacePullRequestPreviewDialog", () => {
 });
 
 function renderPreview({
-  onOpenBrowser = vi.fn(),
+  onOpenExternal = vi.fn(),
   onOpenChange = vi.fn(),
   viewPullRequest,
 }: {
-  onOpenBrowser?: (url: string) => void;
+  onOpenExternal?: (url: string) => void;
   onOpenChange?: (open: boolean) => void;
   viewPullRequest: () => Promise<GitHubPullRequestDetail>;
 }) {
@@ -151,7 +153,7 @@ function renderPreview({
         open
         root="/repos/widgets"
         target={{ number: 42, url: detail.url }}
-        onOpenBrowser={onOpenBrowser}
+        onOpenExternal={onOpenExternal}
         onOpenChange={onOpenChange}
       />
     </QueryClientProvider>,

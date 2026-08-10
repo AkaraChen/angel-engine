@@ -147,7 +147,7 @@ export interface LocaleResourceTranslationWorkspaceToolsCreatePullRequest {
   description: string;
   existing: string;
   noCommits: string;
-  openInApp: string;
+  openInBrowser: string;
   pushedRetry: string;
   pushing: string;
   preview: LocaleResourceTranslationWorkspaceToolsPullRequestPreview;

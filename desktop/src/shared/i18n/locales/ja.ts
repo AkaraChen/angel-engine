@@ -205,7 +205,7 @@ export const ja = {
           existing: "プルリクエスト #{{number}} は既に存在します",
           noCommits:
             "ベースブランチとヘッドブランチの間にコミットがありません。",
-          openInApp: "アプリで開く",
+          openInBrowser: "ブラウザで開く",
           pushedRetry: "ブランチをプッシュしました。作成を再試行してください。",
           pushing: "ブランチをプッシュ中…",
           preview: {
@@ -215,7 +215,7 @@ export const ja = {
             copied: "コピー済み",
             copyLink: "リンクをコピー",
             deletions: "削除",
-            description: "アプリで開く前にプルリクエストを確認します。",
+            description: "ブラウザで開く前にプルリクエストを確認します。",
             emptyBody: "説明はありません。",
             filesChanged: "変更ファイル",
             loadFailed: "プルリクエストの詳細を読み込めませんでした。",

@@ -204,7 +204,7 @@ export const de = {
             "Prüfe Branches und Beschreibung vor der Veröffentlichung.",
           existing: "Pull Request #{{number}} existiert bereits",
           noCommits: "Zwischen Basis- und Head-Branch gibt es keine Commits.",
-          openInApp: "In der App öffnen",
+          openInBrowser: "Im Browser öffnen",
           pushedRetry:
             "Branch gepusht. Erstellung des Pull Requests erneut versuchen.",
           pushing: "Branch wird gepusht…",
@@ -215,7 +215,7 @@ export const de = {
             copied: "Kopiert",
             copyLink: "Link kopieren",
             deletions: "Gelöscht",
-            description: "Pull Request vor dem Öffnen in der App prüfen.",
+            description: "Pull Request vor dem Öffnen im Browser prüfen.",
             emptyBody: "Keine Beschreibung vorhanden.",
             filesChanged: "Geänderte Dateien",
             loadFailed: "Pull-Request-Details konnten nicht geladen werden.",

@@ -198,7 +198,7 @@ export const zhTW = {
           description: "發佈前請確認分支與描述。",
           existing: "拉取請求 #{{number}} 已存在",
           noCommits: "基礎分支與目前分支之間沒有提交。",
-          openInApp: "在應用程式內開啟",
+          openInBrowser: "在瀏覽器中開啟",
           pushedRetry: "分支已推送。請重試建立拉取請求。",
           pushing: "正在推送分支…",
           preview: {
@@ -208,7 +208,7 @@ export const zhTW = {
             copied: "已複製",
             copyLink: "複製連結",
             deletions: "刪除",
-            description: "在應用程式內開啟前預覽拉取請求。",
+            description: "在瀏覽器中開啟前預覽拉取請求。",
             emptyBody: "未提供描述。",
             filesChanged: "變更檔案",
             loadFailed: "無法載入拉取請求詳細資料。",

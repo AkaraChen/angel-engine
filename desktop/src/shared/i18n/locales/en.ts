@@ -202,7 +202,7 @@ export const en = {
           description: "Review the branches and description before publishing.",
           existing: "Pull request #{{number}} already exists",
           noCommits: "No commits between the base and head branches.",
-          openInApp: "Open in app",
+          openInBrowser: "Open in browser",
           pushedRetry: "Branch pushed. Retry creating the pull request.",
           pushing: "Pushing branch…",
           preview: {
@@ -213,7 +213,7 @@ export const en = {
             copyLink: "Copy link",
             deletions: "Deletions",
             description:
-              "Review the pull request before opening it in the app.",
+              "Review the pull request before opening it in your browser.",
             emptyBody: "No description provided.",
             filesChanged: "Files changed",
             loadFailed: "Could not load pull request details.",
