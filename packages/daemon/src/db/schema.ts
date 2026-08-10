@@ -1,4 +1,15 @@
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import type {
+  ChatSourceLink,
+  WorktreeCreationState,
+} from "@angel-engine/daemon-api/chat";
+import type { ProjectWorktreeCreateInput } from "@angel-engine/daemon-api/projects";
+import {
+  index,
+  integer,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 
 export const projects = sqliteTable("projects", {
   id: text("id").primaryKey(),
@@ -30,6 +41,7 @@ export const chats = sqliteTable(
     cwd: text("cwd"),
     runtime: text("runtime").notNull(),
     remoteThreadId: text("remote_thread_id"),
+    sourceLink: text("source_link", { mode: "json" }).$type<ChatSourceLink>(),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
     archived: integer("archived", { mode: "boolean" }).notNull().default(false),
@@ -41,14 +53,40 @@ export const chats = sqliteTable(
   ],
 );
 
+export const chatDiffAnchors = sqliteTable(
+  "chat_diff_anchors",
+  {
+    id: text("id").primaryKey(),
+    chatId: text("chat_id")
+      .notNull()
+      .references(() => chats.id, { onDelete: "cascade" }),
+    kind: text("kind", { enum: ["session", "turn"] }).notNull(),
+    recordedAt: text("recorded_at").notNull(),
+    sha: text("sha").notNull(),
+    turnId: text("turn_id"),
+  },
+  (table) => [
+    index("chat_diff_anchors_chat_kind_recorded_idx").on(
+      table.chatId,
+      table.kind,
+      table.recordedAt,
+    ),
+  ],
+);
+
 export const worktreeCreationJobs = sqliteTable("worktree_creation_jobs", {
   chatId: text("chat_id")
     .primaryKey()
     .references(() => chats.id, { onDelete: "cascade" }),
   error: text("error"),
+  errorCode: text("error_code").$type<WorktreeCreationState["errorCode"]>(),
   jobId: text("job_id").notNull(),
   progress: integer("progress").notNull(),
+  relatedChatId: text("related_chat_id"),
   setupApproval: text("setup_approval"),
+  worktreeRef: text("worktree_ref", { mode: "json" }).$type<
+    ProjectWorktreeCreateInput["ref"]
+  >(),
   stage: text("stage").notNull(),
   status: text("status").notNull(),
 });
@@ -70,11 +108,132 @@ export const queuedChatRuns = sqliteTable(
   (table) => [index("queued_chat_runs_chat_id_idx").on(table.chatId)],
 );
 
+export const pullRequests = sqliteTable(
+  "pull_requests",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id").references(() => projects.id, {
+      onDelete: "cascade",
+    }),
+    chatId: text("chat_id").references(() => chats.id, {
+      onDelete: "set null",
+    }),
+    root: text("root").notNull(),
+    branch: text("branch").notNull(),
+    baseBranch: text("base_branch").notNull(),
+    number: integer("number").notNull(),
+    url: text("url").notNull(),
+    title: text("title").notNull(),
+    isDraft: integer("is_draft", { mode: "boolean" }).notNull().default(false),
+    state: text("state").notNull(),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("pull_requests_root_branch_idx").on(table.root, table.branch),
+  ],
+);
+
+export const automations = sqliteTable(
+  "automations",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    cron: text("cron").notNull(),
+    prompt: text("prompt").notNull(),
+    runtime: text("runtime").notNull(),
+    projectId: text("project_id").references(() => projects.id, {
+      onDelete: "set null",
+    }),
+    workspaceKind: text("workspace_kind", {
+      enum: ["project", "worktree"],
+    })
+      .notNull()
+      .default("project"),
+    notifyOnFailure: integer("notify_on_failure", { mode: "boolean" })
+      .notNull()
+      .default(true),
+    enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+    nextRunAt: text("next_run_at"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    index("automations_enabled_next_run_idx").on(
+      table.enabled,
+      table.nextRunAt,
+    ),
+    index("automations_project_id_idx").on(table.projectId),
+  ],
+);
+
+export const automationRuns = sqliteTable(
+  "automation_runs",
+  {
+    id: text("id").primaryKey(),
+    automationId: text("automation_id")
+      .notNull()
+      .references(() => automations.id, { onDelete: "cascade" }),
+    chatId: text("chat_id").references(() => chats.id, {
+      onDelete: "set null",
+    }),
+    trigger: text("trigger", { enum: ["manual", "scheduled"] }).notNull(),
+    status: text("status", {
+      enum: ["cancelled", "failed", "missed", "running", "succeeded"],
+    }).notNull(),
+    scheduledFor: text("scheduled_for"),
+    startedAt: text("started_at").notNull(),
+    finishedAt: text("finished_at"),
+    error: text("error"),
+  },
+  (table) => [
+    index("automation_runs_automation_started_idx").on(
+      table.automationId,
+      table.startedAt,
+    ),
+    index("automation_runs_chat_id_idx").on(table.chatId),
+  ],
+);
+
 export type ProjectRow = typeof projects.$inferSelect;
 export type NewProjectRow = typeof projects.$inferInsert;
 export type CustomAgentRow = typeof customAgents.$inferSelect;
 export type NewCustomAgentRow = typeof customAgents.$inferInsert;
 export type ChatRow = typeof chats.$inferSelect;
 export type NewChatRow = typeof chats.$inferInsert;
+export type ChatDiffAnchorRow = typeof chatDiffAnchors.$inferSelect;
 export type WorktreeCreationJobRow = typeof worktreeCreationJobs.$inferSelect;
 export type QueuedChatRunRow = typeof queuedChatRuns.$inferSelect;
+export type PullRequestRow = typeof pullRequests.$inferSelect;
+export type NewPullRequestRow = typeof pullRequests.$inferInsert;
+export type AutomationRow = typeof automations.$inferSelect;
+export type AutomationRunRow = typeof automationRuns.$inferSelect;
+
+/** One active PR shepherd per chat (enforced by unique chatId). */
+export const shepherdSessions = sqliteTable("shepherd_sessions", {
+  id: text("id").primaryKey(),
+  chatId: text("chat_id")
+    .notNull()
+    .unique()
+    .references(() => chats.id, { onDelete: "cascade" }),
+  owner: text("owner").notNull(),
+  repo: text("repo").notNull(),
+  prNumber: integer("pr_number").notNull(),
+  headSha: text("head_sha"),
+  state: text("state").notNull(),
+  settledReason: text("settled_reason"),
+  round: integer("round").notNull().default(0),
+  maxRounds: integer("max_rounds").notNull().default(10),
+  consecutiveNoProgress: integer("consecutive_no_progress")
+    .notNull()
+    .default(0),
+  handledFingerprints: text("handled_fingerprints").notNull(),
+  baselineSnapshot: text("baseline_snapshot"),
+  pendingPrompt: text("pending_prompt"),
+  pendingFingerprints: text("pending_fingerprints").notNull(),
+  lastSentHeadSha: text("last_sent_head_sha"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export type ShepherdSessionRow = typeof shepherdSessions.$inferSelect;

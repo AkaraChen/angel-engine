@@ -1,5 +1,7 @@
 import { type as arkType } from "arktype";
 
+import type { DaemonErrorCode } from "./daemon";
+
 export type GitHubItemKind = "issue" | "pullRequest";
 
 export interface GitHubResolveUrlInput {
@@ -13,6 +15,7 @@ export interface GitHubResolvedItem {
   contextText: string;
   headRefName?: string;
   isDraft?: boolean;
+  isCrossRepository?: boolean;
   kind: GitHubItemKind;
   number: number;
   owner: string;
@@ -135,10 +138,14 @@ export interface GitHubPullRequestComment {
 }
 
 export interface GitHubPullRequestDetail {
+  additions: number;
   author: string | null;
   baseRefName: string;
   body: string;
+  changedFiles: number;
   comments: GitHubPullRequestComment[];
+  commitCount: number;
+  deletions: number;
   headRefName: string;
   isDraft: boolean;
   number: number;
@@ -215,6 +222,82 @@ export interface GitHubPrChecksFixPromptResult {
   failedCheckNames: string[];
   prompt: string;
   pullRequest: GitHubPrRef;
+}
+
+export type GitHubMergeMethod = "merge" | "rebase" | "squash";
+
+export interface GitHubPullRequestStatusInput {
+  cwd: string;
+  number?: number;
+}
+
+export interface GitHubPullRequestCheck {
+  name: string;
+  required: boolean;
+  state: "failure" | "pending" | "skipped" | "success";
+  url: string | null;
+}
+
+export interface GitHubPullRequestReviewThread {
+  author: string | null;
+  body: string;
+  id: string;
+  isOutdated: boolean;
+  line: number | null;
+  path: string | null;
+  url: string;
+}
+
+export interface GitHubPullRequestStatus {
+  allowedMergeMethods: GitHubMergeMethod[];
+  author: string | null;
+  baseRefName: string;
+  behindBy: number;
+  checks: GitHubPullRequestCheck[];
+  defaultMergeMethod: GitHubMergeMethod;
+  deleteBranchOnMerge: boolean;
+  headRefName: string;
+  isDraft: boolean;
+  mergeable: "CONFLICTING" | "MERGEABLE" | "UNKNOWN";
+  mergeStateStatus:
+    | "BEHIND"
+    | "BLOCKED"
+    | "CLEAN"
+    | "DIRTY"
+    | "DRAFT"
+    | "HAS_HOOKS"
+    | "UNKNOWN"
+    | "UNSTABLE";
+  mergedAt: string | null;
+  number: number;
+  reviewDecision: "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED" | null;
+  state: "CLOSED" | "MERGED" | "OPEN";
+  title: string;
+  unresolvedThreads: GitHubPullRequestReviewThread[];
+  url: string;
+  viewerCanMerge: boolean;
+  worktreeDirty: boolean;
+}
+
+export interface GitHubMergeInput {
+  cwd: string;
+  deleteBranch?: boolean;
+  method: GitHubMergeMethod;
+  number: number;
+}
+
+export interface GitHubMergeResult {
+  merged: boolean;
+  url: string;
+}
+
+export interface GitHubResolveThreadInput {
+  cwd: string;
+  threadId: string;
+}
+
+export interface GitHubResolveThreadResult {
+  resolved: boolean;
 }
 
 export const githubResolveUrlInputSchema = arkType({
@@ -306,3 +389,178 @@ export interface GitHubRepository {
 export interface GitHubListRepositoriesResult {
   repositories: GitHubRepository[];
 }
+
+export const githubMergeInputSchema = arkType({
+  "+": "ignore",
+  cwd: "string > 0",
+  "deleteBranch?": "boolean",
+  method: "'merge' | 'rebase' | 'squash'",
+  number: "number.integer > 0",
+});
+
+export const githubResolveThreadInputSchema = arkType({
+  "+": "ignore",
+  cwd: "string > 0",
+  threadId: "string > 0",
+});
+
+/** Input for PR checks snapshot / review-thread fetch. */
+export interface GitHubPrContextInput {
+  cwd: string;
+  owner: string;
+  prNumber: number;
+  repo: string;
+}
+
+export type GitHubChecksInput = GitHubPrContextInput;
+export type GitHubReviewThreadsInput = GitHubPrContextInput;
+
+/**
+ * One check/status from a PR's statusCheckRollup.
+ * `checkRunId` + `attempt` form the shepherd dedupe fingerprint.
+ */
+export interface GitHubCheckItem {
+  /** GitHub Actions / Check Run numeric id as string; null for legacy StatusContext. */
+  checkRunId: string | null;
+  /**
+   * Re-run attempt number when known (parsed from details URL), else 1.
+   * Re-runs usually mint a new checkRunId, so id alone is often enough;
+   * attempt is kept for the `checkRunId:attempt` fingerprint shape.
+   */
+  attempt: number;
+  name: string;
+  /** CheckRun status (COMPLETED, IN_PROGRESS, …) or StatusContext state. */
+  status: string;
+  /** CheckRun conclusion when completed; null while pending. StatusContext: same as status. */
+  conclusion: string | null;
+  isRequired: boolean;
+  isPending: boolean;
+  detailsUrl: string | null;
+  workflowName: string | null;
+  /** Workflow run database id when available — used by failure-log fetch. */
+  workflowRunId: string | null;
+}
+
+export interface GitHubChecksSnapshot {
+  checks: GitHubCheckItem[];
+  hasPending: boolean;
+  /** True when every required check is non-pending and not failing. */
+  requiredAllGreen: boolean;
+  /** Required checks that failed (blocking). */
+  failedRequired: GitHubCheckItem[];
+  /** All failed checks (required + optional) for UI. */
+  failed: GitHubCheckItem[];
+  headOid: string | null;
+}
+
+export interface GitHubReviewThreadComment {
+  id: string;
+  author: string | null;
+  body: string;
+  path: string | null;
+  line: number | null;
+  createdAt: string;
+}
+
+export interface GitHubReviewThread {
+  id: string;
+  isResolved: boolean;
+  path: string | null;
+  line: number | null;
+  comments: GitHubReviewThreadComment[];
+}
+
+export interface GitHubReviewThreadsResult {
+  /** All threads (resolved + unresolved) for UI counts. */
+  threads: GitHubReviewThread[];
+  unresolved: GitHubReviewThread[];
+  unresolvedCount: number;
+  resolvedCount: number;
+}
+
+export interface GitHubFailureLogInput {
+  cwd: string;
+  /** Workflow run id (`gh run view <id>`). */
+  runId: string | number;
+  /** Optional explicit repo for when cwd is not a git checkout. */
+  repo?: string;
+}
+
+export interface GitHubFailureLogResult {
+  /** Trailing lines of failed-job logs (capped). */
+  lines: string[];
+  truncated: boolean;
+}
+
+export const githubPrContextInputSchema = arkType({
+  "+": "ignore",
+  cwd: "string > 0",
+  owner: "string > 0",
+  prNumber: "number",
+  repo: "string > 0",
+});
+
+export const githubFailureLogInputSchema = arkType({
+  "+": "ignore",
+  cwd: "string > 0",
+  runId: "string | number",
+  "repo?": "string",
+});
+
+export interface PullRequestCreateInput {
+  base: string;
+  body: string;
+  draft: boolean;
+  root: string;
+  skipPush?: boolean;
+  title: string;
+}
+
+export interface PullRequestRecord {
+  baseBranch: string;
+  branch: string;
+  createdAt: string;
+  id: string;
+  isDraft: boolean;
+  number: number;
+  root: string;
+  state: string;
+  title: string;
+  updatedAt: string;
+  url: string;
+}
+
+export interface PullRequestPreflight {
+  aheadCount: number;
+  availableBaseBranches: string[];
+  base: string;
+  body: string;
+  canCreate: boolean;
+  defaultBranch: string;
+  existing: PullRequestRecord | null;
+  head: string;
+  reason?: DaemonErrorCode;
+  title: string;
+}
+
+export type PullRequestCreateResult =
+  | {
+      pushed: boolean;
+      record: PullRequestRecord;
+      status: "created" | "existing";
+    }
+  | {
+      error: { code: DaemonErrorCode; message: string };
+      pushed: boolean;
+      status: "failed";
+    };
+
+export const pullRequestCreateInputSchema = arkType({
+  "+": "ignore",
+  base: "string > 0",
+  body: "string",
+  draft: "boolean",
+  root: "string > 0",
+  "skipPush?": "boolean",
+  title: "string > 0",
+});

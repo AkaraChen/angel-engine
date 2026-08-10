@@ -87,7 +87,9 @@ import {
   updateWorktreeCreationJob,
 } from "./repository";
 import { DesktopAngelSession } from "./desktop-angel-session";
+import { recordChatTurnStart, setTurnDiffAnchorTurnId } from "./diff-anchors";
 import { WorktreeCreationGate } from "./worktree-creation-gate";
+import { workspaceGitHeadSha } from "../workspace-tools/service";
 
 export { cwdForNewChat };
 
@@ -111,6 +113,7 @@ interface WorktreeCreationJob {
   projectId: string;
   promise: Promise<void>;
   setupApproval?: string;
+  worktreeRef?: ChatCreateInput["worktreeRef"];
   state: WorktreeCreationState;
 }
 type ReadyChatPrewarm = ChatPrewarm & {
@@ -194,6 +197,7 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
         updateWorktreeCreationJob({
           chatId: job.chatId,
           setupApproval: job.setupApproval,
+          worktreeRef: job.worktreeRef,
           state: job.state,
         });
 
@@ -213,6 +217,7 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
             {
               projectId: job.projectId,
               setupApproval: job.setupApproval,
+              ref: job.worktreeRef,
             },
             job.abortController.signal,
             (stage, progress) => {
@@ -243,6 +248,9 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
             job.state = {
               ...job.state,
               error: worktreeCreationErrorMessage(error),
+              errorCode: error instanceof DaemonError ? error.code : undefined,
+              relatedChatId:
+                error instanceof DaemonError ? error.relatedChatId : undefined,
               status: "failed",
             };
             await toPromise(persistWorktreeJob(job)).catch(() => undefined);
@@ -502,6 +510,10 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
           chatEvents.metadataChanged([chat.id]);
 
           const cwd = yield* cwdForChat(chat, input.projectId);
+          const turnStartSha = yield* workspaceGitHeadSha(cwd);
+          const turnAnchor = turnStartSha
+            ? yield* recordChatTurnStart(chat.id, turnStartSha)
+            : undefined;
           const result = yield* session
             .sendText({
               cwd,
@@ -522,6 +534,9 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
             .pipe(Effect.mapError(sessionFailure));
 
           const projected = projectTurnRunResult(result);
+          if (turnAnchor && is.nonEmptyString(projected.turnId)) {
+            yield* setTurnDiffAnchorTurnId(turnAnchor.id, projected.turnId);
+          }
           const finalChat = yield* is.nonEmptyString(projected.remoteThreadId)
             ? setChatRemoteThreadId(chat.id, projected.remoteThreadId)
             : touchChat(chat.id);
@@ -745,6 +760,7 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
                 projectId: input.projectId,
                 promise: Promise.resolve(),
                 setupApproval: input.worktreeSetupApproval,
+                worktreeRef: input.worktreeRef,
                 state: {
                   jobId: randomUUID(),
                   progress: 0,
@@ -755,6 +771,7 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
               yield* createWorktreeCreationJob({
                 chatId: job.chatId,
                 setupApproval: job.setupApproval,
+                worktreeRef: job.worktreeRef,
                 state: job.state,
               });
               worktreeCreationJobs.set(chat.id, job);
@@ -934,6 +951,7 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
               projectId: chat.projectId,
               promise: Promise.resolve(),
               setupApproval,
+              worktreeRef: persisted.worktreeRef,
               state: persisted.state,
             };
             if (

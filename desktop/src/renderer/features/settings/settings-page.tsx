@@ -24,14 +24,10 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import { confirmAction } from "@/components/ui/confirm-dialog";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { useAgentCatalog } from "@/features/agents/agent-catalog-context";
-import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
-import {
-  TRANSCRIPT_DENSITY_VALUES,
-  type TranscriptDensity,
-} from "@/features/chat/transcript-density";
-import { useTranscriptDensityStore } from "@/features/chat/transcript-density-store";
 import { useKeybindingHintsStore } from "@/features/keybindings/keybinding-hints-store";
 import { KeyboardSettings } from "@/features/keybindings/keyboard-settings";
 import { ArchivedSettingsPanel } from "@/features/settings/archived-settings-panel";
@@ -48,12 +44,14 @@ import {
 import { useSettingsStore } from "@/features/settings/settings-store";
 import { findSettingsTab } from "@/features/settings/settings-tabs";
 import { UpdateSettings } from "@/features/settings/update-settings";
+import { UsageSettings } from "@/features/usage/usage-settings";
 import { useSettingsTab } from "@/features/settings/use-settings-tab";
 import { useThemeSettings } from "@/features/settings/use-theme-settings";
 import { useTraySettings } from "@/features/settings/use-tray-settings";
 import { languageOptions } from "@/i18n";
 import { queryKeys } from "@/platform/query-keys";
 import { cn } from "@/platform/utils";
+import { ipc } from "@/platform/ipc";
 
 const themeModeOptions: Array<{
   labelKey: string;
@@ -213,6 +211,14 @@ export function SettingsPage({
 
           <SettingsTabPanel
             activeTab={activeTab}
+            tab="usage"
+            tabPanelId={tabPanelId}
+          >
+            <UsageSettings />
+          </SettingsTabPanel>
+
+          <SettingsTabPanel
+            activeTab={activeTab}
             tab="mobile"
             tabPanelId={tabPanelId}
           >
@@ -279,13 +285,6 @@ function AppearanceSettings() {
     (state) => state.setEnabled,
   );
   const setLanguage = useSettingsStore((state) => state.setLanguage);
-  const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
-  const transcriptDensity = useTranscriptDensityStore((state) =>
-    state.densityFor(workspaceMode),
-  );
-  const setTranscriptDensity = useTranscriptDensityStore(
-    (state) => state.setDensity,
-  );
 
   return (
     <SettingsGroup>
@@ -316,23 +315,6 @@ function AppearanceSettings() {
           />
         }
         title={t("settings.appearance.language")}
-      />
-      <SettingsRow
-        after={
-          <SettingsSelect
-            label={t("settings.appearance.transcriptDensityLabel")}
-            onValueChange={(value) =>
-              setTranscriptDensity(workspaceMode, value as TranscriptDensity)
-            }
-            options={TRANSCRIPT_DENSITY_VALUES.map((value) => ({
-              label: t(`settings.appearance.transcriptDensityOptions.${value}`),
-              value,
-            }))}
-            value={transcriptDensity}
-          />
-        }
-        description={t("settings.appearance.transcriptDensityDescription")}
-        title={t("settings.appearance.transcriptDensityTitle")}
       />
       <SettingsRow
         after={
@@ -367,49 +349,146 @@ function WorkspaceSettings() {
     window.desktopEnvironment.platform === "darwin" ? "⌘+Enter" : "Ctrl+Enter";
 
   return (
-    <SettingsGroup>
+    <>
+      <SettingsGroup>
+        <SettingsRow
+          after={
+            <Switch
+              aria-label={t("settings.workspace.sendWithModEnterSwitchLabel", {
+                shortcut: modEnterShortcut,
+              })}
+              checked={sendWithModEnter}
+              onCheckedChange={setSendWithModEnter}
+            />
+          }
+          description={t("settings.workspace.sendWithModEnterDescription", {
+            shortcut: modEnterShortcut,
+          })}
+          title={t("settings.workspace.sendWithModEnterTitle", {
+            shortcut: modEnterShortcut,
+          })}
+        />
+        <SettingsRow
+          after={
+            <Switch
+              aria-label={t("settings.workspace.dirtyPromptSwitchLabel")}
+              checked={worktreeDirtyPromptEnabled}
+              onCheckedChange={setWorktreeDirtyPromptEnabled}
+            />
+          }
+          description={t("settings.workspace.dirtyPromptDescription")}
+          title={t("settings.workspace.dirtyPromptTitle")}
+        />
+        <SettingsRow
+          after={
+            <Switch
+              aria-label={t("settings.workspace.trayEnabledSwitchLabel")}
+              checked={trayEnabled}
+              onCheckedChange={(checked) => {
+                void setTrayEnabled(checked);
+              }}
+            />
+          }
+          description={t("settings.workspace.trayEnabledDescription")}
+          title={t("settings.workspace.trayEnabledTitle")}
+        />
+        <OsNotificationSettings />
+      </SettingsGroup>
+      <LinearConnectionSettings />
+    </>
+  );
+}
+
+function LinearConnectionSettings() {
+  const { t } = useTranslation();
+  const [hasToken, setHasToken] = useState(false);
+  const [token, setToken] = useState("");
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    void ipc.appLinearTokenHas().then((result) => setHasToken(result.hasToken));
+  }, []);
+
+  const save = async () => {
+    setPending(true);
+    setError(null);
+    try {
+      const result = await ipc.appLinearTokenSet({ token });
+      setHasToken(result.hasToken);
+      setToken("");
+    } catch {
+      setError(t("settings.linear.connectFailed"));
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const clear = async () => {
+    setPending(true);
+    setError(null);
+    try {
+      const result = await ipc.appLinearTokenClear();
+      setHasToken(result.hasToken);
+      setToken("");
+    } catch {
+      setError(t("settings.linear.disconnectFailed"));
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <SettingsGroup
+      description={t("settings.linear.description")}
+      title={t("settings.linear.title")}
+    >
       <SettingsRow
         after={
-          <Switch
-            aria-label={t("settings.workspace.sendWithModEnterSwitchLabel", {
-              shortcut: modEnterShortcut,
-            })}
-            checked={sendWithModEnter}
-            onCheckedChange={setSendWithModEnter}
-          />
+          hasToken ? (
+            <Button
+              disabled={pending}
+              onClick={() => void clear()}
+              variant="outline"
+            >
+              {t("settings.linear.disconnect")}
+            </Button>
+          ) : null
         }
-        description={t("settings.workspace.sendWithModEnterDescription", {
-          shortcut: modEnterShortcut,
-        })}
-        title={t("settings.workspace.sendWithModEnterTitle", {
-          shortcut: modEnterShortcut,
-        })}
+        description={
+          hasToken
+            ? t("settings.linear.connected")
+            : t("settings.linear.notConnected")
+        }
+        title={t("settings.linear.apiConnection")}
       />
       <SettingsRow
         after={
-          <Switch
-            aria-label={t("settings.workspace.dirtyPromptSwitchLabel")}
-            checked={worktreeDirtyPromptEnabled}
-            onCheckedChange={setWorktreeDirtyPromptEnabled}
-          />
+          <Button
+            disabled={pending || token.trim().length === 0}
+            onClick={() => void save()}
+          >
+            {hasToken
+              ? t("settings.linear.replaceToken")
+              : t("settings.linear.connect")}
+          </Button>
         }
-        description={t("settings.workspace.dirtyPromptDescription")}
-        title={t("settings.workspace.dirtyPromptTitle")}
-      />
-      <SettingsRow
-        after={
-          <Switch
-            aria-label={t("settings.workspace.trayEnabledSwitchLabel")}
-            checked={trayEnabled}
-            onCheckedChange={(checked) => {
-              void setTrayEnabled(checked);
-            }}
+        align="start"
+      >
+        <span className="min-w-0 flex-1 space-y-2">
+          <Input
+            aria-label={t("settings.linear.tokenLabel")}
+            autoComplete="off"
+            onChange={(event) => setToken(event.target.value)}
+            placeholder={t("settings.linear.tokenPlaceholder")}
+            type="password"
+            value={token}
           />
-        }
-        description={t("settings.workspace.trayEnabledDescription")}
-        title={t("settings.workspace.trayEnabledTitle")}
-      />
-      <OsNotificationSettings />
+          {error === null ? null : (
+            <span className="block text-xs text-destructive">{error}</span>
+          )}
+        </span>
+      </SettingsRow>
     </SettingsGroup>
   );
 }
@@ -573,11 +652,17 @@ function DangerSettings({
   const { t } = useTranslation();
 
   const deleteAllChats = useCallback(async () => {
-    const confirmed = await window.desktopWindow.confirmDeleteAllChats();
+    const confirmed = await confirmAction({
+      cancelLabel: t("common.cancel"),
+      confirmLabel: t("common.delete"),
+      description: t("settings.danger.description"),
+      title: t("settings.danger.confirmDeleteAll"),
+      tone: "danger",
+    });
     if (!confirmed) return;
 
     await onDeleteAllChats();
-  }, [onDeleteAllChats]);
+  }, [onDeleteAllChats, t]);
 
   return (
     <SettingsGroup title={t("settings.danger.title")} tone="danger">

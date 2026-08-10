@@ -7,12 +7,18 @@ import is from "@sindresorhus/is";
 import { useTranslation } from "react-i18next";
 
 import { getErrorMessage } from "@/app/workspace/workspace-file-display";
+import { splitWorkspaceGitBranchLabel } from "@/app/workspace/workspace-git-status";
 import { WorkspaceToolBanner } from "@/app/workspace/workspace-tool-layout";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 /**
  * The source-control status line: where the branch sits relative to its
- * upstream, how dirty the tree is, and the one action that moves work off the
+ * upstream, how dirty the tree is, and the actions that move work off the
  * machine. Commit lives in the composer at the bottom of the same column.
  */
 export function WorkspaceGitStatusBar({
@@ -22,6 +28,8 @@ export function WorkspaceGitStatusBar({
   pushError,
   pushPending,
   onPush,
+  pullRequestAction,
+  statusLabel,
 }: {
   branchStatus: WorkspaceGitBranchStatus;
   conflictedPaths: string[];
@@ -29,6 +37,8 @@ export function WorkspaceGitStatusBar({
   pushError?: unknown;
   pushPending: boolean;
   onPush: () => void;
+  pullRequestAction?: ReactNode;
+  statusLabel?: string;
 }) {
   const { t } = useTranslation();
   const { ahead, behind, branch, detached, unborn, upstream } = branchStatus;
@@ -43,17 +53,34 @@ export function WorkspaceGitStatusBar({
       : hasBranch
         ? branch
         : t("workspace.tools.git.noCommits");
+  const branchParts = splitWorkspaceGitBranchLabel(branchLabel);
+  const branchTitle = is.nonEmptyString(upstream)
+    ? `${branchLabel} · ${upstream}`
+    : branchLabel;
+  const pushLabel = pushPending
+    ? t("workspace.tools.git.pushing")
+    : hasUpstream
+      ? t("workspace.tools.git.push")
+      : t("workspace.tools.git.publish");
 
   return (
-    <div className="shrink-0 border-b border-border-subtle">
+    <div className="@container shrink-0 border-b border-border-subtle">
       <div className="flex h-8 items-center gap-2 px-3 text-xs">
         <GitBranch
           aria-hidden="true"
           className="size-3.5 shrink-0 text-muted-foreground"
           weight="duotone"
         />
-        <span className="min-w-0 truncate font-mono" title={upstream}>
-          {branchLabel}
+        <span
+          className="flex min-w-0 flex-1 items-center font-mono"
+          title={branchTitle}
+        >
+          {branchParts.prefix ? (
+            <span className="min-w-0 truncate text-muted-foreground">
+              {branchParts.prefix}
+            </span>
+          ) : null}
+          <span className="shrink-0">{branchParts.tail}</span>
         </span>
         {ahead > 0 ? (
           <WorkspaceGitCounter
@@ -70,28 +97,35 @@ export function WorkspaceGitStatusBar({
           />
         ) : null}
         {hasBranch && !hasUpstream && !detached && !unborn ? (
-          <span className="shrink-0 text-muted-foreground">
+          <span className="hidden shrink-0 text-muted-foreground @[360px]:inline">
             {t("workspace.tools.git.noUpstream")}
           </span>
         ) : null}
-        <span className="min-w-0 flex-1 truncate text-right text-muted-foreground">
-          {dirtyCount > 0
-            ? t("workspace.tools.git.dirty", { value: dirtyCount })
-            : t("workspace.tools.git.clean")}
+        <span className="hidden shrink-0 truncate text-right text-muted-foreground @[360px]:inline">
+          {statusLabel ??
+            (dirtyCount > 0
+              ? t("workspace.tools.git.dirty", { value: dirtyCount })
+              : t("workspace.tools.git.clean"))}
         </span>
-        <Button
-          disabled={!canPush || pushPending}
-          onClick={onPush}
-          size="xs"
-          type="button"
-          variant="secondary"
-        >
-          {pushPending
-            ? t("workspace.tools.git.pushing")
-            : hasUpstream
-              ? t("workspace.tools.git.push")
-              : t("workspace.tools.git.publish")}
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              aria-label={pushLabel}
+              className="w-6 px-0 @[290px]:w-auto @[290px]:px-2"
+              disabled={!canPush || pushPending}
+              onClick={onPush}
+              size="xs"
+              title={pushLabel}
+              type="button"
+              variant="secondary"
+            >
+              <ArrowUp aria-hidden="true" />
+              <span className="hidden @[290px]:inline">{pushLabel}</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{pushLabel}</TooltipContent>
+        </Tooltip>
+        {pullRequestAction}
       </div>
       {conflictedPaths.length > 0 ? (
         <WorkspaceToolBanner className="m-3 mb-0" tone="attention">

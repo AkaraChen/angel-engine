@@ -22,6 +22,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
+import { confirmAction } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { KeybindingHint } from "@/features/keybindings/components/keybinding-hint";
 import { KeybindingRecorder } from "@/features/keybindings/keybinding-recorder";
@@ -252,10 +253,16 @@ export function KeyboardSettings() {
           size="sm"
           variant="outline"
           onClick={() => {
-            if (window.confirm(t("settings.keyboard.resetAllConfirm"))) {
+            void confirmAction({
+              cancelLabel: t("common.cancel"),
+              confirmLabel: t("settings.keyboard.resetAll"),
+              title: t("settings.keyboard.resetAllConfirm"),
+              tone: "danger",
+            }).then((confirmed) => {
+              if (!confirmed) return;
               // Main-process reset: backup + empty file (KIT-797 §6).
               void resetAllUserBindings();
-            }
+            });
           }}
         >
           {t("settings.keyboard.resetAll")}

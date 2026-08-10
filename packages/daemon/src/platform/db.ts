@@ -10,13 +10,25 @@ import { drizzle } from "drizzle-orm/libsql";
 import { migrate } from "drizzle-orm/libsql/migrator";
 import { Context, Effect, Layer, Ref } from "effect";
 
-import { chats, customAgents, projects } from "../db/schema";
+import {
+  automationRuns,
+  automations,
+  chatDiffAnchors,
+  chats,
+  customAgents,
+  projects,
+  pullRequests,
+} from "../db/schema";
 import { DaemonError } from "./errors";
 
 export type AppDatabase = LibSQLDatabase<{
+  automationRuns: typeof automationRuns;
+  automations: typeof automations;
+  chatDiffAnchors: typeof chatDiffAnchors;
   chats: typeof chats;
   customAgents: typeof customAgents;
   projects: typeof projects;
+  pullRequests: typeof pullRequests;
 }> & { $client: Client };
 
 export interface DatabaseConfiguration {
@@ -112,7 +124,15 @@ function openDatabase(
         },
       });
       const database = drizzle(client, {
-        schema: { chats, customAgents, projects },
+        schema: {
+          automationRuns,
+          automations,
+          chatDiffAnchors,
+          chats,
+          customAgents,
+          projects,
+          pullRequests,
+        },
       }) as AppDatabase;
       const migrationsFolder = yield* resolveMigrationsFolder(configuration);
       yield* Effect.tryPromise({

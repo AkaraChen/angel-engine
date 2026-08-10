@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { WorkspaceToolEmpty } from "@/app/workspace/workspace-tool-layout";
 import { Button } from "@/components/ui/button";
+import { confirmAction } from "@/components/ui/confirm-dialog";
 import {
   Tooltip,
   TooltipContent,
@@ -126,10 +127,15 @@ export const WorkspaceProcessesView: FC<WorkspaceProcessesViewProps> = ({
   }
 
   const kill = (pid: number, name: string) => {
-    // The process inspector is already a desktop-only privileged surface.
-    // eslint-disable-next-line no-alert
-    if (!window.confirm(`Kill ${name} (${pid})?`)) return;
-    killMutation.mutate({ pid });
+    void confirmAction({
+      cancelLabel: t("common.cancel"),
+      confirmLabel: t("dialog.confirm.kill"),
+      title: t("dialog.confirm.killProcessTitle", { name, pid }),
+      tone: "danger",
+    }).then((confirmed) => {
+      if (!confirmed) return;
+      killMutation.mutate({ pid });
+    });
   };
 
   if (layout === "split") {

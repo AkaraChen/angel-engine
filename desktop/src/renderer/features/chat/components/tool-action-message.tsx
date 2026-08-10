@@ -35,8 +35,10 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { toolCallCardClassName } from "@/features/chat/components/message-styles";
-import { defaultToolDetailsOpen } from "@/features/chat/transcript-density";
-import { useTranscriptDensityStore } from "@/features/chat/transcript-density-store";
+import {
+  defaultToolDetailsOpen,
+  densityForWorkspaceMode,
+} from "@/features/chat/transcript-density";
 import { cn } from "@/platform/utils";
 
 function ToolActionMessagePart(part: ToolCallMessagePartProps) {
@@ -76,9 +78,7 @@ function GenericToolActionMessagePart({
     is.nonEmptyString(errorText);
   const hasTextAfterTool = useHasTextAfterToolCall(part.toolCallId);
   const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
-  const density = useTranscriptDensityStore((state) =>
-    state.densityFor(workspaceMode),
-  );
+  const density = densityForWorkspaceMode(workspaceMode);
   const [manualOpen, setManualOpen] = useState<boolean | undefined>();
   const open =
     hasDetails &&

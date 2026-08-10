@@ -24,7 +24,9 @@ const listPayload = [
 
 const detailPayload = {
   ...listPayload[0],
+  additions: 120,
   body: "PR body",
+  changedFiles: 8,
   comments: [
     {
       author: { login: "bob" },
@@ -34,6 +36,8 @@ const detailPayload = {
       url: "https://github.com/acme/widgets/pull/7#issuecomment-1",
     },
   ],
+  commits: [{ oid: "abc" }, { oid: "def" }],
+  deletions: 35,
 };
 
 function runner(calls: string[][] = [], stdout = JSON.stringify(listPayload)) {
@@ -95,6 +99,12 @@ describe("viewPullRequest", () => {
     );
 
     expect(result.body).toBe("PR body");
+    expect(result).toMatchObject({
+      additions: 120,
+      changedFiles: 8,
+      commitCount: 2,
+      deletions: 35,
+    });
     expect(result.comments).toHaveLength(1);
     expect(result.comments[0]?.author).toBe("bob");
   });

@@ -29,6 +29,8 @@ export const queryKeys = {
     prChecks: (cwd: string | null) => ["github", "pr-checks", cwd] as const,
     pullRequestDetail: (cwd: string | null, number: number | null) =>
       ["github", "pull-request", cwd, number] as const,
+    pullRequest: (cwd: string | null) =>
+      ["github", "pull-request-status", cwd] as const,
     pullRequestTemplate: (cwd: string | null) =>
       ["github", "pull-request-template", cwd] as const,
     pullRequests: (cwd: string | null, state: string, query: string) =>
@@ -37,6 +39,8 @@ export const queryKeys = {
       ["github", "repositories", owner] as const,
     repositoryOwners: () => ["github", "repository-owners"] as const,
     resolve: (url: string | null) => ["github", "resolve", url] as const,
+    pullRequestPreflight: (root: string | null, base?: string) =>
+      ["github", "pull-request", "preflight", root, base] as const,
   },
   projects: {
     all: () => ["projects"] as const,
@@ -52,6 +56,9 @@ export const queryKeys = {
     all: () => ["url-previews"] as const,
     detail: (url: string) => ["url-previews", "detail", url] as const,
   },
+  usage: {
+    snapshot: () => ["usage", "snapshot"] as const,
+  },
   worktrees: {
     all: () => ["worktrees"] as const,
     lifecycle: (chatId: string | null) =>
@@ -61,8 +68,21 @@ export const queryKeys = {
   workspaceTools: {
     fileTree: (root: string | null) =>
       ["workspace-tools", "file-tree", root] as const,
-    gitDiff: (root: string | null) =>
+    gitBranches: (root: string | null) =>
+      ["workspace-tools", "git-branches", root] as const,
+    gitCommitShow: (root: string | null, hash: string | null) =>
+      ["workspace-tools", "git-commit-show", root, hash] as const,
+    gitLog: (root: string | null) =>
+      ["workspace-tools", "git-log", root] as const,
+    gitDiffRoot: (root: string | null) =>
       ["workspace-tools", "git-diff", root] as const,
+    gitDiff: (
+      root: string | null,
+      baseKind = "worktree",
+      baseRef: string | null = null,
+      chatId: string | null = null,
+    ) =>
+      ["workspace-tools", "git-diff", root, baseKind, baseRef, chatId] as const,
     readFile: (root: string | null, path: string | null) =>
       ["workspace-tools", "read-file", root, path] as const,
   },

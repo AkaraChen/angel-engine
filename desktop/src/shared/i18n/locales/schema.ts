@@ -36,6 +36,7 @@ export interface LocaleResourceTranslationCommon {
   proposed: string;
   question: string;
   reload: string;
+  retry: string;
   running: string;
   save: string;
   saving: string;
@@ -80,16 +81,84 @@ export interface LocaleResourceTranslationWorkspaceToolsGitPushHint {
 export interface LocaleResourceTranslationWorkspaceToolsGit {
   ahead: string;
   behind: string;
+  changes: string;
   clean: string;
   conflicts: string;
+  currentBranch: string;
   detached: string;
   dirty: string;
+  history: string;
+  noBranches: string;
   noCommits: string;
+  noHistory: string;
+  noCommitsToPropose: string;
   noUpstream: string;
   publish: string;
+  pull: string;
+  pullCount: string;
+  pulling: string;
   push: string;
+  pushCount: string;
   pushHint: LocaleResourceTranslationWorkspaceToolsGitPushHint;
   pushing: string;
+  viewTabs: string;
+}
+
+export interface LocaleResourceTranslationWorkspaceToolsDiffBase {
+  branch: string;
+  fallback: {
+    anchorMissing: string;
+    anchorUnavailable: string;
+    defaultBranchUnavailable: string;
+    gitRefUnavailable: string;
+    noMergeBase: string;
+    notRepository: string;
+  };
+  fileCount: string;
+  label: string;
+  session: string;
+  turn: string;
+  unstaged: string;
+  worktree: string;
+}
+
+export interface LocaleResourceTranslationWorkspaceToolsPullRequestPreview {
+  additions: string;
+  body: string;
+  commits: string;
+  copied: string;
+  copyLink: string;
+  deletions: string;
+  description: string;
+  emptyBody: string;
+  filesChanged: string;
+  loadFailed: string;
+  open: string;
+  title: string;
+}
+
+export interface LocaleResourceTranslationWorkspaceToolsCreatePullRequest {
+  ahead: string;
+  base: string;
+  bodyPlaceholder: string;
+  create: string;
+  created: string;
+  creating: string;
+  description: string;
+  existing: string;
+  noCommits: string;
+  openInBrowser: string;
+  pushedRetry: string;
+  pushing: string;
+  preview: LocaleResourceTranslationWorkspaceToolsPullRequestPreview;
+  retry: string;
+  short: string;
+  title: string;
+  titlePlaceholder: string;
+  view: string;
+  viewShort: string;
+  willPushMany: string;
+  willPushOne: string;
 }
 
 export interface LocaleResourceTranslationWorkspaceToolsEmpty {
@@ -113,6 +182,7 @@ export interface LocaleResourceTranslationWorkspaceToolsTabs {
   files: string;
   gitChanges: string;
   newTab: string;
+  pullRequest: string;
   processes: string;
   tabs: string;
   tools: string;
@@ -154,15 +224,80 @@ export interface LocaleResourceTranslationWorkspaceToolsComments {
   title: string;
 }
 
+export interface LocaleResourceTranslationWorkspaceToolsPullRequest {
+  archive: string;
+  archiveDetail: string;
+  archiveFailed: string;
+  archiveConfirmDetail: string;
+  archiveConfirmDirtyDetail: string;
+  archiveConfirmTitle: string;
+  archiveUnavailable: string;
+  blocked: string;
+  blockers: {
+    behindBase_one: string;
+    behindBase_other: string;
+    changesRequested: string;
+    checksFailed_one: string;
+    checksFailed_other: string;
+    checksPending_one: string;
+    checksPending_other: string;
+    conflict: string;
+    draft: string;
+    permissionDenied: string;
+    repositoryPolicy: string;
+    reviewRequired: string;
+    unresolvedThreads_one: string;
+    unresolvedThreads_other: string;
+  };
+  checking: string;
+  checkingMergeability: string;
+  continue: string;
+  deleteBranch: string;
+  errors: {
+    cliMissing: string;
+    cliMissingDetail: string;
+    fetch: string;
+    fetchDetail: string;
+    permission: string;
+    permissionDetail: string;
+    unauthenticated: string;
+    unauthenticatedDetail: string;
+  };
+  generalComment: string;
+  merge: string;
+  mergeChanged: string;
+  mergeFailed: string;
+  merged: string;
+  mergedDetail: string;
+  mergedMethod: string;
+  merging: string;
+  method: string;
+  methodDisabled: string;
+  methods: { merge: string; rebase: string; squash: string };
+  noOpen: string;
+  noOpenDetail: string;
+  open: string;
+  optionalChecksFailed_one: string;
+  optionalChecksFailed_other: string;
+  ready: string;
+  refresh: string;
+  resolve: string;
+  title: string;
+  unresolvedTitle: string;
+}
+
 export interface LocaleResourceTranslationWorkspaceTools {
   addToChat: string;
   checks: LocaleResourceTranslationWorkspaceToolsChecks;
   comments: LocaleResourceTranslationWorkspaceToolsComments;
   commit: LocaleResourceTranslationWorkspaceToolsCommit;
+  diffBase: LocaleResourceTranslationWorkspaceToolsDiffBase;
+  createPullRequest: LocaleResourceTranslationWorkspaceToolsCreatePullRequest;
   dockInSidebar: string;
   empty: LocaleResourceTranslationWorkspaceToolsEmpty;
   git: LocaleResourceTranslationWorkspaceToolsGit;
   listeningPorts: string;
+  pullRequest: LocaleResourceTranslationWorkspaceToolsPullRequest;
   resizeFileTree: string;
   resizeGitList: string;
   subprocesses: string;
@@ -192,19 +327,6 @@ export interface LocaleResourceTranslationWorkspaceAmbiguousSend {
   title: string;
 }
 
-export interface LocaleResourceTranslationWorkspaceTranscriptDensityOptions {
-  compact: string;
-  debug: string;
-  normal: string;
-}
-
-export interface LocaleResourceTranslationWorkspaceTranscriptDensity {
-  descriptions: LocaleResourceTranslationWorkspaceTranscriptDensityOptions;
-  menuLabel: string;
-  options: LocaleResourceTranslationWorkspaceTranscriptDensityOptions;
-  title: string;
-}
-
 export interface LocaleResourceTranslationWorkspace {
   ambiguousSend: LocaleResourceTranslationWorkspaceAmbiguousSend;
   backgroundChatCompleted: string;
@@ -224,7 +346,6 @@ export interface LocaleResourceTranslationWorkspace {
   statsChanges: string;
   statsLastActive: string;
   tools: LocaleResourceTranslationWorkspaceTools;
-  transcriptDensity: LocaleResourceTranslationWorkspaceTranscriptDensity;
   worktreeDirtyContinue: string;
   worktreeDirtyDescription: string;
   worktreeDirtyRemember: string;
@@ -309,7 +430,6 @@ export interface LocaleResourceTranslationFleet {
 export interface LocaleResourceTranslationSchedule {
   agent: string;
   alreadyRunning: string;
-  backToList: string;
   createAction: string;
   createDescription: string;
   createTitle: string;
@@ -318,18 +438,11 @@ export interface LocaleResourceTranslationSchedule {
   deleteConfirm: string;
   discardConfirm: string;
   disconnected: string;
-  duration: string;
-  emptyDetail: string;
-  emptyDetailDescription: string;
   invalidCron: string;
-  lastResult: string;
   name: string;
-  neverRun: string;
   newAutomation: string;
-  nextRun: string;
   nextThreeRuns: string;
   noProject: string;
-  noRuns: string;
   notifyOnFailure: string;
   pause: string;
   paused: string;
@@ -344,9 +457,7 @@ export interface LocaleResourceTranslationSchedule {
     nightlyTestsDescription: string;
     title: string;
   };
-  result: string;
   resume: string;
-  runHistory: string;
   runNow: string;
   runStatus: {
     cancelled: string;
@@ -364,10 +475,7 @@ export interface LocaleResourceTranslationSchedule {
     weekdays: string;
     weekly: string;
   };
-  seconds: string;
-  sleepNotice: string;
   startFromScratch: string;
-  started: string;
   status: {
     active: string;
     failing: string;
@@ -376,7 +484,6 @@ export interface LocaleResourceTranslationSchedule {
   };
   subtitle: string;
   title: string;
-  trigger: string;
   triggerType: {
     manual: string;
     scheduled: string;
@@ -438,6 +545,7 @@ export interface LocaleResourceTranslationSidebar {
   noChats: string;
   noProjects: string;
   noStandaloneChats: string;
+  openBranchChat: string;
   projects: string;
   powerWorktreeHome: string;
   powerWorktreeHistoricalChat: string;
@@ -522,12 +630,6 @@ export interface LocaleResourceTranslationSettingsAppearanceThemeOptions {
   system: string;
 }
 
-export interface LocaleResourceTranslationSettingsAppearanceTranscriptDensityOptions {
-  compact: string;
-  debug: string;
-  normal: string;
-}
-
 export interface LocaleResourceTranslationSettingsAppearance {
   keybindingHintsDescription: string;
   keybindingHintsSwitchLabel: string;
@@ -536,10 +638,6 @@ export interface LocaleResourceTranslationSettingsAppearance {
   languageOptions: LocaleResourceTranslationSettingsAppearanceLanguageOptions;
   theme: string;
   themeOptions: LocaleResourceTranslationSettingsAppearanceThemeOptions;
-  transcriptDensityDescription: string;
-  transcriptDensityLabel: string;
-  transcriptDensityOptions: LocaleResourceTranslationSettingsAppearanceTranscriptDensityOptions;
-  transcriptDensityTitle: string;
 }
 
 export interface LocaleResourceTranslationSettingsDanger {
@@ -560,6 +658,7 @@ export interface LocaleResourceTranslationSettingsTabs {
   mobile: string;
   updates: string;
   workspace: string;
+  usage: string;
 }
 
 export interface LocaleResourceTranslationSettingsTabDescriptions {
@@ -571,6 +670,46 @@ export interface LocaleResourceTranslationSettingsTabDescriptions {
   mobile: string;
   updates: string;
   workspace: string;
+  usage: string;
+}
+
+export interface LocaleResourceTranslationUsageUnavailableReasons {
+  "binary-missing": string;
+  "exec-failed": string;
+  "schema-mismatch": string;
+  timeout: string;
+}
+
+export interface LocaleResourceTranslationUsage {
+  activeBlock: string;
+  activeRuns: string;
+  burnRate: string;
+  burnRateThreshold: string;
+  burnRateWarning: string;
+  burnRateWarningActive: string;
+  burnRateWarningDescription: string;
+  byAgent: string;
+  cacheCreationTokens: string;
+  cacheReadTokens: string;
+  collecting: string;
+  contextNearLimit: string;
+  contextUsed: string;
+  month: string;
+  noData: string;
+  projected: string;
+  inputTokens: string;
+  lastCollected: string;
+  outputTokens: string;
+  refresh: string;
+  source: string;
+  sourceDescription: string;
+  sessionCost: string;
+  today: string;
+  tokens: string;
+  unavailable: string;
+  unavailableReasons: LocaleResourceTranslationUsageUnavailableReasons;
+  warnings: string;
+  week: string;
 }
 
 export interface LocaleResourceTranslationSettingsUpdates {
@@ -702,6 +841,21 @@ export interface LocaleResourceTranslationTray {
   tooltipNeedsYou: string;
 }
 
+export interface LocaleResourceTranslationSettingsLinear {
+  apiConnection: string;
+  connect: string;
+  connected: string;
+  connectFailed: string;
+  description: string;
+  disconnect: string;
+  disconnectFailed: string;
+  notConnected: string;
+  replaceToken: string;
+  title: string;
+  tokenLabel: string;
+  tokenPlaceholder: string;
+}
+
 export interface LocaleResourceTranslationSettingsCustomAgentsForm {
   args: string;
   autoAuthenticate: string;
@@ -730,6 +884,7 @@ export interface LocaleResourceTranslationSettings {
   description: string;
   groups: LocaleResourceTranslationSettingsGroups;
   keyboard: LocaleResourceTranslationSettingsKeyboard;
+  linear: LocaleResourceTranslationSettingsLinear;
   mobile: LocaleResourceTranslationSettingsMobile;
   tabDescriptions: LocaleResourceTranslationSettingsTabDescriptions;
   tabs: LocaleResourceTranslationSettingsTabs;
@@ -817,6 +972,14 @@ export interface LocaleResourceTranslationComposerGitHubErrors {
   urlUnsupported: string;
 }
 
+export interface LocaleResourceTranslationComposerTaskLinkErrors {
+  linearFetchFailed: string;
+  linearNotFound: string;
+  linearUnauthorized: string;
+  prForkUnsupported: string;
+  unsupported: string;
+}
+
 export interface LocaleResourceTranslationComposer {
   agentMode: string;
   agentSettings: string;
@@ -836,9 +999,15 @@ export interface LocaleResourceTranslationComposer {
   fileTypeBlocked: string;
   fileTooLarge: string;
   files: string;
+  fromLink: string;
+  fromLinkPlaceholder: string;
   githubErrors: LocaleResourceTranslationComposerGitHubErrors;
   githubIssue: string;
   githubPullRequest: string;
+  linearConnectAction: string;
+  linearConnectDescription: string;
+  linearIssue: string;
+  linearItemMeta: string;
   loadingCommands: string;
   loadingSkills: string;
   loadingValue: string;
@@ -863,6 +1032,14 @@ export interface LocaleResourceTranslationComposer {
   skills: string;
   switchToBuild: string;
   switchToPlan: string;
+  taskLinkErrors: LocaleResourceTranslationComposerTaskLinkErrors;
+  taskLinkHintComplete: string;
+  taskLinkHintGitHubPath: string;
+  taskLinkHintLinearPath: string;
+  taskLinkHintSupported: string;
+  taskLinkStateClosed: string;
+  taskLinkStateMerged: string;
+  taskLinkStateOpen: string;
   toasts: LocaleResourceTranslationComposerToasts;
 }
 
@@ -924,9 +1101,23 @@ export interface LocaleResourceTranslationMessages {
 
 export interface LocaleResourceTranslationDialog {
   chatName: string;
+  confirm: LocaleResourceTranslationDialogConfirm;
   importSession: LocaleResourceTranslationDialogImportSession;
   renameChat: string;
   sessionHandoff: LocaleResourceTranslationDialogSessionHandoff;
+}
+
+export interface LocaleResourceTranslationDialogConfirm {
+  deleteCustomAgentDetail_one: string;
+  deleteCustomAgentDetail_other: string;
+  deleteCustomAgentDetailNone: string;
+  deleteCustomAgentTitle: string;
+  discard: string;
+  dontSave: string;
+  kill: string;
+  killProcessTitle: string;
+  saveFileChangesDetail: string;
+  saveFileChangesTitle: string;
 }
 
 export interface LocaleResourceTranslationDialogImportSession {
@@ -1143,6 +1334,7 @@ export interface LocaleResourceTranslation {
   ui: LocaleResourceTranslationUi;
   promptInput: LocaleResourceTranslationPromptInput;
   runtimeValues: LocaleResourceTranslationRuntimeValues;
+  usage?: LocaleResourceTranslationUsage;
 }
 
 export interface LocaleResource {

@@ -11,6 +11,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { confirmSaveWorkspaceFileChanges } from "@/app/workspace/confirm-save-workspace-file-changes";
 import { getErrorMessage } from "@/app/workspace/workspace-file-display";
 import { WorkspaceWindowFileEditor } from "@/app/workspace/workspace-file-editor";
 import {
@@ -241,7 +242,7 @@ function WorkspaceSplitFilesPanel({ root }: { root: string }) {
           queryKey: queryKeys.workspaceTools.fileTree(root),
         });
         void queryClient.invalidateQueries({
-          queryKey: queryKeys.workspaceTools.gitDiff(root),
+          queryKey: queryKeys.workspaceTools.gitDiffRoot(root),
         });
         return true;
       } catch {
@@ -275,8 +276,7 @@ function WorkspaceSplitFilesPanel({ root }: { root: string }) {
     async (path: string) => {
       const state = fileStates[path];
       if (isWorkspaceWindowFileStateDirty(state)) {
-        const action =
-          await window.desktopWindow.confirmSaveWorkspaceFileChanges({ path });
+        const action = await confirmSaveWorkspaceFileChanges({ path });
         if (action === "cancel") {
           return;
         }

@@ -375,6 +375,7 @@ function WorkspaceSidebarContent({
             onCreateProjectChat={onCreateProjectChat}
             onCancelWorktreeCreation={onCancelWorktreeCreation}
             onOpenWorktree={onOpenWorktree}
+            onOpenChat={onOpenChat}
             onRetryWorktreeCreation={onRetryWorktreeCreation}
             onShowProjectContextMenu={onShowProjectContextMenu}
             onShowWorktreeContextMenu={onShowWorktreeContextMenu}

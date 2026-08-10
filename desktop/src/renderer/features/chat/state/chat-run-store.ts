@@ -256,6 +256,8 @@ async function createChatForRun(input: StartRunOptions): Promise<Chat> {
     reasoningEffort: input.reasoningEffort,
     runtime: input.runtime,
     title: input.title,
+    sourceLink: input.sourceLink,
+    worktreeRef: input.worktreeRef,
     worktreeSetupApproval: input.worktreeSetupApproval,
   });
 }
@@ -416,6 +418,14 @@ export function useChatRunIsRunning(slotKey?: string) {
     is.nonEmptyString(slotKey)
       ? selectSlot(state, slotKey)?.status === "streaming"
       : false,
+  );
+}
+
+export function useActiveChatRunCount() {
+  return useChatRunStore(
+    (state) =>
+      Object.values(state.slots).filter((slot) => slot.status === "streaming")
+        .length,
   );
 }
 

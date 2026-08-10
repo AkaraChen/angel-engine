@@ -1,5 +1,6 @@
 import type { LocaleResource } from "./schema";
 import { scheduleTranslation } from "./schedule";
+import { pullRequestZhTW } from "./pull-request";
 
 export const zhTW = {
   translation: {
@@ -63,6 +64,7 @@ export const zhTW = {
       proposed: "已提議",
       question: "問題",
       reload: "重新載入",
+      retry: "重試",
       running: "執行中",
       save: "儲存",
       saving: "儲存中",
@@ -124,20 +126,7 @@ export const zhTW = {
       statsBranch: "分支",
       statsChanges: "變更",
       statsLastActive: "最近活動",
-      transcriptDensity: {
-        descriptions: {
-          compact: "預設摺疊工具細節，需要時可展開單條。",
-          debug: "預設展開工具與推理細節，方便排查。",
-          normal: "後面沒有正文時自動展開工具。",
-        },
-        menuLabel: "時間線密度：{{density}}",
-        options: {
-          compact: "簡潔",
-          debug: "偵錯",
-          normal: "標準",
-        },
-        title: "時間線密度",
-      },
+
       tools: {
         checks: {
           fixFailures: "修復失敗",
@@ -178,6 +167,63 @@ export const zhTW = {
           filesSelected: "已選 {{selected}}/{{total}} 個檔案",
           summaryPlaceholder: "摘要",
         },
+        diffBase: {
+          branch: "相對預設分支",
+          fallback: {
+            anchorMissing:
+              "{{base}} 基準 {{sha}} 已不存在，暫時顯示{{fallback}}。",
+            anchorUnavailable:
+              "目前工作階段沒有可用的{{base}}，暫時顯示{{fallback}}。",
+            defaultBranchUnavailable:
+              "無法解析預設分支，暫時顯示{{fallback}}。",
+            gitRefUnavailable:
+              "Git 參照 {{ref}} 不可用，暫時顯示{{fallback}}。",
+            noMergeBase: "{{ref}} 與 HEAD 沒有合併基準，暫時顯示{{fallback}}。",
+            notRepository: "此工作區不是 Git 儲存庫。",
+          },
+          fileCount: "{{count}} 個檔案",
+          label: "差異基準",
+          session: "自工作階段開始",
+          turn: "自上一輪開始",
+          unstaged: "僅未暫存",
+          worktree: "未提交變更",
+        },
+        createPullRequest: {
+          ahead: "領先 {{base}} {{count}} 個提交",
+          base: "基礎分支",
+          bodyPlaceholder: "描述這次變更",
+          create: "建立拉取請求",
+          created: "已建立拉取請求 #{{number}}",
+          creating: "正在建立拉取請求…",
+          description: "發佈前請確認分支與描述。",
+          existing: "拉取請求 #{{number}} 已存在",
+          noCommits: "基礎分支與目前分支之間沒有提交。",
+          openInBrowser: "在瀏覽器中開啟",
+          pushedRetry: "分支已推送。請重試建立拉取請求。",
+          pushing: "正在推送分支…",
+          preview: {
+            additions: "新增",
+            body: "描述",
+            commits: "提交",
+            copied: "已複製",
+            copyLink: "複製連結",
+            deletions: "刪除",
+            description: "在瀏覽器中開啟前預覽拉取請求。",
+            emptyBody: "未提供描述。",
+            filesChanged: "變更檔案",
+            loadFailed: "無法載入拉取請求詳細資料。",
+            open: "開啟",
+            title: "拉取請求 #{{number}}",
+          },
+          retry: "重試",
+          short: "建立 PR",
+          title: "建立拉取請求",
+          titlePlaceholder: "拉取請求標題",
+          view: "檢視拉取請求 #{{number}}",
+          viewShort: "PR #{{number}}",
+          willPushMany: "將推送 {{count}} 個提交到 origin/{{head}}",
+          willPushOne: "將推送 1 個提交到 origin/{{head}}",
+        },
         dockInSidebar: "停靠到側欄",
         empty: {
           checksUnavailable: "檢查不可用",
@@ -202,7 +248,18 @@ export const zhTW = {
           detached: "分離 HEAD",
           dirty: "{{value}} 個變更",
           noCommits: "尚無提交",
+          noCommitsToPropose: "沒有可提議的提交",
           noUpstream: "沒有上游分支",
+          changes: "變更",
+          currentBranch: "目前分支",
+          history: "歷史",
+          noBranches: "沒有本機分支",
+          noHistory: "尚無提交",
+          pull: "拉取 {{remote}}",
+          pullCount: "從 {{remote}} 拉取 {{count}} 個提交",
+          pulling: "拉取中…",
+          pushCount: "向 {{remote}} 推送 {{count}} 個提交",
+          viewTabs: "Git 面板檢視",
           publish: "發布分支",
           push: "推送",
           pushHint: {
@@ -215,6 +272,7 @@ export const zhTW = {
           },
           pushing: "推送中",
         },
+        pullRequest: pullRequestZhTW,
         listeningPorts: "監聽連接埠",
         resizeFileTree: "調整檔案樹寬度",
         resizeGitList: "調整變更清單寬度",
@@ -225,6 +283,7 @@ export const zhTW = {
           gitChanges: "Git 變更",
           newTab: "新增分頁",
           processes: "處理程序",
+          pullRequest: "提取要求",
           tabs: "分頁",
           tools: "工具",
           workspaceTabs: "工作區分頁",
@@ -352,6 +411,7 @@ export const zhTW = {
       noChats: "沒有聊天",
       noProjects: "尚無專案",
       noStandaloneChats: "沒有獨立聊天",
+      openBranchChat: "開啟正在使用此分支的聊天",
       projects: "專案",
       powerWorktreeHome: "首頁",
       powerWorktreeHistoricalChat: "歷史聊天",
@@ -394,15 +454,6 @@ export const zhTW = {
           light: "淺色",
           system: "跟隨系統",
         },
-        transcriptDensityDescription:
-          "目前工作區模式下時間線預設顯示多少工具細節。Chat 預設簡潔；Work / Power 預設標準。",
-        transcriptDensityLabel: "時間線密度",
-        transcriptDensityOptions: {
-          compact: "簡潔",
-          debug: "偵錯",
-          normal: "標準",
-        },
-        transcriptDensityTitle: "時間線密度",
       },
       archived: {
         allProjects: "所有專案",
@@ -513,6 +564,20 @@ export const zhTW = {
         sourceUserOverride: "User · overridden",
         warningsCount: "{{count}} warning(s) while loading keybindings",
       },
+      linear: {
+        apiConnection: "API 連線",
+        connect: "連線",
+        connected: "已連線",
+        connectFailed: "無法連線 Linear。",
+        description: "權杖由桌面主程序加密，且絕不會重新暴露給渲染程序。",
+        disconnect: "中斷連線",
+        disconnectFailed: "無法中斷 Linear 連線。",
+        notConnected: "未連線",
+        replaceToken: "替換權杖",
+        title: "Linear",
+        tokenLabel: "Linear API 權杖",
+        tokenPlaceholder: "lin_api_…",
+      },
       mobile: {
         copied: "已複製",
         copy: "複製",
@@ -549,6 +614,7 @@ export const zhTW = {
         danger: "影響本機所有聊天記錄的不可復原操作。",
         mobile: "透過本機網路從這台電腦提供行動版網頁應用程式。",
         updates: "這個應用程式安裝哪些版本，以及何時安裝。",
+        usage: "來自 ccusage 的本機 Token 與費用活動估算。",
         workspace: "工作時輸入區與 worktree 的行為方式。",
       },
       tabs: {
@@ -559,6 +625,7 @@ export const zhTW = {
         danger: "進階",
         mobile: "行動版",
         updates: "更新",
+        usage: "用量",
         workspace: "工作區",
       },
       title: "設定",
@@ -598,6 +665,44 @@ export const zhTW = {
         trayEnabledSwitchLabel: "顯示選單列艦隊摘要",
         trayEnabledTitle: "選單列艦隊摘要",
       },
+    },
+    usage: {
+      activeBlock: "目前計費區塊",
+      activeRuns: "執行中的工作階段",
+      burnRate: "目前速率",
+      burnRateThreshold: "警告門檻",
+      burnRateWarning: "消耗速率警告",
+      burnRateWarningActive: "目前速率已超過 {{threshold}}。",
+      burnRateWarningDescription:
+        "目前每小時速率超過門檻時醒目顯示用量指示器。",
+      byAgent: "依 Agent",
+      cacheCreationTokens: "快取寫入",
+      cacheReadTokens: "快取讀取",
+      collecting: "正在收集本機用量…",
+      contextNearLimit: "上下文即將達到上限。建議建立新聊天。",
+      contextUsed: "已用上下文",
+      month: "本月",
+      noData: "沒有本機用量記錄",
+      projected: "依目前速率預估",
+      inputTokens: "輸入",
+      lastCollected: "上次收集於 {{time}}。",
+      outputTokens: "輸出",
+      refresh: "重新整理",
+      source: "資料來源",
+      sourceDescription:
+        "根據本機 Agent 日誌估算。支援的提供者：{{agents}}；其他及自訂提供者不可用。",
+      sessionCost: "費用",
+      today: "今天",
+      tokens: "tokens",
+      unavailable: "用量無法使用",
+      unavailableReasons: {
+        "binary-missing": "用量無法使用：缺少已封裝的 ccusage 二進位檔。",
+        "exec-failed": "用量無法使用：ccusage 執行失敗。",
+        "schema-mismatch": "用量無法使用：ccusage 輸出格式已變更。",
+        timeout: "用量無法使用：收集逾時。",
+      },
+      warnings: "警告",
+      week: "本週",
     },
     updates: {
       checkFailed: "無法檢查更新",
@@ -671,6 +776,8 @@ export const zhTW = {
       fileTypeBlocked: "檔案類型被阻擋",
       fileTooLarge: "檔案過大",
       files: "檔案",
+      fromLink: "從連結",
+      fromLinkPlaceholder: "貼上 GitHub 或 Linear Issue 連結，或搜尋 GitHub",
       githubErrors: {
         cliMissing: "未安裝 GitHub CLI (gh) 或不在 PATH 中。請安裝後重試。",
         cliUnauthenticated:
@@ -681,6 +788,10 @@ export const zhTW = {
       },
       githubIssue: "Issue",
       githubPullRequest: "Pull request",
+      linearConnectAction: "連線 Linear",
+      linearConnectDescription: "請先連線 Linear，再解析此 Issue。",
+      linearIssue: "Linear Issue",
+      linearItemMeta: "{{identifier}} · Linear · {{state}}",
       loadingCommands: "正在載入命令",
       loadingSkills: "正在載入技能",
       loadingValue: "載入中...",
@@ -709,6 +820,22 @@ export const zhTW = {
       skills: "技能",
       switchToBuild: "切換到執行模式",
       switchToPlan: "切換到計畫模式",
+      taskLinkErrors: {
+        linearFetchFailed: "無法取得該 Linear Issue。",
+        linearNotFound: "找不到該 Linear Issue。",
+        linearUnauthorized: "Linear 拒絕了已設定的 API 權杖。",
+        prForkUnsupported: "暫不支援來自 fork 的 Pull Request。",
+        unsupported: "不支援該工作連結。",
+      },
+      taskLinkHintComplete:
+        "請貼上完整的 GitHub Issue、PR 或 Linear Issue 連結。",
+      taskLinkHintGitHubPath: "這是 GitHub 連結，但不是 Issue 或 PR。",
+      taskLinkHintLinearPath: "這是 Linear 連結，但不是 Issue。",
+      taskLinkHintSupported:
+        "支援 GitHub Issue、GitHub PR 與 Linear Issue 連結。",
+      taskLinkStateClosed: "已關閉",
+      taskLinkStateMerged: "已合併",
+      taskLinkStateOpen: "開啟",
       toasts: {
         couldNotChangeMode: "無法變更模式",
         couldNotReadFile: "無法讀取檔案",
@@ -763,6 +890,18 @@ export const zhTW = {
     },
     dialog: {
       chatName: "聊天名稱",
+      confirm: {
+        deleteCustomAgentDetail_one: "這還會刪除 {{count}} 個相關工作階段。",
+        deleteCustomAgentDetail_other: "這還會刪除 {{count}} 個相關工作階段。",
+        deleteCustomAgentDetailNone: "沒有工作階段使用這個自訂 Agent。",
+        deleteCustomAgentTitle: "要刪除 {{label}} 嗎？",
+        discard: "捨棄",
+        dontSave: "不儲存",
+        kill: "結束處理程序",
+        killProcessTitle: "要結束 {{name}}（{{pid}}）嗎？",
+        saveFileChangesDetail: "如果不儲存，你的變更將會遺失。",
+        saveFileChangesTitle: "要儲存對 {{path}} 的變更嗎？",
+      },
       importSession: {
         cwdLabel: "目錄：{{cwd}}",
         description:

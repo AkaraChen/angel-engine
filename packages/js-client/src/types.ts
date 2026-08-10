@@ -106,6 +106,12 @@ export interface ChatRuntimeConfig {
   models: ChatRuntimeConfigOption[];
   permissionModes: ChatRuntimeConfigOption[];
   reasoningEfforts: ChatRuntimeConfigOption[];
+  usage?: ChatSessionUsage;
+}
+
+export interface ChatSessionUsage {
+  size: number;
+  used: number;
 }
 
 export type ChatJsonValue =
@@ -239,6 +245,8 @@ export interface ChatSendInput {
   chatId?: string;
   model?: string;
   mode?: string | null;
+  /** Who initiated the send. Shepherd auto-turns set this to `"shepherd"`. */
+  origin?: "shepherd";
   permissionMode?: string | null;
   prewarmId?: string;
   projectId?: string;

@@ -1,5 +1,6 @@
 import type { LocaleResource } from "./schema";
 import { scheduleTranslation } from "./schedule";
+import { pullRequestEn } from "./pull-request";
 
 export const ko = {
   translation: {
@@ -63,6 +64,7 @@ export const ko = {
       proposed: "제안됨",
       question: "질문",
       reload: "다시 로드",
+      retry: "다시 시도",
       running: "실행 중",
       save: "저장",
       saving: "저장 중",
@@ -126,20 +128,7 @@ export const ko = {
       statsBranch: "브랜치",
       statsChanges: "변경 사항",
       statsLastActive: "마지막 활동",
-      transcriptDensity: {
-        descriptions: {
-          compact: "도구 세부 정보를 접고, 필요할 때만 펼칩니다.",
-          debug: "도구와 추론 세부 정보를 기본으로 펼칩니다.",
-          normal: "뒤에 본문이 없을 때 도구를 자동으로 펼칩니다.",
-        },
-        menuLabel: "트랜스크립트 밀도: {{density}}",
-        options: {
-          compact: "간결",
-          debug: "디버그",
-          normal: "표준",
-        },
-        title: "트랜스크립트 밀도",
-      },
+
       tools: {
         checks: {
           fixFailures: "실패 수정",
@@ -180,6 +169,65 @@ export const ko = {
           filesSelected: "{{total}}개 중 {{selected}}개 선택됨",
           summaryPlaceholder: "요약",
         },
+        diffBase: {
+          branch: "기본 브랜치 기준",
+          fallback: {
+            anchorMissing:
+              "{{base}} 기준점 {{sha}}이(가) 더 이상 없습니다. 임시로 {{fallback}}을(를) 표시합니다.",
+            anchorUnavailable:
+              "이 채팅에서는 {{base}}을(를) 사용할 수 없습니다. 임시로 {{fallback}}을(를) 표시합니다.",
+            defaultBranchUnavailable:
+              "기본 브랜치를 확인할 수 없습니다. 임시로 {{fallback}}을(를) 표시합니다.",
+            gitRefUnavailable:
+              "Git 참조 {{ref}}을(를) 사용할 수 없습니다. 임시로 {{fallback}}을(를) 표시합니다.",
+            noMergeBase:
+              "{{ref}}과(와) HEAD의 병합 기준점이 없습니다. 임시로 {{fallback}}을(를) 표시합니다.",
+            notRepository: "이 작업 공간은 Git 저장소가 아닙니다.",
+          },
+          fileCount: "파일 {{count}}개",
+          label: "Diff 기준",
+          session: "세션 시작 이후",
+          turn: "이전 턴 이후",
+          unstaged: "스테이지되지 않은 변경만",
+          worktree: "커밋되지 않은 변경",
+        },
+        createPullRequest: {
+          ahead: "{{base}}보다 {{count}}개 커밋 앞섬",
+          base: "기본 브랜치",
+          bodyPlaceholder: "변경 내용을 설명하세요",
+          create: "풀 리퀘스트 만들기",
+          created: "풀 리퀘스트 #{{number}}을 만들었습니다",
+          creating: "풀 리퀘스트 만드는 중…",
+          description: "게시하기 전에 브랜치와 설명을 확인하세요.",
+          existing: "풀 리퀘스트 #{{number}}이 이미 있습니다",
+          noCommits: "기본 브랜치와 헤드 브랜치 사이에 커밋이 없습니다.",
+          openInBrowser: "브라우저에서 열기",
+          pushedRetry:
+            "브랜치를 푸시했습니다. 풀 리퀘스트 생성을 다시 시도하세요.",
+          pushing: "브랜치 푸시 중…",
+          preview: {
+            additions: "추가",
+            body: "설명",
+            commits: "커밋",
+            copied: "복사됨",
+            copyLink: "링크 복사",
+            deletions: "삭제",
+            description: "브라우저에서 열기 전에 풀 리퀘스트를 미리 봅니다.",
+            emptyBody: "설명이 없습니다.",
+            filesChanged: "변경된 파일",
+            loadFailed: "풀 리퀘스트 세부 정보를 불러올 수 없습니다.",
+            open: "열림",
+            title: "풀 리퀘스트 #{{number}}",
+          },
+          retry: "다시 시도",
+          short: "PR 만들기",
+          title: "풀 리퀘스트 만들기",
+          titlePlaceholder: "풀 리퀘스트 제목",
+          view: "풀 리퀘스트 #{{number}} 보기",
+          viewShort: "PR #{{number}}",
+          willPushMany: "{{count}}개 커밋을 origin/{{head}}에 푸시합니다",
+          willPushOne: "커밋 1개를 origin/{{head}}에 푸시합니다",
+        },
         dockInSidebar: "사이드바에 고정",
         empty: {
           checksUnavailable: "검사를 사용할 수 없습니다",
@@ -205,7 +253,18 @@ export const ko = {
           detached: "분리된 HEAD",
           dirty: "{{value}}개 변경됨",
           noCommits: "커밋 없음",
+          noCommitsToPropose: "제안할 커밋이 없습니다",
           noUpstream: "업스트림 없음",
+          changes: "변경 사항",
+          currentBranch: "현재 브랜치",
+          history: "기록",
+          noBranches: "로컬 브랜치 없음",
+          noHistory: "아직 커밋이 없습니다",
+          pull: "{{remote}} 가져오기",
+          pullCount: "{{remote}}에서 {{count}}개 가져오기",
+          pulling: "가져오는 중…",
+          pushCount: "{{remote}}에 {{count}}개 푸시",
+          viewTabs: "Git 패널 보기",
           publish: "브랜치 게시",
           push: "푸시",
           pushHint: {
@@ -218,6 +277,7 @@ export const ko = {
           },
           pushing: "푸시 중",
         },
+        pullRequest: pullRequestEn,
         listeningPorts: "수신 대기 포트",
         resizeFileTree: "파일 트리 너비 조정",
         resizeGitList: "변경 목록 너비 조정",
@@ -228,6 +288,7 @@ export const ko = {
           gitChanges: "Git 변경",
           newTab: "새 탭",
           processes: "프로세스",
+          pullRequest: "풀 리퀘스트",
           tabs: "탭",
           tools: "도구",
           workspaceTabs: "워크스페이스 탭",
@@ -356,6 +417,7 @@ export const ko = {
       noChats: "채팅이 없습니다",
       noProjects: "아직 프로젝트가 없습니다",
       noStandaloneChats: "독립 채팅이 없습니다",
+      openBranchChat: "이 브랜치를 사용 중인 채팅 열기",
       projects: "프로젝트",
       powerWorktreeHome: "홈",
       powerWorktreeHistoricalChat: "채팅 기록",
@@ -398,15 +460,6 @@ export const ko = {
           light: "라이트",
           system: "시스템",
         },
-        transcriptDensityDescription:
-          "현재 워크스페이스 모드에서 트랜스크립트가 기본적으로 얼마나 많은 도구 세부 정보를 보여줄지 정합니다. Chat은 간결, Work/Power는 표준으로 시작합니다.",
-        transcriptDensityLabel: "트랜스크립트 밀도",
-        transcriptDensityOptions: {
-          compact: "간결",
-          debug: "디버그",
-          normal: "표준",
-        },
-        transcriptDensityTitle: "트랜스크립트 밀도",
       },
       archived: {
         allProjects: "모든 프로젝트",
@@ -519,6 +572,21 @@ export const ko = {
         sourceUserOverride: "User · overridden",
         warningsCount: "{{count}} warning(s) while loading keybindings",
       },
+      linear: {
+        apiConnection: "API 연결",
+        connect: "연결",
+        connected: "연결됨",
+        connectFailed: "Linear에 연결할 수 없습니다.",
+        description:
+          "토큰은 데스크톱 메인 프로세스에서 암호화되며 렌더러에 다시 노출되지 않습니다.",
+        disconnect: "연결 해제",
+        disconnectFailed: "Linear 연결을 해제할 수 없습니다.",
+        notConnected: "연결되지 않음",
+        replaceToken: "토큰 교체",
+        title: "Linear",
+        tokenLabel: "Linear API 토큰",
+        tokenPlaceholder: "lin_api_…",
+      },
       mobile: {
         copied: "복사됨",
         copy: "복사",
@@ -560,6 +628,7 @@ export const ko = {
           "이 컴퓨터에 저장된 모든 채팅에 영향을 주는 되돌릴 수 없는 작업입니다.",
         mobile: "로컬 네트워크를 통해 이 컴퓨터에서 모바일 웹 앱을 제공합니다.",
         updates: "이 앱이 어떤 릴리스를 언제 설치할지 정합니다.",
+        usage: "ccusage에서 추정한 로컬 토큰 및 비용 활동입니다.",
         workspace: "작업 중 입력창과 워크트리가 동작하는 방식입니다.",
       },
       tabs: {
@@ -570,6 +639,7 @@ export const ko = {
         danger: "고급",
         mobile: "모바일 보기",
         updates: "업데이트",
+        usage: "사용량",
         workspace: "작업 공간",
       },
       title: "설정",
@@ -610,6 +680,47 @@ export const ko = {
         trayEnabledSwitchLabel: "메뉴 막대 함대 요약 표시",
         trayEnabledTitle: "메뉴 막대 함대 요약",
       },
+    },
+    usage: {
+      activeBlock: "현재 결제 블록",
+      activeRuns: "실행 중인 세션",
+      burnRate: "현재 사용률",
+      burnRateThreshold: "경고 임계값",
+      burnRateWarning: "사용률 경고",
+      burnRateWarningActive: "현재 사용률이 {{threshold}}을(를) 초과했습니다.",
+      burnRateWarningDescription:
+        "시간당 사용률이 임계값을 넘으면 사용량 표시기를 강조합니다.",
+      byAgent: "에이전트별",
+      cacheCreationTokens: "캐시 쓰기",
+      cacheReadTokens: "캐시 읽기",
+      collecting: "로컬 사용량 수집 중…",
+      contextNearLimit:
+        "컨텍스트가 한도에 가까워졌습니다. 새 채팅을 시작해 보세요.",
+      contextUsed: "사용한 컨텍스트",
+      month: "이번 달",
+      noData: "로컬 사용량 기록이 없습니다",
+      projected: "현재 사용률 기준 예상",
+      inputTokens: "입력",
+      lastCollected: "마지막 수집: {{time}}.",
+      outputTokens: "출력",
+      refresh: "새로 고침",
+      source: "데이터 소스",
+      sourceDescription:
+        "로컬 에이전트 로그에서 추정합니다. 지원 제공자: {{agents}}. 기타 및 사용자 지정 제공자는 사용할 수 없습니다.",
+      sessionCost: "비용",
+      today: "오늘",
+      tokens: "토큰",
+      unavailable: "사용량을 확인할 수 없음",
+      unavailableReasons: {
+        "binary-missing":
+          "사용량을 확인할 수 없음: 패키지된 ccusage 바이너리가 없습니다.",
+        "exec-failed": "사용량을 확인할 수 없음: ccusage 실행에 실패했습니다.",
+        "schema-mismatch":
+          "사용량을 확인할 수 없음: ccusage 출력 형식이 변경되었습니다.",
+        timeout: "사용량을 확인할 수 없음: 수집 시간이 초과되었습니다.",
+      },
+      warnings: "경고",
+      week: "이번 주",
     },
     updates: {
       checkFailed: "업데이트를 확인할 수 없음",
@@ -689,6 +800,9 @@ export const ko = {
       fileTypeBlocked: "파일 형식 차단됨",
       fileTooLarge: "파일이 너무 큽니다",
       files: "파일",
+      fromLink: "링크에서",
+      fromLinkPlaceholder:
+        "GitHub 또는 Linear 이슈 링크를 붙여넣거나 GitHub 검색",
       githubErrors: {
         cliMissing: "GitHub CLI(gh)가 설치되지 않았거나 PATH에 없습니다.",
         cliUnauthenticated:
@@ -699,6 +813,10 @@ export const ko = {
       },
       githubIssue: "Issue",
       githubPullRequest: "Pull request",
+      linearConnectAction: "Linear 연결",
+      linearConnectDescription: "이 이슈를 확인하기 전에 Linear에 연결하세요.",
+      linearIssue: "Linear 이슈",
+      linearItemMeta: "{{identifier}} · Linear · {{state}}",
       loadingCommands: "명령 로드 중",
       loadingSkills: "스킬 로드 중",
       loadingValue: "로드 중...",
@@ -728,6 +846,23 @@ export const ko = {
       skills: "스킬",
       switchToBuild: "실행 모드로 전환",
       switchToPlan: "계획 모드로 전환",
+      taskLinkErrors: {
+        linearFetchFailed: "Linear 이슈를 가져올 수 없습니다.",
+        linearNotFound: "Linear 이슈를 찾을 수 없습니다.",
+        linearUnauthorized: "Linear가 설정된 API 토큰을 거부했습니다.",
+        prForkUnsupported: "fork에서 온 Pull Request는 아직 지원되지 않습니다.",
+        unsupported: "이 작업 링크는 지원되지 않습니다.",
+      },
+      taskLinkHintComplete:
+        "GitHub 이슈, Pull Request 또는 Linear 이슈의 전체 링크를 붙여넣으세요.",
+      taskLinkHintGitHubPath:
+        "GitHub 링크이지만 이슈나 Pull Request가 아닙니다.",
+      taskLinkHintLinearPath: "Linear 링크이지만 이슈가 아닙니다.",
+      taskLinkHintSupported:
+        "GitHub 이슈, GitHub Pull Request 및 Linear 이슈 링크를 지원합니다.",
+      taskLinkStateClosed: "닫힘",
+      taskLinkStateMerged: "병합됨",
+      taskLinkStateOpen: "열림",
       toasts: {
         couldNotChangeMode: "모드를 변경할 수 없습니다",
         couldNotReadFile: "파일을 읽을 수 없습니다",
@@ -782,6 +917,20 @@ export const ko = {
     },
     dialog: {
       chatName: "채팅 이름",
+      confirm: {
+        deleteCustomAgentDetail_one: "관련 채팅 {{count}}개도 함께 삭제됩니다.",
+        deleteCustomAgentDetail_other:
+          "관련 채팅 {{count}}개도 함께 삭제됩니다.",
+        deleteCustomAgentDetailNone:
+          "이 사용자 지정 에이전트를 사용하는 채팅이 없습니다.",
+        deleteCustomAgentTitle: "{{label}}을(를) 삭제할까요?",
+        discard: "취소하고 버리기",
+        dontSave: "저장하지 않음",
+        kill: "종료",
+        killProcessTitle: "{{name}}({{pid}})을(를) 종료할까요?",
+        saveFileChangesDetail: "저장하지 않으면 변경 내용이 사라집니다.",
+        saveFileChangesTitle: "{{path}}의 변경 내용을 저장할까요?",
+      },
       importSession: {
         cwdLabel: "디렉터리: {{cwd}}",
         description: "선택한 에이전트의 세션을 검색해 Angel Engine에서 엽니다.",

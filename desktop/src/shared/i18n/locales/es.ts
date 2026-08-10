@@ -1,5 +1,6 @@
 import type { LocaleResource } from "./schema";
 import { scheduleTranslation } from "./schedule";
+import { pullRequestEn } from "./pull-request";
 
 export const es = {
   translation: {
@@ -63,6 +64,7 @@ export const es = {
       proposed: "Propuesto",
       question: "Pregunta",
       reload: "Recargar",
+      retry: "Reintentar",
       running: "En ejecución",
       save: "Guardar",
       saving: "Guardando",
@@ -127,23 +129,7 @@ export const es = {
       statsBranch: "Rama",
       statsChanges: "Cambios",
       statsLastActive: "Última actividad",
-      transcriptDensity: {
-        descriptions: {
-          compact:
-            "Pliega el detalle de herramientas; expande una fila si hace falta.",
-          debug:
-            "Mantiene abiertos el detalle de herramientas y el razonamiento.",
-          normal:
-            "Expande herramientas automáticamente si no hay texto después.",
-        },
-        menuLabel: "Densidad de la transcripción: {{density}}",
-        options: {
-          compact: "Compacta",
-          debug: "Depuración",
-          normal: "Normal",
-        },
-        title: "Densidad de la transcripción",
-      },
+
       tools: {
         checks: {
           fixFailures: "Corregir fallos",
@@ -185,6 +171,65 @@ export const es = {
           filesSelected: "{{selected}} de {{total}} archivos seleccionados",
           summaryPlaceholder: "Resumen",
         },
+        diffBase: {
+          branch: "Relativo a la rama predeterminada",
+          fallback: {
+            anchorMissing:
+              "La base {{sha}} de {{base}} ya no existe. Se muestra temporalmente {{fallback}}.",
+            anchorUnavailable:
+              "{{base}} no está disponible para este chat. Se muestra temporalmente {{fallback}}.",
+            defaultBranchUnavailable:
+              "No se pudo resolver la rama predeterminada. Se muestra temporalmente {{fallback}}.",
+            gitRefUnavailable:
+              "La referencia Git {{ref}} no está disponible. Se muestra temporalmente {{fallback}}.",
+            noMergeBase:
+              "No hay una base de fusión para {{ref}} y HEAD. Se muestra temporalmente {{fallback}}.",
+            notRepository: "Este espacio de trabajo no es un repositorio Git.",
+          },
+          fileCount: "{{count}} archivos",
+          label: "Base de diferencias",
+          session: "Desde el inicio de la sesión",
+          turn: "Desde el turno anterior",
+          unstaged: "Solo sin preparar",
+          worktree: "Cambios sin confirmar",
+        },
+        createPullRequest: {
+          ahead: "{{count}} commits por delante de {{base}}",
+          base: "Rama base",
+          bodyPlaceholder: "Describe el cambio",
+          create: "Crear pull request",
+          created: "Pull request #{{number}} creado",
+          creating: "Creando pull request…",
+          description: "Revisa las ramas y la descripción antes de publicar.",
+          existing: "El pull request #{{number}} ya existe",
+          noCommits: "No hay commits entre las ramas base y principal.",
+          openInBrowser: "Abrir en el navegador",
+          pushedRetry: "Rama enviada. Vuelve a intentar crear el pull request.",
+          pushing: "Enviando rama…",
+          preview: {
+            additions: "Adiciones",
+            body: "Descripción",
+            commits: "Commits",
+            copied: "Copiado",
+            copyLink: "Copiar enlace",
+            deletions: "Eliminaciones",
+            description:
+              "Revisa el pull request antes de abrirlo en el navegador.",
+            emptyBody: "No se proporcionó descripción.",
+            filesChanged: "Archivos modificados",
+            loadFailed: "No se pudieron cargar los detalles del pull request.",
+            open: "Abierto",
+            title: "Pull request #{{number}}",
+          },
+          retry: "Reintentar",
+          short: "Crear PR",
+          title: "Crear pull request",
+          titlePlaceholder: "Título del pull request",
+          view: "Ver pull request #{{number}}",
+          viewShort: "PR #{{number}}",
+          willPushMany: "Se enviarán {{count}} commits a origin/{{head}}",
+          willPushOne: "Se enviará 1 commit a origin/{{head}}",
+        },
         dockInSidebar: "Acoplar a la barra lateral",
         empty: {
           checksUnavailable: "Checks no disponibles",
@@ -210,7 +255,18 @@ export const es = {
           detached: "HEAD desacoplado",
           dirty: "{{value}} modificados",
           noCommits: "Aún no hay commits",
+          noCommitsToPropose: "No hay commits que proponer",
           noUpstream: "Sin upstream",
+          changes: "Cambios",
+          currentBranch: "Rama actual",
+          history: "Historial",
+          noBranches: "Sin ramas locales",
+          noHistory: "Aún no hay commits",
+          pull: "Traer {{remote}}",
+          pullCount: "Traer {{count}} de {{remote}}",
+          pulling: "Trayendo…",
+          pushCount: "Enviar {{count}} a {{remote}}",
+          viewTabs: "Vistas del panel de Git",
           publish: "Publicar rama",
           push: "Push",
           pushHint: {
@@ -224,6 +280,7 @@ export const es = {
           },
           pushing: "Enviando",
         },
+        pullRequest: pullRequestEn,
         listeningPorts: "Puertos en escucha",
         resizeFileTree: "Redimensionar el árbol de archivos",
         resizeGitList: "Redimensionar la lista de cambios",
@@ -234,6 +291,7 @@ export const es = {
           gitChanges: "Cambios de Git",
           newTab: "Nueva pestaña",
           processes: "Procesos",
+          pullRequest: "Pull request",
           tabs: "Pestañas",
           tools: "Herramientas",
           workspaceTabs: "Pestañas del espacio de trabajo",
@@ -362,6 +420,7 @@ export const es = {
       noChats: "No hay chats",
       noProjects: "Aún no hay proyectos",
       noStandaloneChats: "No hay chats independientes",
+      openBranchChat: "Abrir el chat que usa esta rama",
       projects: "Proyectos",
       powerWorktreeHome: "Inicio",
       powerWorktreeHistoricalChat: "Historial de chats",
@@ -404,15 +463,6 @@ export const es = {
           light: "Claro",
           system: "Sistema",
         },
-        transcriptDensityDescription:
-          "Cuánto detalle de herramientas muestra la transcripción por defecto en el modo de espacio de trabajo actual. Chat empieza en Compacta; Work y Power en Normal.",
-        transcriptDensityLabel: "Densidad de la transcripción",
-        transcriptDensityOptions: {
-          compact: "Compacta",
-          debug: "Depuración",
-          normal: "Normal",
-        },
-        transcriptDensityTitle: "Densidad de la transcripción",
       },
       archived: {
         allProjects: "Todos los proyectos",
@@ -527,6 +577,21 @@ export const es = {
         sourceUserOverride: "User · overridden",
         warningsCount: "{{count}} warning(s) while loading keybindings",
       },
+      linear: {
+        apiConnection: "Conexión API",
+        connect: "Conectar",
+        connected: "Conectado",
+        connectFailed: "No se pudo conectar Linear.",
+        description:
+          "El token se cifra en el proceso principal y nunca vuelve a exponerse al renderer.",
+        disconnect: "Desconectar",
+        disconnectFailed: "No se pudo desconectar Linear.",
+        notConnected: "Sin conexión",
+        replaceToken: "Reemplazar token",
+        title: "Linear",
+        tokenLabel: "Token de API de Linear",
+        tokenPlaceholder: "lin_api_…",
+      },
       mobile: {
         copied: "Copiado",
         copy: "Copiar",
@@ -571,6 +636,7 @@ export const es = {
         mobile:
           "Sirve la aplicación web móvil desde este equipo en tu red local.",
         updates: "Qué versiones instala esta aplicación y cuándo lo hace.",
+        usage: "Actividad local estimada de tokens y costes según ccusage.",
         workspace:
           "Cómo se comportan el campo de escritura y los worktrees mientras trabajas.",
       },
@@ -582,6 +648,7 @@ export const es = {
         danger: "Avanzado",
         mobile: "Vista móvil",
         updates: "Actualizaciones",
+        usage: "Uso",
         workspace: "Espacio de trabajo",
       },
       title: "Configuración",
@@ -625,6 +692,47 @@ export const es = {
         trayEnabledSwitchLabel: "Mostrar resumen de flota en la barra de menús",
         trayEnabledTitle: "Resumen de flota en la barra de menús",
       },
+    },
+    usage: {
+      activeBlock: "Bloque de facturación activo",
+      activeRuns: "Sesiones en ejecución",
+      burnRate: "Tasa actual",
+      burnRateThreshold: "Umbral de alerta",
+      burnRateWarning: "Alerta de tasa de consumo",
+      burnRateWarningActive: "La tasa actual supera {{threshold}}.",
+      burnRateWarningDescription:
+        "Resalta el indicador de uso cuando la tasa por hora supera el umbral.",
+      byAgent: "Por agente",
+      cacheCreationTokens: "Escritura de caché",
+      cacheReadTokens: "Lectura de caché",
+      collecting: "Recopilando uso local…",
+      contextNearLimit:
+        "El contexto está cerca de su límite. Considera iniciar un chat nuevo.",
+      contextUsed: "Contexto utilizado",
+      month: "Este mes",
+      noData: "No hay registros de uso local",
+      projected: "Proyección con la tasa actual",
+      inputTokens: "Entrada",
+      lastCollected: "Última recopilación a las {{time}}.",
+      outputTokens: "Salida",
+      refresh: "Actualizar",
+      source: "Fuente de datos",
+      sourceDescription:
+        "Estimado a partir de registros locales de agentes. Proveedores compatibles: {{agents}}; otros proveedores y los personalizados no están disponibles.",
+      sessionCost: "Coste",
+      today: "Hoy",
+      tokens: "tokens",
+      unavailable: "Uso no disponible",
+      unavailableReasons: {
+        "binary-missing":
+          "Uso no disponible: falta el binario ccusage incluido.",
+        "exec-failed": "Uso no disponible: ccusage ha fallado.",
+        "schema-mismatch":
+          "Uso no disponible: la salida de ccusage ha cambiado.",
+        timeout: "Uso no disponible: se agotó el tiempo de recopilación.",
+      },
+      warnings: "Alertas",
+      week: "Esta semana",
     },
     updates: {
       checkFailed: "No se pudieron buscar actualizaciones",
@@ -705,6 +813,9 @@ export const es = {
       fileTypeBlocked: "Tipo de archivo bloqueado",
       fileTooLarge: "El archivo es demasiado grande",
       files: "Archivos",
+      fromLink: "Desde un enlace",
+      fromLinkPlaceholder:
+        "Pega un enlace de issue de GitHub o Linear, o busca en GitHub",
       githubErrors: {
         cliMissing: "GitHub CLI (gh) no está instalada o no está en el PATH.",
         cliUnauthenticated:
@@ -715,6 +826,10 @@ export const es = {
       },
       githubIssue: "Issue",
       githubPullRequest: "Pull request",
+      linearConnectAction: "Conectar Linear",
+      linearConnectDescription: "Conecta Linear antes de resolver este issue.",
+      linearIssue: "Issue de Linear",
+      linearItemMeta: "{{identifier}} · Linear · {{state}}",
       loadingCommands: "Cargando comandos",
       loadingSkills: "Cargando habilidades",
       loadingValue: "Cargando...",
@@ -744,6 +859,24 @@ export const es = {
       skills: "Habilidades",
       switchToBuild: "Cambiar a modo ejecución",
       switchToPlan: "Cambiar a modo plan",
+      taskLinkErrors: {
+        linearFetchFailed: "No se pudo obtener ese issue de Linear.",
+        linearNotFound: "No se encontró el issue de Linear.",
+        linearUnauthorized: "Linear rechazó el token de API configurado.",
+        prForkUnsupported:
+          "Las pull requests de forks todavía no son compatibles.",
+        unsupported: "Ese enlace de tarea no es compatible.",
+      },
+      taskLinkHintComplete:
+        "Pega un enlace completo a un issue de GitHub, una pull request o un issue de Linear.",
+      taskLinkHintGitHubPath:
+        "Es un enlace de GitHub, pero no es un issue ni una pull request.",
+      taskLinkHintLinearPath: "Es un enlace de Linear, pero no es un issue.",
+      taskLinkHintSupported:
+        "Se admiten enlaces de issues de GitHub, pull requests de GitHub e issues de Linear.",
+      taskLinkStateClosed: "Cerrado",
+      taskLinkStateMerged: "Fusionado",
+      taskLinkStateOpen: "Abierto",
       toasts: {
         couldNotChangeMode: "No se pudo cambiar el modo",
         couldNotReadFile: "No se pudo leer el archivo",
@@ -798,6 +931,21 @@ export const es = {
     },
     dialog: {
       chatName: "Nombre del chat",
+      confirm: {
+        deleteCustomAgentDetail_one:
+          "Esto también eliminará {{count}} chat relacionado.",
+        deleteCustomAgentDetail_other:
+          "Esto también eliminará {{count}} chats relacionados.",
+        deleteCustomAgentDetailNone:
+          "Ningún chat usa este agente personalizado.",
+        deleteCustomAgentTitle: "¿Eliminar {{label}}?",
+        discard: "Descartar",
+        dontSave: "No guardar",
+        kill: "Finalizar",
+        killProcessTitle: "¿Finalizar {{name}} ({{pid}})?",
+        saveFileChangesDetail: "Perderás los cambios si no los guardas.",
+        saveFileChangesTitle: "¿Guardar los cambios en {{path}}?",
+      },
       importSession: {
         cwdLabel: "Directorio: {{cwd}}",
         description:

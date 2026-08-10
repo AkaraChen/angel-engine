@@ -1,5 +1,6 @@
 import type { LocaleResource } from "./schema";
 import { scheduleTranslation } from "./schedule";
+import { pullRequestEn } from "./pull-request";
 
 export const fr = {
   translation: {
@@ -63,6 +64,7 @@ export const fr = {
       proposed: "Proposé",
       question: "Question",
       reload: "Recharger",
+      retry: "Réessayer",
       running: "En cours",
       save: "Enregistrer",
       saving: "Enregistrement",
@@ -128,21 +130,7 @@ export const fr = {
       statsBranch: "Branche",
       statsChanges: "Modifications",
       statsLastActive: "Dernière activité",
-      transcriptDensity: {
-        descriptions: {
-          compact:
-            "Replie le détail des outils ; développez une ligne au besoin.",
-          debug: "Garde le détail des outils et du raisonnement ouvert.",
-          normal: "Développe automatiquement les outils s’il n’y a rien après.",
-        },
-        menuLabel: "Densité de la transcription : {{density}}",
-        options: {
-          compact: "Compact",
-          debug: "Débogage",
-          normal: "Normal",
-        },
-        title: "Densité de la transcription",
-      },
+
       tools: {
         checks: {
           fixFailures: "Corriger les échecs",
@@ -184,6 +172,66 @@ export const fr = {
           filesSelected: "{{selected}} sur {{total}} fichiers sélectionnés",
           summaryPlaceholder: "Résumé",
         },
+        diffBase: {
+          branch: "Par rapport à la branche par défaut",
+          fallback: {
+            anchorMissing:
+              "La base {{sha}} de {{base}} n’existe plus. {{fallback}} est affiché temporairement.",
+            anchorUnavailable:
+              "{{base}} n’est pas disponible pour ce chat. {{fallback}} est affiché temporairement.",
+            defaultBranchUnavailable:
+              "La branche par défaut n’a pas pu être déterminée. {{fallback}} est affiché temporairement.",
+            gitRefUnavailable:
+              "La référence Git {{ref}} n’est pas disponible. {{fallback}} est affiché temporairement.",
+            noMergeBase:
+              "Il n’existe aucune base de fusion entre {{ref}} et HEAD. {{fallback}} est affiché temporairement.",
+            notRepository: "Cet espace de travail n’est pas un dépôt Git.",
+          },
+          fileCount: "{{count}} fichiers",
+          label: "Base du diff",
+          session: "Depuis le début de la session",
+          turn: "Depuis le tour précédent",
+          unstaged: "Non indexés uniquement",
+          worktree: "Modifications non validées",
+        },
+        createPullRequest: {
+          ahead: "{{count}} commits devant {{base}}",
+          base: "Branche de base",
+          bodyPlaceholder: "Décrivez la modification",
+          create: "Créer la pull request",
+          created: "Pull request #{{number}} créée",
+          creating: "Création de la pull request…",
+          description:
+            "Vérifiez les branches et la description avant publication.",
+          existing: "La pull request #{{number}} existe déjà",
+          noCommits: "Aucun commit entre les branches de base et de tête.",
+          openInBrowser: "Ouvrir dans le navigateur",
+          pushedRetry: "Branche poussée. Réessayez de créer la pull request.",
+          pushing: "Envoi de la branche…",
+          preview: {
+            additions: "Ajouts",
+            body: "Description",
+            commits: "Commits",
+            copied: "Copié",
+            copyLink: "Copier le lien",
+            deletions: "Suppressions",
+            description:
+              "Vérifiez la pull request avant de l’ouvrir dans le navigateur.",
+            emptyBody: "Aucune description fournie.",
+            filesChanged: "Fichiers modifiés",
+            loadFailed: "Impossible de charger les détails de la pull request.",
+            open: "Ouverte",
+            title: "Pull request #{{number}}",
+          },
+          retry: "Réessayer",
+          short: "Créer la PR",
+          title: "Créer une pull request",
+          titlePlaceholder: "Titre de la pull request",
+          view: "Voir la pull request #{{number}}",
+          viewShort: "PR #{{number}}",
+          willPushMany: "{{count}} commits seront envoyés vers origin/{{head}}",
+          willPushOne: "1 commit sera envoyé vers origin/{{head}}",
+        },
         dockInSidebar: "Ancrer dans la barre latérale",
         empty: {
           checksUnavailable: "Checks indisponibles",
@@ -209,7 +257,18 @@ export const fr = {
           detached: "HEAD détaché",
           dirty: "{{value}} modifiés",
           noCommits: "Aucun commit",
+          noCommitsToPropose: "Aucun commit à proposer",
           noUpstream: "Aucun upstream",
+          changes: "Modifications",
+          currentBranch: "Branche actuelle",
+          history: "Historique",
+          noBranches: "Aucune branche locale",
+          noHistory: "Aucun commit pour l’instant",
+          pull: "Tirer {{remote}}",
+          pullCount: "Tirer {{count}} depuis {{remote}}",
+          pulling: "Tirage…",
+          pushCount: "Pousser {{count}} vers {{remote}}",
+          viewTabs: "Vues du panneau Git",
           publish: "Publier la branche",
           push: "Push",
           pushHint: {
@@ -223,6 +282,7 @@ export const fr = {
           },
           pushing: "Envoi en cours",
         },
+        pullRequest: pullRequestEn,
         listeningPorts: "Ports en écoute",
         resizeFileTree: "Redimensionner l’arborescence",
         resizeGitList: "Redimensionner la liste des changements",
@@ -233,6 +293,7 @@ export const fr = {
           gitChanges: "Changements Git",
           newTab: "Nouvel onglet",
           processes: "Processus",
+          pullRequest: "Pull request",
           tabs: "Onglets",
           tools: "Outils",
           workspaceTabs: "Onglets de l’espace de travail",
@@ -361,6 +422,7 @@ export const fr = {
       noChats: "Aucune discussion",
       noProjects: "Aucun projet pour le moment",
       noStandaloneChats: "Aucune discussion autonome",
+      openBranchChat: "Ouvrir la discussion utilisant cette branche",
       projects: "Projets",
       powerWorktreeHome: "Accueil",
       powerWorktreeHistoricalChat: "Historique des discussions",
@@ -403,15 +465,6 @@ export const fr = {
           light: "Clair",
           system: "Système",
         },
-        transcriptDensityDescription:
-          "Combien de détail d’outil la transcription affiche par défaut dans le mode d’espace de travail actuel. Chat commence en Compact ; Work et Power en Normal.",
-        transcriptDensityLabel: "Densité de la transcription",
-        transcriptDensityOptions: {
-          compact: "Compact",
-          debug: "Débogage",
-          normal: "Normal",
-        },
-        transcriptDensityTitle: "Densité de la transcription",
       },
       archived: {
         allProjects: "Tous les projets",
@@ -525,6 +578,21 @@ export const fr = {
         sourceUserOverride: "User · overridden",
         warningsCount: "{{count}} warning(s) while loading keybindings",
       },
+      linear: {
+        apiConnection: "Connexion API",
+        connect: "Connecter",
+        connected: "Connecté",
+        connectFailed: "Impossible de connecter Linear.",
+        description:
+          "Le jeton est chiffré par le processus principal et n’est jamais réexposé au moteur de rendu.",
+        disconnect: "Déconnecter",
+        disconnectFailed: "Impossible de déconnecter Linear.",
+        notConnected: "Non connecté",
+        replaceToken: "Remplacer le jeton",
+        title: "Linear",
+        tokenLabel: "Jeton API Linear",
+        tokenPlaceholder: "lin_api_…",
+      },
       mobile: {
         copied: "Copié",
         copy: "Copier",
@@ -569,6 +637,8 @@ export const fr = {
         mobile:
           "Diffusez l’application web mobile depuis cet ordinateur sur votre réseau local.",
         updates: "Quelles versions cette application installe, et quand.",
+        usage:
+          "Estimation par ccusage de l’activité locale des jetons et des coûts.",
         workspace:
           "Comportement du champ de saisie et des worktrees pendant votre travail.",
       },
@@ -580,6 +650,7 @@ export const fr = {
         danger: "Avancé",
         mobile: "Vue mobile",
         updates: "Mises à jour",
+        usage: "Utilisation",
         workspace: "Espace de travail",
       },
       title: "Paramètres",
@@ -624,6 +695,47 @@ export const fr = {
           "Afficher le résumé de flotte dans la barre de menus",
         trayEnabledTitle: "Résumé de flotte dans la barre de menus",
       },
+    },
+    usage: {
+      activeBlock: "Bloc de facturation actif",
+      activeRuns: "Sessions en cours",
+      burnRate: "Débit actuel",
+      burnRateThreshold: "Seuil d’alerte",
+      burnRateWarning: "Alerte de débit de dépense",
+      burnRateWarningActive: "Le débit actuel dépasse {{threshold}}.",
+      burnRateWarningDescription:
+        "Met en évidence l’indicateur d’utilisation lorsque le débit horaire dépasse votre seuil.",
+      byAgent: "Par agent",
+      cacheCreationTokens: "Écriture du cache",
+      cacheReadTokens: "Lecture du cache",
+      collecting: "Collecte de l’utilisation locale…",
+      contextNearLimit:
+        "Le contexte approche de sa limite. Envisagez une nouvelle discussion.",
+      contextUsed: "Contexte utilisé",
+      month: "Ce mois-ci",
+      noData: "Aucune donnée d’utilisation locale",
+      projected: "Projection au débit actuel",
+      inputTokens: "Entrée",
+      lastCollected: "Dernière collecte à {{time}}.",
+      outputTokens: "Sortie",
+      refresh: "Actualiser",
+      source: "Source des données",
+      sourceDescription:
+        "Estimation à partir des journaux locaux des agents. Fournisseurs pris en charge : {{agents}} ; les autres fournisseurs et les fournisseurs personnalisés ne sont pas disponibles.",
+      sessionCost: "Coût",
+      today: "Aujourd’hui",
+      tokens: "jetons",
+      unavailable: "Utilisation indisponible",
+      unavailableReasons: {
+        "binary-missing":
+          "Utilisation indisponible : le binaire ccusage intégré est absent.",
+        "exec-failed": "Utilisation indisponible : échec de ccusage.",
+        "schema-mismatch":
+          "Utilisation indisponible : la sortie de ccusage a changé.",
+        timeout: "Utilisation indisponible : délai de collecte dépassé.",
+      },
+      warnings: "Alertes",
+      week: "Cette semaine",
     },
     updates: {
       checkFailed: "Impossible de rechercher les mises à jour",
@@ -705,6 +817,9 @@ export const fr = {
       fileTypeBlocked: "Type de fichier bloqué",
       fileTooLarge: "Le fichier est trop volumineux",
       files: "Fichiers",
+      fromLink: "Depuis un lien",
+      fromLinkPlaceholder:
+        "Collez un lien d’issue GitHub ou Linear, ou recherchez sur GitHub",
       githubErrors: {
         cliMissing: "GitHub CLI (gh) n'est pas installée ou absente du PATH.",
         cliUnauthenticated:
@@ -716,6 +831,11 @@ export const fr = {
       },
       githubIssue: "Issue",
       githubPullRequest: "Pull request",
+      linearConnectAction: "Connecter Linear",
+      linearConnectDescription:
+        "Connectez Linear avant de résoudre cette issue.",
+      linearIssue: "Issue Linear",
+      linearItemMeta: "{{identifier}} · Linear · {{state}}",
       loadingCommands: "Chargement des commandes",
       loadingSkills: "Chargement des compétences",
       loadingValue: "Chargement...",
@@ -745,6 +865,24 @@ export const fr = {
       skills: "Compétences",
       switchToBuild: "Passer en mode exécution",
       switchToPlan: "Passer en mode plan",
+      taskLinkErrors: {
+        linearFetchFailed: "Impossible de récupérer cette issue Linear.",
+        linearNotFound: "Issue Linear introuvable.",
+        linearUnauthorized: "Linear a refusé le jeton API configuré.",
+        prForkUnsupported:
+          "Les pull requests provenant de forks ne sont pas encore prises en charge.",
+        unsupported: "Ce lien de tâche n’est pas pris en charge.",
+      },
+      taskLinkHintComplete:
+        "Collez un lien complet vers une issue GitHub, une pull request ou une issue Linear.",
+      taskLinkHintGitHubPath:
+        "Ce lien GitHub ne pointe ni vers une issue ni vers une pull request.",
+      taskLinkHintLinearPath: "Ce lien Linear ne pointe pas vers une issue.",
+      taskLinkHintSupported:
+        "Liens pris en charge : issues GitHub, pull requests GitHub et issues Linear.",
+      taskLinkStateClosed: "Fermée",
+      taskLinkStateMerged: "Fusionnée",
+      taskLinkStateOpen: "Ouverte",
       toasts: {
         couldNotChangeMode: "Impossible de changer de mode",
         couldNotReadFile: "Impossible de lire le fichier",
@@ -799,6 +937,22 @@ export const fr = {
     },
     dialog: {
       chatName: "Nom de la discussion",
+      confirm: {
+        deleteCustomAgentDetail_one:
+          "Cela supprimera également {{count}} conversation associée.",
+        deleteCustomAgentDetail_other:
+          "Cela supprimera également {{count}} conversations associées.",
+        deleteCustomAgentDetailNone:
+          "Aucune conversation n'utilise cet agent personnalisé.",
+        deleteCustomAgentTitle: "Supprimer {{label}} ?",
+        discard: "Abandonner",
+        dontSave: "Ne pas enregistrer",
+        kill: "Arrêter",
+        killProcessTitle: "Arrêter {{name}} ({{pid}}) ?",
+        saveFileChangesDetail:
+          "Vos modifications seront perdues si vous ne les enregistrez pas.",
+        saveFileChangesTitle: "Enregistrer les modifications de {{path}} ?",
+      },
       importSession: {
         cwdLabel: "Répertoire : {{cwd}}",
         description:

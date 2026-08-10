@@ -36,11 +36,13 @@ export function WorkspaceChecksPanel({
   layout,
   root,
   onOpenBrowser,
+  onOpenExternal,
 }: {
   active: boolean;
   layout: WorkspaceToolPanelLayout;
   root: string;
   onOpenBrowser: (url: string) => void;
+  onOpenExternal: (url: string) => void;
 }) {
   const { api } = useWorkspaceToolSurface();
   const { t } = useTranslation();
@@ -144,7 +146,7 @@ export function WorkspaceChecksPanel({
             <Button
               size="xs"
               variant="ghost"
-              onClick={() => onOpenBrowser(pr.url)}
+              onClick={() => onOpenExternal(pr.url)}
             >
               <ArrowSquareOut className="size-3.5" />
               <span className="sr-only">

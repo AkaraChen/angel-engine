@@ -439,7 +439,10 @@ function ChatThreadRuntime({
               projectId={projectContext.id ?? selectedChat.projectId ?? ""}
             />
             <div className="min-h-0 flex-1">
-              <AssistantThread projectName={projectContext.name} />
+              <AssistantThread
+                projectName={projectContext.name}
+                usage={runtimeConfig?.usage}
+              />
             </div>
           </div>
         </AppRuntimeProvider>

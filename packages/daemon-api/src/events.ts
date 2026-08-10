@@ -31,21 +31,43 @@ export interface DaemonChatActivityChangedEvent {
   type: "chat-activity-changed";
 }
 
+export interface DaemonShepherdChangedEvent {
+  chatIds: string[];
+  type: "shepherd-changed";
+}
+
+/** Automation definitions or their persisted run history changed. */
+export interface DaemonAutomationsChangedEvent {
+  automationIds: string[];
+  type: "automations-changed";
+}
+
 export type DaemonGlobalEvent =
+  | DaemonAutomationsChangedEvent
   | DaemonChatActivityChangedEvent
   | DaemonChatAttentionChangedEvent
   | DaemonChatConversationChangedEvent
-  | DaemonChatMetadataChangedEvent;
+  | DaemonChatMetadataChangedEvent
+  | DaemonShepherdChangedEvent;
 
 export function isDaemonGlobalEvent(
   value: unknown,
 ): value is DaemonGlobalEvent {
   if (!is.plainObject(value)) return false;
   switch (value.type) {
+    case "automations-changed":
+      return (
+        Array.isArray(value.automationIds) &&
+        value.automationIds.length > 0 &&
+        value.automationIds.every(
+          (id) => typeof id === "string" && id.length > 0,
+        )
+      );
     case "chat-activity-changed":
     case "chat-attention-changed":
     case "chat-conversation-changed":
     case "chat-metadata-changed":
+    case "shepherd-changed":
       return (
         Array.isArray(value.chatIds) &&
         value.chatIds.length > 0 &&

@@ -7,6 +7,12 @@ import type {
   UpdateCustomAgentInput,
 } from "@angel-engine/daemon-api/agents";
 import type {
+  Automation,
+  AutomationRun,
+  CreateAutomationInput,
+  UpdateAutomationInput,
+} from "@angel-engine/daemon-api/automations";
+import type {
   Chat,
   ChatActiveRunResult,
   ChatAmbiguousRunResult,
@@ -19,6 +25,7 @@ import type {
   ChatArchivedDeleteInput,
   ChatArchivedDeleteResult,
   ChatArchivedRestoreInput,
+  ChatArchiveWorkspaceResult,
   ChatAvailableSkill,
   ChatCreateInput,
   ChatLoadResult,
@@ -75,16 +82,30 @@ import type {
   GitHubPrChecksResult,
   GitHubListPullRequestsInput,
   GitHubListPullRequestsResult,
-  GitHubPullRequestDetail,
-  GitHubPullRequestTemplateInput,
-  GitHubPullRequestTemplateResult,
   GitHubListRepositoriesInput,
   GitHubListRepositoriesResult,
+  GitHubMergeInput,
+  GitHubMergeResult,
+  GitHubPullRequestDetail,
+  GitHubPullRequestStatus,
+  GitHubPullRequestStatusInput,
+  GitHubPullRequestTemplateInput,
+  GitHubPullRequestTemplateResult,
   GitHubRepositoryOwnersResult,
   GitHubResolveUrlInput,
+  GitHubResolveThreadInput,
+  GitHubResolveThreadResult,
   GitHubResolvedItem,
   GitHubViewPullRequestInput,
+  PullRequestCreateInput,
+  PullRequestCreateResult,
+  PullRequestPreflight,
+  PullRequestRecord,
 } from "@angel-engine/daemon-api/github";
+import type {
+  ResolvedTaskLink,
+  TaskLinkResolveInput,
+} from "@angel-engine/daemon-api/links";
 import type {
   CreateProjectInput,
   ProjectCloneEvent,
@@ -108,9 +129,18 @@ import type {
   WorkspaceFileReadResult,
   WorkspaceFileTreeResult,
   WorkspaceFileWriteResult,
+  WorkspaceGitBranchesResult,
+  WorkspaceGitCheckoutInput,
+  WorkspaceGitCheckoutResult,
+  WorkspaceGitCommitShowInput,
+  WorkspaceGitCommitShowResult,
+  WorkspaceGitDiffInput,
   WorkspaceGitDiffResult,
+  WorkspaceGitLogResult,
   WorkspaceToolGitCommitInput,
   WorkspaceToolGitCommitResult,
+  WorkspaceToolGitPullInput,
+  WorkspaceToolGitPullResult,
   WorkspaceToolGitPushInput,
   WorkspaceToolGitPushResult,
   WorkspaceToolReadFileInput,
@@ -384,6 +414,38 @@ export function createDaemonClient(options: DaemonClientOptions) {
           json("PUT", input),
         ),
     },
+    automations: {
+      create: (input: CreateAutomationInput) =>
+        request<Automation>("/api/automations", json("POST", input)),
+      delete: (id: string) =>
+        request<{ ok: boolean }>(`/api/automations/${encodeURIComponent(id)}`, {
+          method: "DELETE",
+        }),
+      list: () => request<Automation[]>("/api/automations"),
+      listRuns: (id: string, limit?: number) =>
+        request<AutomationRun[]>(
+          `/api/automations/${encodeURIComponent(id)}/runs${limit === undefined ? "" : `?${query({ limit })}`}`,
+        ),
+      pause: (id: string) =>
+        request<Automation>(
+          `/api/automations/${encodeURIComponent(id)}/pause`,
+          { method: "POST" },
+        ),
+      resume: (id: string) =>
+        request<Automation>(
+          `/api/automations/${encodeURIComponent(id)}/resume`,
+          { method: "POST" },
+        ),
+      runNow: (id: string) =>
+        request<Automation>(`/api/automations/${encodeURIComponent(id)}/run`, {
+          method: "POST",
+        }),
+      update: (id: string, input: UpdateAutomationInput) =>
+        request<Automation>(
+          `/api/automations/${encodeURIComponent(id)}`,
+          json("PATCH", input),
+        ),
+    },
     chatRuns: {
       active: activeRun,
       observe: (runId: string, signal?: AbortSignal) =>
@@ -424,6 +486,11 @@ export function createDaemonClient(options: DaemonClientOptions) {
         request<Chat>(`/api/chats/${encodeURIComponent(id)}/archive`, {
           method: "POST",
         }),
+      archiveWorkspace: (id: string) =>
+        request<ChatArchiveWorkspaceResult>(
+          `/api/chats/${encodeURIComponent(id)}/archive-workspace`,
+          { method: "POST" },
+        ),
       archivedDelete: (input: ChatArchivedDeleteInput) =>
         request<ChatArchivedDeleteResult>(
           "/api/chats/archived/delete",
@@ -554,6 +621,15 @@ export function createDaemonClient(options: DaemonClientOptions) {
           "/api/github/pull-requests/workspace",
           json("POST", input),
         ),
+      createWorkspacePullRequest: (input: PullRequestCreateInput) =>
+        request<PullRequestCreateResult>(
+          "/api/github/pull-request",
+          json("POST", input),
+        ),
+      getWorkspacePullRequest: (root: string) =>
+        request<PullRequestRecord | null>(
+          `/api/github/pull-request?${query({ root })}`,
+        ),
       listItems: (input: GitHubListItemsInput) =>
         request<GitHubListItemsResult>(`/api/github/items?${query(input)}`),
       listPrChecks: (input: GitHubPrChecksInput) =>
@@ -579,10 +655,32 @@ export function createDaemonClient(options: DaemonClientOptions) {
         request<GitHubRepositoryOwnersResult>("/api/github/repo-owners"),
       resolveUrl: (input: GitHubResolveUrlInput) =>
         request<GitHubResolvedItem>("/api/github/resolve", json("POST", input)),
+      pullRequestStatus: (input: GitHubPullRequestStatusInput) =>
+        request<GitHubPullRequestStatus>(
+          `/api/github/pull-request?${query(input)}`,
+        ),
+      mergePullRequest: (input: GitHubMergeInput) =>
+        request<GitHubMergeResult>(
+          "/api/github/pull-request/merge",
+          json("POST", input),
+        ),
+      resolveReviewThread: (input: GitHubResolveThreadInput) =>
+        request<GitHubResolveThreadResult>(
+          "/api/github/pull-request/resolve-thread",
+          json("POST", input),
+        ),
+      workspacePullRequestPreflight: (root: string, base?: string) =>
+        request<PullRequestPreflight>(
+          `/api/github/pull-request/preflight?${query({ base, root })}`,
+        ),
       viewPullRequest: (input: GitHubViewPullRequestInput) =>
         request<GitHubPullRequestDetail>(
           `/api/github/pull-requests/${encodeURIComponent(String(input.number))}?${query({ cwd: input.cwd })}`,
         ),
+    },
+    links: {
+      resolve: (input: TaskLinkResolveInput) =>
+        request<ResolvedTaskLink>("/api/links/resolve", json("POST", input)),
     },
     health: () => request<DaemonHealth>("/api/health"),
     events: {
@@ -662,14 +760,36 @@ export function createDaemonClient(options: DaemonClientOptions) {
         request<WorkspaceFileTreeResult>(
           `/api/workspace/file-tree?${query(input)}`,
         ),
+      gitBranches: (input: WorkspaceToolRootInput) =>
+        request<WorkspaceGitBranchesResult>(
+          `/api/workspace/git-branches?${query(input)}`,
+        ),
+      gitCheckout: (input: WorkspaceGitCheckoutInput) =>
+        request<WorkspaceGitCheckoutResult>(
+          "/api/workspace/git-checkout",
+          json("POST", input),
+        ),
       gitCommit: (input: WorkspaceToolGitCommitInput) =>
         request<WorkspaceToolGitCommitResult>(
           "/api/workspace/git-commit",
           json("POST", input),
         ),
-      gitDiff: (input: WorkspaceToolRootInput) =>
+      gitCommitShow: (input: WorkspaceGitCommitShowInput) =>
+        request<WorkspaceGitCommitShowResult>(
+          `/api/workspace/git-commit-show?${query(input)}`,
+        ),
+      gitDiff: (input: WorkspaceGitDiffInput) =>
         request<WorkspaceGitDiffResult>(
           `/api/workspace/git-diff?${query(input)}`,
+        ),
+      gitLog: (input: WorkspaceToolRootInput & { limit?: number }) =>
+        request<WorkspaceGitLogResult>(
+          `/api/workspace/git-log?${query(input)}`,
+        ),
+      gitPull: (input: WorkspaceToolGitPullInput) =>
+        request<WorkspaceToolGitPullResult>(
+          "/api/workspace/git-pull",
+          json("POST", input),
         ),
       gitPush: (input: WorkspaceToolGitPushInput) =>
         request<WorkspaceToolGitPushResult>(

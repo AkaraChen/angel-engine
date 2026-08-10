@@ -6,13 +6,15 @@ export default defineConfig({
   entry: [
     "src/index.ts",
     "src/agents.ts",
+    "src/automations.ts",
     "src/daemon.ts",
     "src/events.ts",
     "src/chat/index.ts",
     "src/github.ts",
+    "src/links.ts",
     "src/mime.ts",
     "src/projects.ts",
-
+    "src/shepherd.ts",
     "src/terminal.ts",
     "src/workspace-tools.ts",
   ],

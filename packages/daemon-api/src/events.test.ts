@@ -3,10 +3,12 @@ import { isDaemonGlobalEvent } from "./events";
 import { describe, expect, it } from "vitest";
 
 const validEvents: DaemonGlobalEvent[] = [
+  { automationIds: ["automation-1"], type: "automations-changed" },
   { chatIds: ["chat-1"], type: "chat-activity-changed" },
   { chatIds: ["chat-1"], type: "chat-attention-changed" },
   { chatIds: ["chat-1"], type: "chat-conversation-changed" },
   { chatIds: ["chat-1"], type: "chat-metadata-changed" },
+  { chatIds: ["chat-1"], type: "shepherd-changed" },
 ];
 
 describe("isDaemonGlobalEvent", () => {
@@ -18,6 +20,14 @@ describe("isDaemonGlobalEvent", () => {
 
   it.each([
     ["an unknown event", { type: "future-event" }],
+    [
+      "an empty automation id list",
+      { automationIds: [], type: "automations-changed" },
+    ],
+    [
+      "a non-string automation id",
+      { automationIds: [42], type: "automations-changed" },
+    ],
     ["an empty chat id list", { chatIds: [], type: "chat-attention-changed" }],
     ["a non-string chat id", { chatIds: [42], type: "chat-metadata-changed" }],
     [

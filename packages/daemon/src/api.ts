@@ -6,6 +6,7 @@ import type {
   ChatStreamElicitationResolveInput,
 } from "@angel-engine/daemon-api/chat";
 import type { ProjectCloneEvent } from "@angel-engine/daemon-api/projects";
+import type { AutomationRow } from "./db/schema";
 import type { Context, Hono } from "hono";
 import type { ChatEventsApi } from "./features/chat/chat-events";
 import type { Db } from "./platform/db";
@@ -16,9 +17,14 @@ import { Effect } from "effect";
 import { streamSSE } from "hono/streaming";
 import {
   createCustomAgentInputSchema,
+  isAgentRuntime,
   isCustomAgentRuntime,
   updateCustomAgentInputSchema,
 } from "@angel-engine/daemon-api/agents";
+import {
+  createAutomationInputSchema,
+  updateAutomationInputSchema,
+} from "@angel-engine/daemon-api/automations";
 import {
   chatCreateInputSchema,
   chatPrewarmInputSchema,
@@ -36,14 +42,19 @@ import {
 } from "@angel-engine/daemon-api/chat";
 import {
   githubPrChecksFixPromptInputSchema,
+  githubPrContextInputSchema,
   githubResolveUrlInputSchema,
   githubAddPullRequestCommentInputSchema,
   githubCreatePullRequestInputSchema,
   githubCreateWorkspaceFromPullRequestInputSchema,
   githubListPullRequestsInputSchema,
+  githubMergeInputSchema,
   githubPullRequestTemplateInputSchema,
+  githubResolveThreadInputSchema,
   githubViewPullRequestInputSchema,
+  pullRequestCreateInputSchema,
 } from "@angel-engine/daemon-api/github";
+import { taskLinkResolveInputSchema } from "@angel-engine/daemon-api/links";
 import {
   createProjectInputSchema,
   managedWorktreeDeleteInputSchema,
@@ -53,14 +64,23 @@ import {
   updateProjectInputSchema,
 } from "@angel-engine/daemon-api/projects";
 import {
+  workspaceToolGitCheckoutInputSchema,
   workspaceToolGitCommitInputSchema,
+  workspaceToolGitCommitShowInputSchema,
+  workspaceToolGitPullInputSchema,
   workspaceToolGitPushInputSchema,
   workspaceToolWriteFileInputSchema,
 } from "@angel-engine/daemon-api/workspace-tools";
 import {
+  shepherdResumeInputSchema,
+  shepherdStartInputSchema,
+  shepherdStopInputSchema,
+} from "@angel-engine/daemon-api/shepherd";
+import {
   buildGitHubPrChecksFixPrompt,
   listGitHubPrChecks,
 } from "./features/github/checks";
+import { fetchGitHubChecks } from "./features/github/checks-snapshot";
 import { listGitHubItems } from "./features/github/list";
 import { discoverPullRequestTemplates } from "./features/github/pr-template";
 import {
@@ -74,7 +94,20 @@ import {
   listGitHubRepositoryOwners,
 } from "./features/github/repos";
 import { resolveGitHubUrl } from "./features/github/resolve";
+import { fetchGitHubReviewThreads } from "./features/github/review-threads";
 import { createWorkspaceFromPullRequest } from "./features/github/workspace-from-pr";
+import {
+  createPullRequest as createWorkspacePullRequest,
+  getStoredPullRequest,
+  pullRequestPreflight,
+} from "./features/github/pull-request-create";
+import {
+  getGitHubPullRequestStatus,
+  mergeGitHubPullRequest,
+  resolveGitHubReviewThread,
+} from "./features/github/pull-request";
+import { resolveTaskLink } from "./features/links/resolve";
+import { setLinearToken } from "./features/links/secrets";
 import { listAvailableAgents } from "./features/agents/availability";
 import {
   createCustomAgent,
@@ -85,8 +118,26 @@ import {
 } from "./features/agents/repository";
 import { listSkillsForAgent } from "./features/agents/skills";
 import { ChatActivityStore } from "./features/chat/activity";
+import { isValidCron, nextCronRun } from "./features/automations/cron";
+import {
+  attachAutomationRunChat,
+  createAutomationRecord,
+  createAutomationRun,
+  deleteAutomationRecord,
+  finishAutomationRun,
+  getAutomation,
+  hasActiveAutomationRun,
+  listAutomationRuns,
+  listAutomations,
+  listDueAutomationRecords,
+  requireAutomationRecord,
+  setAutomationNextRun,
+  updateAutomationRecord,
+} from "./features/automations/repository";
+import { AutomationRuntime } from "./features/automations/runtime";
 import { ChatEngine } from "./features/chat/engine-runtime";
 import { ChatRunRegistry } from "./features/chat/run-registry";
+import { ShepherdService } from "./features/shepherd/service";
 import {
   archiveChat,
   deleteAllChats,
@@ -126,10 +177,16 @@ import {
   listProjects,
   updateProject,
 } from "./features/projects/repository";
+import { getChatDiffAnchor } from "./features/chat/diff-anchors";
 import {
   workspaceFileTree,
+  workspaceGitBranches,
+  workspaceGitCheckout,
   workspaceGitCommit,
+  workspaceGitCommitShow,
   workspaceGitDiff,
+  workspaceGitLog,
+  workspaceGitPull,
   workspaceGitPush,
   workspaceReadFile,
   workspaceWriteFile,
@@ -142,10 +199,11 @@ export function registerApi(
   app: Hono,
   runtime: DaemonRuntime,
   chatEvents: ChatEventsApi,
+  options: {
+    internalBridgeSecret?: string;
+    startAutomationScheduler?: boolean;
+  } = {},
 ) {
-  const activity = new ChatActivityStore({
-    onChange: (chatId) => chatEvents.activityChanged(chatId),
-  });
   const run = <A>(
     effect: Effect.Effect<A, DaemonError, Db | ChatEngine>,
   ): Promise<A> => runDaemonApi(runtime, effect);
@@ -154,6 +212,15 @@ export function registerApi(
       chatEngine: Effect.Effect.Success<typeof ChatEngine>,
     ) => Effect.Effect<A, DaemonError, Db>,
   ) => Effect.flatMap(ChatEngine, use);
+  let automationRuntime: AutomationRuntime | undefined;
+  // Late-bound so activity onChange can notify shepherd without a circular init.
+  let shepherd: ShepherdService | undefined;
+  const activity = new ChatActivityStore({
+    onChange: (chatId) => {
+      chatEvents.activityChanged(chatId);
+      void shepherd?.onActivityChanged(chatId);
+    },
+  });
   const chatRuns = new ChatRunRegistry({
     execute: async (input, onEvent, signal, controls, runId) => {
       await run(engine((e) => e.waitForChatSetup(input.chatId, signal)));
@@ -184,8 +251,18 @@ export function registerApi(
       if (event.type === "result" || event.type === "error") {
         chatEvents.conversationChanged([chatId]);
       }
+      void automationRuntime
+        ?.handleChatRunEvent(runId, event)
+        .catch(() => undefined);
     },
   });
+  shepherd = new ShepherdService({
+    activity,
+    chatRuns,
+    chatEvents,
+    run: (effect) => run(effect),
+  });
+  void shepherd.start().catch(() => undefined);
   const queuedRunRecovery = run(
     engine((chatEngine) => chatEngine.restoreQueuedChatRuns()),
   ).then((queuedRuns) => {
@@ -205,6 +282,178 @@ export function registerApi(
       ),
     ),
   ).catch(() => undefined);
+
+  const runEffect = <A>(effect: Effect.Effect<A, DaemonError, Db>) =>
+    runDaemonApi(runtime, effect);
+  automationRuntime = new AutomationRuntime({
+    attachRunChat: (runId, chatId) =>
+      runEffect(attachAutomationRunChat(runId, chatId)).then(() => undefined),
+    createChat: (automation: AutomationRow) =>
+      run(
+        engine((chatEngine) =>
+          chatEngine.createChatFromInput(
+            {
+              creationLocation: automation.workspaceKind,
+              projectId: automation.projectId ?? undefined,
+              runtime: automation.runtime,
+              title: automation.name,
+            },
+            new AbortController().signal,
+          ),
+        ),
+      ),
+    createRun: (input) => runEffect(createAutomationRun(input)),
+    finishRun: (runId, status, error) =>
+      runEffect(finishAutomationRun(runId, status, error)),
+    getAutomation: async (id) => {
+      const automation = await runEffect(getAutomation(id));
+      if (!automation) throw DaemonError.automationNotFound();
+      return automation;
+    },
+    getRecord: (id) => runEffect(requireAutomationRecord(id)),
+    hasActiveRun: (id) => runEffect(hasActiveAutomationRun(id)),
+    listDue: (now) => runEffect(listDueAutomationRecords(now)),
+    onChanged: (ids) => chatEvents.automationsChanged(ids),
+    setNextRun: (id, nextRunAt) =>
+      runEffect(setAutomationNextRun(id, nextRunAt)).then(() => undefined),
+    startChatRun: async (runId, input) => {
+      await queuedRunRecovery;
+      chatRuns.reserve(runId, input);
+      try {
+        await run(
+          engine((chatEngine) => chatEngine.queueChatRun(runId, input)),
+        );
+      } catch (error) {
+        chatRuns.stop(runId);
+        throw error;
+      }
+      activity.start(input.chatId, runId);
+      chatEvents.conversationChanged([input.chatId]);
+      chatRuns.begin(runId);
+    },
+    stopChatRun: async (runId) => {
+      try {
+        const snapshot = chatRuns.snapshot(runId);
+        activity.cancel(snapshot.chatId, runId);
+        chatRuns.stop(runId);
+        await run(
+          engine((chatEngine) => chatEngine.cancelQueuedChatRun(runId)),
+        );
+        chatEvents.conversationChanged([snapshot.chatId]);
+      } catch {
+        await run(
+          engine((chatEngine) => chatEngine.cancelQueuedChatRun(runId)),
+        );
+      }
+    },
+  });
+  if (options.startAutomationScheduler === true) automationRuntime.start();
+
+  const validateAutomation = (input: {
+    cron: string;
+    projectId?: string | null;
+    runtime: string;
+    workspaceKind?: "project" | "worktree";
+  }) => {
+    if (!isValidCron(input.cron))
+      throw DaemonError.invalidRequest("Cron expression is invalid.");
+    if (!isAgentRuntime(input.runtime)) throw DaemonError.chatRuntimeUnknown();
+    if (input.workspaceKind === "worktree" && !input.projectId)
+      throw DaemonError.projectRequiredForWorktree();
+  };
+  const validateAutomationProject = async (projectId?: string | null) => {
+    if (projectId && (await runEffect(getProject(projectId))) === null)
+      throw DaemonError.projectNotFound();
+  };
+
+  app.get("/api/automations", async (context) =>
+    context.json(await runEffect(listAutomations())),
+  );
+  app.get("/api/automations/:id/runs", async (context) =>
+    context.json(
+      await runEffect(
+        listAutomationRuns(
+          context.req.param("id"),
+          optionalNumber(context.req.query("limit")),
+        ),
+      ),
+    ),
+  );
+  app.post("/api/automations", async (context) => {
+    const input = createAutomationInputSchema(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Automation input is invalid.");
+    validateAutomation(input);
+    await validateAutomationProject(input.projectId);
+    const enabled = input.enabled ?? true;
+    const nextRunAt = enabled
+      ? (nextCronRun(input.cron, new Date())?.toISOString() ?? null)
+      : null;
+    const automation = await runEffect(
+      createAutomationRecord(input, nextRunAt),
+    );
+    chatEvents.automationsChanged([automation.id]);
+    return context.json(automation, 201);
+  });
+  app.patch("/api/automations/:id", async (context) => {
+    const id = context.req.param("id");
+    const input = updateAutomationInputSchema(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Automation input is invalid.");
+    const current = await runEffect(requireAutomationRecord(id));
+    validateAutomation({
+      cron: input.cron ?? current.cron,
+      projectId:
+        input.projectId === undefined ? current.projectId : input.projectId,
+      runtime: input.runtime ?? current.runtime,
+      workspaceKind: input.workspaceKind ?? current.workspaceKind,
+    });
+    await validateAutomationProject(
+      input.projectId === undefined ? current.projectId : input.projectId,
+    );
+    const enabled = input.enabled ?? current.enabled;
+    const recalculate = input.cron !== undefined || input.enabled !== undefined;
+    const nextRunAt = recalculate
+      ? enabled
+        ? (nextCronRun(input.cron ?? current.cron, new Date())?.toISOString() ??
+          null)
+        : null
+      : undefined;
+    const automation = await runEffect(
+      updateAutomationRecord(id, input, nextRunAt),
+    );
+    chatEvents.automationsChanged([id]);
+    return context.json(automation);
+  });
+  app.post("/api/automations/:id/pause", async (context) => {
+    const id = context.req.param("id");
+    const automation = await runEffect(
+      updateAutomationRecord(id, { enabled: false }, null),
+    );
+    chatEvents.automationsChanged([id]);
+    return context.json(automation);
+  });
+  app.post("/api/automations/:id/resume", async (context) => {
+    const id = context.req.param("id");
+    const current = await runEffect(requireAutomationRecord(id));
+    const nextRunAt =
+      nextCronRun(current.cron, new Date())?.toISOString() ?? null;
+    const automation = await runEffect(
+      updateAutomationRecord(id, { enabled: true }, nextRunAt),
+    );
+    chatEvents.automationsChanged([id]);
+    return context.json(automation);
+  });
+  app.post("/api/automations/:id/run", async (context) =>
+    context.json(await automationRuntime.runNow(context.req.param("id"))),
+  );
+  app.delete("/api/automations/:id", async (context) => {
+    const id = context.req.param("id");
+    await automationRuntime.cancelActiveRuns(id);
+    await runEffect(deleteAutomationRecord(id));
+    chatEvents.automationsChanged([id]);
+    return context.json({ ok: true });
+  });
 
   app.get("/api/chat-activity", (context) => context.json(activity.list()));
   app.get("/api/chat-attention", (context) =>
@@ -390,6 +639,29 @@ export function registerApi(
     chatEvents.metadataChanged([chat.id]);
     return context.json(chat);
   });
+  app.post("/api/chats/:id/archive-workspace", async (context) => {
+    const result = await run(
+      Effect.gen(function* () {
+        const chat = yield* requireChat(context.req.param("id"));
+        const archived = yield* archiveChat(chat.id);
+        const worktree = managedWorktreePath(chat.cwd);
+        if (worktree === undefined) {
+          return { chat: archived, removedWorktree: null };
+        }
+        const activeChats = yield* listChats();
+        const worktreeStillActive = activeChats.some(
+          (candidate) => managedWorktreePath(candidate.cwd) === worktree,
+        );
+        const removedWorktree = worktreeStillActive
+          ? undefined
+          : yield* removeManagedWorktree(worktree);
+        return { chat: archived, removedWorktree: removedWorktree ?? null };
+      }),
+    );
+    activity.clearChat(result.chat.id);
+    chatEvents.metadataChanged([result.chat.id]);
+    return context.json(result);
+  });
   app.post("/api/chats/:id/load", async (context) =>
     context.json(
       await run(engine((e) => e.loadChatSession(context.req.param("id")))),
@@ -449,6 +721,10 @@ export function registerApi(
   });
   app.post("/api/chats/send", async (context) => {
     const input = parseSendInput(await context.req.json());
+    await shepherd?.maybeYieldToUser({
+      chatId: input.chatId,
+      origin: input.origin,
+    });
     const result = await run(engine((e) => e.sendChat(input)));
     return context.json(result);
   });
@@ -627,6 +903,29 @@ export function registerApi(
       throw DaemonError.invalidRequest("GitHub URL is required.");
     return context.json(await run(resolveGitHubUrl(input)));
   });
+  app.post("/api/links/resolve", async (context) => {
+    const input = taskLinkResolveInputSchema(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Task link URL is required.");
+    return context.json(await run(resolveTaskLink(input)));
+  });
+  app.put("/api/internal/secrets/linear", async (context) => {
+    const expectedMainSecret = options.internalBridgeSecret;
+    if (
+      expectedMainSecret === undefined ||
+      expectedMainSecret.length === 0 ||
+      context.req.header("x-angel-main-secret") !== expectedMainSecret
+    ) {
+      throw DaemonError.invalidRequest(
+        "Internal main-process request required.",
+      );
+    }
+    const input = arkType({ "token?": "string" })(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Linear secret update is invalid.");
+    setLinearToken(input.token);
+    return context.json({ hasToken: input.token !== undefined });
+  });
   app.get("/api/github/items", async (context) =>
     context.json(
       await run(
@@ -647,6 +946,30 @@ export function registerApi(
       ),
     ),
   );
+  app.get("/api/github/checks", async (context) => {
+    const prNumber = Number(context.req.query("prNumber"));
+    const input = githubPrContextInputSchema({
+      cwd: requireQuery(context.req.query("cwd"), "cwd"),
+      owner: requireQuery(context.req.query("owner"), "owner"),
+      prNumber,
+      repo: requireQuery(context.req.query("repo"), "repo"),
+    });
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Invalid GitHub checks query.");
+    return context.json(await run(fetchGitHubChecks(input)));
+  });
+  app.get("/api/github/review-threads", async (context) => {
+    const prNumber = Number(context.req.query("prNumber"));
+    const input = githubPrContextInputSchema({
+      cwd: requireQuery(context.req.query("cwd"), "cwd"),
+      owner: requireQuery(context.req.query("owner"), "owner"),
+      prNumber,
+      repo: requireQuery(context.req.query("repo"), "repo"),
+    });
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Invalid GitHub review-threads query.");
+    return context.json(await run(fetchGitHubReviewThreads(input)));
+  });
   app.get("/api/github/pull-request-template", async (context) => {
     const input = githubPullRequestTemplateInputSchema({
       cwd: requireQuery(context.req.query("cwd"), "cwd"),
@@ -736,6 +1059,79 @@ export function registerApi(
       throw DaemonError.invalidRequest("GitHub checks fix input is invalid.");
     }
     return context.json(await run(buildGitHubPrChecksFixPrompt(input)));
+  });
+  app.get("/api/github/pull-request/preflight", async (context) =>
+    context.json(
+      await run(
+        pullRequestPreflight(
+          requireQuery(context.req.query("root"), "root"),
+          context.req.query("base"),
+        ),
+      ),
+    ),
+  );
+  app.get("/api/github/pull-request", async (context) => {
+    const root = context.req.query("root");
+    if (root !== undefined) {
+      return context.json(await run(getStoredPullRequest(root)));
+    }
+    return context.json(
+      await run(
+        getGitHubPullRequestStatus({
+          cwd: requireQuery(context.req.query("cwd"), "cwd"),
+          number: optionalNumber(context.req.query("number")),
+        }),
+      ),
+    );
+  });
+  app.post("/api/github/pull-request", async (context) => {
+    const input = pullRequestCreateInputSchema(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Pull request input is invalid.");
+    return context.json(await run(createWorkspacePullRequest(input)));
+  });
+  app.post("/api/github/pull-request/merge", async (context) => {
+    const input = githubMergeInputSchema(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Pull request merge input is invalid.");
+    return context.json(await run(mergeGitHubPullRequest(input)));
+  });
+  app.post("/api/github/pull-request/resolve-thread", async (context) => {
+    const input = githubResolveThreadInputSchema(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Review thread input is invalid.");
+    return context.json(await run(resolveGitHubReviewThread(input)));
+  });
+
+  app.post("/api/shepherd/start", async (context) => {
+    const input = shepherdStartInputSchema(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Shepherd start input is invalid.");
+    if (!Number.isInteger(input.prNumber) || input.prNumber <= 0) {
+      throw DaemonError.invalidRequest("Pull request number is required.");
+    }
+    return context.json(await shepherd!.startSession(input));
+  });
+  app.post("/api/shepherd/:id/stop", async (context) => {
+    const input = shepherdStopInputSchema({
+      id: requirePath(context.req.param("id"), "id"),
+    });
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Shepherd stop input is invalid.");
+    return context.json(await shepherd!.stopSession(input.id));
+  });
+  app.post("/api/shepherd/:id/resume", async (context) => {
+    const input = shepherdResumeInputSchema({
+      id: requirePath(context.req.param("id"), "id"),
+    });
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Shepherd resume input is invalid.");
+    return context.json(await shepherd!.resumeSession(input.id));
+  });
+  app.get("/api/shepherd", async (context) => {
+    const chatId = requireQuery(context.req.query("chatId"), "chatId");
+    const session = await shepherd!.getByChatId(chatId);
+    return context.json({ session });
   });
 
   app.get("/api/projects", async (context) =>
@@ -906,7 +1302,22 @@ export function registerApi(
   app.get("/api/workspace/git-diff", async (context) =>
     context.json(
       await run(
-        workspaceGitDiff(requireQuery(context.req.query("root"), "root")),
+        workspaceGitDiff(
+          {
+            baseKind: context.req.query("baseKind"),
+            baseRef: context.req.query("baseRef"),
+            chatId: context.req.query("chatId"),
+            root: requireQuery(context.req.query("root"), "root"),
+          },
+          (chatId, kind) =>
+            getChatDiffAnchor(chatId, kind).pipe(
+              Effect.map((anchor) =>
+                anchor
+                  ? { ref: anchor.turnId ?? undefined, sha: anchor.sha }
+                  : undefined,
+              ),
+            ),
+        ),
       ),
     ),
   );
@@ -921,6 +1332,47 @@ export function registerApi(
     if (input instanceof arkType.errors)
       throw DaemonError.invalidRequest("Git push input is invalid.");
     return context.json(await run(workspaceGitPush(input)));
+  });
+  app.post("/api/workspace/git-pull", async (context) => {
+    const input = workspaceToolGitPullInputSchema(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Git pull input is invalid.");
+    return context.json(await run(workspaceGitPull(input)));
+  });
+  app.get("/api/workspace/git-branches", async (context) =>
+    context.json(
+      await run(
+        workspaceGitBranches(requireQuery(context.req.query("root"), "root")),
+      ),
+    ),
+  );
+  app.post("/api/workspace/git-checkout", async (context) => {
+    const input = workspaceToolGitCheckoutInputSchema(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Git checkout input is invalid.");
+    return context.json(await run(workspaceGitCheckout(input)));
+  });
+  app.get("/api/workspace/git-log", async (context) => {
+    const limitRaw = context.req.query("limit");
+    const limit =
+      limitRaw === undefined ? undefined : Number.parseInt(limitRaw, 10);
+    return context.json(
+      await run(
+        workspaceGitLog(
+          requireQuery(context.req.query("root"), "root"),
+          Number.isFinite(limit) ? limit : undefined,
+        ),
+      ),
+    );
+  });
+  app.get("/api/workspace/git-commit-show", async (context) => {
+    const input = workspaceToolGitCommitShowInputSchema({
+      hash: context.req.query("hash"),
+      root: context.req.query("root"),
+    });
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Git commit show input is invalid.");
+    return context.json(await run(workspaceGitCommitShow(input)));
   });
   app.get("/api/workspace/file", async (context) =>
     context.json(
@@ -944,6 +1396,10 @@ export function registerApi(
   app.post("/api/chat-runs/:runId", async (context) => {
     const runId = requirePath(context.req.param("runId"), "runId");
     const input = parseRunStartInput(await context.req.json());
+    await shepherd?.maybeYieldToUser({
+      chatId: input.chatId,
+      origin: input.origin,
+    });
     await queuedRunRecovery;
     chatRuns.reserve(runId, input);
     try {
@@ -1027,6 +1483,8 @@ export function registerApi(
     activity.resolveInput(snapshot.chatId, runId, body.elicitationId);
     return context.json({ resolved: true });
   });
+
+  return () => automationRuntime?.stop();
 }
 
 function observeChatRun(
@@ -1072,6 +1530,7 @@ function parseRunStartInput(value: unknown): ChatRunStartInput {
     chatId: value.chatId,
     mode: value.mode,
     model: value.model,
+    origin: value.origin,
     permissionMode: value.permissionMode,
     reasoningEffort: value.reasoningEffort,
     text: value.text,

@@ -6,6 +6,8 @@ import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { WorkspaceToolContent } from "@/app/workspace/workspace-tool-content";
+import { createPullRequestAction } from "@/app/workspace/workspace-create-pr-action";
+import { WorkspaceCreatePullRequestController } from "@/app/workspace/workspace-git-create-pr";
 import { WorkspaceToolEmpty } from "@/app/workspace/workspace-tool-layout";
 import {
   ensureWorkspaceToolSurfaceEvents,
@@ -61,9 +63,33 @@ export function WorkspaceToolSurface({
       surfaceRef.current?.focus();
     });
   }, [host, storeHost]);
+  useEffect(() => {
+    if (!active || !is.nonEmptyString(model.root)) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        event.shiftKey &&
+        !event.altKey &&
+        event.key.toLowerCase() === "p"
+      ) {
+        event.preventDefault();
+        createPullRequestAction.execute();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [active, model.root]);
 
   return (
     <WorkspaceToolSurfaceProvider model={model}>
+      {active && is.nonEmptyString(model.root) ? (
+        <WorkspaceCreatePullRequestController
+          api={api}
+          contextKey={model.contextKey}
+          key={model.root}
+          root={model.root}
+        />
+      ) : null}
       <section
         className="
           flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden

@@ -1,4 +1,7 @@
 export const TIPC_CHANNELS = [
+  "appLinearTokenClear",
+  "appLinearTokenHas",
+  "appLinearTokenSet",
   "appFetchUrlPreview",
   "appReadClipboardSourceUrl",
   "appSetLanguage",
@@ -14,6 +17,8 @@ export const TIPC_CHANNELS = [
   "pathLauncherShowContextMenu",
   "projectsChooseDirectory",
   "projectsShowContextMenu",
+  "usageGetSnapshot",
+  "usageRefresh",
   "trayGetPreferences",
   "traySetEnabled",
 ] as const;

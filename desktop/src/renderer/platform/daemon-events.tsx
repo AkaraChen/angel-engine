@@ -8,6 +8,7 @@ import {
   mountedChatIds,
   reconcileChatConversation,
 } from "@/features/chat/state/chat-conversation-sync";
+import { scheduleQueryKeys } from "@/features/schedule/requests/keys";
 import { useDaemonClient } from "@/platform/daemon";
 import { queryKeys } from "@/platform/query-keys";
 
@@ -70,6 +71,11 @@ export function DaemonEventSync() {
 
     const handleEvent = (event: DaemonGlobalEvent) => {
       switch (event.type) {
+        case "automations-changed":
+          void queryClient.invalidateQueries({
+            queryKey: scheduleQueryKeys.automations.all(),
+          });
+          return;
         case "chat-activity-changed":
         case "chat-attention-changed":
           void queryClient.invalidateQueries({
@@ -82,6 +88,10 @@ export function DaemonEventSync() {
         case "chat-metadata-changed":
           // Archive/restore moves a row between the two lists, so both are stale.
           invalidateChatLists();
+          return;
+        case "shepherd-changed":
+          // Stage 3 will invalidate the shepherd panel query. No consumer yet.
+          return;
       }
     };
 
@@ -106,6 +116,9 @@ export function DaemonEventSync() {
           queryKey: queryKeys.chatActivity.all(),
         });
         invalidateChatLists();
+        void queryClient.invalidateQueries({
+          queryKey: scheduleQueryKeys.automations.all(),
+        });
         // Conversation hints published while the socket was down are simply gone
         // — there is no replay — so every open chat reconciles on reconnect.
         queueConversations(mountedChatIds());

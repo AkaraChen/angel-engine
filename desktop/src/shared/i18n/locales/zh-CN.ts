@@ -1,5 +1,6 @@
 import type { LocaleResource } from "./schema";
 import { scheduleTranslation } from "./schedule";
+import { pullRequestZhCN } from "./pull-request";
 
 export const zhCN = {
   translation: {
@@ -63,6 +64,7 @@ export const zhCN = {
       proposed: "已提议",
       question: "问题",
       reload: "重新生成",
+      retry: "重试",
       running: "运行中",
       save: "保存",
       saving: "保存中",
@@ -124,20 +126,7 @@ export const zhCN = {
       statsBranch: "分支",
       statsChanges: "更改",
       statsLastActive: "最近活动",
-      transcriptDensity: {
-        descriptions: {
-          compact: "默认折叠工具细节，需要时可展开单条。",
-          debug: "默认展开工具与推理细节，便于排查。",
-          normal: "后面没有正文时自动展开工具。",
-        },
-        menuLabel: "时间线密度：{{density}}",
-        options: {
-          compact: "简洁",
-          debug: "调试",
-          normal: "标准",
-        },
-        title: "时间线密度",
-      },
+
       tools: {
         checks: {
           fixFailures: "修复失败",
@@ -178,6 +167,63 @@ export const zhCN = {
           filesSelected: "已选 {{selected}}/{{total}} 个文件",
           summaryPlaceholder: "摘要",
         },
+        diffBase: {
+          branch: "相对默认分支",
+          fallback: {
+            anchorMissing:
+              "{{base}} 基线 {{sha}} 已不存在，暂时显示{{fallback}}。",
+            anchorUnavailable:
+              "当前会话没有可用的{{base}}，暂时显示{{fallback}}。",
+            defaultBranchUnavailable:
+              "无法解析默认分支，暂时显示{{fallback}}。",
+            gitRefUnavailable:
+              "Git 引用 {{ref}} 不可用，暂时显示{{fallback}}。",
+            noMergeBase: "{{ref}} 与 HEAD 没有合并基点，暂时显示{{fallback}}。",
+            notRepository: "此工作区不是 Git 仓库。",
+          },
+          fileCount: "{{count}} 个文件",
+          label: "差异基线",
+          session: "自会话开始",
+          turn: "自上一轮开始",
+          unstaged: "仅未暂存",
+          worktree: "未提交更改",
+        },
+        createPullRequest: {
+          ahead: "领先 {{base}} {{count}} 个提交",
+          base: "基础分支",
+          bodyPlaceholder: "描述本次更改",
+          create: "创建拉取请求",
+          created: "已创建拉取请求 #{{number}}",
+          creating: "正在创建拉取请求…",
+          description: "发布前请确认分支与描述。",
+          existing: "拉取请求 #{{number}} 已存在",
+          noCommits: "基础分支与当前分支之间没有提交。",
+          openInBrowser: "在浏览器中打开",
+          pushedRetry: "分支已推送。请重试创建拉取请求。",
+          pushing: "正在推送分支…",
+          preview: {
+            additions: "新增",
+            body: "描述",
+            commits: "提交",
+            copied: "已复制",
+            copyLink: "复制链接",
+            deletions: "删除",
+            description: "在浏览器中打开前预览拉取请求。",
+            emptyBody: "未提供描述。",
+            filesChanged: "变更文件",
+            loadFailed: "无法加载拉取请求详情。",
+            open: "打开",
+            title: "拉取请求 #{{number}}",
+          },
+          retry: "重试",
+          short: "创建 PR",
+          title: "创建拉取请求",
+          titlePlaceholder: "拉取请求标题",
+          view: "查看拉取请求 #{{number}}",
+          viewShort: "PR #{{number}}",
+          willPushMany: "将推送 {{count}} 个提交到 origin/{{head}}",
+          willPushOne: "将推送 1 个提交到 origin/{{head}}",
+        },
         dockInSidebar: "停靠到侧栏",
         empty: {
           checksUnavailable: "检查不可用",
@@ -202,7 +248,18 @@ export const zhCN = {
           detached: "分离 HEAD",
           dirty: "{{value}} 个更改",
           noCommits: "尚无提交",
+          noCommitsToPropose: "没有可提议的提交",
           noUpstream: "没有上游分支",
+          changes: "更改",
+          currentBranch: "当前分支",
+          history: "历史",
+          noBranches: "没有本地分支",
+          noHistory: "还没有提交",
+          pull: "拉取 {{remote}}",
+          pullCount: "从 {{remote}} 拉取 {{count}} 个提交",
+          pulling: "拉取中…",
+          pushCount: "向 {{remote}} 推送 {{count}} 个提交",
+          viewTabs: "Git 面板视图",
           publish: "发布分支",
           push: "推送",
           pushHint: {
@@ -215,6 +272,7 @@ export const zhCN = {
           },
           pushing: "推送中",
         },
+        pullRequest: pullRequestZhCN,
         listeningPorts: "监听端口",
         resizeFileTree: "调整文件树宽度",
         resizeGitList: "调整更改列表宽度",
@@ -225,6 +283,7 @@ export const zhCN = {
           gitChanges: "Git 更改",
           newTab: "新建标签页",
           processes: "进程",
+          pullRequest: "拉取请求",
           tabs: "标签页",
           tools: "工具",
           workspaceTabs: "工作区标签页",
@@ -352,6 +411,7 @@ export const zhCN = {
       noChats: "没有聊天",
       noProjects: "还没有项目",
       noStandaloneChats: "没有独立聊天",
+      openBranchChat: "打开正在使用此分支的聊天",
       projects: "项目",
       powerWorktreeHome: "主页",
       powerWorktreeHistoricalChat: "历史聊天",
@@ -394,15 +454,6 @@ export const zhCN = {
           light: "浅色",
           system: "跟随系统",
         },
-        transcriptDensityDescription:
-          "当前工作区模式下时间线默认展示多少工具细节。Chat 默认简洁；Work / Power 默认标准。",
-        transcriptDensityLabel: "时间线密度",
-        transcriptDensityOptions: {
-          compact: "简洁",
-          debug: "调试",
-          normal: "标准",
-        },
-        transcriptDensityTitle: "时间线密度",
       },
       archived: {
         allProjects: "所有项目",
@@ -511,6 +562,20 @@ export const zhCN = {
         sourceUserOverride: "用户 · 已覆盖",
         warningsCount: "加载快捷键时有 {{count}} 条警告",
       },
+      linear: {
+        apiConnection: "API 连接",
+        connect: "连接",
+        connected: "已连接",
+        connectFailed: "无法连接 Linear。",
+        description: "令牌由桌面主进程加密，且绝不会重新暴露给渲染进程。",
+        disconnect: "断开连接",
+        disconnectFailed: "无法断开 Linear 连接。",
+        notConnected: "未连接",
+        replaceToken: "替换令牌",
+        title: "Linear",
+        tokenLabel: "Linear API 令牌",
+        tokenPlaceholder: "lin_api_…",
+      },
       mobile: {
         copied: "已复制",
         copy: "复制",
@@ -547,6 +612,7 @@ export const zhCN = {
         danger: "影响本机所有聊天记录的不可撤销操作。",
         mobile: "通过本地网络从这台电脑提供移动端网页应用。",
         updates: "这个应用安装哪些版本，以及何时安装。",
+        usage: "来自 ccusage 的本地 Token 与费用活动估算。",
         workspace: "工作时输入框与 worktree 的行为方式。",
       },
       tabs: {
@@ -557,6 +623,7 @@ export const zhCN = {
         danger: "高级",
         mobile: "移动端",
         updates: "更新",
+        usage: "用量",
         workspace: "工作区",
       },
       title: "设置",
@@ -596,6 +663,44 @@ export const zhCN = {
         trayEnabledSwitchLabel: "显示菜单栏舰队摘要",
         trayEnabledTitle: "菜单栏舰队摘要",
       },
+    },
+    usage: {
+      activeBlock: "当前计费区块",
+      activeRuns: "运行中的会话",
+      burnRate: "当前速率",
+      burnRateThreshold: "警告阈值",
+      burnRateWarning: "消耗速率警告",
+      burnRateWarningActive: "当前速率已超过 {{threshold}}。",
+      burnRateWarningDescription:
+        "当前每小时速率超过阈值时突出显示用量指示器。",
+      byAgent: "按 Agent",
+      cacheCreationTokens: "缓存写入",
+      cacheReadTokens: "缓存读取",
+      collecting: "正在收集本地用量…",
+      contextNearLimit: "上下文即将达到上限。建议新建聊天。",
+      contextUsed: "已用上下文",
+      month: "本月",
+      noData: "没有本地用量记录",
+      projected: "按当前速率预计",
+      inputTokens: "输入",
+      lastCollected: "上次收集于 {{time}}。",
+      outputTokens: "输出",
+      refresh: "刷新",
+      source: "数据来源",
+      sourceDescription:
+        "根据本地 Agent 日志估算。支持的提供商：{{agents}}；其他及自定义提供商不可用。",
+      sessionCost: "费用",
+      today: "今天",
+      tokens: "tokens",
+      unavailable: "用量不可用",
+      unavailableReasons: {
+        "binary-missing": "用量不可用：缺少打包的 ccusage 二进制文件。",
+        "exec-failed": "用量不可用：ccusage 执行失败。",
+        "schema-mismatch": "用量不可用：ccusage 输出格式已变化。",
+        timeout: "用量不可用：收集超时。",
+      },
+      warnings: "警告",
+      week: "本周",
     },
     updates: {
       checkFailed: "无法检查更新",
@@ -668,6 +773,8 @@ export const zhCN = {
       fileTypeBlocked: "文件类型被阻止",
       fileTooLarge: "文件过大",
       files: "文件",
+      fromLink: "从链接",
+      fromLinkPlaceholder: "粘贴 GitHub 或 Linear Issue 链接，或搜索 GitHub",
       githubErrors: {
         cliMissing: "未安装 GitHub CLI (gh) 或不在 PATH 中。请安装后重试。",
         cliUnauthenticated:
@@ -678,6 +785,10 @@ export const zhCN = {
       },
       githubIssue: "Issue",
       githubPullRequest: "Pull request",
+      linearConnectAction: "连接 Linear",
+      linearConnectDescription: "请先连接 Linear，再解析此 Issue。",
+      linearIssue: "Linear Issue",
+      linearItemMeta: "{{identifier}} · Linear · {{state}}",
       loadingCommands: "正在加载命令",
       loadingSkills: "正在加载技能",
       loadingValue: "加载中...",
@@ -706,6 +817,22 @@ export const zhCN = {
       skills: "技能",
       switchToBuild: "切换到执行模式",
       switchToPlan: "切换到计划模式",
+      taskLinkErrors: {
+        linearFetchFailed: "无法获取该 Linear Issue。",
+        linearNotFound: "未找到该 Linear Issue。",
+        linearUnauthorized: "Linear 拒绝了已配置的 API 令牌。",
+        prForkUnsupported: "暂不支持来自 fork 的 Pull Request。",
+        unsupported: "不支持该任务链接。",
+      },
+      taskLinkHintComplete:
+        "请粘贴完整的 GitHub Issue、PR 或 Linear Issue 链接。",
+      taskLinkHintGitHubPath: "这是 GitHub 链接，但不是 Issue 或 PR。",
+      taskLinkHintLinearPath: "这是 Linear 链接，但不是 Issue。",
+      taskLinkHintSupported:
+        "支持 GitHub Issue、GitHub PR 与 Linear Issue 链接。",
+      taskLinkStateClosed: "已关闭",
+      taskLinkStateMerged: "已合并",
+      taskLinkStateOpen: "打开",
       toasts: {
         couldNotChangeMode: "无法更改模式",
         couldNotReadFile: "无法读取文件",
@@ -760,6 +887,18 @@ export const zhCN = {
     },
     dialog: {
       chatName: "聊天名称",
+      confirm: {
+        deleteCustomAgentDetail_one: "这还会删除 {{count}} 个相关会话。",
+        deleteCustomAgentDetail_other: "这还会删除 {{count}} 个相关会话。",
+        deleteCustomAgentDetailNone: "没有会话使用这个自定义 Agent。",
+        deleteCustomAgentTitle: "要删除 {{label}} 吗？",
+        discard: "放弃",
+        dontSave: "不保存",
+        kill: "结束进程",
+        killProcessTitle: "要结束 {{name}}（{{pid}}）吗？",
+        saveFileChangesDetail: "如果不保存，你的更改将会丢失。",
+        saveFileChangesTitle: "要保存对 {{path}} 的更改吗？",
+      },
       importSession: {
         cwdLabel: "目录：{{cwd}}",
         description:

@@ -5,6 +5,7 @@ import type {
   ChatPrewarmResult,
   ChatRuntimeConfig,
 } from "@angel-engine/daemon-api/chat";
+import type { ResolvedTaskLink } from "@angel-engine/daemon-api/links";
 
 import type { QueryClient } from "@tanstack/react-query";
 import type { ApiClient } from "@/platform/api-client";
@@ -76,6 +77,8 @@ interface GitHubResolveQueryParams {
   url: string | null;
 }
 
+interface TaskLinkResolveQueryParams extends GitHubResolveQueryParams {}
+
 interface ChatPrewarmQueryParams {
   api: ApiClient;
   creationLocation?: ChatCreationLocation | null;
@@ -100,6 +103,15 @@ interface SetChatRuntimeMutationParams {
 interface ArchiveChatMutationParams {
   api: ApiClient;
   onSuccess?: (data: Chat, variables: Chat) => Promise<void> | void;
+  queryClient: QueryClient;
+}
+
+interface ArchiveWorkspaceMutationParams {
+  api: ApiClient;
+  onSuccess?: (
+    data: Awaited<ReturnType<ApiClient["chats"]["archiveWorkspace"]>>,
+    chatId: string,
+  ) => Promise<void> | void;
   queryClient: QueryClient;
 }
 
@@ -293,6 +305,22 @@ export function githubResolveQueryOptions({
   });
 }
 
+export function taskLinkResolveQueryOptions({
+  api,
+  enabled = true,
+  staleTime = 30_000,
+  url,
+}: TaskLinkResolveQueryParams) {
+  return queryOptions({
+    enabled: enabled && is.nonEmptyString(url),
+    queryFn: async (): Promise<ResolvedTaskLink> =>
+      api.links.resolve({ url: url ?? "" }),
+    queryKey: ["task-link", "resolve", url],
+    retry: false,
+    staleTime,
+  });
+}
+
 export function chatPrewarmQueryOptions({
   api,
   creationLocation,
@@ -383,6 +411,26 @@ export function archiveChatMutationOptions({
       queryClient.setQueryData<ChatLoadResult | undefined>(
         queryKeys.chats.detail(data.id),
         (current) => (current ? { ...current, chat: data } : current),
+      );
+      await onSuccess?.(data, variables);
+    },
+  });
+}
+
+export function archiveWorkspaceMutationOptions({
+  api,
+  onSuccess,
+  queryClient,
+}: ArchiveWorkspaceMutationParams) {
+  return mutationOptions({
+    mutationFn: async (chatId: string) => api.chats.archiveWorkspace(chatId),
+    onSuccess: async (data, variables) => {
+      queryClient.setQueryData<Chat[]>(queryKeys.chats.list(), (current = []) =>
+        current.filter((chat) => chat.id !== data.chat.id),
+      );
+      queryClient.setQueryData<ChatLoadResult | undefined>(
+        queryKeys.chats.detail(data.chat.id),
+        (current) => (current ? { ...current, chat: data.chat } : current),
       );
       await onSuccess?.(data, variables);
     },

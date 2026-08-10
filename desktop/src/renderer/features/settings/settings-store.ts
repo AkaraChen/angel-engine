@@ -22,6 +22,10 @@ const senderId = globalThis.crypto?.randomUUID?.() ?? String(Date.now());
 const sendWithModEnterStorageKey = "angel-engine.send-with-mod-enter";
 const worktreeDirtyPromptStorageKey =
   "angel-engine.worktree-dirty-prompt-enabled";
+const usageBurnRateWarningStorageKey =
+  "angel-engine.usage-burn-rate-warning-enabled";
+const usageBurnRateThresholdStorageKey =
+  "angel-engine.usage-burn-rate-warning-threshold";
 
 interface SettingsBroadcastMessage {
   agentSettings: AgentSettings;
@@ -30,6 +34,8 @@ interface SettingsBroadcastMessage {
   sendWithModEnter: boolean;
   senderId: string;
   themeMode: DesktopThemeMode;
+  usageBurnRateThreshold: number;
+  usageBurnRateWarningEnabled: boolean;
   worktreeDirtyPromptEnabled: boolean;
 }
 
@@ -49,9 +55,13 @@ interface SettingsState {
   setLanguage: (language: SupportedLanguage) => void;
   setSendWithModEnter: (enabled: boolean) => void;
   setThemeMode: (themeMode: DesktopThemeMode) => void;
+  setUsageBurnRateThreshold: (threshold: number) => void;
+  setUsageBurnRateWarningEnabled: (enabled: boolean) => void;
   setWorktreeDirtyPromptEnabled: (enabled: boolean) => void;
   themeMode: DesktopThemeMode;
   updateCustomAgent: (input: UpdateCustomAgentInput) => Promise<CustomAgent>;
+  usageBurnRateThreshold: number;
+  usageBurnRateWarningEnabled: boolean;
   worktreeDirtyPromptEnabled: boolean;
 }
 
@@ -150,6 +160,21 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
       current.themeMode === themeMode ? {} : { themeMode },
     );
   },
+  setUsageBurnRateThreshold: (threshold) => {
+    updateSettingsState(set, get, (current) => {
+      const sanitized = sanitizeUsageBurnRateThreshold(threshold);
+      return current.usageBurnRateThreshold === sanitized
+        ? {}
+        : { usageBurnRateThreshold: sanitized };
+    });
+  },
+  setUsageBurnRateWarningEnabled: (enabled) => {
+    updateSettingsState(set, get, (current) =>
+      current.usageBurnRateWarningEnabled === enabled
+        ? {}
+        : { usageBurnRateWarningEnabled: enabled },
+    );
+  },
   setWorktreeDirtyPromptEnabled: (enabled) => {
     updateSettingsState(set, get, (current) =>
       current.worktreeDirtyPromptEnabled === enabled
@@ -158,6 +183,8 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     );
   },
   themeMode: readDesktopThemeMode(),
+  usageBurnRateThreshold: readUsageBurnRateThreshold(),
+  usageBurnRateWarningEnabled: readUsageBurnRateWarningEnabled(),
   updateCustomAgent: async (input) => {
     const agent = await getApiClient().agents.updateCustom(input);
     invalidateAgentCatalog();
@@ -179,6 +206,8 @@ broadcastChannel?.addEventListener("message", (event) => {
     language: message.language,
     sendWithModEnter: message.sendWithModEnter,
     themeMode: message.themeMode,
+    usageBurnRateThreshold: message.usageBurnRateThreshold,
+    usageBurnRateWarningEnabled: message.usageBurnRateWarningEnabled,
     worktreeDirtyPromptEnabled: message.worktreeDirtyPromptEnabled,
   });
   if (message.refreshAgentOptions === true) {
@@ -217,6 +246,8 @@ function settingsBroadcastMessage(
     | "language"
     | "sendWithModEnter"
     | "themeMode"
+    | "usageBurnRateThreshold"
+    | "usageBurnRateWarningEnabled"
     | "worktreeDirtyPromptEnabled"
   >,
   options: UpdateSettingsStateOptions = {},
@@ -228,6 +259,8 @@ function settingsBroadcastMessage(
     sendWithModEnter: state.sendWithModEnter,
     senderId,
     themeMode: state.themeMode,
+    usageBurnRateThreshold: state.usageBurnRateThreshold,
+    usageBurnRateWarningEnabled: state.usageBurnRateWarningEnabled,
     worktreeDirtyPromptEnabled: state.worktreeDirtyPromptEnabled,
   };
 }
@@ -237,6 +270,8 @@ function applySettingsSideEffects(message: SettingsBroadcastMessage) {
   writeLanguage(message.language);
   writeSendWithModEnter(message.sendWithModEnter);
   writeWorktreeDirtyPromptEnabled(message.worktreeDirtyPromptEnabled);
+  writeUsageBurnRateThreshold(message.usageBurnRateThreshold);
+  writeUsageBurnRateWarningEnabled(message.usageBurnRateWarningEnabled);
   setDesktopThemeMode(message.themeMode);
 }
 
@@ -252,6 +287,12 @@ function readBroadcastMessage(value: unknown): SettingsBroadcastMessage | null {
     sendWithModEnter: sanitizeSendWithModEnter(input.sendWithModEnter),
     senderId: input.senderId,
     themeMode: sanitizeThemeMode(input.themeMode),
+    usageBurnRateThreshold: sanitizeUsageBurnRateThreshold(
+      input.usageBurnRateThreshold,
+    ),
+    usageBurnRateWarningEnabled: sanitizeUsageBurnRateWarningEnabled(
+      input.usageBurnRateWarningEnabled,
+    ),
     worktreeDirtyPromptEnabled: sanitizeWorktreeDirtyPromptEnabled(
       input.worktreeDirtyPromptEnabled,
     ),
@@ -337,6 +378,49 @@ function sanitizeWorktreeDirtyPromptEnabled(value: unknown) {
   if (value === false || value === "false") return false;
   if (value === true || value === "true") return true;
   return true;
+}
+
+function readUsageBurnRateThreshold() {
+  try {
+    return sanitizeUsageBurnRateThreshold(
+      window.localStorage.getItem(usageBurnRateThresholdStorageKey),
+    );
+  } catch {
+    return 50;
+  }
+}
+
+function writeUsageBurnRateThreshold(threshold: number) {
+  window.localStorage.setItem(
+    usageBurnRateThresholdStorageKey,
+    String(threshold),
+  );
+}
+
+function sanitizeUsageBurnRateThreshold(value: unknown) {
+  const threshold = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(threshold) && threshold > 0 ? threshold : 50;
+}
+
+function readUsageBurnRateWarningEnabled() {
+  try {
+    return sanitizeUsageBurnRateWarningEnabled(
+      window.localStorage.getItem(usageBurnRateWarningStorageKey),
+    );
+  } catch {
+    return false;
+  }
+}
+
+function writeUsageBurnRateWarningEnabled(enabled: boolean) {
+  window.localStorage.setItem(
+    usageBurnRateWarningStorageKey,
+    enabled ? "true" : "false",
+  );
+}
+
+function sanitizeUsageBurnRateWarningEnabled(value: unknown) {
+  return value === true || value === "true";
 }
 
 function sanitizeThemeMode(value: unknown): DesktopThemeMode {
