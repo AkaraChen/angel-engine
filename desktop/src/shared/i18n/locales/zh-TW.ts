@@ -722,6 +722,7 @@ export const zhTW = {
         userInput: "問題",
       },
       exportMarkdown: "匯出 Markdown",
+      forkSession: "從此處分支工作階段",
       handoff: "移交",
       handoffMenuLabel: "交給…實作",
       handoffPromptIntro: "請實作以下計劃。",
@@ -730,6 +731,7 @@ export const zhTW = {
       response: "回應",
       startImplementation: "開始執行",
       toasts: {
+        couldNotForkSession: "無法分支工作階段",
         couldNotHandoffPlan: "無法移交計劃",
         couldNotStartImplementation: "無法開始執行",
       },

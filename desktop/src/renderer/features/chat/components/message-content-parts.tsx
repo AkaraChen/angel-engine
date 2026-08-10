@@ -143,8 +143,11 @@ function FileMessagePart(part: Extract<EnrichedPartState, { type: "file" }>) {
   const isMention = messageFileMention(part);
   if (isMention) return null;
   const isImage = part.mimeType.startsWith("image/");
+  // JSON (and other structured dumps like session-fork transcripts) must stay
+  // as compact attachment cards. Expanding raw payload into the thread is the
+  // failure mode called out for PR #220.
   const previewText =
-    isMention || isImage
+    isMention || isImage || !shouldPreviewTextAttachment(part.mimeType)
       ? undefined
       : textFilePreview(part.data, part.mimeType);
 
@@ -238,15 +241,19 @@ function MessageAttachment({ attachment }: { attachment: CompleteAttachment }) {
       (filePart?.mimeType.startsWith("image/")
         ? imageFilePreviewUrl(filePart.data, filePart.mimeType)
         : undefined));
+  const mimeType = attachment.contentType ?? filePart?.mimeType;
   const previewText =
-    !is.nonEmptyString(previewUrl) && filePart !== undefined && !isMention
+    !is.nonEmptyString(previewUrl) &&
+    filePart !== undefined &&
+    !isMention &&
+    shouldPreviewTextAttachment(filePart.mimeType)
       ? textFilePreview(filePart.data, filePart.mimeType)
       : undefined;
 
   return (
     <ChatAttachmentTile
       className="max-w-64"
-      contentType={attachment.contentType ?? filePart?.mimeType}
+      contentType={mimeType}
       name={attachment.name}
       previewText={previewText}
       previewUrl={previewUrl}
@@ -261,6 +268,13 @@ function MessageAttachment({ attachment }: { attachment: CompleteAttachment }) {
       }
     />
   );
+}
+
+/** Compact cards only for JSON / structured payloads — never inline expand. */
+function shouldPreviewTextAttachment(mimeType: string) {
+  if (!isTextLikeMimeType(mimeType)) return false;
+  const normalized = mimeType.split(";")[0]?.trim().toLowerCase() ?? "";
+  return normalized !== "application/json" && !normalized.endsWith("+json");
 }
 
 function messageFileMention(part: unknown) {

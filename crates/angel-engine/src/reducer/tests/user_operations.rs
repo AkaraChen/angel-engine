@@ -277,6 +277,16 @@ fn start_turn_preserves_every_user_input_shape_for_runtime_projection() {
     let conversation = engine.conversations.get(&conversation_id).unwrap();
     let turn = conversation.turns.get(&turn_id).expect("turn");
     assert_eq!(turn.input.len(), 7);
+    // Embedded text resources keep their body for the model, but the live
+    // display path must project them as file cards, not raw text bubbles.
+    assert_eq!(
+        turn.input[3].file.as_ref().map(|file| (
+            file.data.as_str(),
+            file.mime_type.as_str(),
+            file.name.as_deref()
+        )),
+        Some(("inline note", "text/plain", Some("note")))
+    );
     assert!(turn.input[4].file.is_some());
     assert_eq!(
         turn.input[4].file.as_ref().expect("file ref").mime_type,

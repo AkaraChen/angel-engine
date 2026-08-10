@@ -55,6 +55,7 @@ import { KeymapScope, useContextKey } from "@/platform/keymap/provider";
 interface ActiveChatThreadProps {
   draftAgentConfig: DraftAgentConfig;
   onChatCreated: (chat: Chat) => void;
+  onForkChatCreated: (chat: Chat) => void;
   onChatMessagesUpdated: ChatMessagesUpdateHandler;
   onChatUpdated: ChatUpdateHandler;
   onSetupDiscarded: (projectId?: string) => void;
@@ -100,6 +101,7 @@ interface ChatProjectContext {
 export function ActiveChatThread({
   draftAgentConfig,
   onChatCreated,
+  onForkChatCreated,
   onChatMessagesUpdated,
   onChatUpdated,
   onSetupDiscarded,
@@ -121,6 +123,7 @@ export function ActiveChatThread({
       historyRevision={0}
       keySuffix="active"
       onChatCreated={onChatCreated}
+      onForkChatCreated={onForkChatCreated}
       onChatMessagesUpdated={onChatMessagesUpdated}
       onChatUpdated={onChatUpdated}
       onSetupDiscarded={onSetupDiscarded}
@@ -143,6 +146,7 @@ export function RestoredChatThread({
   draftAgentConfig,
   includeProjectInRoute,
   onChatCreated,
+  onForkChatCreated,
   onChatMessagesUpdated,
   onChatUpdated,
   onSetupDiscarded,
@@ -185,6 +189,7 @@ export function RestoredChatThread({
       historyMessages={chatLoadData.messages}
       historyRevision={chatLoadQuery.dataUpdatedAt}
       onChatCreated={onChatCreated}
+      onForkChatCreated={onForkChatCreated}
       onChatMessagesUpdated={onChatMessagesUpdated}
       onChatUpdated={onChatUpdated}
       onSetupDiscarded={onSetupDiscarded}
@@ -208,6 +213,7 @@ function ChatThreadRuntime({
   historyRevision,
   keySuffix,
   onChatCreated,
+  onForkChatCreated,
   onChatMessagesUpdated,
   onChatUpdated,
   onSetupDiscarded,
@@ -413,6 +419,7 @@ function ChatThreadRuntime({
           model={modelOverride}
           mode={undefined}
           onChatCreated={onChatCreated}
+          onForkChatCreated={onForkChatCreated}
           onChatMessagesUpdated={onChatMessagesUpdated}
           onChatUpdated={onChatUpdated}
           projectId={projectContext.id ?? selectedChat.projectId ?? null}

@@ -10,7 +10,7 @@ use crate::{
     ConversationCapabilities, ConversationId, ConversationLifecycle, ConversationState,
     HistoryReplayEntry, HistoryReplayToolAction, HistoryRole, PlanDisplayKind, PlanEntry,
     PlanEntryStatus, PlanState, RemoteConversationId, RemoteTurnId, TurnDisplayContentKind,
-    TurnDisplayPart, TurnId, TurnState, UserImageInputRef, UserInputRef,
+    TurnDisplayPart, TurnId, TurnState, UserFileInputRef, UserImageInputRef, UserInputRef,
 };
 
 #[test]
@@ -439,6 +439,51 @@ fn live_turn_projects_image_input_parts() {
             && data == "ZmFrZQ=="
             && mime_type == "image/png"
             && name.as_deref() == Some("sample.png")
+    ));
+}
+
+#[test]
+fn live_turn_projects_embedded_text_as_file_card_not_raw_text() {
+    let mut conversation = conversation(ConversationCapabilities::unknown());
+    let turn_id = TurnId::new("turn-1");
+    let mut turn = TurnState::new(
+        turn_id.clone(),
+        RemoteTurnId::Known("remote-turn-1".to_string()),
+        0,
+    );
+    turn.input.push(UserInputRef {
+        content: "Continue this conversation from the attached message history.".to_string(),
+        file: None,
+        image: None,
+        reference: false,
+    });
+    // Engine maps EmbeddedTextResource onto a file ref so the JSON body never
+    // becomes a second text part in the user bubble.
+    turn.input.push(UserInputRef {
+        content: "{\n  \"version\": 1\n}".to_string(),
+        file: Some(UserFileInputRef {
+            data: "{\n  \"version\": 1\n}".to_string(),
+            mime_type: "application/json".to_string(),
+            name: Some("angel-session-chat.json".to_string()),
+        }),
+        image: None,
+        reference: false,
+    });
+    conversation.turns.insert(turn_id, turn);
+
+    let messages = conversation_display_messages(&conversation);
+
+    assert_eq!(messages.len(), 1);
+    assert_eq!(messages[0].role, DisplayMessageRole::User);
+    assert!(matches!(
+        messages[0].content.as_slice(),
+        [
+            DisplayMessagePart::Text { kind: DisplayTextPartKind::Text, text },
+            DisplayMessagePart::File { data, mime_type, name }
+        ] if text == "Continue this conversation from the attached message history."
+            && data == "{\n  \"version\": 1\n}"
+            && mime_type == "application/json"
+            && name.as_deref() == Some("angel-session-chat.json")
     ));
 }
 

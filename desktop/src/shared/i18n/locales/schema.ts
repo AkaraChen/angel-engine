@@ -870,6 +870,7 @@ export interface LocaleResourceTranslationMessagesElicitation {
 }
 
 export interface LocaleResourceTranslationMessagesToasts {
+  couldNotForkSession: string;
   couldNotHandoffPlan: string;
   couldNotStartImplementation: string;
 }
@@ -890,6 +891,7 @@ export interface LocaleResourceTranslationMessages {
   created: string;
   elicitation: LocaleResourceTranslationMessagesElicitation;
   exportMarkdown: string;
+  forkSession: string;
   handoff: string;
   handoffMenuLabel: string;
   handoffPromptIntro: string;

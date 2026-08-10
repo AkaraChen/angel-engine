@@ -4,6 +4,7 @@ import { createContext } from "react";
 
 export interface ChatRuntimeActionsContextValue {
   enablePermissionBypass: (response: ChatElicitationResponse) => void;
+  forkSession?: (messageId: string) => Promise<void>;
   permissionBypassEnabled: boolean;
   resolveElicitation: (
     elicitationId: string,

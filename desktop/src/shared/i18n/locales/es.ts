@@ -755,6 +755,7 @@ export const es = {
         userInput: "Pregunta",
       },
       exportMarkdown: "Exportar Markdown",
+      forkSession: "Bifurcar sesión desde aquí",
       handoff: "Transferir",
       handoffMenuLabel: "Implementar con…",
       handoffPromptIntro: "Implementa el siguiente plan.",
@@ -763,6 +764,7 @@ export const es = {
       response: "Respuesta",
       startImplementation: "Iniciar ejecución",
       toasts: {
+        couldNotForkSession: "No se pudo bifurcar la sesión",
         couldNotHandoffPlan: "No se pudo transferir el plan",
         couldNotStartImplementation: "No se pudo iniciar la ejecución",
       },

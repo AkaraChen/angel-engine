@@ -753,6 +753,7 @@ export const de = {
         userInput: "Frage",
       },
       exportMarkdown: "Markdown exportieren",
+      forkSession: "Sitzung hier verzweigen",
       handoff: "Übergeben",
       handoffMenuLabel: "Umsetzen mit…",
       handoffPromptIntro: "Setze den folgenden Plan um.",
@@ -761,6 +762,7 @@ export const de = {
       response: "Antwort",
       startImplementation: "Ausführung starten",
       toasts: {
+        couldNotForkSession: "Sitzung konnte nicht verzweigt werden",
         couldNotHandoffPlan: "Plan konnte nicht übergeben werden",
         couldNotStartImplementation: "Ausführung konnte nicht gestartet werden",
       },
