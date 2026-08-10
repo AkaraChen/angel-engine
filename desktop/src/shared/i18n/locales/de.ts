@@ -126,6 +126,20 @@ export const de = {
       statsBranch: "Branch",
       statsChanges: "Änderungen",
       statsLastActive: "Zuletzt aktiv",
+      transcriptDensity: {
+        descriptions: {
+          compact: "Tool-Details einklappen; bei Bedarf einzeln öffnen.",
+          debug: "Tool- und Reasoning-Details standardmäßig geöffnet lassen.",
+          normal: "Tools automatisch öffnen, wenn nichts danach folgt.",
+        },
+        menuLabel: "Transkript-Dichte: {{density}}",
+        options: {
+          compact: "Kompakt",
+          debug: "Debug",
+          normal: "Normal",
+        },
+        title: "Transkript-Dichte",
+      },
       tools: {
         addToChat: "Zum Chat hinzufügen",
         commit: {
@@ -343,6 +357,15 @@ export const de = {
           light: "Hell",
           system: "System",
         },
+        transcriptDensityDescription:
+          "Wie viel Tool-Detail das Transkript im aktuellen Workspace-Modus standardmäßig zeigt. Chat startet kompakt; Work und Power starten normal.",
+        transcriptDensityLabel: "Transkript-Dichte",
+        transcriptDensityOptions: {
+          compact: "Kompakt",
+          debug: "Debug",
+          normal: "Normal",
+        },
+        transcriptDensityTitle: "Transkript-Dichte",
       },
       archived: {
         allProjects: "Alle Projekte",

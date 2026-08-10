@@ -126,6 +126,20 @@ export const en = {
       statsBranch: "Branch",
       statsChanges: "Changes",
       statsLastActive: "Last active",
+      transcriptDensity: {
+        descriptions: {
+          compact: "Fold tool detail; expand any row when needed.",
+          debug: "Keep tool and reasoning detail open.",
+          normal: "Auto-expand tools when nothing follows them.",
+        },
+        menuLabel: "Transcript density: {{density}}",
+        options: {
+          compact: "Compact",
+          debug: "Debug",
+          normal: "Normal",
+        },
+        title: "Transcript density",
+      },
       tools: {
         addToChat: "Add to chat",
         commit: {
@@ -341,6 +355,15 @@ export const en = {
           light: "Light",
           system: "System",
         },
+        transcriptDensityDescription:
+          "How much tool detail the transcript shows by default in the current workspace mode. Chat mode starts in Compact; Work and Power start in Normal.",
+        transcriptDensityLabel: "Transcript density",
+        transcriptDensityOptions: {
+          compact: "Compact",
+          debug: "Debug",
+          normal: "Normal",
+        },
+        transcriptDensityTitle: "Transcript density",
       },
       archived: {
         allProjects: "All projects",

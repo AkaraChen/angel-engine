@@ -28,12 +28,15 @@ import is from "@sindresorhus/is";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { toolCallCardClassName } from "@/features/chat/components/message-styles";
+import { defaultToolDetailsOpen } from "@/features/chat/transcript-density";
+import { useTranscriptDensityStore } from "@/features/chat/transcript-density-store";
 import { cn } from "@/platform/utils";
 
 function ToolActionMessagePart(part: ToolCallMessagePartProps) {
@@ -72,8 +75,14 @@ function GenericToolActionMessagePart({
     is.nonEmptyString(outputText) ||
     is.nonEmptyString(errorText);
   const hasTextAfterTool = useHasTextAfterToolCall(part.toolCallId);
+  const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
+  const density = useTranscriptDensityStore((state) =>
+    state.densityFor(workspaceMode),
+  );
   const [manualOpen, setManualOpen] = useState<boolean | undefined>();
-  const open = hasDetails && (manualOpen ?? !hasTextAfterTool);
+  const open =
+    hasDetails &&
+    (manualOpen ?? defaultToolDetailsOpen(density, hasTextAfterTool));
   if (isBareHostCapabilityToolAction(action, title, outputText, errorText)) {
     return null;
   }

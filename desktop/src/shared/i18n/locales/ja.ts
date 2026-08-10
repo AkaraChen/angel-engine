@@ -126,6 +126,20 @@ export const ja = {
       statsBranch: "ブランチ",
       statsChanges: "変更",
       statsLastActive: "最終アクティブ",
+      transcriptDensity: {
+        descriptions: {
+          compact: "ツール詳細は折りたたみ。必要なら個別に展開。",
+          debug: "ツールと推論の詳細を開いたまま表示。",
+          normal: "後続テキストがないときツールを自動展開。",
+        },
+        menuLabel: "トランスクリプト密度: {{density}}",
+        options: {
+          compact: "コンパクト",
+          debug: "デバッグ",
+          normal: "標準",
+        },
+        title: "トランスクリプト密度",
+      },
       tools: {
         addToChat: "チャットに追加",
         commit: {
@@ -343,6 +357,15 @@ export const ja = {
           light: "ライト",
           system: "システム",
         },
+        transcriptDensityDescription:
+          "現在のワークスペースモードで、トランスクリプトが既定でどれだけツール詳細を見せるか。Chat はコンパクト、Work / Power は標準から始まります。",
+        transcriptDensityLabel: "トランスクリプト密度",
+        transcriptDensityOptions: {
+          compact: "コンパクト",
+          debug: "デバッグ",
+          normal: "標準",
+        },
+        transcriptDensityTitle: "トランスクリプト密度",
       },
       archived: {
         allProjects: "すべてのプロジェクト",
