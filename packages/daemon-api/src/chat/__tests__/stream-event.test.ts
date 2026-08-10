@@ -53,6 +53,7 @@ const config: ChatRuntimeConfig = {
   models: [],
   permissionModes: [],
   reasoningEfforts: [],
+  usage: { size: 200_000, used: 140_000 },
 };
 
 const validEvents: ChatStreamEvent[] = [

@@ -80,16 +80,44 @@ export interface LocaleResourceTranslationWorkspaceToolsGitPushHint {
 export interface LocaleResourceTranslationWorkspaceToolsGit {
   ahead: string;
   behind: string;
+  changes: string;
   clean: string;
   conflicts: string;
+  currentBranch: string;
   detached: string;
   dirty: string;
+  history: string;
+  noBranches: string;
   noCommits: string;
+  noHistory: string;
   noUpstream: string;
   publish: string;
+  pull: string;
+  pullCount: string;
+  pulling: string;
   push: string;
+  pushCount: string;
   pushHint: LocaleResourceTranslationWorkspaceToolsGitPushHint;
   pushing: string;
+  viewTabs: string;
+}
+
+export interface LocaleResourceTranslationWorkspaceToolsDiffBase {
+  branch: string;
+  fallback: {
+    anchorMissing: string;
+    anchorUnavailable: string;
+    defaultBranchUnavailable: string;
+    gitRefUnavailable: string;
+    noMergeBase: string;
+    notRepository: string;
+  };
+  fileCount: string;
+  label: string;
+  session: string;
+  turn: string;
+  unstaged: string;
+  worktree: string;
 }
 
 export interface LocaleResourceTranslationWorkspaceToolsEmpty {
@@ -113,8 +141,8 @@ export interface LocaleResourceTranslationWorkspaceToolsTabs {
   files: string;
   gitChanges: string;
   newTab: string;
-  processes: string;
   pullRequest: string;
+  processes: string;
   tabs: string;
   tools: string;
   workspaceTabs: string;
@@ -152,58 +180,6 @@ export interface LocaleResourceTranslationWorkspaceToolsComments {
   sideNew: string;
   sideOld: string;
   status: LocaleResourceTranslationWorkspaceToolsCommentsStatus;
-  title: string;
-}
-
-export interface LocaleResourceTranslationWorkspaceTools {
-  addToChat: string;
-  checks: LocaleResourceTranslationWorkspaceToolsChecks;
-  comments: LocaleResourceTranslationWorkspaceToolsComments;
-  commit: LocaleResourceTranslationWorkspaceToolsCommit;
-  dockInSidebar: string;
-  empty: LocaleResourceTranslationWorkspaceToolsEmpty;
-  git: LocaleResourceTranslationWorkspaceToolsGit;
-  pullRequest: LocaleResourceTranslationWorkspaceToolsPullRequest;
-  listeningPorts: string;
-  resizeFileTree: string;
-  resizeGitList: string;
-  subprocesses: string;
-  tabs: LocaleResourceTranslationWorkspaceToolsTabs;
-}
-
-export interface LocaleResourceTranslationWorkspaceSetup {
-  approvalUnavailable: string;
-  continueAnyway: string;
-  discard: string;
-  discardConfirm: string;
-  discardConfirmDescription: string;
-  discardConfirmTitle: string;
-  failedStep: string;
-  failedTitle: string;
-  noLog: string;
-  ready: string;
-  retry: string;
-  running: string;
-  runningStep: string;
-  viewLog: string;
-}
-
-export interface LocaleResourceTranslationWorkspaceAmbiguousSend {
-  description: string;
-  dismiss: string;
-  title: string;
-}
-
-export interface LocaleResourceTranslationWorkspaceTranscriptDensityOptions {
-  compact: string;
-  debug: string;
-  normal: string;
-}
-
-export interface LocaleResourceTranslationWorkspaceTranscriptDensity {
-  descriptions: LocaleResourceTranslationWorkspaceTranscriptDensityOptions;
-  menuLabel: string;
-  options: LocaleResourceTranslationWorkspaceTranscriptDensityOptions;
   title: string;
 }
 
@@ -269,6 +245,46 @@ export interface LocaleResourceTranslationWorkspaceToolsPullRequest {
   unresolvedTitle: string;
 }
 
+export interface LocaleResourceTranslationWorkspaceTools {
+  addToChat: string;
+  checks: LocaleResourceTranslationWorkspaceToolsChecks;
+  comments: LocaleResourceTranslationWorkspaceToolsComments;
+  commit: LocaleResourceTranslationWorkspaceToolsCommit;
+  diffBase: LocaleResourceTranslationWorkspaceToolsDiffBase;
+  dockInSidebar: string;
+  empty: LocaleResourceTranslationWorkspaceToolsEmpty;
+  git: LocaleResourceTranslationWorkspaceToolsGit;
+  listeningPorts: string;
+  pullRequest: LocaleResourceTranslationWorkspaceToolsPullRequest;
+  resizeFileTree: string;
+  resizeGitList: string;
+  subprocesses: string;
+  tabs: LocaleResourceTranslationWorkspaceToolsTabs;
+}
+
+export interface LocaleResourceTranslationWorkspaceSetup {
+  approvalUnavailable: string;
+  continueAnyway: string;
+  discard: string;
+  discardConfirm: string;
+  discardConfirmDescription: string;
+  discardConfirmTitle: string;
+  failedStep: string;
+  failedTitle: string;
+  noLog: string;
+  ready: string;
+  retry: string;
+  running: string;
+  runningStep: string;
+  viewLog: string;
+}
+
+export interface LocaleResourceTranslationWorkspaceAmbiguousSend {
+  description: string;
+  dismiss: string;
+  title: string;
+}
+
 export interface LocaleResourceTranslationWorkspace {
   ambiguousSend: LocaleResourceTranslationWorkspaceAmbiguousSend;
   backgroundChatCompleted: string;
@@ -288,7 +304,6 @@ export interface LocaleResourceTranslationWorkspace {
   statsChanges: string;
   statsLastActive: string;
   tools: LocaleResourceTranslationWorkspaceTools;
-  transcriptDensity: LocaleResourceTranslationWorkspaceTranscriptDensity;
   worktreeDirtyContinue: string;
   worktreeDirtyDescription: string;
   worktreeDirtyRemember: string;
@@ -586,12 +601,6 @@ export interface LocaleResourceTranslationSettingsAppearanceThemeOptions {
   system: string;
 }
 
-export interface LocaleResourceTranslationSettingsAppearanceTranscriptDensityOptions {
-  compact: string;
-  debug: string;
-  normal: string;
-}
-
 export interface LocaleResourceTranslationSettingsAppearance {
   keybindingHintsDescription: string;
   keybindingHintsSwitchLabel: string;
@@ -600,10 +609,6 @@ export interface LocaleResourceTranslationSettingsAppearance {
   languageOptions: LocaleResourceTranslationSettingsAppearanceLanguageOptions;
   theme: string;
   themeOptions: LocaleResourceTranslationSettingsAppearanceThemeOptions;
-  transcriptDensityDescription: string;
-  transcriptDensityLabel: string;
-  transcriptDensityOptions: LocaleResourceTranslationSettingsAppearanceTranscriptDensityOptions;
-  transcriptDensityTitle: string;
 }
 
 export interface LocaleResourceTranslationSettingsDanger {
@@ -624,6 +629,7 @@ export interface LocaleResourceTranslationSettingsTabs {
   mobile: string;
   updates: string;
   workspace: string;
+  usage: string;
 }
 
 export interface LocaleResourceTranslationSettingsTabDescriptions {
@@ -635,6 +641,46 @@ export interface LocaleResourceTranslationSettingsTabDescriptions {
   mobile: string;
   updates: string;
   workspace: string;
+  usage: string;
+}
+
+export interface LocaleResourceTranslationUsageUnavailableReasons {
+  "binary-missing": string;
+  "exec-failed": string;
+  "schema-mismatch": string;
+  timeout: string;
+}
+
+export interface LocaleResourceTranslationUsage {
+  activeBlock: string;
+  activeRuns: string;
+  burnRate: string;
+  burnRateThreshold: string;
+  burnRateWarning: string;
+  burnRateWarningActive: string;
+  burnRateWarningDescription: string;
+  byAgent: string;
+  cacheCreationTokens: string;
+  cacheReadTokens: string;
+  collecting: string;
+  contextNearLimit: string;
+  contextUsed: string;
+  month: string;
+  noData: string;
+  projected: string;
+  inputTokens: string;
+  lastCollected: string;
+  outputTokens: string;
+  refresh: string;
+  source: string;
+  sourceDescription: string;
+  sessionCost: string;
+  today: string;
+  tokens: string;
+  unavailable: string;
+  unavailableReasons: LocaleResourceTranslationUsageUnavailableReasons;
+  warnings: string;
+  week: string;
 }
 
 export interface LocaleResourceTranslationSettingsUpdates {
@@ -988,9 +1034,23 @@ export interface LocaleResourceTranslationMessages {
 
 export interface LocaleResourceTranslationDialog {
   chatName: string;
+  confirm: LocaleResourceTranslationDialogConfirm;
   importSession: LocaleResourceTranslationDialogImportSession;
   renameChat: string;
   sessionHandoff: LocaleResourceTranslationDialogSessionHandoff;
+}
+
+export interface LocaleResourceTranslationDialogConfirm {
+  deleteCustomAgentDetail_one: string;
+  deleteCustomAgentDetail_other: string;
+  deleteCustomAgentDetailNone: string;
+  deleteCustomAgentTitle: string;
+  discard: string;
+  dontSave: string;
+  kill: string;
+  killProcessTitle: string;
+  saveFileChangesDetail: string;
+  saveFileChangesTitle: string;
 }
 
 export interface LocaleResourceTranslationDialogImportSession {
@@ -1207,6 +1267,7 @@ export interface LocaleResourceTranslation {
   ui: LocaleResourceTranslationUi;
   promptInput: LocaleResourceTranslationPromptInput;
   runtimeValues: LocaleResourceTranslationRuntimeValues;
+  usage?: LocaleResourceTranslationUsage;
 }
 
 export interface LocaleResource {

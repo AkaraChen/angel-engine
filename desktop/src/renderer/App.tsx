@@ -7,10 +7,12 @@ import { Suspense } from "react";
 import { queryClient } from "@/app/query-client";
 import { AppRouter } from "@/app/router";
 import { AppLoadingScreen } from "@/components/app-loading-screen";
+import { ConfirmDialogHost } from "@/components/ui/confirm-dialog";
 import { ToastProvider } from "@/components/ui/toast";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AgentCatalogProvider } from "@/features/agents/agent-catalog";
 import { SettingsWindowPage } from "@/features/settings/settings-window-page";
+import { UpdateMessageDialog } from "@/features/updates/update-message-dialog";
 import { DaemonProvider } from "@/platform/daemon";
 import { DaemonEventSync } from "@/platform/daemon-events";
 import { KeymapProvider } from "@/platform/keymap/provider";
@@ -27,7 +29,11 @@ function AppProviders({ children }: PropsWithChildren) {
                 <QueryClientProvider client={queryClient}>
                   <KeymapProvider>
                     <ToastProvider>
-                      <TooltipProvider>{children}</TooltipProvider>
+                      <TooltipProvider>
+                        {children}
+                        <UpdateMessageDialog />
+                        <ConfirmDialogHost />
+                      </TooltipProvider>
                     </ToastProvider>
                   </KeymapProvider>
                 </QueryClientProvider>

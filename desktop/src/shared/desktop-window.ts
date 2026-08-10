@@ -14,34 +14,19 @@ export interface DesktopThemeSetInput {
   mode: DesktopThemeMode;
 }
 
-export interface DesktopConfirmDeleteCustomAgentInput {
-  chatCount: number;
-  label: string;
+/**
+ * Update notices the main process needs the user to see. The renderer owns the
+ * presentation (an in-app dialog), so main sends the already-translated copy
+ * plus the actions the dialog should offer.
+ */
+export interface DesktopUpdateMessageEvent {
+  actions: DesktopUpdateMessageAction[];
+  detail: string;
+  message: string;
+  tone: "error" | "info";
 }
 
-export interface DesktopConfirmDeleteArchivedChatsInput {
-  chatCount: number;
-  managedWorktreeCount: number;
-}
-
-export interface DesktopConfirmDeleteManagedWorktreesInput {
-  chatCount: number;
-  managedWorktreeCount: number;
-}
-
-export interface DesktopConfirmArchiveWorkspaceInput {
-  hasUncommittedChanges: boolean;
-  path: string;
-}
-
-export interface DesktopConfirmSaveWorkspaceFileChangesInput {
-  path: string;
-}
-
-export type DesktopConfirmSaveWorkspaceFileChangesResult =
-  | "cancel"
-  | "discard"
-  | "save";
+export type DesktopUpdateMessageAction = "install";
 
 export interface DesktopUpdateDownloadedEvent {
   releaseName: string;
@@ -56,18 +41,7 @@ export const DESKTOP_UPDATE_STATUS_CHANGED_CHANNEL =
   "desktop-window:update:status:changed";
 export const DESKTOP_UPDATE_STATUS_GET_CHANNEL =
   "desktop-window:update:status:get";
-export const DESKTOP_CONFIRM_DELETE_CUSTOM_AGENT_CHANNEL =
-  "desktop-window:confirm-delete-custom-agent";
-export const DESKTOP_CONFIRM_DELETE_ALL_CHATS_CHANNEL =
-  "desktop-window:confirm-delete-all-chats";
-export const DESKTOP_CONFIRM_DELETE_ARCHIVED_CHATS_CHANNEL =
-  "desktop-window:confirm-delete-archived-chats";
-export const DESKTOP_CONFIRM_DELETE_MANAGED_WORKTREES_CHANNEL =
-  "desktop-window:confirm-delete-managed-worktrees";
-export const DESKTOP_CONFIRM_ARCHIVE_WORKSPACE_CHANNEL =
-  "desktop-window:confirm-archive-workspace";
-export const DESKTOP_CONFIRM_SAVE_WORKSPACE_FILE_CHANGES_CHANNEL =
-  "desktop-window:confirm-save-workspace-file-changes";
+export const DESKTOP_UPDATE_MESSAGE_CHANNEL = "desktop-window:update:message";
 export const DESKTOP_COMMAND_CHANNEL = "desktop-window:command";
 export const DESKTOP_WINDOW_CONTENT_READY_CHANNEL =
   "desktop-window:content-ready";

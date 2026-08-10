@@ -1,4 +1,5 @@
 import type {
+  WorkspaceGitNumstatEntry,
   WorkspaceGitSkippedFile,
   WorkspaceToolGitStatus,
   WorkspaceToolGitStatusEntry,
@@ -86,6 +87,7 @@ export async function buildUntrackedPatch(
 ) {
   const warnings: string[] = [];
   const patches: string[] = [];
+  const numstat: WorkspaceGitNumstatEntry[] = [];
   const skippedFiles: WorkspaceGitSkippedFile[] = [];
   let totalBytes = 0;
 
@@ -127,14 +129,79 @@ export async function buildUntrackedPatch(
     }
 
     totalBytes += buffer.byteLength;
-    patches.push(createNewFilePatch(entry.path, buffer.toString("utf8")));
+    const contents = buffer.toString("utf8");
+    patches.push(createNewFilePatch(entry.path, contents));
+    numstat.push({
+      additions: countTextLines(contents),
+      deletions: 0,
+      path: entry.path,
+    });
   }
 
   return {
     patch: joinPatches(...patches),
+    numstat,
     skippedFiles,
     warnings,
   };
+}
+
+export function parseGitNumstatOutput(output: string) {
+  const parts = output.split("\0");
+  const entries: WorkspaceGitNumstatEntry[] = [];
+  let index = 0;
+
+  while (index < parts.length) {
+    const record = parts[index] ?? "";
+    index += 1;
+    if (!record) continue;
+
+    const [rawAdditions, rawDeletions, recordPath = ""] = record.split("\t");
+    let entryPath = recordPath;
+    if (!entryPath) {
+      index += 1;
+      entryPath = parts[index] ?? "";
+      index += 1;
+    }
+    if (!entryPath) continue;
+
+    entries.push({
+      additions: parseNumstatCount(rawAdditions),
+      deletions: parseNumstatCount(rawDeletions),
+      path: normalizeGitPath(entryPath),
+    });
+  }
+
+  return entries;
+}
+
+export function mergeGitNumstatEntries(
+  ...groups: WorkspaceGitNumstatEntry[][]
+) {
+  const merged = new Map<string, WorkspaceGitNumstatEntry>();
+  for (const entry of groups.flat()) {
+    const existing = merged.get(entry.path);
+    merged.set(entry.path, {
+      additions: (existing?.additions ?? 0) + entry.additions,
+      deletions: (existing?.deletions ?? 0) + entry.deletions,
+      path: entry.path,
+    });
+  }
+  return Array.from(merged.values()).sort((left, right) =>
+    left.path.localeCompare(right.path),
+  );
+}
+
+function parseNumstatCount(value?: string) {
+  return value && /^\d+$/.test(value) ? Number(value) : 0;
+}
+
+function countTextLines(contents: string) {
+  if (!contents) return 0;
+  const normalized = contents.replaceAll("\r\n", "\n");
+  return normalized.endsWith("\n")
+    ? normalized.split("\n").length - 1
+    : normalized.split("\n").length;
 }
 
 function createNewFilePatch(treePath: string, contents: string) {

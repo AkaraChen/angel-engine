@@ -1,8 +1,8 @@
 import type {
   GitHubMergeMethod,
   GitHubPullRequestCheck,
+  GitHubPullRequestReviewThread,
   GitHubPullRequestStatus,
-  GitHubReviewThread,
 } from "@angel-engine/daemon-api/github";
 import type { FC } from "react";
 import { DaemonRequestError } from "@angel-engine/daemon-client";
@@ -25,6 +25,7 @@ import {
   WorkspaceToolEmpty,
 } from "@/app/workspace/workspace-tool-layout";
 import { Button } from "@/components/ui/button";
+import { confirmAction } from "@/components/ui/confirm-dialog";
 import {
   NativeSelect,
   NativeSelectOption,
@@ -107,11 +108,19 @@ export const PullRequestPanel: FC<{ root: string }> = ({ root }) => {
         onArchive={async () => {
           if (!is.nonEmptyString(chatId)) return;
           try {
-            const confirmed =
-              await window.desktopWindow.confirmArchiveWorkspace({
-                hasUncommittedChanges: status.worktreeDirty,
-                path: root,
-              });
+            const confirmed = await confirmAction({
+              cancelLabel: t("common.cancel"),
+              confirmLabel: t("workspace.tools.pullRequest.archive"),
+              description: status.worktreeDirty
+                ? t("workspace.tools.pullRequest.archiveConfirmDirtyDetail", {
+                    path: root,
+                  })
+                : t("workspace.tools.pullRequest.archiveConfirmDetail", {
+                    path: root,
+                  }),
+              title: t("workspace.tools.pullRequest.archiveConfirmTitle"),
+              tone: "danger",
+            });
             if (!confirmed) return;
             await archiveMutation.mutateAsync(chatId);
           } catch (error) {
@@ -454,7 +463,7 @@ const ReviewThreadRow: FC<{
   onOpen: () => void;
   onResolve: () => Promise<unknown>;
   pending: boolean;
-  thread: GitHubReviewThread;
+  thread: GitHubPullRequestReviewThread;
 }> = ({ onOpen, onResolve, pending, thread }) => {
   const { t } = useTranslation();
   return (

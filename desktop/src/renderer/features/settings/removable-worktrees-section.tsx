@@ -16,6 +16,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getProjectDisplayName } from "@/app/workspace/workspace-display";
 import { Button } from "@/components/ui/button";
+import { confirmAction } from "@/components/ui/confirm-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/components/ui/toast";
 import { broadcastChatsChanged } from "@/features/chat/chat-metadata-events";
@@ -74,16 +75,24 @@ export const RemovableWorktreesSection: FC<RemovableWorktreesSectionProps> = ({
       if (targets.length === 0) return;
 
       try {
-        const confirmed =
-          await window.desktopWindow.confirmDeleteManagedWorktrees({
-            chatCount: targets.reduce(
-              (total, worktree) => total + worktree.archivedChatCount,
-              0,
-            ),
-            managedWorktreeCount: targets.filter(
-              (worktree) => worktree.existsOnDisk,
-            ).length,
-          });
+        const confirmed = await confirmAction({
+          cancelLabel: t("common.cancel"),
+          confirmLabel: t("common.delete"),
+          description: t(
+            "settings.archived.removableWorktrees.confirmDeleteDetail",
+            {
+              chatCount: targets.reduce(
+                (total, worktree) => total + worktree.archivedChatCount,
+                0,
+              ),
+              managedWorktreeCount: targets.filter(
+                (worktree) => worktree.existsOnDisk,
+              ).length,
+            },
+          ),
+          title: t("settings.archived.removableWorktrees.confirmDeleteTitle"),
+          tone: "danger",
+        });
         if (!confirmed) return;
 
         const result = await deleteWorktreesMutation.mutateAsync({

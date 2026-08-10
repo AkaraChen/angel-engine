@@ -50,6 +50,7 @@
         "@angel-engine/daemon-client": "workspace:*",
         "@angel-engine/js-client": "workspace:*",
         "@angel-engine/pi-client": "workspace:*",
+        "@angel-engine/usage-collector": "workspace:*",
         "@anthropic-ai/claude-agent-sdk": "0.3.198",
         "@assistant-ui/core": "0.2.20",
         "@assistant-ui/react": "^0.14.26",
@@ -411,6 +412,30 @@
         "@angel-engine/client-napi": "0.1.0",
       },
     },
+    "packages/usage-collector": {
+      "name": "@angel-engine/usage-collector",
+      "version": "0.1.0",
+      "dependencies": {
+        "ccusage": "20.0.19",
+        "zod": "^4.4.3",
+      },
+      "devDependencies": {
+        "@types/node": "^24.10.1",
+        "oxlint": "^1.73.0",
+        "oxlint-tsgolint": "^0.24.0",
+        "tsup": "^8.5.1",
+        "typescript": "^7.0.2",
+        "vitest": "^4.1.9",
+      },
+      "optionalDependencies": {
+        "@ccusage/ccusage-darwin-arm64": "20.0.19",
+        "@ccusage/ccusage-darwin-x64": "20.0.19",
+        "@ccusage/ccusage-linux-arm64": "20.0.19",
+        "@ccusage/ccusage-linux-x64": "20.0.19",
+        "@ccusage/ccusage-win32-arm64": "20.0.19",
+        "@ccusage/ccusage-win32-x64": "20.0.19",
+      },
+    },
   },
   "trustedDependencies": [
     "@google/genai",
@@ -464,6 +489,8 @@
     "@angel-engine/js-client": ["@angel-engine/js-client@workspace:packages/js-client"],
 
     "@angel-engine/pi-client": ["@angel-engine/pi-client@workspace:packages/pi-client"],
+
+    "@angel-engine/usage-collector": ["@angel-engine/usage-collector@workspace:packages/usage-collector"],
 
     "@antfu/install-pkg": ["@antfu/install-pkg@1.1.0", "", { "dependencies": { "package-manager-detector": "^1.3.0", "tinyexec": "^1.0.1" } }, "sha512-MGQsmw10ZyI+EJo45CdSER4zEb+p31LpDAFp2Z3gkSd1yqVZGi0Ebx++YTEMonJy4oChEMLsxZ64j8FH6sSqtQ=="],
 
@@ -640,6 +667,18 @@
     "@braintree/sanitize-url": ["@braintree/sanitize-url@7.1.2", "", {}, "sha512-jigsZK+sMF/cuiB7sERuo9V7N9jx+dhmHHnQyDSVdpZwVutaBu7WvNYqMDLSgFgfB30n452TP3vjDAvFC973mA=="],
 
     "@bramus/specificity": ["@bramus/specificity@2.4.2", "", { "dependencies": { "css-tree": "^3.0.0" }, "bin": { "specificity": "bin/cli.js" } }, "sha512-ctxtJ/eA+t+6q2++vj5j7FYX3nRu311q1wfYH3xjlLOsczhlhxAg2FWNUXhpGvAw3BWo1xBcvOV6/YLc2r5FJw=="],
+
+    "@ccusage/ccusage-darwin-arm64": ["@ccusage/ccusage-darwin-arm64@20.0.19", "", { "os": "darwin", "cpu": "arm64" }, "sha512-8b69h4tuMH1KNW+EYjFRJWpbWHXbMUtFu8cOCyFOQsR6lGxq37g0kzEGHSqG+iZEoUTHaabR5CE7ZHLhW9Q64A=="],
+
+    "@ccusage/ccusage-darwin-x64": ["@ccusage/ccusage-darwin-x64@20.0.19", "", { "os": "darwin", "cpu": "x64" }, "sha512-YTsqIfsPo3qR9OMrwJtnJoq/fil7Jk5mzXV8k0Iejpiq7zysw4FfkjCeHr0UVJG8ihdqtE18o+xIk99p3v+5Ew=="],
+
+    "@ccusage/ccusage-linux-arm64": ["@ccusage/ccusage-linux-arm64@20.0.19", "", { "os": "linux", "cpu": "arm64" }, "sha512-4e+7hV3WrEpM7hQPQkh4/zNLTUSqzpd+vSSWl2y659+xQ+JCDLWqE6gzvXLMOAT/LTtcFtlrduIWDZt8VPceqQ=="],
+
+    "@ccusage/ccusage-linux-x64": ["@ccusage/ccusage-linux-x64@20.0.19", "", { "os": "linux", "cpu": "x64" }, "sha512-VPbB6onrwOGojTKutFzeahttb98ZgmdsiQpOr/BJet1i3QdrmUGXGmJSt591xXrvVOVVgsC7/5wBELdWM9/bKA=="],
+
+    "@ccusage/ccusage-win32-arm64": ["@ccusage/ccusage-win32-arm64@20.0.19", "", { "os": "win32", "cpu": "arm64" }, "sha512-oOv4mZkapxzvQeAMI+jqfTOv/zN2x2AYPAD+F4AnYHQQL4n898axhH9uPd2Ls0U5CDlvfh1zDTyNILz8X9M15A=="],
+
+    "@ccusage/ccusage-win32-x64": ["@ccusage/ccusage-win32-x64@20.0.19", "", { "os": "win32", "cpu": "x64" }, "sha512-KtDlTk07uv8cu6TlizB/RptcDiQePE1YSQe6uNNZTUnwVy9zq5R3fvUUFr9/d3FYHwimSGduoHXRS8Ta+Kmkrw=="],
 
     "@chenglou/pretext": ["@chenglou/pretext@0.0.8", "", {}, "sha512-yqm2GMxnPI7VHcHwe84P8ZF0JK/2d2DMKPqMN+s95jQhwDMYYXKVFVJUMEaVWckQStdsjdLav/0Vu+d9YbtGxA=="],
 
@@ -2090,6 +2129,8 @@
     "caniuse-lite": ["caniuse-lite@1.0.30001805", "", {}, "sha512-52noaS3DubycKSXaU30TwPGIp+POyQSUVa5jBEq3vkRkY0kjyb3LQgvhU6WGyCcyXqVLWO0Cw0Q6BSdD0kUfVA=="],
 
     "ccount": ["ccount@2.0.1", "", {}, "sha512-eyrF0jiFpY+3drT6383f1qhkbGsLSifNAjA61IUjZjmLCWjItY6LB9ft9YhoDgwfmclB2zhu51Lc7+95b8NRAg=="],
+
+    "ccusage": ["ccusage@20.0.19", "", { "optionalDependencies": { "@ccusage/ccusage-darwin-arm64": "20.0.19", "@ccusage/ccusage-darwin-x64": "20.0.19", "@ccusage/ccusage-linux-arm64": "20.0.19", "@ccusage/ccusage-linux-x64": "20.0.19", "@ccusage/ccusage-win32-arm64": "20.0.19", "@ccusage/ccusage-win32-x64": "20.0.19" }, "bin": { "ccusage": "./src/cli.js" } }, "sha512-vyNIyctcvTKFbrsU/WJuWiII3CVw8WopU/0NcR+lKmRbh62wm0jccmkWrFCG6j7R8agc8mIBz5+YlmGbXH1RnQ=="],
 
     "chai": ["chai@6.2.2", "", {}, "sha512-NUPRluOfOiTKBKvWPtSD4PhFvWCqOi0BGStNWs57X9js7XGTprSmFoz5F0tWhR4WPjNeR9jXqdC7/UpSJTnlRg=="],
 

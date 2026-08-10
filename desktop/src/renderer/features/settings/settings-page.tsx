@@ -24,14 +24,9 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import { confirmAction } from "@/components/ui/confirm-dialog";
 import { Switch } from "@/components/ui/switch";
 import { useAgentCatalog } from "@/features/agents/agent-catalog-context";
-import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
-import {
-  TRANSCRIPT_DENSITY_VALUES,
-  type TranscriptDensity,
-} from "@/features/chat/transcript-density";
-import { useTranscriptDensityStore } from "@/features/chat/transcript-density-store";
 import { useKeybindingHintsStore } from "@/features/keybindings/keybinding-hints-store";
 import { KeyboardSettings } from "@/features/keybindings/keyboard-settings";
 import { ArchivedSettingsPanel } from "@/features/settings/archived-settings-panel";
@@ -48,6 +43,7 @@ import {
 import { useSettingsStore } from "@/features/settings/settings-store";
 import { findSettingsTab } from "@/features/settings/settings-tabs";
 import { UpdateSettings } from "@/features/settings/update-settings";
+import { UsageSettings } from "@/features/usage/usage-settings";
 import { useSettingsTab } from "@/features/settings/use-settings-tab";
 import { useThemeSettings } from "@/features/settings/use-theme-settings";
 import { useTraySettings } from "@/features/settings/use-tray-settings";
@@ -213,6 +209,14 @@ export function SettingsPage({
 
           <SettingsTabPanel
             activeTab={activeTab}
+            tab="usage"
+            tabPanelId={tabPanelId}
+          >
+            <UsageSettings />
+          </SettingsTabPanel>
+
+          <SettingsTabPanel
+            activeTab={activeTab}
             tab="mobile"
             tabPanelId={tabPanelId}
           >
@@ -279,13 +283,6 @@ function AppearanceSettings() {
     (state) => state.setEnabled,
   );
   const setLanguage = useSettingsStore((state) => state.setLanguage);
-  const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
-  const transcriptDensity = useTranscriptDensityStore((state) =>
-    state.densityFor(workspaceMode),
-  );
-  const setTranscriptDensity = useTranscriptDensityStore(
-    (state) => state.setDensity,
-  );
 
   return (
     <SettingsGroup>
@@ -316,23 +313,6 @@ function AppearanceSettings() {
           />
         }
         title={t("settings.appearance.language")}
-      />
-      <SettingsRow
-        after={
-          <SettingsSelect
-            label={t("settings.appearance.transcriptDensityLabel")}
-            onValueChange={(value) =>
-              setTranscriptDensity(workspaceMode, value as TranscriptDensity)
-            }
-            options={TRANSCRIPT_DENSITY_VALUES.map((value) => ({
-              label: t(`settings.appearance.transcriptDensityOptions.${value}`),
-              value,
-            }))}
-            value={transcriptDensity}
-          />
-        }
-        description={t("settings.appearance.transcriptDensityDescription")}
-        title={t("settings.appearance.transcriptDensityTitle")}
       />
       <SettingsRow
         after={
@@ -573,11 +553,17 @@ function DangerSettings({
   const { t } = useTranslation();
 
   const deleteAllChats = useCallback(async () => {
-    const confirmed = await window.desktopWindow.confirmDeleteAllChats();
+    const confirmed = await confirmAction({
+      cancelLabel: t("common.cancel"),
+      confirmLabel: t("common.delete"),
+      description: t("settings.danger.description"),
+      title: t("settings.danger.confirmDeleteAll"),
+      tone: "danger",
+    });
     if (!confirmed) return;
 
     await onDeleteAllChats();
-  }, [onDeleteAllChats]);
+  }, [onDeleteAllChats, t]);
 
   return (
     <SettingsGroup title={t("settings.danger.title")} tone="danger">

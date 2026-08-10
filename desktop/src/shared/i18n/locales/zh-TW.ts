@@ -125,20 +125,7 @@ export const zhTW = {
       statsBranch: "分支",
       statsChanges: "變更",
       statsLastActive: "最近活動",
-      transcriptDensity: {
-        descriptions: {
-          compact: "預設摺疊工具細節，需要時可展開單條。",
-          debug: "預設展開工具與推理細節，方便排查。",
-          normal: "後面沒有正文時自動展開工具。",
-        },
-        menuLabel: "時間線密度：{{density}}",
-        options: {
-          compact: "簡潔",
-          debug: "偵錯",
-          normal: "標準",
-        },
-        title: "時間線密度",
-      },
+
       tools: {
         checks: {
           fixFailures: "修復失敗",
@@ -179,6 +166,27 @@ export const zhTW = {
           filesSelected: "已選 {{selected}}/{{total}} 個檔案",
           summaryPlaceholder: "摘要",
         },
+        diffBase: {
+          branch: "相對預設分支",
+          fallback: {
+            anchorMissing:
+              "{{base}} 基準 {{sha}} 已不存在，暫時顯示{{fallback}}。",
+            anchorUnavailable:
+              "目前工作階段沒有可用的{{base}}，暫時顯示{{fallback}}。",
+            defaultBranchUnavailable:
+              "無法解析預設分支，暫時顯示{{fallback}}。",
+            gitRefUnavailable:
+              "Git 參照 {{ref}} 不可用，暫時顯示{{fallback}}。",
+            noMergeBase: "{{ref}} 與 HEAD 沒有合併基準，暫時顯示{{fallback}}。",
+            notRepository: "此工作區不是 Git 儲存庫。",
+          },
+          fileCount: "{{count}} 個檔案",
+          label: "差異基準",
+          session: "自工作階段開始",
+          turn: "自上一輪開始",
+          unstaged: "僅未暫存",
+          worktree: "未提交變更",
+        },
         dockInSidebar: "停靠到側欄",
         empty: {
           checksUnavailable: "檢查不可用",
@@ -204,6 +212,16 @@ export const zhTW = {
           dirty: "{{value}} 個變更",
           noCommits: "尚無提交",
           noUpstream: "沒有上游分支",
+          changes: "變更",
+          currentBranch: "目前分支",
+          history: "歷史",
+          noBranches: "沒有本機分支",
+          noHistory: "尚無提交",
+          pull: "拉取 {{remote}}",
+          pullCount: "從 {{remote}} 拉取 {{count}} 個提交",
+          pulling: "拉取中…",
+          pushCount: "向 {{remote}} 推送 {{count}} 個提交",
+          viewTabs: "Git 面板檢視",
           publish: "發布分支",
           push: "推送",
           pushHint: {
@@ -397,15 +415,6 @@ export const zhTW = {
           light: "淺色",
           system: "跟隨系統",
         },
-        transcriptDensityDescription:
-          "目前工作區模式下時間線預設顯示多少工具細節。Chat 預設簡潔；Work / Power 預設標準。",
-        transcriptDensityLabel: "時間線密度",
-        transcriptDensityOptions: {
-          compact: "簡潔",
-          debug: "偵錯",
-          normal: "標準",
-        },
-        transcriptDensityTitle: "時間線密度",
       },
       archived: {
         allProjects: "所有專案",
@@ -552,6 +561,7 @@ export const zhTW = {
         danger: "影響本機所有聊天記錄的不可復原操作。",
         mobile: "透過本機網路從這台電腦提供行動版網頁應用程式。",
         updates: "這個應用程式安裝哪些版本，以及何時安裝。",
+        usage: "來自 ccusage 的本機 Token 與費用活動估算。",
         workspace: "工作時輸入區與 worktree 的行為方式。",
       },
       tabs: {
@@ -562,6 +572,7 @@ export const zhTW = {
         danger: "進階",
         mobile: "行動版",
         updates: "更新",
+        usage: "用量",
         workspace: "工作區",
       },
       title: "設定",
@@ -601,6 +612,44 @@ export const zhTW = {
         trayEnabledSwitchLabel: "顯示選單列艦隊摘要",
         trayEnabledTitle: "選單列艦隊摘要",
       },
+    },
+    usage: {
+      activeBlock: "目前計費區塊",
+      activeRuns: "執行中的工作階段",
+      burnRate: "目前速率",
+      burnRateThreshold: "警告門檻",
+      burnRateWarning: "消耗速率警告",
+      burnRateWarningActive: "目前速率已超過 {{threshold}}。",
+      burnRateWarningDescription:
+        "目前每小時速率超過門檻時醒目顯示用量指示器。",
+      byAgent: "依 Agent",
+      cacheCreationTokens: "快取寫入",
+      cacheReadTokens: "快取讀取",
+      collecting: "正在收集本機用量…",
+      contextNearLimit: "上下文即將達到上限。建議建立新聊天。",
+      contextUsed: "已用上下文",
+      month: "本月",
+      noData: "沒有本機用量記錄",
+      projected: "依目前速率預估",
+      inputTokens: "輸入",
+      lastCollected: "上次收集於 {{time}}。",
+      outputTokens: "輸出",
+      refresh: "重新整理",
+      source: "資料來源",
+      sourceDescription:
+        "根據本機 Agent 日誌估算。支援的提供者：{{agents}}；其他及自訂提供者不可用。",
+      sessionCost: "費用",
+      today: "今天",
+      tokens: "tokens",
+      unavailable: "用量無法使用",
+      unavailableReasons: {
+        "binary-missing": "用量無法使用：缺少已封裝的 ccusage 二進位檔。",
+        "exec-failed": "用量無法使用：ccusage 執行失敗。",
+        "schema-mismatch": "用量無法使用：ccusage 輸出格式已變更。",
+        timeout: "用量無法使用：收集逾時。",
+      },
+      warnings: "警告",
+      week: "本週",
     },
     updates: {
       checkFailed: "無法檢查更新",
@@ -766,6 +815,18 @@ export const zhTW = {
     },
     dialog: {
       chatName: "聊天名稱",
+      confirm: {
+        deleteCustomAgentDetail_one: "這還會刪除 {{count}} 個相關工作階段。",
+        deleteCustomAgentDetail_other: "這還會刪除 {{count}} 個相關工作階段。",
+        deleteCustomAgentDetailNone: "沒有工作階段使用這個自訂 Agent。",
+        deleteCustomAgentTitle: "要刪除 {{label}} 嗎？",
+        discard: "捨棄",
+        dontSave: "不儲存",
+        kill: "結束處理程序",
+        killProcessTitle: "要結束 {{name}}（{{pid}}）嗎？",
+        saveFileChangesDetail: "如果不儲存，你的變更將會遺失。",
+        saveFileChangesTitle: "要儲存對 {{path}} 的變更嗎？",
+      },
       importSession: {
         cwdLabel: "目錄：{{cwd}}",
         description:

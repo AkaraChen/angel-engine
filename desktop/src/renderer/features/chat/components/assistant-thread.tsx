@@ -3,6 +3,7 @@ import {
   SelectionToolbarPrimitive,
   ThreadPrimitive,
 } from "@assistant-ui/react";
+import type { ChatSessionUsage } from "@angel-engine/js-client";
 import { Quotes as Quote } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
 import { Trans, useTranslation } from "react-i18next";
@@ -16,13 +17,16 @@ import {
 } from "@/features/chat/components/messages";
 import { SketchUnderline } from "@/features/chat/components/sketch-underline";
 import { workspaceContentColumnClass } from "@/features/chat/components/thread-styles";
+import { ContextUsageBar } from "@/features/usage/context-usage-bar";
 
 export function AssistantThread({
   onBeforeSubmit,
   projectName,
+  usage,
 }: {
   onBeforeSubmit?: () => boolean | Promise<boolean>;
   projectName?: string;
+  usage?: ChatSessionUsage;
 }) {
   const { t } = useTranslation();
   const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
@@ -85,6 +89,7 @@ export function AssistantThread({
         "
       >
         <div className={workspaceContentColumnClass}>
+          <ContextUsageBar usage={usage} />
           <AssistantComposer onBeforeSubmit={onBeforeSubmit} />
         </div>
       </div>

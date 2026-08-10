@@ -128,20 +128,7 @@ export const ja = {
       statsBranch: "ブランチ",
       statsChanges: "変更",
       statsLastActive: "最終アクティブ",
-      transcriptDensity: {
-        descriptions: {
-          compact: "ツール詳細は折りたたみ。必要なら個別に展開。",
-          debug: "ツールと推論の詳細を開いたまま表示。",
-          normal: "後続テキストがないときツールを自動展開。",
-        },
-        menuLabel: "トランスクリプト密度: {{density}}",
-        options: {
-          compact: "コンパクト",
-          debug: "デバッグ",
-          normal: "標準",
-        },
-        title: "トランスクリプト密度",
-      },
+
       tools: {
         checks: {
           fixFailures: "失敗を修正",
@@ -183,6 +170,29 @@ export const ja = {
           filesSelected: "{{total}} 件中 {{selected}} 件を選択",
           summaryPlaceholder: "概要",
         },
+        diffBase: {
+          branch: "既定ブランチとの差分",
+          fallback: {
+            anchorMissing:
+              "{{base}} の基準 {{sha}} は存在しません。一時的に{{fallback}}を表示します。",
+            anchorUnavailable:
+              "このチャットでは{{base}}を利用できません。一時的に{{fallback}}を表示します。",
+            defaultBranchUnavailable:
+              "既定ブランチを解決できません。一時的に{{fallback}}を表示します。",
+            gitRefUnavailable:
+              "Git 参照 {{ref}} を利用できません。一時的に{{fallback}}を表示します。",
+            noMergeBase:
+              "{{ref}} と HEAD のマージベースがありません。一時的に{{fallback}}を表示します。",
+            notRepository:
+              "このワークスペースは Git リポジトリではありません。",
+          },
+          fileCount: "{{count}} ファイル",
+          label: "差分ベース",
+          session: "セッション開始以降",
+          turn: "前のターン以降",
+          unstaged: "未ステージのみ",
+          worktree: "未コミットの変更",
+        },
         dockInSidebar: "サイドバーにドック",
         empty: {
           checksUnavailable: "チェックを利用できません",
@@ -209,6 +219,16 @@ export const ja = {
           dirty: "{{value}} 件の変更",
           noCommits: "コミットがありません",
           noUpstream: "上流ブランチなし",
+          changes: "変更",
+          currentBranch: "現在のブランチ",
+          history: "履歴",
+          noBranches: "ローカルブランチがありません",
+          noHistory: "まだコミットがありません",
+          pull: "{{remote}} をプル",
+          pullCount: "{{remote}} から {{count}} 件プル",
+          pulling: "プル中…",
+          pushCount: "{{remote}} へ {{count}} 件プッシュ",
+          viewTabs: "Git パネルの表示",
           publish: "ブランチを公開",
           push: "プッシュ",
           pushHint: {
@@ -405,15 +425,6 @@ export const ja = {
           light: "ライト",
           system: "システム",
         },
-        transcriptDensityDescription:
-          "現在のワークスペースモードで、トランスクリプトが既定でどれだけツール詳細を見せるか。Chat はコンパクト、Work / Power は標準から始まります。",
-        transcriptDensityLabel: "トランスクリプト密度",
-        transcriptDensityOptions: {
-          compact: "コンパクト",
-          debug: "デバッグ",
-          normal: "標準",
-        },
-        transcriptDensityTitle: "トランスクリプト密度",
       },
       archived: {
         allProjects: "すべてのプロジェクト",
@@ -571,6 +582,7 @@ export const ja = {
         mobile:
           "ローカルネットワーク経由で、このコンピューターからモバイル版ウェブアプリを配信します。",
         updates: "このアプリがどのリリースを、いつインストールするかです。",
+        usage: "ccusage によるローカルのトークン使用量とコストの推定です。",
         workspace: "作業中の入力欄とワークツリーの動作です。",
       },
       tabs: {
@@ -581,6 +593,7 @@ export const ja = {
         danger: "詳細",
         mobile: "モバイル表示",
         updates: "アップデート",
+        usage: "使用量",
         workspace: "ワークスペース",
       },
       title: "設定",
@@ -624,6 +637,47 @@ export const ja = {
         trayEnabledSwitchLabel: "メニューバーの艦隊サマリーを表示",
         trayEnabledTitle: "メニューバーの艦隊サマリー",
       },
+    },
+    usage: {
+      activeBlock: "現在の課金ブロック",
+      activeRuns: "実行中のセッション",
+      burnRate: "現在のレート",
+      burnRateThreshold: "警告しきい値",
+      burnRateWarning: "消費レート警告",
+      burnRateWarningActive: "現在のレートが {{threshold}} を超えています。",
+      burnRateWarningDescription:
+        "1 時間あたりのレートがしきい値を超えたときに使用量インジケーターを強調します。",
+      byAgent: "エージェント別",
+      cacheCreationTokens: "キャッシュ書き込み",
+      cacheReadTokens: "キャッシュ読み取り",
+      collecting: "ローカル使用量を収集中…",
+      contextNearLimit:
+        "コンテキストが上限に近づいています。新しいチャットを検討してください。",
+      contextUsed: "使用済みコンテキスト",
+      month: "今月",
+      noData: "ローカル使用量の記録がありません",
+      projected: "現在のレートでの予測",
+      inputTokens: "入力",
+      lastCollected: "最終収集：{{time}}。",
+      outputTokens: "出力",
+      refresh: "更新",
+      source: "データソース",
+      sourceDescription:
+        "ローカルのエージェントログから推定。対応プロバイダー：{{agents}}。その他およびカスタムプロバイダーは利用できません。",
+      sessionCost: "コスト",
+      today: "今日",
+      tokens: "トークン",
+      unavailable: "使用量を取得できません",
+      unavailableReasons: {
+        "binary-missing":
+          "使用量を取得できません：同梱された ccusage バイナリがありません。",
+        "exec-failed": "使用量を取得できません：ccusage の実行に失敗しました。",
+        "schema-mismatch":
+          "使用量を取得できません：ccusage の出力形式が変更されました。",
+        timeout: "使用量を取得できません：収集がタイムアウトしました。",
+      },
+      warnings: "警告",
+      week: "今週",
     },
     updates: {
       checkFailed: "アップデートを確認できませんでした",
@@ -796,6 +850,21 @@ export const ja = {
     },
     dialog: {
       chatName: "チャット名",
+      confirm: {
+        deleteCustomAgentDetail_one:
+          "関連するチャット {{count}} 件も削除されます。",
+        deleteCustomAgentDetail_other:
+          "関連するチャット {{count}} 件も削除されます。",
+        deleteCustomAgentDetailNone:
+          "このカスタムエージェントを使用しているチャットはありません。",
+        deleteCustomAgentTitle: "{{label}} を削除しますか？",
+        discard: "破棄",
+        dontSave: "保存しない",
+        kill: "終了",
+        killProcessTitle: "{{name}}（{{pid}}）を終了しますか？",
+        saveFileChangesDetail: "保存しないと変更内容は失われます。",
+        saveFileChangesTitle: "{{path}} の変更を保存しますか？",
+      },
       importSession: {
         cwdLabel: "ディレクトリ: {{cwd}}",
         description:

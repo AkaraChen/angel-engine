@@ -1,5 +1,9 @@
 import type { FileDiffMetadata } from "@pierre/diffs";
-import type { WorkspaceGitSkippedFile } from "@angel-engine/daemon-api/workspace-tools";
+import type {
+  WorkspaceGitDiffResult,
+  WorkspaceGitNumstatEntry,
+  WorkspaceGitSkippedFile,
+} from "@angel-engine/daemon-api/workspace-tools";
 
 import { parsePatchFiles } from "@pierre/diffs";
 import is from "@sindresorhus/is";
@@ -68,6 +72,32 @@ export function buildWorkspaceToolPatchList(
     ),
     files,
   };
+}
+
+export function buildWorkspaceGitDiffPatchList(data: WorkspaceGitDiffResult) {
+  return data.resolvedBase.kind === "worktree"
+    ? buildWorkspaceToolPatchList(
+        data.stagedPatch,
+        data.unstagedPatch,
+        data.skippedFiles,
+      )
+    : buildWorkspaceToolPatchList("", data.patch, data.skippedFiles);
+}
+
+export function getWorkspaceGitNumstatTotal(
+  entries: WorkspaceGitNumstatEntry[],
+  paths?: ReadonlySet<string>,
+): WorkspaceToolPatchFileLineChanges {
+  return entries.reduce<WorkspaceToolPatchFileLineChanges>(
+    (total, entry) =>
+      paths && !paths.has(entry.path)
+        ? total
+        : {
+            additions: total.additions + entry.additions,
+            deletions: total.deletions + entry.deletions,
+          },
+    { additions: 0, deletions: 0 },
+  );
 }
 
 function formatWorkspaceGitSkippedFileNotice(file: WorkspaceGitSkippedFile) {

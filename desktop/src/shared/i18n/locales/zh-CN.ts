@@ -125,20 +125,7 @@ export const zhCN = {
       statsBranch: "分支",
       statsChanges: "更改",
       statsLastActive: "最近活动",
-      transcriptDensity: {
-        descriptions: {
-          compact: "默认折叠工具细节，需要时可展开单条。",
-          debug: "默认展开工具与推理细节，便于排查。",
-          normal: "后面没有正文时自动展开工具。",
-        },
-        menuLabel: "时间线密度：{{density}}",
-        options: {
-          compact: "简洁",
-          debug: "调试",
-          normal: "标准",
-        },
-        title: "时间线密度",
-      },
+
       tools: {
         checks: {
           fixFailures: "修复失败",
@@ -179,6 +166,27 @@ export const zhCN = {
           filesSelected: "已选 {{selected}}/{{total}} 个文件",
           summaryPlaceholder: "摘要",
         },
+        diffBase: {
+          branch: "相对默认分支",
+          fallback: {
+            anchorMissing:
+              "{{base}} 基线 {{sha}} 已不存在，暂时显示{{fallback}}。",
+            anchorUnavailable:
+              "当前会话没有可用的{{base}}，暂时显示{{fallback}}。",
+            defaultBranchUnavailable:
+              "无法解析默认分支，暂时显示{{fallback}}。",
+            gitRefUnavailable:
+              "Git 引用 {{ref}} 不可用，暂时显示{{fallback}}。",
+            noMergeBase: "{{ref}} 与 HEAD 没有合并基点，暂时显示{{fallback}}。",
+            notRepository: "此工作区不是 Git 仓库。",
+          },
+          fileCount: "{{count}} 个文件",
+          label: "差异基线",
+          session: "自会话开始",
+          turn: "自上一轮开始",
+          unstaged: "仅未暂存",
+          worktree: "未提交更改",
+        },
         dockInSidebar: "停靠到侧栏",
         empty: {
           checksUnavailable: "检查不可用",
@@ -204,6 +212,16 @@ export const zhCN = {
           dirty: "{{value}} 个更改",
           noCommits: "尚无提交",
           noUpstream: "没有上游分支",
+          changes: "更改",
+          currentBranch: "当前分支",
+          history: "历史",
+          noBranches: "没有本地分支",
+          noHistory: "还没有提交",
+          pull: "拉取 {{remote}}",
+          pullCount: "从 {{remote}} 拉取 {{count}} 个提交",
+          pulling: "拉取中…",
+          pushCount: "向 {{remote}} 推送 {{count}} 个提交",
+          viewTabs: "Git 面板视图",
           publish: "发布分支",
           push: "推送",
           pushHint: {
@@ -397,15 +415,6 @@ export const zhCN = {
           light: "浅色",
           system: "跟随系统",
         },
-        transcriptDensityDescription:
-          "当前工作区模式下时间线默认展示多少工具细节。Chat 默认简洁；Work / Power 默认标准。",
-        transcriptDensityLabel: "时间线密度",
-        transcriptDensityOptions: {
-          compact: "简洁",
-          debug: "调试",
-          normal: "标准",
-        },
-        transcriptDensityTitle: "时间线密度",
       },
       archived: {
         allProjects: "所有项目",
@@ -550,6 +559,7 @@ export const zhCN = {
         danger: "影响本机所有聊天记录的不可撤销操作。",
         mobile: "通过本地网络从这台电脑提供移动端网页应用。",
         updates: "这个应用安装哪些版本，以及何时安装。",
+        usage: "来自 ccusage 的本地 Token 与费用活动估算。",
         workspace: "工作时输入框与 worktree 的行为方式。",
       },
       tabs: {
@@ -560,6 +570,7 @@ export const zhCN = {
         danger: "高级",
         mobile: "移动端",
         updates: "更新",
+        usage: "用量",
         workspace: "工作区",
       },
       title: "设置",
@@ -599,6 +610,44 @@ export const zhCN = {
         trayEnabledSwitchLabel: "显示菜单栏舰队摘要",
         trayEnabledTitle: "菜单栏舰队摘要",
       },
+    },
+    usage: {
+      activeBlock: "当前计费区块",
+      activeRuns: "运行中的会话",
+      burnRate: "当前速率",
+      burnRateThreshold: "警告阈值",
+      burnRateWarning: "消耗速率警告",
+      burnRateWarningActive: "当前速率已超过 {{threshold}}。",
+      burnRateWarningDescription:
+        "当前每小时速率超过阈值时突出显示用量指示器。",
+      byAgent: "按 Agent",
+      cacheCreationTokens: "缓存写入",
+      cacheReadTokens: "缓存读取",
+      collecting: "正在收集本地用量…",
+      contextNearLimit: "上下文即将达到上限。建议新建聊天。",
+      contextUsed: "已用上下文",
+      month: "本月",
+      noData: "没有本地用量记录",
+      projected: "按当前速率预计",
+      inputTokens: "输入",
+      lastCollected: "上次收集于 {{time}}。",
+      outputTokens: "输出",
+      refresh: "刷新",
+      source: "数据来源",
+      sourceDescription:
+        "根据本地 Agent 日志估算。支持的提供商：{{agents}}；其他及自定义提供商不可用。",
+      sessionCost: "费用",
+      today: "今天",
+      tokens: "tokens",
+      unavailable: "用量不可用",
+      unavailableReasons: {
+        "binary-missing": "用量不可用：缺少打包的 ccusage 二进制文件。",
+        "exec-failed": "用量不可用：ccusage 执行失败。",
+        "schema-mismatch": "用量不可用：ccusage 输出格式已变化。",
+        timeout: "用量不可用：收集超时。",
+      },
+      warnings: "警告",
+      week: "本周",
     },
     updates: {
       checkFailed: "无法检查更新",
@@ -763,6 +812,18 @@ export const zhCN = {
     },
     dialog: {
       chatName: "聊天名称",
+      confirm: {
+        deleteCustomAgentDetail_one: "这还会删除 {{count}} 个相关会话。",
+        deleteCustomAgentDetail_other: "这还会删除 {{count}} 个相关会话。",
+        deleteCustomAgentDetailNone: "没有会话使用这个自定义 Agent。",
+        deleteCustomAgentTitle: "要删除 {{label}} 吗？",
+        discard: "放弃",
+        dontSave: "不保存",
+        kill: "结束进程",
+        killProcessTitle: "要结束 {{name}}（{{pid}}）吗？",
+        saveFileChangesDetail: "如果不保存，你的更改将会丢失。",
+        saveFileChangesTitle: "要保存对 {{path}} 的更改吗？",
+      },
       importSession: {
         cwdLabel: "目录：{{cwd}}",
         description:

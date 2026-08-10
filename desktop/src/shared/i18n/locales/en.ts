@@ -128,20 +128,7 @@ export const en = {
       statsBranch: "Branch",
       statsChanges: "Changes",
       statsLastActive: "Last active",
-      transcriptDensity: {
-        descriptions: {
-          compact: "Fold tool detail; expand any row when needed.",
-          debug: "Keep tool and reasoning detail open.",
-          normal: "Auto-expand tools when nothing follows them.",
-        },
-        menuLabel: "Transcript density: {{density}}",
-        options: {
-          compact: "Compact",
-          debug: "Debug",
-          normal: "Normal",
-        },
-        title: "Transcript density",
-      },
+
       tools: {
         checks: {
           fixFailures: "Fix failures",
@@ -182,6 +169,28 @@ export const en = {
           filesSelected: "{{selected}} of {{total}} files selected",
           summaryPlaceholder: "Summary",
         },
+        diffBase: {
+          branch: "Relative to default branch",
+          fallback: {
+            anchorMissing:
+              "{{base}} baseline {{sha}} no longer exists. Temporarily showing {{fallback}}.",
+            anchorUnavailable:
+              "{{base}} is not available for this chat. Temporarily showing {{fallback}}.",
+            defaultBranchUnavailable:
+              "No default branch could be resolved. Temporarily showing {{fallback}}.",
+            gitRefUnavailable:
+              "Git ref {{ref}} is unavailable. Temporarily showing {{fallback}}.",
+            noMergeBase:
+              "No merge base exists for {{ref}} and HEAD. Temporarily showing {{fallback}}.",
+            notRepository: "This workspace is not a Git repository.",
+          },
+          fileCount: "{{count}} files",
+          label: "Diff base",
+          session: "Since session start",
+          turn: "Since previous turn",
+          unstaged: "Unstaged only",
+          worktree: "Uncommitted changes",
+        },
         dockInSidebar: "Dock in sidebar",
         empty: {
           checksUnavailable: "Checks unavailable",
@@ -208,6 +217,16 @@ export const en = {
           dirty: "{{value}} changed",
           noCommits: "No commits yet",
           noUpstream: "No upstream",
+          changes: "Changes",
+          currentBranch: "Current Branch",
+          history: "History",
+          noBranches: "No local branches",
+          noHistory: "No commits yet",
+          pull: "Pull {{remote}}",
+          pullCount: "Pull {{count}} from {{remote}}",
+          pulling: "Pulling…",
+          pushCount: "Push {{count}} to {{remote}}",
+          viewTabs: "Git panel views",
           publish: "Publish branch",
           push: "Push",
           pushHint: {
@@ -402,15 +421,6 @@ export const en = {
           light: "Light",
           system: "System",
         },
-        transcriptDensityDescription:
-          "How much tool detail the transcript shows by default in the current workspace mode. Chat mode starts in Compact; Work and Power start in Normal.",
-        transcriptDensityLabel: "Transcript density",
-        transcriptDensityOptions: {
-          compact: "Compact",
-          debug: "Debug",
-          normal: "Normal",
-        },
-        transcriptDensityTitle: "Transcript density",
       },
       archived: {
         allProjects: "All projects",
@@ -566,6 +576,7 @@ export const en = {
         mobile:
           "Serve the mobile web app from this computer over your local network.",
         updates: "Which releases this app installs, and when.",
+        usage: "Estimated local token and cost activity from ccusage.",
         workspace: "How the composer and worktrees behave while you work.",
       },
       tabs: {
@@ -576,6 +587,7 @@ export const en = {
         danger: "Advanced",
         mobile: "Mobile view",
         updates: "Updates",
+        usage: "Usage",
         workspace: "Workspace",
       },
       title: "Settings",
@@ -618,6 +630,45 @@ export const en = {
         trayEnabledSwitchLabel: "Show menu bar fleet summary",
         trayEnabledTitle: "Menu bar fleet summary",
       },
+    },
+    usage: {
+      activeBlock: "Active billing block",
+      activeRuns: "Running sessions",
+      burnRate: "Current rate",
+      burnRateThreshold: "Warning threshold",
+      burnRateWarning: "Burn-rate warning",
+      burnRateWarningActive: "Current rate exceeds {{threshold}}.",
+      burnRateWarningDescription:
+        "Highlight the usage indicator when the current hourly rate crosses your threshold.",
+      byAgent: "By agent",
+      cacheCreationTokens: "Cache write",
+      cacheReadTokens: "Cache read",
+      collecting: "Collecting local usage…",
+      contextNearLimit: "Context is near its limit. Consider a new chat.",
+      contextUsed: "Context used",
+      month: "This month",
+      noData: "No local usage records",
+      projected: "Projected at the current rate",
+      inputTokens: "Input",
+      lastCollected: "Last collected at {{time}}.",
+      outputTokens: "Output",
+      refresh: "Refresh",
+      source: "Data source",
+      sourceDescription:
+        "Estimated from local agent logs. Supported providers: {{agents}}; other and custom providers are unavailable.",
+      sessionCost: "Cost",
+      today: "Today",
+      tokens: "tokens",
+      unavailable: "Usage unavailable",
+      unavailableReasons: {
+        "binary-missing":
+          "Usage unavailable: packaged ccusage binary is missing.",
+        "exec-failed": "Usage unavailable: ccusage failed.",
+        "schema-mismatch": "Usage unavailable: ccusage output changed.",
+        timeout: "Usage unavailable: collection timed out.",
+      },
+      warnings: "Warnings",
+      week: "This week",
     },
     updates: {
       checkFailed: "Could not check for updates",
@@ -792,6 +843,22 @@ export const en = {
     },
     dialog: {
       chatName: "Chat name",
+      confirm: {
+        deleteCustomAgentDetail_one:
+          "This will also delete {{count}} related chat.",
+        deleteCustomAgentDetail_other:
+          "This will also delete {{count}} related chats.",
+        deleteCustomAgentDetailNone:
+          "This custom agent is not used by any chats.",
+        deleteCustomAgentTitle: "Delete {{label}}?",
+        discard: "Discard",
+        dontSave: "Don't Save",
+        kill: "Kill",
+        killProcessTitle: "Kill {{name}} ({{pid}})?",
+        saveFileChangesDetail:
+          "Your changes will be lost if you don't save them.",
+        saveFileChangesTitle: "Save changes to {{path}}?",
+      },
       importSession: {
         cwdLabel: "Directory: {{cwd}}",
         description:

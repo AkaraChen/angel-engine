@@ -128,20 +128,7 @@ export const de = {
       statsBranch: "Branch",
       statsChanges: "Änderungen",
       statsLastActive: "Zuletzt aktiv",
-      transcriptDensity: {
-        descriptions: {
-          compact: "Tool-Details einklappen; bei Bedarf einzeln öffnen.",
-          debug: "Tool- und Reasoning-Details standardmäßig geöffnet lassen.",
-          normal: "Tools automatisch öffnen, wenn nichts danach folgt.",
-        },
-        menuLabel: "Transkript-Dichte: {{density}}",
-        options: {
-          compact: "Kompakt",
-          debug: "Debug",
-          normal: "Normal",
-        },
-        title: "Transkript-Dichte",
-      },
+
       tools: {
         checks: {
           fixFailures: "Fehler beheben",
@@ -183,6 +170,28 @@ export const de = {
           filesSelected: "{{selected}} von {{total}} Dateien ausgewählt",
           summaryPlaceholder: "Zusammenfassung",
         },
+        diffBase: {
+          branch: "Relativ zum Standardbranch",
+          fallback: {
+            anchorMissing:
+              "Die Basis {{sha}} für {{base}} existiert nicht mehr. Vorübergehend wird {{fallback}} angezeigt.",
+            anchorUnavailable:
+              "{{base}} ist für diesen Chat nicht verfügbar. Vorübergehend wird {{fallback}} angezeigt.",
+            defaultBranchUnavailable:
+              "Der Standardbranch konnte nicht ermittelt werden. Vorübergehend wird {{fallback}} angezeigt.",
+            gitRefUnavailable:
+              "Die Git-Referenz {{ref}} ist nicht verfügbar. Vorübergehend wird {{fallback}} angezeigt.",
+            noMergeBase:
+              "Für {{ref}} und HEAD gibt es keine Merge-Basis. Vorübergehend wird {{fallback}} angezeigt.",
+            notRepository: "Dieser Workspace ist kein Git-Repository.",
+          },
+          fileCount: "{{count}} Dateien",
+          label: "Diff-Basis",
+          session: "Seit Sitzungsbeginn",
+          turn: "Seit der letzten Runde",
+          unstaged: "Nur nicht bereitgestellt",
+          worktree: "Nicht commitete Änderungen",
+        },
         dockInSidebar: "In Seitenleiste andocken",
         empty: {
           checksUnavailable: "Checks nicht verfügbar",
@@ -209,6 +218,16 @@ export const de = {
           dirty: "{{value}} geändert",
           noCommits: "Noch keine Commits",
           noUpstream: "Kein Upstream",
+          changes: "Änderungen",
+          currentBranch: "Aktueller Branch",
+          history: "Verlauf",
+          noBranches: "Keine lokalen Branches",
+          noHistory: "Noch keine Commits",
+          pull: "{{remote}} pullen",
+          pullCount: "{{count}} von {{remote}} pullen",
+          pulling: "Pull…",
+          pushCount: "{{count}} nach {{remote}} pushen",
+          viewTabs: "Git-Panel-Ansichten",
           publish: "Branch veröffentlichen",
           push: "Push",
           pushHint: {
@@ -405,15 +424,6 @@ export const de = {
           light: "Hell",
           system: "System",
         },
-        transcriptDensityDescription:
-          "Wie viel Tool-Detail das Transkript im aktuellen Workspace-Modus standardmäßig zeigt. Chat startet kompakt; Work und Power starten normal.",
-        transcriptDensityLabel: "Transkript-Dichte",
-        transcriptDensityOptions: {
-          compact: "Kompakt",
-          debug: "Debug",
-          normal: "Normal",
-        },
-        transcriptDensityTitle: "Transkript-Dichte",
       },
       archived: {
         allProjects: "Alle Projekte",
@@ -572,6 +582,7 @@ export const de = {
         mobile:
           "Die mobile Web-App von diesem Computer im lokalen Netzwerk bereitstellen.",
         updates: "Welche Releases diese App installiert – und wann.",
+        usage: "Von ccusage geschätzte lokale Token- und Kostenaktivität.",
         workspace:
           "Verhalten von Eingabefeld und Worktrees während der Arbeit.",
       },
@@ -583,6 +594,7 @@ export const de = {
         danger: "Erweitert",
         mobile: "Mobile Ansicht",
         updates: "Updates",
+        usage: "Nutzung",
         workspace: "Arbeitsbereich",
       },
       title: "Einstellungen",
@@ -624,6 +636,48 @@ export const de = {
         trayEnabledSwitchLabel: "Flottenübersicht in der Menüleiste anzeigen",
         trayEnabledTitle: "Flottenübersicht in der Menüleiste",
       },
+    },
+    usage: {
+      activeBlock: "Aktiver Abrechnungsblock",
+      activeRuns: "Laufende Sitzungen",
+      burnRate: "Aktuelle Rate",
+      burnRateThreshold: "Warnschwelle",
+      burnRateWarning: "Verbrauchsratenwarnung",
+      burnRateWarningActive: "Die aktuelle Rate überschreitet {{threshold}}.",
+      burnRateWarningDescription:
+        "Hebt die Nutzungsanzeige hervor, wenn die aktuelle Stundenrate den Schwellenwert überschreitet.",
+      byAgent: "Nach Agent",
+      cacheCreationTokens: "Cache-Schreibvorgänge",
+      cacheReadTokens: "Cache-Lesevorgänge",
+      collecting: "Lokale Nutzung wird erfasst…",
+      contextNearLimit:
+        "Der Kontext nähert sich seinem Limit. Erwäge einen neuen Chat.",
+      contextUsed: "Verwendeter Kontext",
+      month: "Diesen Monat",
+      noData: "Keine lokalen Nutzungsdaten",
+      projected: "Hochrechnung mit aktueller Rate",
+      inputTokens: "Eingabe",
+      lastCollected: "Zuletzt erfasst um {{time}}.",
+      outputTokens: "Ausgabe",
+      refresh: "Aktualisieren",
+      source: "Datenquelle",
+      sourceDescription:
+        "Aus lokalen Agent-Protokollen geschätzt. Unterstützte Anbieter: {{agents}}; andere und benutzerdefinierte Anbieter sind nicht verfügbar.",
+      sessionCost: "Kosten",
+      today: "Heute",
+      tokens: "Token",
+      unavailable: "Nutzung nicht verfügbar",
+      unavailableReasons: {
+        "binary-missing":
+          "Nutzung nicht verfügbar: Das gebündelte ccusage-Binärprogramm fehlt.",
+        "exec-failed": "Nutzung nicht verfügbar: ccusage ist fehlgeschlagen.",
+        "schema-mismatch":
+          "Nutzung nicht verfügbar: Die ccusage-Ausgabe hat sich geändert.",
+        timeout:
+          "Nutzung nicht verfügbar: Zeitüberschreitung bei der Erfassung.",
+      },
+      warnings: "Warnungen",
+      week: "Diese Woche",
     },
     updates: {
       checkFailed: "Updates konnten nicht gesucht werden",
@@ -799,6 +853,22 @@ export const de = {
     },
     dialog: {
       chatName: "Chatname",
+      confirm: {
+        deleteCustomAgentDetail_one:
+          "Dadurch wird auch {{count}} zugehöriger Chat gelöscht.",
+        deleteCustomAgentDetail_other:
+          "Dadurch werden auch {{count}} zugehörige Chats gelöscht.",
+        deleteCustomAgentDetailNone:
+          "Dieser benutzerdefinierte Agent wird von keinem Chat verwendet.",
+        deleteCustomAgentTitle: "{{label}} löschen?",
+        discard: "Verwerfen",
+        dontSave: "Nicht sichern",
+        kill: "Beenden",
+        killProcessTitle: "{{name}} ({{pid}}) beenden?",
+        saveFileChangesDetail:
+          "Ihre Änderungen gehen verloren, wenn Sie sie nicht sichern.",
+        saveFileChangesTitle: "Änderungen an {{path}} sichern?",
+      },
       importSession: {
         cwdLabel: "Verzeichnis: {{cwd}}",
         description:

@@ -1,5 +1,6 @@
 import type {
   WorkspaceFileReadResult,
+  WorkspaceGitDiffBaseKind,
   WorkspaceGitDiffResult,
 } from "@angel-engine/daemon-api/workspace-tools";
 import type { WorkspaceToolSurfaceDynamicTab } from "@shared/workspace-tool-surface";
@@ -15,12 +16,20 @@ import {
   getErrorMessage,
 } from "@/app/workspace/workspace-file-display";
 import {
+  formatWorkspaceGitDiffUnavailableReason,
+  WorkspaceGitBaseSelect,
+} from "@/app/workspace/workspace-git-base-select";
+import {
   WorkspaceToolBanner,
   WorkspaceToolEmpty,
 } from "@/app/workspace/workspace-tool-layout";
 import { WorkspaceToolPatchFileRows } from "@/app/workspace/workspace-tool-patch-list";
-import { buildWorkspaceToolPatchList } from "@/app/workspace/workspace-tool-patch-model";
+import {
+  buildWorkspaceGitDiffPatchList,
+  getWorkspaceGitNumstatTotal,
+} from "@/app/workspace/workspace-tool-patch-model";
 import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
+import { useWorkspaceGitBasePreference } from "@/app/workspace/use-workspace-git-base-preference";
 import { queryKeys } from "@/platform/query-keys";
 
 export function WorkspaceFilePreview({
@@ -63,15 +72,25 @@ export function WorkspaceGitDiffTool({
 }: {
   tab: Extract<WorkspaceToolSurfaceDynamicTab, { kind: "git-diff" }>;
 }) {
-  const { api } = useWorkspaceToolSurface();
+  const { api, chatId } = useWorkspaceToolSurface();
   const { t } = useTranslation();
+  const { baseKind, setBaseKind } = useWorkspaceGitBasePreference(tab.root);
   const gitQuery = useQuery({
-    queryFn: async () => api.workspaceTools.gitDiff({ root: tab.root }),
-    queryKey: queryKeys.workspaceTools.gitDiff(tab.root),
+    queryFn: async () =>
+      api.workspaceTools.gitDiff({
+        baseKind,
+        chatId: chatId ?? undefined,
+        root: tab.root,
+      }),
+    queryKey: queryKeys.workspaceTools.gitDiff(
+      tab.root,
+      baseKind,
+      null,
+      chatId,
+    ),
     retry: false,
     staleTime: 5_000,
   });
-
   if (gitQuery.isLoading) {
     return null;
   }
@@ -87,7 +106,12 @@ export function WorkspaceGitDiffTool({
   }
 
   return (
-    <WorkspaceGitDiffResultView data={gitQuery.data} pathFilter={tab.path} />
+    <WorkspaceGitDiffResultView
+      baseKind={baseKind}
+      data={gitQuery.data}
+      pathFilter={tab.path}
+      onBaseKindChange={setBaseKind}
+    />
   );
 }
 
@@ -138,11 +162,15 @@ function WorkspaceFileReadResultView({
 }
 
 function WorkspaceGitDiffResultView({
+  baseKind,
   data,
   pathFilter,
+  onBaseKindChange,
 }: {
+  baseKind: WorkspaceGitDiffBaseKind;
   data?: WorkspaceGitDiffResult;
   pathFilter?: string;
+  onBaseKindChange: (kind: WorkspaceGitDiffBaseKind) => void;
 }) {
   const { t } = useTranslation();
   if (!data?.isGitRepository) {
@@ -154,17 +182,41 @@ function WorkspaceGitDiffResultView({
     );
   }
 
-  const patchList = buildWorkspaceToolPatchList(
-    data.stagedPatch,
-    data.unstagedPatch,
-    data.skippedFiles,
-  );
+  const patchList = buildWorkspaceGitDiffPatchList(data);
   const files = is.nonEmptyString(pathFilter)
     ? patchList.files.filter((file) => file.name === pathFilter)
     : patchList.files;
+  const totalLineChanges = getWorkspaceGitNumstatTotal(
+    data.numstat,
+    is.nonEmptyString(pathFilter) ? new Set([pathFilter]) : undefined,
+  );
 
   return (
     <div className="h-full min-h-0 overflow-auto p-3">
+      <div className="mb-3">
+        <WorkspaceGitBaseSelect
+          bases={data.availableBases}
+          resolvedBase={data.resolvedBase}
+          summary={
+            <span className="min-w-0 truncate text-xs text-muted-foreground tabular-nums">
+              {t("workspace.tools.diffBase.fileCount", { count: files.length })}
+              {` · +${totalLineChanges.additions} −${totalLineChanges.deletions}`}
+            </span>
+          }
+          value={baseKind}
+          onChange={onBaseKindChange}
+        />
+      </div>
+      {data.resolvedBase.unavailableReason ? (
+        <WorkspaceToolBanner className="mb-3" tone="attention">
+          {formatWorkspaceGitDiffUnavailableReason({
+            fallbackKind: data.resolvedBase.kind,
+            reason: data.resolvedBase.unavailableReason,
+            requestedKind: data.requestedBaseKind,
+            t,
+          })}
+        </WorkspaceToolBanner>
+      ) : null}
       {data.warnings.length > 0 ? (
         <WorkspaceToolBanner className="mb-3" tone="attention">
           {data.warnings.map((warning) => (

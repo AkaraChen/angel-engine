@@ -292,6 +292,11 @@ function isRuntimeConfigOptionArray(
   return Array.isArray(value) && value.every(isRuntimeConfigOption);
 }
 
+function isSessionUsage(value: unknown): boolean {
+  if (!isBoundaryRecord(value)) return false;
+  return typeof value.used === "number" && typeof value.size === "number";
+}
+
 function isRuntimeConfig(value: unknown): value is ChatRuntimeConfig {
   if (!isBoundaryRecord(value)) return false;
   const agentState = value.agentState;
@@ -321,7 +326,8 @@ function isRuntimeConfig(value: unknown): value is ChatRuntimeConfig {
     isRuntimeConfigOptionArray(value.modes) &&
     isRuntimeConfigOptionArray(value.models) &&
     isRuntimeConfigOptionArray(value.permissionModes) &&
-    isRuntimeConfigOptionArray(value.reasoningEfforts)
+    isRuntimeConfigOptionArray(value.reasoningEfforts) &&
+    (value.usage === undefined || isSessionUsage(value.usage))
   );
 }
 

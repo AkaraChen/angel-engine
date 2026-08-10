@@ -10,6 +10,7 @@ import {
   DeviceMobile as MobileIcon,
   Palette as PaletteIcon,
   ArrowsClockwise as UpdateIcon,
+  ChartLineUp as UsageIcon,
 } from "@phosphor-icons/react";
 
 type SettingsTab =
@@ -18,6 +19,7 @@ type SettingsTab =
   | "workspace"
   | "agents"
   | "updates"
+  | "usage"
   | "mobile"
   | "archived"
   | "danger";
@@ -73,6 +75,14 @@ const settingsTabs: SettingsTabDefinition[] = [
     icon: UpdateIcon,
     id: "updates",
     labelKey: "settings.tabs.updates",
+  },
+  {
+    descriptionKey: "settings.tabDescriptions.usage",
+    group: "general",
+    icon: UsageIcon,
+    id: "usage",
+    labelKey: "settings.tabs.usage",
+    wide: true,
   },
   {
     descriptionKey: "settings.tabDescriptions.mobile",

@@ -9,7 +9,7 @@ import type {
   GitHubPullRequestStatusInput,
   GitHubResolveThreadInput,
   GitHubResolveThreadResult,
-  GitHubReviewThread,
+  GitHubPullRequestReviewThread,
 } from "@angel-engine/daemon-api/github";
 import is from "@sindresorhus/is";
 import { type as arkType } from "arktype";
@@ -237,7 +237,7 @@ export function getGitHubPullRequestStatus(
             ],
             { concurrency: "unbounded" },
           )
-        : [0, new Set<string>(), [] as GitHubReviewThread[]];
+        : [0, new Set<string>(), [] as GitHubPullRequestReviewThread[]];
     const allowedMergeMethods = allowedMethods(repository);
 
     return {
@@ -528,7 +528,7 @@ function getReviewThreads({
   owner: string;
   repo: string;
   runGh: GhRunner;
-}): Effect.Effect<GitHubReviewThread[], DaemonError> {
+}): Effect.Effect<GitHubPullRequestReviewThread[], DaemonError> {
   return Effect.gen(function* () {
     const output = yield* gh(
       runGh,

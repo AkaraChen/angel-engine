@@ -88,6 +88,7 @@ export function useWorkspaceToolSurfaceModel({
     (state) => state.requestWorkspaceToolHost,
   );
   const contextKey = propContextKey ?? context.contextKey ?? null;
+  const chatId = context.chatId ?? null;
   const root = propRoot ?? context.root ?? null;
   const snapshot = currentWorkspaceToolSnapshot(contextKey, snapshots);
   const activeTabId = visibleActiveWorkspaceToolTabId(snapshot);
@@ -269,10 +270,10 @@ export function useWorkspaceToolSurfaceModel({
       active,
       activeDynamicTab,
       activeTabId,
-      chatId: context.chatId ?? null,
       addBrowserTab,
       addTerminalTab,
       api,
+      chatId,
       contextKey,
       closeDynamicTab,
       host,
@@ -288,10 +289,10 @@ export function useWorkspaceToolSurfaceModel({
       active,
       activeDynamicTab,
       activeTabId,
-      context.chatId,
       addBrowserTab,
       addTerminalTab,
       api,
+      chatId,
       contextKey,
       closeDynamicTab,
       host,
