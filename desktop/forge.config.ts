@@ -272,10 +272,16 @@ function verifyCopiedCcusageBinary(buildPath: string) {
     "bin",
     process.platform === "win32" ? "ccusage.exe" : "ccusage",
   );
-  fs.accessSync(
-    binaryPath,
-    process.platform === "win32" ? fs.constants.F_OK : fs.constants.X_OK,
-  );
+  fs.accessSync(binaryPath, fs.constants.F_OK);
+  // Bun may install optional native binaries without the execute bit.
+  if (process.platform !== "win32") {
+    try {
+      fs.accessSync(binaryPath, fs.constants.X_OK);
+    } catch {
+      fs.chmodSync(binaryPath, 0o755);
+      fs.accessSync(binaryPath, fs.constants.X_OK);
+    }
+  }
 }
 
 const config: ForgeConfig = {
