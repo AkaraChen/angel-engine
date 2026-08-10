@@ -26,6 +26,7 @@ import {
   type ComposerGitHubAttachment,
 } from "@/features/chat/components/composer/github-attachments";
 import { composerRichTextClassName } from "@/features/chat/components/composer/composer-rich-text";
+import { ComposerKeymapBridge } from "@/features/chat/components/composer/composer-keymap-bridge";
 import { useSettingsStore } from "@/features/settings/settings-store";
 import { ipc } from "@/platform/ipc";
 import { cn } from "@/platform/utils";
@@ -127,7 +128,12 @@ export function ComposerEditor({
   }, [disabled, editor]);
 
   return (
-    <>
+    <ComposerKeymapBridge
+      blockSubmit={blockSubmit}
+      canCancel={canCancel}
+      controller={controller}
+      onCancel={onCancel}
+    >
       <WorkspaceFileTreeIconSprite />
       <ComposerEditorHeader
         githubAttachments={githubAttachments}
@@ -144,7 +150,7 @@ export function ComposerEditor({
           editor={editor}
         />
       </PromptInputBody>
-    </>
+    </ComposerKeymapBridge>
   );
 }
 

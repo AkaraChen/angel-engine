@@ -1,8 +1,16 @@
 // @vitest-environment jsdom
 
 import type { Chat } from "@angel-engine/daemon-api/chat";
+import type { CommandId } from "@shared/keybindings";
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import {
   afterAll,
   afterEach,
@@ -12,12 +20,38 @@ import {
   it,
   vi,
 } from "vitest";
+import { useEffect } from "react";
 
-import { WorkspaceCommandPalette } from "./workspace-command-palette";
+const commandHandlers = new Map<CommandId, (args?: unknown) => unknown>();
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
+
+/**
+ * Palette opens via central keymap (`palette.open`). Mock the provider hooks so
+ * this unit test does not pull KeymapProvider → tipc / ipcRenderer.
+ */
+vi.mock("@/platform/keymap/provider", () => ({
+  useCommand: (
+    id: CommandId,
+    handler: (args?: unknown) => unknown,
+    deps: unknown[],
+  ) => {
+    useEffect(() => {
+      commandHandlers.set(id, handler);
+      return () => {
+        if (commandHandlers.get(id) === handler) {
+          commandHandlers.delete(id);
+        }
+      };
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [id, handler, ...deps]);
+  },
+  useContextKey: () => {},
+}));
+
+import { WorkspaceCommandPalette } from "./workspace-command-palette";
 
 class TestResizeObserver {
   disconnect(): void {}
@@ -65,8 +99,21 @@ const chat: Chat = {
   updatedAt: "2026-08-09T00:00:00.000Z",
 };
 
+async function openPaletteViaCommand() {
+  await waitFor(() => {
+    expect(commandHandlers.get("palette.open")).toBeTypeOf("function");
+  });
+  await act(async () => {
+    commandHandlers.get("palette.open")?.();
+  });
+  await waitFor(() => {
+    expect(screen.getByRole("dialog")).toBeDefined();
+  });
+}
+
 beforeEach(() => {
   window.desktopEnvironment.platform = "win32";
+  commandHandlers.clear();
 });
 afterEach(cleanup);
 afterAll(() => {
@@ -96,7 +143,7 @@ afterAll(() => {
 });
 
 describe("WorkspaceCommandPalette", () => {
-  it("opens with Ctrl+K and jumps to a fuzzy title match", () => {
+  it("opens via palette.open and jumps to a fuzzy title match", async () => {
     const onOpenSession = vi.fn();
     render(
       <WorkspaceCommandPalette
@@ -107,8 +154,7 @@ describe("WorkspaceCommandPalette", () => {
       />,
     );
 
-    fireEvent.keyDown(window, { ctrlKey: true, key: "k" });
-    expect(screen.getByRole("dialog")).toBeDefined();
+    await openPaletteViaCommand();
 
     fireEvent.change(screen.getByRole("combobox"), {
       target: { value: "comand palete" },
@@ -119,7 +165,7 @@ describe("WorkspaceCommandPalette", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("registers new workspace and settings actions", () => {
+  it("registers new workspace and settings actions", async () => {
     const onNewWorkspace = vi.fn();
     render(
       <WorkspaceCommandPalette
@@ -130,8 +176,7 @@ describe("WorkspaceCommandPalette", () => {
       />,
     );
 
-    window.desktopEnvironment.platform = "darwin";
-    fireEvent.keyDown(window, { key: "k", metaKey: true });
+    await openPaletteViaCommand();
     fireEvent.click(screen.getByText("ui.commandNewWorkspace"));
 
     expect(onNewWorkspace).toHaveBeenCalledTimes(1);

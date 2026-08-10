@@ -6,6 +6,29 @@ export const en = {
     app: {
       name: "Angel Engine",
     },
+    commands: {
+      categories: {
+        app: "App",
+        chat: "Chat",
+        files: "Files",
+        view: "View",
+      },
+      chatFocusComposer: "Focus chat composer",
+      chatInterrupt: "Interrupt run",
+      chatNew: "New chat",
+      chatNewline: "Insert newline",
+      chatRemoveLastAttachment: "Remove last attachment",
+      chatSend: "Send message",
+      filesSave: "Save file",
+      paletteClose: "Close command palette",
+      paletteOpen: "Open command palette",
+      settingsOpen: "Open settings",
+      workspaceCloseTab: "Close tab",
+      workspaceNewTab: "New tab",
+      workspaceNextTab: "Next tab",
+      workspacePreviousTab: "Previous tab",
+      workspaceToggleSidebar: "Toggle sidebar",
+    },
     common: {
       allow: "Allow",
       allowSession: "Allow session",
@@ -104,6 +127,20 @@ export const en = {
       statsBranch: "Branch",
       statsChanges: "Changes",
       statsLastActive: "Last active",
+      transcriptDensity: {
+        descriptions: {
+          compact: "Fold tool detail; expand any row when needed.",
+          debug: "Keep tool and reasoning detail open.",
+          normal: "Auto-expand tools when nothing follows them.",
+        },
+        menuLabel: "Transcript density: {{density}}",
+        options: {
+          compact: "Compact",
+          debug: "Debug",
+          normal: "Normal",
+        },
+        title: "Transcript density",
+      },
       tools: {
         addToChat: "Add to chat",
         commit: {
@@ -320,6 +357,15 @@ export const en = {
           light: "Light",
           system: "System",
         },
+        transcriptDensityDescription:
+          "How much tool detail the transcript shows by default in the current workspace mode. Chat mode starts in Compact; Work and Power start in Normal.",
+        transcriptDensityLabel: "Transcript density",
+        transcriptDensityOptions: {
+          compact: "Compact",
+          debug: "Debug",
+          normal: "Normal",
+        },
+        transcriptDensityTitle: "Transcript density",
       },
       archived: {
         allProjects: "All projects",
@@ -401,6 +447,37 @@ export const en = {
         data: "Data",
         general: "General",
       },
+      keyboard: {
+        addShortcut: "Add shortcut",
+        bindEscape: "Bind Escape",
+        conflictAmbiguous: "Ambiguous conflict — last registration wins",
+        conflictChordPrefix: "Chord prefix conflict",
+        conflictShadowed: "Shadowed by a higher-priority binding",
+        emptySearch: "No commands match this search.",
+        filterAll: "All",
+        filterConflicts: "Conflicts",
+        filterModified: "Modified",
+        hintsLink: "Shortcut hints visibility is under Appearance.",
+        loadFailedDescription:
+          "Using default keybindings until the file is fixed or reset.",
+        loadFailedTitle: "Could not load keybindings.json",
+        openConfig: "Open config file",
+        recordingChordThen: "then…",
+        recordingHint: "Press a new shortcut · Esc to cancel",
+        remove: "Remove",
+        resetAll: "Reset all to defaults…",
+        resetAllConfirm:
+          "Reset all custom keybindings? A local backup will be kept.",
+        resetBroken: "Reset broken config",
+        resetCategory: "Reset category defaults",
+        resetCommand: "Reset command",
+        searchPlaceholder: "Search commands or keys…",
+        sourceConflict: "Conflict",
+        sourceDefault: "Default",
+        sourceUser: "User",
+        sourceUserOverride: "User · overridden",
+        warningsCount: "{{count}} warning(s) while loading keybindings",
+      },
       mobile: {
         copied: "Copied",
         copy: "Copy",
@@ -433,6 +510,7 @@ export const en = {
         urlTitle: "Mobile URL",
       },
       tabDescriptions: {
+        keyboard: "Change keyboard shortcuts and resolve conflicts.",
         agents:
           "Choose which coding agents appear in the picker, and in what order.",
         appearance: "Theme and display language for the desktop app.",
@@ -448,6 +526,7 @@ export const en = {
       tabs: {
         agents: "Agents",
         appearance: "Appearance",
+        keyboard: "Keyboard shortcuts",
         archived: "Archived",
         danger: "Advanced",
         mobile: "Mobile view",

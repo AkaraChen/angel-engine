@@ -6,6 +6,29 @@ export const ja = {
     app: {
       name: "Angel Engine",
     },
+    commands: {
+      categories: {
+        app: "App",
+        chat: "Chat",
+        files: "Files",
+        view: "View",
+      },
+      chatFocusComposer: "Focus chat composer",
+      chatInterrupt: "Interrupt run",
+      chatNew: "New chat",
+      chatNewline: "Insert newline",
+      chatRemoveLastAttachment: "Remove last attachment",
+      chatSend: "Send message",
+      filesSave: "Save file",
+      paletteClose: "Close command palette",
+      paletteOpen: "Open command palette",
+      settingsOpen: "Open settings",
+      workspaceCloseTab: "Close tab",
+      workspaceNewTab: "New tab",
+      workspaceNextTab: "Next tab",
+      workspacePreviousTab: "Previous tab",
+      workspaceToggleSidebar: "Toggle sidebar",
+    },
     common: {
       allow: "許可",
       allowSession: "セッションで許可",
@@ -104,6 +127,20 @@ export const ja = {
       statsBranch: "ブランチ",
       statsChanges: "変更",
       statsLastActive: "最終アクティブ",
+      transcriptDensity: {
+        descriptions: {
+          compact: "ツール詳細は折りたたみ。必要なら個別に展開。",
+          debug: "ツールと推論の詳細を開いたまま表示。",
+          normal: "後続テキストがないときツールを自動展開。",
+        },
+        menuLabel: "トランスクリプト密度: {{density}}",
+        options: {
+          compact: "コンパクト",
+          debug: "デバッグ",
+          normal: "標準",
+        },
+        title: "トランスクリプト密度",
+      },
       tools: {
         addToChat: "チャットに追加",
         commit: {
@@ -322,6 +359,15 @@ export const ja = {
           light: "ライト",
           system: "システム",
         },
+        transcriptDensityDescription:
+          "現在のワークスペースモードで、トランスクリプトが既定でどれだけツール詳細を見せるか。Chat はコンパクト、Work / Power は標準から始まります。",
+        transcriptDensityLabel: "トランスクリプト密度",
+        transcriptDensityOptions: {
+          compact: "コンパクト",
+          debug: "デバッグ",
+          normal: "標準",
+        },
+        transcriptDensityTitle: "トランスクリプト密度",
       },
       archived: {
         allProjects: "すべてのプロジェクト",
@@ -404,6 +450,37 @@ export const ja = {
         data: "データ",
         general: "一般",
       },
+      keyboard: {
+        addShortcut: "Add shortcut",
+        bindEscape: "Bind Escape",
+        conflictAmbiguous: "Ambiguous conflict — last registration wins",
+        conflictChordPrefix: "Chord prefix conflict",
+        conflictShadowed: "Shadowed by a higher-priority binding",
+        emptySearch: "No commands match this search.",
+        filterAll: "All",
+        filterConflicts: "Conflicts",
+        filterModified: "Modified",
+        hintsLink: "Shortcut hints visibility is under Appearance.",
+        loadFailedDescription:
+          "Using default keybindings until the file is fixed or reset.",
+        loadFailedTitle: "Could not load keybindings.json",
+        openConfig: "Open config file",
+        recordingChordThen: "then…",
+        recordingHint: "Press a new shortcut · Esc to cancel",
+        remove: "Remove",
+        resetAll: "Reset all to defaults…",
+        resetAllConfirm:
+          "Reset all custom keybindings? A local backup will be kept.",
+        resetBroken: "Reset broken config",
+        resetCategory: "Reset category defaults",
+        resetCommand: "Reset command",
+        searchPlaceholder: "Search commands or keys…",
+        sourceConflict: "Conflict",
+        sourceDefault: "Default",
+        sourceUser: "User",
+        sourceUserOverride: "User · overridden",
+        warningsCount: "{{count}} warning(s) while loading keybindings",
+      },
       mobile: {
         copied: "コピーしました",
         copy: "コピー",
@@ -437,6 +514,7 @@ export const ja = {
         urlTitle: "モバイル URL",
       },
       tabDescriptions: {
+        keyboard: "Change keyboard shortcuts and resolve conflicts.",
         agents:
           "セレクターに表示するコーディングエージェントと、その並び順を選びます。",
         appearance: "デスクトップアプリのテーマと表示言語です。",
@@ -452,6 +530,7 @@ export const ja = {
       tabs: {
         agents: "Agents",
         appearance: "外観",
+        keyboard: "Keyboard shortcuts",
         archived: "アーカイブ",
         danger: "詳細",
         mobile: "モバイル表示",

@@ -6,6 +6,29 @@ export const es = {
     app: {
       name: "Angel Engine",
     },
+    commands: {
+      categories: {
+        app: "App",
+        chat: "Chat",
+        files: "Files",
+        view: "View",
+      },
+      chatFocusComposer: "Focus chat composer",
+      chatInterrupt: "Interrupt run",
+      chatNew: "New chat",
+      chatNewline: "Insert newline",
+      chatRemoveLastAttachment: "Remove last attachment",
+      chatSend: "Send message",
+      filesSave: "Save file",
+      paletteClose: "Close command palette",
+      paletteOpen: "Open command palette",
+      settingsOpen: "Open settings",
+      workspaceCloseTab: "Close tab",
+      workspaceNewTab: "New tab",
+      workspaceNextTab: "Next tab",
+      workspacePreviousTab: "Previous tab",
+      workspaceToggleSidebar: "Toggle sidebar",
+    },
     common: {
       allow: "Permitir",
       allowSession: "Permitir sesión",
@@ -104,6 +127,23 @@ export const es = {
       statsBranch: "Rama",
       statsChanges: "Cambios",
       statsLastActive: "Última actividad",
+      transcriptDensity: {
+        descriptions: {
+          compact:
+            "Pliega el detalle de herramientas; expande una fila si hace falta.",
+          debug:
+            "Mantiene abiertos el detalle de herramientas y el razonamiento.",
+          normal:
+            "Expande herramientas automáticamente si no hay texto después.",
+        },
+        menuLabel: "Densidad de la transcripción: {{density}}",
+        options: {
+          compact: "Compacta",
+          debug: "Depuración",
+          normal: "Normal",
+        },
+        title: "Densidad de la transcripción",
+      },
       tools: {
         addToChat: "Añadir al chat",
         commit: {
@@ -321,6 +361,15 @@ export const es = {
           light: "Claro",
           system: "Sistema",
         },
+        transcriptDensityDescription:
+          "Cuánto detalle de herramientas muestra la transcripción por defecto en el modo de espacio de trabajo actual. Chat empieza en Compacta; Work y Power en Normal.",
+        transcriptDensityLabel: "Densidad de la transcripción",
+        transcriptDensityOptions: {
+          compact: "Compacta",
+          debug: "Depuración",
+          normal: "Normal",
+        },
+        transcriptDensityTitle: "Densidad de la transcripción",
       },
       archived: {
         allProjects: "Todos los proyectos",
@@ -404,6 +453,37 @@ export const es = {
         data: "Datos",
         general: "General",
       },
+      keyboard: {
+        addShortcut: "Add shortcut",
+        bindEscape: "Bind Escape",
+        conflictAmbiguous: "Ambiguous conflict — last registration wins",
+        conflictChordPrefix: "Chord prefix conflict",
+        conflictShadowed: "Shadowed by a higher-priority binding",
+        emptySearch: "No commands match this search.",
+        filterAll: "All",
+        filterConflicts: "Conflicts",
+        filterModified: "Modified",
+        hintsLink: "Shortcut hints visibility is under Appearance.",
+        loadFailedDescription:
+          "Using default keybindings until the file is fixed or reset.",
+        loadFailedTitle: "Could not load keybindings.json",
+        openConfig: "Open config file",
+        recordingChordThen: "then…",
+        recordingHint: "Press a new shortcut · Esc to cancel",
+        remove: "Remove",
+        resetAll: "Reset all to defaults…",
+        resetAllConfirm:
+          "Reset all custom keybindings? A local backup will be kept.",
+        resetBroken: "Reset broken config",
+        resetCategory: "Reset category defaults",
+        resetCommand: "Reset command",
+        searchPlaceholder: "Search commands or keys…",
+        sourceConflict: "Conflict",
+        sourceDefault: "Default",
+        sourceUser: "User",
+        sourceUserOverride: "User · overridden",
+        warningsCount: "{{count}} warning(s) while loading keybindings",
+      },
       mobile: {
         copied: "Copiado",
         copy: "Copiar",
@@ -437,6 +517,7 @@ export const es = {
         urlTitle: "URL móvil",
       },
       tabDescriptions: {
+        keyboard: "Change keyboard shortcuts and resolve conflicts.",
         agents:
           "Elige qué agentes de código aparecen en el selector y en qué orden.",
         appearance: "Tema e idioma de la aplicación de escritorio.",
@@ -453,6 +534,7 @@ export const es = {
       tabs: {
         agents: "Agents",
         appearance: "Apariencia",
+        keyboard: "Keyboard shortcuts",
         archived: "Archivadas",
         danger: "Avanzado",
         mobile: "Vista móvil",

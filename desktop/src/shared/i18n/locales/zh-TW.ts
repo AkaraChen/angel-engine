@@ -6,6 +6,29 @@ export const zhTW = {
     app: {
       name: "Angel Engine",
     },
+    commands: {
+      categories: {
+        app: "App",
+        chat: "Chat",
+        files: "Files",
+        view: "View",
+      },
+      chatFocusComposer: "Focus chat composer",
+      chatInterrupt: "Interrupt run",
+      chatNew: "New chat",
+      chatNewline: "Insert newline",
+      chatRemoveLastAttachment: "Remove last attachment",
+      chatSend: "Send message",
+      filesSave: "Save file",
+      paletteClose: "Close command palette",
+      paletteOpen: "Open command palette",
+      settingsOpen: "Open settings",
+      workspaceCloseTab: "Close tab",
+      workspaceNewTab: "New tab",
+      workspaceNextTab: "Next tab",
+      workspacePreviousTab: "Previous tab",
+      workspaceToggleSidebar: "Toggle sidebar",
+    },
     common: {
       allow: "允許",
       allowSession: "本工作階段允許",
@@ -101,6 +124,20 @@ export const zhTW = {
       statsBranch: "分支",
       statsChanges: "變更",
       statsLastActive: "最近活動",
+      transcriptDensity: {
+        descriptions: {
+          compact: "預設摺疊工具細節，需要時可展開單條。",
+          debug: "預設展開工具與推理細節，方便排查。",
+          normal: "後面沒有正文時自動展開工具。",
+        },
+        menuLabel: "時間線密度：{{density}}",
+        options: {
+          compact: "簡潔",
+          debug: "偵錯",
+          normal: "標準",
+        },
+        title: "時間線密度",
+      },
       tools: {
         addToChat: "加入聊天",
         commit: {
@@ -316,6 +353,15 @@ export const zhTW = {
           light: "淺色",
           system: "跟隨系統",
         },
+        transcriptDensityDescription:
+          "目前工作區模式下時間線預設顯示多少工具細節。Chat 預設簡潔；Work / Power 預設標準。",
+        transcriptDensityLabel: "時間線密度",
+        transcriptDensityOptions: {
+          compact: "簡潔",
+          debug: "偵錯",
+          normal: "標準",
+        },
+        transcriptDensityTitle: "時間線密度",
       },
       archived: {
         allProjects: "所有專案",
@@ -395,6 +441,37 @@ export const zhTW = {
         data: "資料",
         general: "一般",
       },
+      keyboard: {
+        addShortcut: "Add shortcut",
+        bindEscape: "Bind Escape",
+        conflictAmbiguous: "Ambiguous conflict — last registration wins",
+        conflictChordPrefix: "Chord prefix conflict",
+        conflictShadowed: "Shadowed by a higher-priority binding",
+        emptySearch: "No commands match this search.",
+        filterAll: "All",
+        filterConflicts: "Conflicts",
+        filterModified: "Modified",
+        hintsLink: "Shortcut hints visibility is under Appearance.",
+        loadFailedDescription:
+          "Using default keybindings until the file is fixed or reset.",
+        loadFailedTitle: "Could not load keybindings.json",
+        openConfig: "Open config file",
+        recordingChordThen: "then…",
+        recordingHint: "Press a new shortcut · Esc to cancel",
+        remove: "Remove",
+        resetAll: "Reset all to defaults…",
+        resetAllConfirm:
+          "Reset all custom keybindings? A local backup will be kept.",
+        resetBroken: "Reset broken config",
+        resetCategory: "Reset category defaults",
+        resetCommand: "Reset command",
+        searchPlaceholder: "Search commands or keys…",
+        sourceConflict: "Conflict",
+        sourceDefault: "Default",
+        sourceUser: "User",
+        sourceUserOverride: "User · overridden",
+        warningsCount: "{{count}} warning(s) while loading keybindings",
+      },
       mobile: {
         copied: "已複製",
         copy: "複製",
@@ -424,6 +501,7 @@ export const zhTW = {
         urlTitle: "行動版網址",
       },
       tabDescriptions: {
+        keyboard: "Change keyboard shortcuts and resolve conflicts.",
         agents: "選擇要在選擇器中顯示哪些 Agent，以及它們的順序。",
         appearance: "桌面應用程式的主題與顯示語言。",
         archived: "還原已封存的工作階段，或連同 worktree 一併永久刪除。",
@@ -435,6 +513,7 @@ export const zhTW = {
       tabs: {
         agents: "Agents",
         appearance: "外觀",
+        keyboard: "Keyboard shortcuts",
         archived: "已封存",
         danger: "進階",
         mobile: "行動版",

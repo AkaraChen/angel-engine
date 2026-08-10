@@ -6,6 +6,29 @@ export const ko = {
     app: {
       name: "Angel Engine",
     },
+    commands: {
+      categories: {
+        app: "App",
+        chat: "Chat",
+        files: "Files",
+        view: "View",
+      },
+      chatFocusComposer: "Focus chat composer",
+      chatInterrupt: "Interrupt run",
+      chatNew: "New chat",
+      chatNewline: "Insert newline",
+      chatRemoveLastAttachment: "Remove last attachment",
+      chatSend: "Send message",
+      filesSave: "Save file",
+      paletteClose: "Close command palette",
+      paletteOpen: "Open command palette",
+      settingsOpen: "Open settings",
+      workspaceCloseTab: "Close tab",
+      workspaceNewTab: "New tab",
+      workspaceNextTab: "Next tab",
+      workspacePreviousTab: "Previous tab",
+      workspaceToggleSidebar: "Toggle sidebar",
+    },
     common: {
       allow: "허용",
       allowSession: "세션 허용",
@@ -103,6 +126,20 @@ export const ko = {
       statsBranch: "브랜치",
       statsChanges: "변경 사항",
       statsLastActive: "마지막 활동",
+      transcriptDensity: {
+        descriptions: {
+          compact: "도구 세부 정보를 접고, 필요할 때만 펼칩니다.",
+          debug: "도구와 추론 세부 정보를 기본으로 펼칩니다.",
+          normal: "뒤에 본문이 없을 때 도구를 자동으로 펼칩니다.",
+        },
+        menuLabel: "트랜스크립트 밀도: {{density}}",
+        options: {
+          compact: "간결",
+          debug: "디버그",
+          normal: "표준",
+        },
+        title: "트랜스크립트 밀도",
+      },
       tools: {
         addToChat: "채팅에 추가",
         commit: {
@@ -319,6 +356,15 @@ export const ko = {
           light: "라이트",
           system: "시스템",
         },
+        transcriptDensityDescription:
+          "현재 워크스페이스 모드에서 트랜스크립트가 기본적으로 얼마나 많은 도구 세부 정보를 보여줄지 정합니다. Chat은 간결, Work/Power는 표준으로 시작합니다.",
+        transcriptDensityLabel: "트랜스크립트 밀도",
+        transcriptDensityOptions: {
+          compact: "간결",
+          debug: "디버그",
+          normal: "표준",
+        },
+        transcriptDensityTitle: "트랜스크립트 밀도",
       },
       archived: {
         allProjects: "모든 프로젝트",
@@ -400,6 +446,37 @@ export const ko = {
         data: "데이터",
         general: "일반",
       },
+      keyboard: {
+        addShortcut: "Add shortcut",
+        bindEscape: "Bind Escape",
+        conflictAmbiguous: "Ambiguous conflict — last registration wins",
+        conflictChordPrefix: "Chord prefix conflict",
+        conflictShadowed: "Shadowed by a higher-priority binding",
+        emptySearch: "No commands match this search.",
+        filterAll: "All",
+        filterConflicts: "Conflicts",
+        filterModified: "Modified",
+        hintsLink: "Shortcut hints visibility is under Appearance.",
+        loadFailedDescription:
+          "Using default keybindings until the file is fixed or reset.",
+        loadFailedTitle: "Could not load keybindings.json",
+        openConfig: "Open config file",
+        recordingChordThen: "then…",
+        recordingHint: "Press a new shortcut · Esc to cancel",
+        remove: "Remove",
+        resetAll: "Reset all to defaults…",
+        resetAllConfirm:
+          "Reset all custom keybindings? A local backup will be kept.",
+        resetBroken: "Reset broken config",
+        resetCategory: "Reset category defaults",
+        resetCommand: "Reset command",
+        searchPlaceholder: "Search commands or keys…",
+        sourceConflict: "Conflict",
+        sourceDefault: "Default",
+        sourceUser: "User",
+        sourceUserOverride: "User · overridden",
+        warningsCount: "{{count}} warning(s) while loading keybindings",
+      },
       mobile: {
         copied: "복사됨",
         copy: "복사",
@@ -433,6 +510,7 @@ export const ko = {
         urlTitle: "모바일 URL",
       },
       tabDescriptions: {
+        keyboard: "Change keyboard shortcuts and resolve conflicts.",
         agents: "선택기에 표시할 코딩 에이전트와 순서를 정합니다.",
         appearance: "데스크톱 앱의 테마와 표시 언어입니다.",
         archived: "보관된 세션을 복원하거나 워크트리와 함께 영구 삭제합니다.",
@@ -445,6 +523,7 @@ export const ko = {
       tabs: {
         agents: "Agents",
         appearance: "모양",
+        keyboard: "Keyboard shortcuts",
         archived: "보관됨",
         danger: "고급",
         mobile: "모바일 보기",

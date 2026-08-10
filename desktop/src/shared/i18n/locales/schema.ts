@@ -150,6 +150,19 @@ export interface LocaleResourceTranslationWorkspaceAmbiguousSend {
   title: string;
 }
 
+export interface LocaleResourceTranslationWorkspaceTranscriptDensityOptions {
+  compact: string;
+  debug: string;
+  normal: string;
+}
+
+export interface LocaleResourceTranslationWorkspaceTranscriptDensity {
+  descriptions: LocaleResourceTranslationWorkspaceTranscriptDensityOptions;
+  menuLabel: string;
+  options: LocaleResourceTranslationWorkspaceTranscriptDensityOptions;
+  title: string;
+}
+
 export interface LocaleResourceTranslationWorkspace {
   ambiguousSend: LocaleResourceTranslationWorkspaceAmbiguousSend;
   backgroundChatCompleted: string;
@@ -169,6 +182,7 @@ export interface LocaleResourceTranslationWorkspace {
   statsChanges: string;
   statsLastActive: string;
   tools: LocaleResourceTranslationWorkspaceTools;
+  transcriptDensity: LocaleResourceTranslationWorkspaceTranscriptDensity;
   worktreeDirtyContinue: string;
   worktreeDirtyDescription: string;
   worktreeDirtyRemember: string;
@@ -459,6 +473,12 @@ export interface LocaleResourceTranslationSettingsAppearanceThemeOptions {
   system: string;
 }
 
+export interface LocaleResourceTranslationSettingsAppearanceTranscriptDensityOptions {
+  compact: string;
+  debug: string;
+  normal: string;
+}
+
 export interface LocaleResourceTranslationSettingsAppearance {
   keybindingHintsDescription: string;
   keybindingHintsSwitchLabel: string;
@@ -467,6 +487,10 @@ export interface LocaleResourceTranslationSettingsAppearance {
   languageOptions: LocaleResourceTranslationSettingsAppearanceLanguageOptions;
   theme: string;
   themeOptions: LocaleResourceTranslationSettingsAppearanceThemeOptions;
+  transcriptDensityDescription: string;
+  transcriptDensityLabel: string;
+  transcriptDensityOptions: LocaleResourceTranslationSettingsAppearanceTranscriptDensityOptions;
+  transcriptDensityTitle: string;
 }
 
 export interface LocaleResourceTranslationSettingsDanger {
@@ -483,6 +507,7 @@ export interface LocaleResourceTranslationSettingsTabs {
   appearance: string;
   archived: string;
   danger: string;
+  keyboard: string;
   mobile: string;
   updates: string;
   workspace: string;
@@ -493,6 +518,7 @@ export interface LocaleResourceTranslationSettingsTabDescriptions {
   appearance: string;
   archived: string;
   danger: string;
+  keyboard: string;
   mobile: string;
   updates: string;
   workspace: string;
@@ -547,6 +573,62 @@ export interface LocaleResourceTranslationSettingsMobile {
   urlTitle: string;
 }
 
+export interface LocaleResourceTranslationSettingsKeyboard {
+  addShortcut: string;
+  bindEscape: string;
+  conflictAmbiguous: string;
+  conflictChordPrefix: string;
+  conflictShadowed: string;
+  emptySearch: string;
+  filterAll: string;
+  filterConflicts: string;
+  filterModified: string;
+  hintsLink: string;
+  loadFailedDescription: string;
+  loadFailedTitle: string;
+  openConfig: string;
+  recordingChordThen: string;
+  recordingHint: string;
+  remove: string;
+  resetAll: string;
+  resetAllConfirm: string;
+  resetBroken: string;
+  resetCategory: string;
+  resetCommand: string;
+  searchPlaceholder: string;
+  sourceConflict: string;
+  sourceDefault: string;
+  sourceUser: string;
+  sourceUserOverride: string;
+  warningsCount: string;
+}
+
+export interface LocaleResourceTranslationCommandsCategories {
+  app: string;
+  chat: string;
+  files: string;
+  view: string;
+}
+
+export interface LocaleResourceTranslationCommands {
+  categories: LocaleResourceTranslationCommandsCategories;
+  chatFocusComposer: string;
+  chatInterrupt: string;
+  chatNew: string;
+  chatNewline: string;
+  chatRemoveLastAttachment: string;
+  chatSend: string;
+  filesSave: string;
+  paletteClose: string;
+  paletteOpen: string;
+  settingsOpen: string;
+  workspaceCloseTab: string;
+  workspaceNewTab: string;
+  workspaceNextTab: string;
+  workspacePreviousTab: string;
+  workspaceToggleSidebar: string;
+}
+
 export interface LocaleResourceTranslationSettingsWorkspace {
   dirtyPromptDescription: string;
   dirtyPromptSwitchLabel: string;
@@ -586,6 +668,7 @@ export interface LocaleResourceTranslationSettings {
   danger: LocaleResourceTranslationSettingsDanger;
   description: string;
   groups: LocaleResourceTranslationSettingsGroups;
+  keyboard: LocaleResourceTranslationSettingsKeyboard;
   mobile: LocaleResourceTranslationSettingsMobile;
   tabDescriptions: LocaleResourceTranslationSettingsTabDescriptions;
   tabs: LocaleResourceTranslationSettingsTabs;
@@ -952,6 +1035,7 @@ export interface LocaleResourceTranslationRuntimeValues {
 }
 
 export interface LocaleResourceTranslation {
+  commands: LocaleResourceTranslationCommands;
   app: LocaleResourceTranslationApp;
   common: LocaleResourceTranslationCommon;
   attachment: LocaleResourceTranslationAttachment;

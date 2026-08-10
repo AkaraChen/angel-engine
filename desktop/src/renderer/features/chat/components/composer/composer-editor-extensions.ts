@@ -451,6 +451,11 @@ function renderComposerSuggestion() {
     onExit: () => {
       unmount?.();
       component?.destroy();
+      document
+        .querySelectorAll("[data-composer-suggestion-open='true']")
+        .forEach((node) => {
+          node.removeAttribute("data-composer-suggestion-open");
+        });
     },
     onKeyDown: ({ event }: { event: KeyboardEvent }) =>
       component?.ref?.onKeyDown(event) ?? false,
@@ -462,6 +467,9 @@ function renderComposerSuggestion() {
         props,
       });
       unmount = props.mount(component.element);
+      props.editor.view.dom
+        .closest("[data-composer-root]")
+        ?.setAttribute("data-composer-suggestion-open", "true");
     },
     onUpdate: (
       props: SuggestionProps<ComposerSuggestionItem, ComposerSuggestionItem>,
@@ -469,55 +477,21 @@ function renderComposerSuggestion() {
   };
 }
 
+/**
+ * Command bindings (send / newline / interrupt / remove attachment) live in the
+ * central desktop keymap (KIT-796). This extension is intentionally empty so
+ * TipTap does not double-handle those keys; editing behavior stays in StarterKit
+ * / suggestion plugins.
+ */
 export function createComposerKeymap(
-  interactions: Pick<
+  _interactions: Pick<
     ComposerInteractionRefs,
     "blockSubmit" | "onCancel" | "removeLastAttachment" | "sendWithModEnter"
   >,
 ) {
-  const handleSubmit = (editor: Editor) => {
-    const form = editor.view.dom.closest("form");
-    const submitButton = form?.querySelector<HTMLButtonElement>(
-      'button[type="submit"]',
-    );
-    const action = composerEnterAction({
-      blockSubmit: interactions.blockSubmit.current,
-      composing: editor.view.composing,
-      submitDisabled: submitButton?.disabled ?? false,
-    });
-    if (action === "allow-ime") return false;
-    if (action === "block") return true;
-    form?.requestSubmit();
-    return true;
-  };
-
   return Extension.create({
     addKeyboardShortcuts() {
-      return {
-        Backspace: () =>
-          this.editor.isEmpty && interactions.removeLastAttachment.current(),
-        Enter: () =>
-          composerEnterIntent({
-            modKey: false,
-            sendWithModEnter: interactions.sendWithModEnter.current,
-          }) === "submit"
-            ? handleSubmit(this.editor)
-            : false,
-        Escape: () => {
-          const onCancel = interactions.onCancel.current;
-          if (onCancel === undefined) return false;
-          onCancel();
-          return true;
-        },
-        "Mod-Enter": () =>
-          composerEnterIntent({
-            modKey: true,
-            sendWithModEnter: interactions.sendWithModEnter.current,
-          }) === "submit"
-            ? handleSubmit(this.editor)
-            : this.editor.commands.enter(),
-        "Shift-Enter": () => this.editor.commands.setHardBreak(),
-      };
+      return {};
     },
     name: "composerKeymap",
     priority: 100,

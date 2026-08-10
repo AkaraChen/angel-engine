@@ -107,6 +107,7 @@
     "whatwg-mimetype": "^5.0.0",
     "which": "^7.0.0",
     "wouter": "^3.10.0",
+    "write-file-atomic": "^8.0.0",
     "xstate": "^5.32.4",
     "zod": "^4.4.3",
     "zustand": "^5.0.14"
@@ -133,6 +134,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/whatwg-mimetype": "^5.0.0",
     "@types/which": "^3.0.4",
+    "@types/write-file-atomic": "^4.0.3",
     "@vitejs/plugin-react": "^6.0.3",
     "drizzle-kit": "^0.31.10",
     "electron": "43.0.0",
