@@ -1,5 +1,3 @@
-import type { ReactNode } from "react";
-
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -25,6 +23,15 @@ function renderSection() {
   );
 }
 
+function stubClipboard(
+  clipboard: { writeText: (text: string) => Promise<void> } | undefined,
+) {
+  Object.defineProperty(navigator, "clipboard", {
+    configurable: true,
+    value: clipboard,
+  });
+}
+
 beforeEach(async () => {
   healthMock.data = { version: "1.2.3" };
   await i18n.changeLanguage("en");
@@ -32,7 +39,10 @@ beforeEach(async () => {
 
 afterEach(() => {
   cleanup();
-  vi.unstubAllGlobals();
+  Object.defineProperty(navigator, "clipboard", {
+    configurable: true,
+    value: undefined,
+  });
   vi.restoreAllMocks();
 });
 
@@ -41,7 +51,7 @@ describe("AboutSection diagnostics copy", () => {
     const writeText = vi
       .fn<(text: string) => Promise<void>>()
       .mockResolvedValue();
-    vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+    stubClipboard({ writeText });
 
     renderSection();
     fireEvent.click(screen.getByRole("button", { name: "Copy diagnostics" }));
@@ -56,7 +66,7 @@ describe("AboutSection diagnostics copy", () => {
   });
 
   it("shows a safe visible failure when the Clipboard API is unavailable", async () => {
-    vi.stubGlobal("navigator", { ...navigator, clipboard: undefined });
+    stubClipboard(undefined);
 
     renderSection();
     fireEvent.click(screen.getByRole("button", { name: "Copy diagnostics" }));
@@ -69,9 +79,9 @@ describe("AboutSection diagnostics copy", () => {
 
   it("shows a safe visible failure when the Clipboard API rejects", async () => {
     const writeText = vi
-      .fn<() => Promise<void>>()
+      .fn<(text: string) => Promise<void>>()
       .mockRejectedValue(new DOMException("denied", "NotAllowedError"));
-    vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+    stubClipboard({ writeText });
 
     renderSection();
     fireEvent.click(screen.getByRole("button", { name: "Copy diagnostics" }));

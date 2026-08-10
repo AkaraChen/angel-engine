@@ -1,5 +1,3 @@
-import { useTranslation } from "react-i18next";
-
 import { AboutSection } from "@/features/settings/about-section";
 import { AgentsSection } from "@/features/settings/agents-section";
 import { AppearanceSection } from "@/features/settings/appearance-section";
