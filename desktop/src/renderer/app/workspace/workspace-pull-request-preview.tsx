@@ -221,7 +221,7 @@ function PreviewStat({
 }) {
   return (
     <div className="rounded-lg border border-border-subtle bg-muted/20 p-2.5">
-      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+      <div className="flex items-center gap-1 text-xs text-muted-foreground [&_svg]:size-3.5 [&_svg]:shrink-0">
         {icon}
         {label}
       </div>
