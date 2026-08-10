@@ -1,5 +1,9 @@
 import { useEffect } from "react";
 
+interface ExistingPullRequestTarget {
+  url: string;
+}
+
 const createPullRequestEvent = "angel-engine:create-pull-request";
 
 export const createPullRequestAction = {
@@ -21,6 +25,23 @@ export function openExistingPullRequest({
 }) {
   close?.();
   openBrowser(url);
+}
+
+export function executeCreatePullRequestAction({
+  existing,
+  openBrowser,
+  openDialog,
+}: {
+  existing?: ExistingPullRequestTarget | null;
+  openBrowser: (url: string) => void;
+  openDialog: () => void;
+}) {
+  if (existing) {
+    openExistingPullRequest({ openBrowser, url: existing.url });
+    return "opened-existing" as const;
+  }
+  openDialog();
+  return "opened-create" as const;
 }
 
 export function useCreatePullRequestAction(handler: () => void) {

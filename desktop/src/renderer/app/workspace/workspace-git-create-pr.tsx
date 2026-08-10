@@ -1,4 +1,7 @@
-import type { PullRequestCreateResult } from "@angel-engine/daemon-api/github";
+import type {
+  PullRequestCreateResult,
+  PullRequestPreflight,
+} from "@angel-engine/daemon-api/github";
 import type { ApiClient } from "@/platform/api-client";
 
 import { GitPullRequest } from "@phosphor-icons/react";
@@ -18,6 +21,7 @@ import {
 } from "@/app/workspace/pull-request-draft";
 import {
   createPullRequestAction,
+  executeCreatePullRequestAction,
   openExistingPullRequest,
   useCreatePullRequestAction,
 } from "@/app/workspace/workspace-create-pr-action";
@@ -40,8 +44,14 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/toast";
 import { queryKeys } from "@/platform/query-keys";
+import { cn } from "@/platform/utils";
 
 interface PullRequestDraft {
   base: string;
@@ -63,11 +73,24 @@ export function WorkspaceCreatePullRequestController({
 }) {
   const { openBrowserTab, selectTab } = useWorkspaceToolSurface();
   const [open, setOpen] = useState(false);
+  const preflightQuery = useWorkspaceGitPullRequestPreflight(api, root);
+  const preflight = preflightQuery.data;
+  const refetchPreflight = preflightQuery.refetch;
   const openDialog = useCallback(() => {
     void selectTab("git");
     setOpen(true);
   }, [selectTab]);
-  useCreatePullRequestAction(openDialog);
+  const executeAction = useCallback(() => {
+    void (async () => {
+      const resolvedPreflight = preflight ?? (await refetchPreflight()).data;
+      executeCreatePullRequestAction({
+        existing: resolvedPreflight?.existing,
+        openBrowser: openBrowserTab,
+        openDialog,
+      });
+    })();
+  }, [openBrowserTab, openDialog, preflight, refetchPreflight]);
+  useCreatePullRequestAction(executeAction);
 
   useEffect(() => setOpen(resetPullRequestDialogState(root).open), [root]);
 
@@ -83,75 +106,68 @@ export function WorkspaceCreatePullRequestController({
   );
 }
 
-export function WorkspaceCreatePullRequestButton({
-  api,
-  hasChanges,
-  root,
-}: {
-  api: ApiClient;
-  hasChanges: boolean;
-  root: string;
-}) {
-  const { t } = useTranslation();
-  const { openBrowserTab } = useWorkspaceToolSurface();
-  const query = useQuery({
+export function useWorkspaceGitPullRequestPreflight(
+  api: ApiClient,
+  root: string,
+) {
+  return useQuery({
     queryFn: () => api.github.workspacePullRequestPreflight(root),
     queryKey: queryKeys.github.pullRequestPreflight(root),
     retry: false,
     staleTime: 5_000,
   });
-  const preflight = query.data;
-  if (
-    query.isPending ||
-    query.isError ||
-    (!preflight?.existing && !preflight?.canCreate)
-  ) {
+}
+
+export function WorkspaceGitPullRequestAction({
+  preflight,
+}: {
+  preflight?: PullRequestPreflight;
+}) {
+  const { t } = useTranslation();
+  const { openBrowserTab } = useWorkspaceToolSurface();
+  if (!preflight?.existing && !preflight?.canCreate) {
     return null;
   }
 
+  const existing = preflight.existing;
+  const label = existing
+    ? t("workspace.tools.createPullRequest.viewShort", {
+        number: existing.number,
+      })
+    : t("workspace.tools.createPullRequest.short");
+  const tooltip = existing
+    ? `${t("workspace.tools.createPullRequest.view", {
+        number: existing.number,
+      })} · ${existing.isDraft ? t("common.draft").toLocaleLowerCase() : existing.state}`
+    : t("workspace.tools.createPullRequest.create");
+
   return (
-    <div
-      className={
-        hasChanges
-          ? "border-t border-border-subtle px-2 py-1.5"
-          : "border-t border-border-subtle p-2"
-      }
-    >
-      <Button
-        className={
-          hasChanges
-            ? "h-auto w-full justify-start px-1 py-0 text-xs"
-            : "w-full"
-        }
-        type="button"
-        variant={hasChanges ? "ghost" : "default"}
-        onClick={() => {
-          if (preflight.existing) {
-            openExistingPullRequest({
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          aria-label={label}
+          className={cn(
+            "w-6 px-0 @[250px]:w-auto @[250px]:px-2",
+            existing?.isDraft && "text-muted-foreground",
+          )}
+          size="xs"
+          title={tooltip}
+          type="button"
+          variant={existing ? "ghost" : "outline"}
+          onClick={() => {
+            executeCreatePullRequestAction({
+              existing,
               openBrowser: openBrowserTab,
-              url: preflight.existing.url,
+              openDialog: () => createPullRequestAction.execute(),
             });
-            return;
-          }
-          createPullRequestAction.execute();
-        }}
-      >
-        <GitPullRequest />
-        {preflight.existing
-          ? t("workspace.tools.createPullRequest.view", {
-              number: preflight.existing.number,
-            })
-          : t("workspace.tools.createPullRequest.create")}
-        {hasChanges && !preflight.existing ? (
-          <span className="ml-auto text-muted-foreground">
-            {t("workspace.tools.createPullRequest.ahead", {
-              base: preflight.base,
-              count: preflight.aheadCount,
-            })}
-          </span>
-        ) : null}
-      </Button>
-    </div>
+          }}
+        >
+          <GitPullRequest />
+          <span className="hidden @[250px]:inline">{label}</span>
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{tooltip}</TooltipContent>
+    </Tooltip>
   );
 }
 

@@ -91,6 +91,7 @@ export interface LocaleResourceTranslationWorkspaceToolsGit {
   noBranches: string;
   noCommits: string;
   noHistory: string;
+  noCommitsToPropose: string;
   noUpstream: string;
   publish: string;
   pull: string;
@@ -135,9 +136,11 @@ export interface LocaleResourceTranslationWorkspaceToolsCreatePullRequest {
   pushedRetry: string;
   pushing: string;
   retry: string;
+  short: string;
   title: string;
   titlePlaceholder: string;
   view: string;
+  viewShort: string;
   willPushMany: string;
   willPushOne: string;
 }
