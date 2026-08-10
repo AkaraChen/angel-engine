@@ -128,6 +128,10 @@ describe("OsNotificationSettings", () => {
       "textContent",
       "settings.workspace.osNotificationsSaveFailed",
     );
+    // Failed write rolls the control back to the durable value before retry.
+    await waitFor(() =>
+      expect(sound.getAttribute("aria-checked")).toBe("true"),
+    );
 
     fireEvent.click(sound);
     await screen.findByRole("status");
