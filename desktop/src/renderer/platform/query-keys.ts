@@ -61,6 +61,12 @@ export const queryKeys = {
   workspaceTools: {
     fileTree: (root: string | null) =>
       ["workspace-tools", "file-tree", root] as const,
+    gitBranches: (root: string | null) =>
+      ["workspace-tools", "git-branches", root] as const,
+    gitCommitShow: (root: string | null, hash: string | null) =>
+      ["workspace-tools", "git-commit-show", root, hash] as const,
+    gitLog: (root: string | null) =>
+      ["workspace-tools", "git-log", root] as const,
     gitDiffRoot: (root: string | null) =>
       ["workspace-tools", "git-diff", root] as const,
     gitDiff: (
