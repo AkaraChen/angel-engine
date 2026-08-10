@@ -113,6 +113,13 @@ function renderFleet(overrides: Partial<Parameters<typeof FleetPage>[0]> = {}) {
   return { onNewChat, onOpenChat, queryClient, ...result };
 }
 
+function expectContainedBoardScroller(element: HTMLElement): void {
+  expect(element.className).toContain("overflow-x-auto");
+  expect(element.className).toContain("pl-6");
+  expect(element.className).not.toContain("min-w-[53rem]");
+  expect(element.firstElementChild?.className).toContain("min-w-[53rem]");
+}
+
 afterEach(() => {
   cleanup();
   window.localStorage.clear();
@@ -192,21 +199,37 @@ describe("fleetPage", () => {
     expect(page?.className).not.toContain("max-w-[88rem]");
   });
 
-  it("keeps the pending board skeleton at board width", async () => {
+  it("keeps pending and loaded board columns aligned inside their scroller", async () => {
     window.localStorage.setItem(FLEET_VIEW_STORAGE_KEY, "board");
+    let resolveActivity:
+      | ((result: { items: ChatActivity[] }) => void)
+      | undefined;
     listActivity.mockImplementation(
-      () => new Promise<{ items: ChatActivity[] }>(() => {}),
+      () =>
+        new Promise<{ items: ChatActivity[] }>((resolve) => {
+          resolveActivity = resolve;
+        }),
     );
-    renderFleet({ chats: [] });
+    renderFleet();
 
-    expect(
-      await screen.findByRole("status", { name: "fleet.loading" }),
-    ).toBeDefined();
+    const skeleton = await screen.findByRole("status", {
+      name: "fleet.loading",
+    });
     const page = screen.getByRole("heading", {
       name: "fleet.title",
     }).parentElement;
     expect(page?.className).toContain("max-w-[88rem]");
     expect(page?.className).not.toContain("max-w-4xl");
+    expect(page?.className).toContain("w-full");
+    expectContainedBoardScroller(skeleton);
+
+    resolveActivity?.({ items: [DONE_ACTIVITY] });
+    const board = await screen.findByRole("region", {
+      name: "fleet.views.board",
+    });
+
+    expectContainedBoardScroller(board);
+    expect(board.className).toBe(skeleton.className);
   });
 
   it("waits for chat metadata before calling the fleet empty", async () => {
@@ -300,8 +323,7 @@ describe("fleetPage", () => {
       .getByRole("searchbox", { name: "fleet.search" })
       .closest('[data-slot="input-group"]');
     expect(searchGroup?.className).toContain("max-w-xs");
-    expect(board.className).toContain("overflow-x-auto");
-    expect(board.firstElementChild?.className).toContain("min-w-[53rem]");
+    expectContainedBoardScroller(board);
     expect(within(board).getAllByRole("heading")).toHaveLength(3);
     expect(
       within(board).getByText("fleet.emptySegments.running"),

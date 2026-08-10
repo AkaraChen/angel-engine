@@ -454,7 +454,7 @@ function FleetBoard({
   return (
     <div
       aria-label={t("fleet.views.board")}
-      className="mt-8 overflow-x-auto pb-3"
+      className="mt-8 overflow-x-auto pb-3 pl-6"
       role="region"
     >
       <div className="grid min-w-[53rem] grid-cols-3 items-start gap-4">
@@ -729,7 +729,7 @@ function FleetSkeletonBoard(): ReactElement {
   return (
     <div
       aria-label={t("fleet.loading")}
-      className="mt-8 overflow-x-auto pb-3"
+      className="mt-8 overflow-x-auto pb-3 pl-6"
       role="status"
     >
       <div className="grid min-w-[53rem] grid-cols-3 gap-4">
