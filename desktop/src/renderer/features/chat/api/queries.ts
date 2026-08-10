@@ -143,9 +143,26 @@ interface DeleteAllChatsMutationParams {
   queryClient: QueryClient;
 }
 
-type ChatContextMenuResult = Awaited<
-  ReturnType<ApiClient["chats"]["showContextMenu"]>
->;
+/** Items the chat context menu offers. */
+export type ChatContextMenuAction =
+  | "copyJson"
+  | "delete"
+  | "handoff"
+  | "rename"
+  | "togglePin";
+
+export type ChatContextMenuResult =
+  | "copied"
+  | "deleted"
+  | "handoff"
+  | "pinned"
+  | "rename"
+  | "unpinned";
+
+export interface ChatContextMenuVariables {
+  action: ChatContextMenuAction;
+  chat: Chat;
+}
 
 interface ChatContextMenuMutationParams {
   api: ApiClient;
@@ -491,12 +508,29 @@ export function chatContextMenuMutationOptions({
   queryClient,
 }: ChatContextMenuMutationParams) {
   return mutationOptions({
-    mutationFn: async (chat: Chat) => api.chats.showContextMenu(chat.id),
+    mutationFn: async ({
+      action,
+      chat,
+    }: ChatContextMenuVariables): Promise<ChatContextMenuResult> => {
+      if (action === "togglePin") {
+        await api.chats.setPinned(chat.id, !chat.pinned);
+        return chat.pinned ? "unpinned" : "pinned";
+      }
+      if (action === "delete") {
+        await api.chats.delete(chat.id);
+        return "deleted";
+      }
+      if (action === "copyJson") {
+        await navigator.clipboard.writeText(JSON.stringify(chat, null, 2));
+        return "copied";
+      }
+      return action;
+    },
     onSuccess: async (data, variables) => {
       if (data === "deleted" || data === "pinned" || data === "unpinned") {
         await invalidateChatQueries(queryClient);
       }
-      await onSuccess?.(data, variables);
+      await onSuccess?.(data, variables.chat);
     },
   });
 }

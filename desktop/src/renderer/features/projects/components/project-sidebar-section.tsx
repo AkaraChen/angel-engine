@@ -1,6 +1,9 @@
 import type { Chat } from "@angel-engine/daemon-api/chat";
 import type { Project } from "@angel-engine/daemon-api/projects";
+import type { PathLauncherActionId } from "@shared/path-launcher";
 import type { ReactElement } from "react";
+import type { ChatContextMenuAction } from "@/features/chat/api/queries";
+import type { ProjectContextMenuAction } from "@/features/projects/api/queries";
 import {
   CaretDown as ChevronDown,
   Folder,
@@ -29,7 +32,9 @@ import {
   WorkspaceSidebarMenuAction,
   WorkspaceSidebarMenuButton,
 } from "@/components/workspace-sidebar-primitives";
+import { ChatContextMenu } from "@/features/chat/components/chat-context-menu";
 import { ChatSidebarItem } from "@/features/chat/components/chat-sidebar-item";
+import { ProjectContextMenu } from "@/features/projects/components/project-context-menu";
 import { AddProjectMenu } from "@/features/projects/components/add-project-menu";
 import { WorktreeCreationActions } from "@/features/projects/components/worktree-creation-actions";
 
@@ -44,8 +49,15 @@ interface ProjectSidebarSectionProps {
   onCreateProjectChat: (project: Project) => MaybeAsync;
   onOpenChat: (chat: Chat) => MaybeAsync;
   onRetryWorktreeCreation: (chat: Chat) => MaybeAsync;
-  onShowChatContextMenu: (chat: Chat) => MaybeAsync;
-  onShowProjectContextMenu: (project: Project) => MaybeAsync;
+  onChatContextMenuAction: (chat: Chat, action: ChatContextMenuAction) => void;
+  onProjectContextMenuAction: (
+    project: Project,
+    action: ProjectContextMenuAction,
+  ) => void;
+  onProjectPathLauncherAction: (
+    project: Project,
+    action: PathLauncherActionId,
+  ) => void;
   projectChatsByProjectId: Map<string, Chat[]>;
   projects: Project[];
   selectedChatId?: string;
@@ -60,8 +72,9 @@ export function ProjectSidebarSection({
   onCreateProjectChat,
   onOpenChat,
   onRetryWorktreeCreation,
-  onShowChatContextMenu,
-  onShowProjectContextMenu,
+  onChatContextMenuAction,
+  onProjectContextMenuAction,
+  onProjectPathLauncherAction,
   projectChatsByProjectId,
   projects,
   selectedChatId,
@@ -135,41 +148,43 @@ export function ProjectSidebarSection({
 
               return (
                 <AnimatedSidebarMenuItem key={project.id}>
-                  <WorkspaceSidebarMenuButton
-                    aria-expanded={isExpanded}
-                    onClick={() => {
-                      toggleProjectExpanded(project.id);
-                    }}
-                    onContextMenu={(event) => {
-                      event.preventDefault();
-                      void onShowProjectContextMenu(project);
-                    }}
-                    title={project.path}
+                  <ProjectContextMenu
+                    onAction={onProjectContextMenuAction}
+                    onPathLauncherAction={onProjectPathLauncherAction}
+                    project={project}
                   >
-                    <span
-                      className="
+                    <WorkspaceSidebarMenuButton
+                      aria-expanded={isExpanded}
+                      onClick={() => {
+                        toggleProjectExpanded(project.id);
+                      }}
+                      title={project.path}
+                    >
+                      <span
+                        className="
                         block min-w-0 truncate overflow-hidden text-left
                         whitespace-nowrap
                       "
-                      title={projectDisplayName}
-                    >
-                      {projectDisplayName}
-                    </span>
-                    <m.span
-                      animate={{ rotate: isExpanded ? 0 : -90 }}
-                      aria-hidden="true"
-                      className="
+                        title={projectDisplayName}
+                      >
+                        {projectDisplayName}
+                      </span>
+                      <m.span
+                        animate={{ rotate: isExpanded ? 0 : -90 }}
+                        aria-hidden="true"
+                        className="
                         ml-1 flex size-4 shrink-0 items-center justify-center
                         opacity-0 transition-opacity
                         group-focus-within/menu-item:opacity-70
                         group-hover/menu-item:opacity-70
                         group-data-[collapsible=icon]:hidden
                       "
-                      transition={sidebarMotion}
-                    >
-                      <ChevronDown />
-                    </m.span>
-                  </WorkspaceSidebarMenuButton>
+                        transition={sidebarMotion}
+                      >
+                        <ChevronDown />
+                      </m.span>
+                    </WorkspaceSidebarMenuButton>
+                  </ProjectContextMenu>
                   <WorkspaceSidebarMenuAction
                     aria-label={t("sidebar.newChatInProject", {
                       projectName: projectDisplayName,
@@ -236,25 +251,29 @@ export function ProjectSidebarSection({
                               }
                               return (
                                 <AnimatedSidebarMenuItem key={chat.id}>
-                                  <ChatSidebarItem
-                                    chatId={chat.id}
-                                    isActive={chat.id === selectedChatId}
-                                    nested
-                                    onArchiveChat={async () =>
-                                      onArchiveChat(chat)
-                                    }
-                                    onOpenChat={() => void onOpenChat(chat)}
-                                    onShowContextMenu={async () =>
-                                      onShowChatContextMenu(chat)
-                                    }
-                                    pinned={chat.pinned}
-                                    runtime={chat.runtime}
-                                    title={displayChatTitle(chat.title, t)}
-                                    tooltip={
-                                      chat.cwd ??
-                                      displayChatTitle(chat.title, t)
-                                    }
-                                  />
+                                  <ChatContextMenu
+                                    chat={chat}
+                                    onAction={onChatContextMenuAction}
+                                  >
+                                    <div>
+                                      <ChatSidebarItem
+                                        chatId={chat.id}
+                                        isActive={chat.id === selectedChatId}
+                                        nested
+                                        onArchiveChat={async () =>
+                                          onArchiveChat(chat)
+                                        }
+                                        onOpenChat={() => void onOpenChat(chat)}
+                                        pinned={chat.pinned}
+                                        runtime={chat.runtime}
+                                        title={displayChatTitle(chat.title, t)}
+                                        tooltip={
+                                          chat.cwd ??
+                                          displayChatTitle(chat.title, t)
+                                        }
+                                      />
+                                    </div>
+                                  </ChatContextMenu>
                                 </AnimatedSidebarMenuItem>
                               );
                             })

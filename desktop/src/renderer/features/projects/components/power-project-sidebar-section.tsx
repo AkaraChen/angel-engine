@@ -1,7 +1,9 @@
 import type { Chat } from "@angel-engine/daemon-api/chat";
 import type { Project } from "@angel-engine/daemon-api/projects";
+import type { PathLauncherActionId } from "@shared/path-launcher";
 import type { ReactElement } from "react";
 import type { ProjectWorktreeChatGroup } from "@/features/chat/worktree-grouping";
+import type { ProjectContextMenuAction } from "@/features/projects/api/queries";
 
 import {
   CaretDown as ChevronDown,
@@ -27,7 +29,9 @@ import {
   WorkspaceSidebarMenuButton,
 } from "@/components/workspace-sidebar-primitives";
 import { groupProjectChatsByWorktree } from "@/features/chat/worktree-grouping";
+import { PathLauncherContextMenu } from "@/features/path-launcher/components/path-launcher-context-menu";
 import { AddProjectMenu } from "@/features/projects/components/add-project-menu";
+import { ProjectContextMenu } from "@/features/projects/components/project-context-menu";
 import { WorktreeCreationActions } from "@/features/projects/components/worktree-creation-actions";
 
 type MaybeAsync = void | Promise<void>;
@@ -44,11 +48,19 @@ interface PowerProjectSidebarSectionProps {
   ) => MaybeAsync;
   onOpenChat: (chat: Chat) => MaybeAsync;
   onRetryWorktreeCreation: (chat: Chat) => MaybeAsync;
-  onShowProjectContextMenu: (project: Project) => MaybeAsync;
-  onShowWorktreeContextMenu: (
+  onProjectContextMenuAction: (
+    project: Project,
+    action: ProjectContextMenuAction,
+  ) => void;
+  onProjectPathLauncherAction: (
+    project: Project,
+    action: PathLauncherActionId,
+  ) => void;
+  onWorktreePathLauncherAction: (
     project: Project,
     worktreeGroup: ProjectWorktreeChatGroup,
-  ) => MaybeAsync;
+    action: PathLauncherActionId,
+  ) => void;
   projectChatsByProjectId: Map<string, Chat[]>;
   projects: Project[];
 }
@@ -62,8 +74,9 @@ export function PowerProjectSidebarSection({
   onOpenWorktree,
   onOpenChat,
   onRetryWorktreeCreation,
-  onShowProjectContextMenu,
-  onShowWorktreeContextMenu,
+  onProjectContextMenuAction,
+  onProjectPathLauncherAction,
+  onWorktreePathLauncherAction,
   projectChatsByProjectId,
   projects,
 }: PowerProjectSidebarSectionProps): ReactElement {
@@ -147,50 +160,54 @@ export function PowerProjectSidebarSection({
 
               return (
                 <AnimatedSidebarMenuItem key={project.id}>
-                  <WorkspaceSidebarMenuButton
-                    aria-expanded={
-                      singleWorktreeGroup === undefined ? isExpanded : undefined
-                    }
-                    onClick={() => {
-                      if (singleWorktreeGroup !== undefined) {
-                        void onOpenWorktree(project, singleWorktreeGroup);
-                        return;
-                      }
-
-                      toggleProjectExpanded(project.id);
-                    }}
-                    onContextMenu={(event) => {
-                      event.preventDefault();
-                      void onShowProjectContextMenu(project);
-                    }}
-                    title={project.path}
+                  <ProjectContextMenu
+                    onAction={onProjectContextMenuAction}
+                    onPathLauncherAction={onProjectPathLauncherAction}
+                    project={project}
                   >
-                    <span
-                      className="
+                    <WorkspaceSidebarMenuButton
+                      aria-expanded={
+                        singleWorktreeGroup === undefined
+                          ? isExpanded
+                          : undefined
+                      }
+                      onClick={() => {
+                        if (singleWorktreeGroup !== undefined) {
+                          void onOpenWorktree(project, singleWorktreeGroup);
+                          return;
+                        }
+
+                        toggleProjectExpanded(project.id);
+                      }}
+                      title={project.path}
+                    >
+                      <span
+                        className="
                         block min-w-0 flex-1 truncate overflow-hidden text-left
                         whitespace-nowrap
                       "
-                      title={projectDisplayName}
-                    >
-                      {projectDisplayName}
-                    </span>
-                    {singleWorktreeGroup === undefined ? (
-                      <m.span
-                        animate={{ rotate: isExpanded ? 0 : -90 }}
-                        aria-hidden="true"
-                        className="
+                        title={projectDisplayName}
+                      >
+                        {projectDisplayName}
+                      </span>
+                      {singleWorktreeGroup === undefined ? (
+                        <m.span
+                          animate={{ rotate: isExpanded ? 0 : -90 }}
+                          aria-hidden="true"
+                          className="
                           ml-1 flex size-4 shrink-0 items-center justify-center
                           opacity-0 transition-opacity
                           group-focus-within/menu-item:opacity-70
                           group-hover/menu-item:opacity-70
                           group-data-[collapsible=icon]:hidden
                         "
-                        transition={sidebarMotion}
-                      >
-                        <ChevronDown />
-                      </m.span>
-                    ) : null}
-                  </WorkspaceSidebarMenuButton>
+                          transition={sidebarMotion}
+                        >
+                          <ChevronDown />
+                        </m.span>
+                      ) : null}
+                    </WorkspaceSidebarMenuButton>
+                  </ProjectContextMenu>
                   <WorkspaceSidebarMenuAction
                     aria-label={t("sidebar.newChatInProject", {
                       projectName: projectDisplayName,
@@ -256,8 +273,17 @@ export function PowerProjectSidebarSection({
                           })}
                           {worktreeGroups.map((group) => (
                             <AnimatedSidebarMenuItem key={group.key}>
-                              <button
-                                className="
+                              <PathLauncherContextMenu
+                                onSelect={(action) =>
+                                  onWorktreePathLauncherAction(
+                                    project,
+                                    group,
+                                    action,
+                                  )
+                                }
+                              >
+                                <button
+                                  className="
                                   group/worktree-group flex h-6 w-full
                                   items-center gap-1.5 rounded-sm pr-2 pl-6
                                   text-left text-[11px] font-medium
@@ -265,24 +291,18 @@ export function PowerProjectSidebarSection({
                                   hover:text-sidebar-foreground/75
                                   focus-visible:text-sidebar-foreground/75
                                 "
-                                onClick={() =>
-                                  void onOpenWorktree(project, group)
-                                }
-                                onContextMenu={(event) => {
-                                  event.preventDefault();
-                                  void onShowWorktreeContextMenu(
-                                    project,
-                                    group,
-                                  );
-                                }}
-                                title={group.cwd}
-                                type="button"
-                              >
-                                <GitBranch className="size-3 shrink-0" />
-                                <span className="min-w-0 truncate">
-                                  {group.label}
-                                </span>
-                              </button>
+                                  onClick={() =>
+                                    void onOpenWorktree(project, group)
+                                  }
+                                  title={group.cwd}
+                                  type="button"
+                                >
+                                  <GitBranch className="size-3 shrink-0" />
+                                  <span className="min-w-0 truncate">
+                                    {group.label}
+                                  </span>
+                                </button>
+                              </PathLauncherContextMenu>
                             </AnimatedSidebarMenuItem>
                           ))}
                         </SidebarMenu>

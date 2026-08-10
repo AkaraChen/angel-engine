@@ -1,5 +1,6 @@
 import type { Chat } from "@angel-engine/daemon-api/chat";
 import type { ReactElement } from "react";
+import type { ChatContextMenuAction } from "@/features/chat/api/queries";
 
 import {
   Archive,
@@ -18,6 +19,7 @@ import {
   getWorkspaceToolPatchFileLineChanges,
 } from "@/app/workspace/workspace-tool-patch-model";
 import { Button } from "@/components/ui/button";
+import { ChatContextMenu } from "@/features/chat/components/chat-context-menu";
 import {
   agentRuntimeIconSvg,
   agentRuntimeLabel,
@@ -40,7 +42,7 @@ interface PowerWorktreeHistoryPageProps {
   onArchiveChat: (chat: Chat) => void;
   onNewChat: () => void;
   onOpenChat: (chat: Chat) => void;
-  onShowChatContextMenu: (chat: Chat) => void;
+  onChatContextMenuAction: (chat: Chat, action: ChatContextMenuAction) => void;
   projectPath?: string;
 }
 
@@ -51,7 +53,7 @@ export function PowerWorktreeHistoryPage({
   onArchiveChat,
   onNewChat,
   onOpenChat,
-  onShowChatContextMenu,
+  onChatContextMenuAction,
   projectPath,
 }: PowerWorktreeHistoryPageProps): ReactElement {
   const { t } = useTranslation();
@@ -184,66 +186,67 @@ export function PowerWorktreeHistoryPage({
             "
           >
             {historyChats.map((chat) => (
-              <div
-                className="
+              <ChatContextMenu
+                chat={chat}
+                key={chat.id}
+                onAction={onChatContextMenuAction}
+              >
+                <div
+                  className="
                   group/history-chat flex min-w-0 items-center gap-1 rounded-lg
                 "
-                key={chat.id}
-                onContextMenu={(event) => {
-                  event.preventDefault();
-                  onShowChatContextMenu(chat);
-                }}
-                title={chat.title}
-              >
-                <button
-                  className="
+                  title={chat.title}
+                >
+                  <button
+                    className="
                     flex min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-2
                     text-left outline-none
                     focus-visible:ring-2 focus-visible:ring-ring/50
                     focus-visible:ring-inset
                   "
-                  onClick={() => onOpenChat(chat)}
-                  type="button"
-                >
-                  <AgentIcon runtime={chat.runtime} />
-                  <span
-                    className="
+                    onClick={() => onOpenChat(chat)}
+                    type="button"
+                  >
+                    <AgentIcon runtime={chat.runtime} />
+                    <span
+                      className="
                       max-w-full min-w-0 flex-1 truncate text-sm text-foreground
                     "
-                  >
-                    {displayChatTitle(chat.title, t)}
-                  </span>
-                  {chat.pinned ? (
-                    <PushPin
-                      aria-label={t("sidebar.dateGroups.pinned")}
-                      className="size-3 shrink-0 text-muted-foreground"
-                      weight="fill"
-                    />
-                  ) : null}
-                  <span
-                    className="shrink-0 text-xs text-muted-foreground"
-                    title={formatDateTime(chat.updatedAt)}
-                  >
-                    {formatRelativeTime(chat.updatedAt)}
-                  </span>
-                </button>
-                <Button
-                  aria-label={t("sidebar.archiveChat")}
-                  className="
+                    >
+                      {displayChatTitle(chat.title, t)}
+                    </span>
+                    {chat.pinned ? (
+                      <PushPin
+                        aria-label={t("sidebar.dateGroups.pinned")}
+                        className="size-3 shrink-0 text-muted-foreground"
+                        weight="fill"
+                      />
+                    ) : null}
+                    <span
+                      className="shrink-0 text-xs text-muted-foreground"
+                      title={formatDateTime(chat.updatedAt)}
+                    >
+                      {formatRelativeTime(chat.updatedAt)}
+                    </span>
+                  </button>
+                  <Button
+                    aria-label={t("sidebar.archiveChat")}
+                    className="
                     mr-1.5 size-7 shrink-0 opacity-0 transition-opacity
                     group-focus-within/history-chat:opacity-100
                     group-hover/history-chat:opacity-100
                     motion-reduce:transition-none
                   "
-                  onClick={() => onArchiveChat(chat)}
-                  size="icon-sm"
-                  title={t("sidebar.archiveChat")}
-                  type="button"
-                  variant="ghost"
-                >
-                  <Archive className="size-4" />
-                </Button>
-              </div>
+                    onClick={() => onArchiveChat(chat)}
+                    size="icon-sm"
+                    title={t("sidebar.archiveChat")}
+                    type="button"
+                    variant="ghost"
+                  >
+                    <Archive className="size-4" />
+                  </Button>
+                </div>
+              </ChatContextMenu>
             ))}
           </div>
         )}

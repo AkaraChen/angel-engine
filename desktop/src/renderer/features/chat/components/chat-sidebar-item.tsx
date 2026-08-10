@@ -1,4 +1,4 @@
-import type { MouseEventHandler, ReactElement } from "react";
+import type { ReactElement } from "react";
 import { Archive, Robot as Bot, PushPin } from "@phosphor-icons/react";
 
 import is from "@sindresorhus/is";
@@ -30,7 +30,6 @@ interface ChatSidebarItemProps {
   nested?: boolean;
   onArchiveChat?: () => Promise<void> | void;
   onOpenChat: () => void;
-  onShowContextMenu?: () => Promise<void> | void;
   pinned?: boolean;
   runtime?: string | null;
 }
@@ -43,27 +42,18 @@ export function ChatSidebarItem({
   nested,
   onArchiveChat,
   onOpenChat,
-  onShowContextMenu,
   pinned,
   runtime,
 }: ChatSidebarItemProps): ReactElement {
   const { t } = useTranslation();
   const runtimeIconSvg = agentRuntimeIconSvg(runtime);
   const runtimeLabel = agentRuntimeLabel(runtime);
-  const handleContextMenu: MouseEventHandler<HTMLButtonElement> = (event) => {
-    event.preventDefault();
-    if (onShowContextMenu) {
-      void onShowContextMenu();
-    }
-  };
-
   return (
     <div className="group/chat-sidebar-item relative">
       <WorkspaceSidebarMenuButton
         className={cn("gap-1.5 pr-8!", nested && "pl-6")}
         isActive={isActive}
         onClick={onOpenChat}
-        onContextMenu={onShowContextMenu ? handleContextMenu : undefined}
         title={tooltip}
       >
         <span

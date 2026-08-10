@@ -1,3 +1,4 @@
+import type { PathLauncherActionId } from "@shared/path-launcher";
 import type { FC } from "react";
 import type { PowerWorktreeTabs } from "@/app/workspace/use-power-worktree-tabs";
 import type { WorkspaceChatActions } from "@/app/workspace/use-workspace-chat-actions";
@@ -162,9 +163,9 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     setChatMessagesInCache,
     setPersistedChatRuntime,
     settingsTargetProject,
-    showChatContextMenu,
-    showPathLauncherContextMenu,
-    showProjectContextMenu,
+    runChatContextMenuAction,
+    runPathLauncherAction,
+    runProjectContextMenuAction,
     updateChatFromRun,
   } = chatActions;
   const openWorkspaceTerminal = useWorkspaceToolStore(
@@ -240,15 +241,15 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     canShowRightSidebar &&
     is.nonEmptyString(workspaceToolContextKey) &&
     is.nonEmptyString(workspaceToolRoot);
-  const showCurrentWorkspaceContextMenu = async () => {
+  const runCurrentWorkspacePathLauncherAction = async (
+    action: PathLauncherActionId,
+  ) => {
     if (currentLauncherTarget === undefined) return;
 
-    const action = await showPathLauncherContextMenu(currentLauncherTarget, {
-      includeAngelTerminal: canOpenAngelTerminal,
-    });
+    const result = await runPathLauncherAction(currentLauncherTarget, action);
     if (
-      typeof action !== "object" ||
-      action.action !== "open_angel_terminal" ||
+      typeof result !== "object" ||
+      result.action !== "open_angel_terminal" ||
       !is.nonEmptyString(workspaceToolContextKey)
     ) {
       return;
@@ -256,7 +257,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
 
     openWorkspaceTerminal({
       contextKey: workspaceToolContextKey,
-      root: action.target,
+      root: result.target,
     });
     if (workspaceToolHost === "sidebar") {
       setRightSidebarOpen(true);
@@ -264,15 +265,31 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
       toggleWorkspaceTools();
     }
   };
-  const showWorktreeContextMenu = (
+  const handleChatContextMenuAction = (
+    chat: (typeof chats)[number],
+    action: Parameters<typeof runChatContextMenuAction>[1],
+  ) => {
+    void runChatContextMenuAction(chat, action);
+  };
+  const handleProjectContextMenuAction = (
+    project: (typeof projects)[number],
+    action: Parameters<typeof runProjectContextMenuAction>[1],
+  ) => {
+    void runProjectContextMenuAction(project, action);
+  };
+  const runProjectPathLauncherAction = (
+    project: (typeof projects)[number],
+    action: PathLauncherActionId,
+  ) => {
+    void runPathLauncherAction({ projectId: project.id }, action);
+  };
+  const runWorktreePathLauncherAction = (
     project: (typeof projects)[number],
     worktree: Parameters<typeof navigation.openPowerWorktree>[1],
+    action: PathLauncherActionId,
   ) => {
     const chatId = worktree.isMain ? undefined : worktree.chats[0]?.id;
-    void showPathLauncherContextMenu({
-      chatId,
-      projectId: project.id,
-    });
+    void runPathLauncherAction({ chatId, projectId: project.id }, action);
   };
   const cancelWorktreeCreation = async (chat: (typeof chats)[number]) => {
     await api.chats.cancelWorktreeCreation(chat.id);
@@ -334,9 +351,10 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
             onOpenSettings={openSettings}
             onOpenWorktree={openPowerWorktree}
             onRetryWorktreeCreation={retryWorktreeCreation}
-            onShowChatContextMenu={showChatContextMenu}
-            onShowProjectContextMenu={showProjectContextMenu}
-            onShowWorktreeContextMenu={showWorktreeContextMenu}
+            onChatContextMenuAction={handleChatContextMenuAction}
+            onProjectContextMenuAction={handleProjectContextMenuAction}
+            onProjectPathLauncherAction={runProjectPathLauncherAction}
+            onWorktreePathLauncherAction={runWorktreePathLauncherAction}
             onWorkspaceModeChange={changeWorkspaceMode}
             projectChatsByProjectId={projectChatsByProjectId}
             projects={projects}
@@ -365,9 +383,10 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
             onOpenSettings={openSettings}
             onOpenWorktree={openPowerWorktree}
             onRetryWorktreeCreation={retryWorktreeCreation}
-            onShowChatContextMenu={showChatContextMenu}
-            onShowProjectContextMenu={showProjectContextMenu}
-            onShowWorktreeContextMenu={showWorktreeContextMenu}
+            onChatContextMenuAction={handleChatContextMenuAction}
+            onProjectContextMenuAction={handleProjectContextMenuAction}
+            onProjectPathLauncherAction={runProjectPathLauncherAction}
+            onWorktreePathLauncherAction={runWorktreePathLauncherAction}
             onWorkspaceModeChange={changeWorkspaceMode}
             projectChatsByProjectId={projectChatsByProjectId}
             projects={projects}
@@ -457,10 +476,12 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                       ? t("fleet.title")
                       : workspaceTitle
               }
-              onShowContextMenu={
+              includeAngelTerminal={canOpenAngelTerminal}
+              onPathLauncherAction={
                 currentLauncherTarget === undefined
                   ? undefined
-                  : () => void showCurrentWorkspaceContextMenu()
+                  : (action) =>
+                      void runCurrentWorkspacePathLauncherAction(action)
               }
               onToggleRightSidebar={
                 canShowRightSidebar &&
@@ -515,9 +536,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                     onArchiveChat={(chat) => void archiveChat(chat)}
                     onNewChat={openDraftTabFromTabBar}
                     onOpenChat={openPowerHistoryChatTab}
-                    onShowChatContextMenu={(chat) =>
-                      void showChatContextMenu(chat)
-                    }
+                    onChatContextMenuAction={handleChatContextMenuAction}
                     projectPath={activePowerWorktreeProject?.path}
                   />
                 ) : is.nonEmptyString(selectedChatId) ? (

@@ -1,3 +1,5 @@
+import type { PathLauncherActionId } from "@shared/path-launcher";
+import type { ReactElement } from "react";
 import type { ChatAttentionState } from "@/features/chat/state/chat-run-store";
 
 import {
@@ -11,11 +13,13 @@ import { WorkspaceToolHeaderButton } from "@/app/workspace/workspace-tool-surfac
 import { useSidebar } from "@/components/ui/sidebar";
 import { UsageChip } from "@/features/usage/usage-chip";
 import { NotificationCenter } from "@/features/notifications/notification-center";
+import { PathLauncherContextMenu } from "@/features/path-launcher/components/path-launcher-context-menu";
 
 interface WorkspaceHeaderProps {
   attention?: ChatAttentionState;
   breadcrumbProject?: string;
-  onShowContextMenu?: () => void;
+  includeAngelTerminal?: boolean;
+  onPathLauncherAction?: (action: PathLauncherActionId) => void;
   onToggleRightSidebar?: () => void;
   rightSidebarOpen?: boolean;
   rightSidebarToggleLabel?: string;
@@ -26,7 +30,8 @@ interface WorkspaceHeaderProps {
 export function WorkspaceHeader({
   attention,
   breadcrumbProject,
-  onShowContextMenu,
+  includeAngelTerminal,
+  onPathLauncherAction,
   onToggleRightSidebar,
   rightSidebarOpen = false,
   rightSidebarToggleLabel = "Toggle workspace tools",
@@ -40,6 +45,36 @@ export function WorkspaceHeader({
   const triggerLeft = isMacOS ? 80 : 20;
   const titleMarginLeft = Math.max(0, triggerLeft + 44 - 16);
   const reserveTitleStart = isMobile || state === "collapsed";
+  const titleElement: ReactElement = (
+    <h1
+      className="
+        flex min-w-0 flex-1 items-baseline gap-1.5 truncate text-sm font-medium
+        transition-[margin] duration-200 ease-linear
+      "
+      data-electron-no-drag={onPathLauncherAction ? true : undefined}
+      style={{ marginLeft: reserveTitleStart ? titleMarginLeft : 0 }}
+      title={
+        is.nonEmptyString(breadcrumbProject)
+          ? `${breadcrumbProject} › ${title}`
+          : title
+      }
+    >
+      {is.nonEmptyString(breadcrumbProject) ? (
+        <>
+          <span className="shrink-0 font-semibold text-primary">
+            {breadcrumbProject}
+          </span>
+          <span
+            aria-hidden="true"
+            className="shrink-0 font-normal text-muted-foreground/60"
+          >
+            ›
+          </span>
+        </>
+      ) : null}
+      <span className="truncate">{title}</span>
+    </h1>
+  );
 
   return (
     <header
@@ -58,42 +93,16 @@ export function WorkspaceHeader({
         />
       ) : null}
       <WorkspaceSidebarControlTarget />
-      <h1
-        className="
-          flex min-w-0 flex-1 items-baseline gap-1.5 truncate text-sm
-          font-medium transition-[margin] duration-200 ease-linear
-        "
-        data-electron-no-drag={onShowContextMenu ? true : undefined}
-        onContextMenu={
-          onShowContextMenu
-            ? (event) => {
-                event.preventDefault();
-                onShowContextMenu();
-              }
-            : undefined
-        }
-        style={{ marginLeft: reserveTitleStart ? titleMarginLeft : 0 }}
-        title={
-          is.nonEmptyString(breadcrumbProject)
-            ? `${breadcrumbProject} › ${title}`
-            : title
-        }
-      >
-        {is.nonEmptyString(breadcrumbProject) ? (
-          <>
-            <span className="shrink-0 font-semibold text-primary">
-              {breadcrumbProject}
-            </span>
-            <span
-              aria-hidden="true"
-              className="shrink-0 font-normal text-muted-foreground/60"
-            >
-              ›
-            </span>
-          </>
-        ) : null}
-        <span className="truncate">{title}</span>
-      </h1>
+      {onPathLauncherAction === undefined ? (
+        titleElement
+      ) : (
+        <PathLauncherContextMenu
+          includeAngelTerminal={includeAngelTerminal}
+          onSelect={onPathLauncherAction}
+        >
+          {titleElement}
+        </PathLauncherContextMenu>
+      )}
       {showAttention ? (
         <span
           aria-label={t("workspace.backgroundChatStatus")}
