@@ -16,6 +16,7 @@ import {
   lastOpenedTargetPath,
   projectDraftRoutePath,
   projectPullRequestsRoutePath,
+  scheduleRoutePath,
   workspaceModeForChat,
 } from "@/app/workspace/workspace-route-paths";
 import {
@@ -266,6 +267,10 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
     if (location !== fleetRoutePath) navigate(fleetRoutePath);
   }, [location, navigate]);
 
+  const openSchedule = useCallback(() => {
+    if (location !== scheduleRoutePath) navigate(scheduleRoutePath);
+  }, [location, navigate]);
+
   const openPullRequests = useCallback(
     (project: Project) => {
       setPowerDraftWorktree(undefined);
@@ -319,6 +324,7 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
     openChat,
     openChatFromFleet,
     openFleet,
+    openSchedule,
     openPowerWorktree,
     openPullRequests,
     openSettings,

@@ -1,4 +1,5 @@
 import type { LocaleResource } from "./schema";
+import { scheduleTranslation } from "./schedule";
 
 export const es = {
   translation: {
@@ -280,6 +281,7 @@ export const es = {
         list: "Vista de lista",
       },
     },
+    schedule: scheduleTranslation,
     pullRequests: {
       commentPlaceholder: "Write a comment…",
       comments: "Comments ({{count}})",

@@ -1,4 +1,5 @@
 import type { LocaleResource } from "./schema";
+import { scheduleTranslation } from "./schedule";
 
 export const zhCN = {
   translation: {
@@ -272,6 +273,7 @@ export const zhCN = {
         list: "列表视图",
       },
     },
+    schedule: scheduleTranslation,
     pullRequests: {
       commentPlaceholder: "写一条评论…",
       comments: "评论（{{count}}）",

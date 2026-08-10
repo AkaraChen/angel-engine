@@ -1,4 +1,5 @@
 import type { LocaleResource } from "./schema";
+import { scheduleTranslation } from "./schedule";
 
 export const zhTW = {
   translation: {
@@ -272,6 +273,7 @@ export const zhTW = {
         list: "列表檢視",
       },
     },
+    schedule: scheduleTranslation,
     pullRequests: {
       commentPlaceholder: "寫一則評論…",
       comments: "評論（{{count}}）",
