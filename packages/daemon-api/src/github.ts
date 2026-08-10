@@ -138,10 +138,14 @@ export interface GitHubPullRequestComment {
 }
 
 export interface GitHubPullRequestDetail {
+  additions: number;
   author: string | null;
   baseRefName: string;
   body: string;
+  changedFiles: number;
   comments: GitHubPullRequestComment[];
+  commitCount: number;
+  deletions: number;
   headRefName: string;
   isDraft: boolean;
   number: number;
@@ -501,6 +505,8 @@ export const githubFailureLogInputSchema = arkType({
   cwd: "string > 0",
   runId: "string | number",
   "repo?": "string",
+});
+
 export interface PullRequestCreateInput {
   base: string;
   body: string;

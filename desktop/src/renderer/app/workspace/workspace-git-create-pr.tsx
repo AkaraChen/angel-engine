@@ -22,9 +22,11 @@ import {
 import {
   createPullRequestAction,
   executeCreatePullRequestAction,
+  type ExistingPullRequestTarget,
   openExistingPullRequest,
   useCreatePullRequestAction,
 } from "@/app/workspace/workspace-create-pr-action";
+import { WorkspacePullRequestPreviewDialog } from "@/app/workspace/workspace-pull-request-preview";
 import { WorkspaceToolBanner } from "@/app/workspace/workspace-tool-layout";
 import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
 import { Button } from "@/components/ui/button";
@@ -73,6 +75,8 @@ export function WorkspaceCreatePullRequestController({
 }) {
   const { openBrowserTab, selectTab } = useWorkspaceToolSurface();
   const [open, setOpen] = useState(false);
+  const [previewTarget, setPreviewTarget] =
+    useState<ExistingPullRequestTarget | null>(null);
   const preflightQuery = useWorkspaceGitPullRequestPreflight(api, root);
   const preflight = preflightQuery.data;
   const refetchPreflight = preflightQuery.refetch;
@@ -85,24 +89,43 @@ export function WorkspaceCreatePullRequestController({
       const resolvedPreflight = preflight ?? (await refetchPreflight()).data;
       executeCreatePullRequestAction({
         existing: resolvedPreflight?.existing,
-        openBrowser: openBrowserTab,
         openDialog,
+        openPreview: (target) => {
+          setOpen(false);
+          void selectTab("git");
+          setPreviewTarget(target);
+        },
       });
     })();
-  }, [openBrowserTab, openDialog, preflight, refetchPreflight]);
+  }, [openDialog, preflight, refetchPreflight, selectTab]);
   useCreatePullRequestAction(executeAction);
 
-  useEffect(() => setOpen(resetPullRequestDialogState(root).open), [root]);
+  useEffect(() => {
+    setOpen(resetPullRequestDialogState(root).open);
+    setPreviewTarget(null);
+  }, [root]);
 
   return (
-    <WorkspaceCreatePullRequestDialog
-      api={api}
-      contextKey={contextKey}
-      open={open}
-      root={root}
-      onOpenBrowser={openBrowserTab}
-      onOpenChange={setOpen}
-    />
+    <>
+      <WorkspaceCreatePullRequestDialog
+        api={api}
+        contextKey={contextKey}
+        open={open}
+        root={root}
+        onOpenBrowser={openBrowserTab}
+        onOpenChange={setOpen}
+      />
+      <WorkspacePullRequestPreviewDialog
+        api={api}
+        open={previewTarget !== null}
+        root={root}
+        target={previewTarget}
+        onOpenBrowser={openBrowserTab}
+        onOpenChange={(next) => {
+          if (!next) setPreviewTarget(null);
+        }}
+      />
+    </>
   );
 }
 
@@ -124,7 +147,6 @@ export function WorkspaceGitPullRequestAction({
   preflight?: PullRequestPreflight;
 }) {
   const { t } = useTranslation();
-  const { openBrowserTab } = useWorkspaceToolSurface();
   if (!preflight?.existing && !preflight?.canCreate) {
     return null;
   }
@@ -154,13 +176,7 @@ export function WorkspaceGitPullRequestAction({
           title={tooltip}
           type="button"
           variant={existing ? "ghost" : "outline"}
-          onClick={() => {
-            executeCreatePullRequestAction({
-              existing,
-              openBrowser: openBrowserTab,
-              openDialog: () => createPullRequestAction.execute(),
-            });
-          }}
+          onClick={() => createPullRequestAction.execute()}
         >
           <GitPullRequest />
           <span className="hidden @[250px]:inline">{label}</span>

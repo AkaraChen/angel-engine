@@ -122,6 +122,21 @@ export interface LocaleResourceTranslationWorkspaceToolsDiffBase {
   worktree: string;
 }
 
+export interface LocaleResourceTranslationWorkspaceToolsPullRequestPreview {
+  additions: string;
+  body: string;
+  commits: string;
+  copied: string;
+  copyLink: string;
+  deletions: string;
+  description: string;
+  emptyBody: string;
+  filesChanged: string;
+  loadFailed: string;
+  open: string;
+  title: string;
+}
+
 export interface LocaleResourceTranslationWorkspaceToolsCreatePullRequest {
   ahead: string;
   base: string;
@@ -135,6 +150,7 @@ export interface LocaleResourceTranslationWorkspaceToolsCreatePullRequest {
   openInApp: string;
   pushedRetry: string;
   pushing: string;
+  preview: LocaleResourceTranslationWorkspaceToolsPullRequestPreview;
   retry: string;
   short: string;
   title: string;

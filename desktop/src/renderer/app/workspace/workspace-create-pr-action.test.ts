@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  createPullRequestAction,
   executeCreatePullRequestAction,
   openExistingPullRequest,
 } from "./workspace-create-pr-action";
@@ -25,35 +26,38 @@ describe("openExistingPullRequest", () => {
 });
 
 describe("executeCreatePullRequestAction", () => {
-  it("routes an existing pull request directly to the browser tab", () => {
-    const openBrowser = vi.fn();
+  it("routes the reusable shortcut action's existing PR to preview", () => {
     const openDialog = vi.fn();
+    const openPreview = vi.fn();
+    const existing = {
+      number: 42,
+      url: "https://github.com/acme/widgets/pull/42",
+    };
 
     expect(
       executeCreatePullRequestAction({
-        existing: { url: "https://github.com/acme/widgets/pull/42" },
-        openBrowser,
+        existing,
         openDialog,
+        openPreview,
       }),
-    ).toBe("opened-existing");
-    expect(openBrowser).toHaveBeenCalledWith(
-      "https://github.com/acme/widgets/pull/42",
-    );
+    ).toBe("opened-preview");
+    expect(openPreview).toHaveBeenCalledWith(existing);
     expect(openDialog).not.toHaveBeenCalled();
+    expect(createPullRequestAction.shortcut).toBe("CommandOrControl+Shift+P");
   });
 
   it("keeps the create dialog path when no pull request exists", () => {
-    const openBrowser = vi.fn();
     const openDialog = vi.fn();
+    const openPreview = vi.fn();
 
     expect(
       executeCreatePullRequestAction({
         existing: null,
-        openBrowser,
         openDialog,
+        openPreview,
       }),
     ).toBe("opened-create");
     expect(openDialog).toHaveBeenCalledOnce();
-    expect(openBrowser).not.toHaveBeenCalled();
+    expect(openPreview).not.toHaveBeenCalled();
   });
 });

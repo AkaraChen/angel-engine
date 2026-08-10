@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 
-interface ExistingPullRequestTarget {
+export interface ExistingPullRequestTarget {
+  number: number;
   url: string;
 }
 
@@ -29,16 +30,16 @@ export function openExistingPullRequest({
 
 export function executeCreatePullRequestAction({
   existing,
-  openBrowser,
   openDialog,
+  openPreview,
 }: {
   existing?: ExistingPullRequestTarget | null;
-  openBrowser: (url: string) => void;
   openDialog: () => void;
+  openPreview: (target: ExistingPullRequestTarget) => void;
 }) {
   if (existing) {
-    openExistingPullRequest({ openBrowser, url: existing.url });
-    return "opened-existing" as const;
+    openPreview(existing);
+    return "opened-preview" as const;
   }
   openDialog();
   return "opened-create" as const;

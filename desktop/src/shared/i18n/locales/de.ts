@@ -192,6 +192,7 @@ export const de = {
           turn: "Seit der letzten Runde",
           unstaged: "Nur nicht bereitgestellt",
           worktree: "Nicht commitete Änderungen",
+        },
         createPullRequest: {
           ahead: "{{count}} Commits vor {{base}}",
           base: "Basis-Branch",
@@ -207,6 +208,20 @@ export const de = {
           pushedRetry:
             "Branch gepusht. Erstellung des Pull Requests erneut versuchen.",
           pushing: "Branch wird gepusht…",
+          preview: {
+            additions: "Hinzugefügt",
+            body: "Beschreibung",
+            commits: "Commits",
+            copied: "Kopiert",
+            copyLink: "Link kopieren",
+            deletions: "Gelöscht",
+            description: "Pull Request vor dem Öffnen in der App prüfen.",
+            emptyBody: "Keine Beschreibung vorhanden.",
+            filesChanged: "Geänderte Dateien",
+            loadFailed: "Pull-Request-Details konnten nicht geladen werden.",
+            open: "Offen",
+            title: "Pull Request #{{number}}",
+          },
           retry: "Erneut versuchen",
           short: "PR erstellen",
           title: "Pull Request erstellen",

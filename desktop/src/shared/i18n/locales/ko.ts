@@ -190,6 +190,7 @@ export const ko = {
           turn: "이전 턴 이후",
           unstaged: "스테이지되지 않은 변경만",
           worktree: "커밋되지 않은 변경",
+        },
         createPullRequest: {
           ahead: "{{base}}보다 {{count}}개 커밋 앞섬",
           base: "기본 브랜치",
@@ -204,6 +205,20 @@ export const ko = {
           pushedRetry:
             "브랜치를 푸시했습니다. 풀 리퀘스트 생성을 다시 시도하세요.",
           pushing: "브랜치 푸시 중…",
+          preview: {
+            additions: "추가",
+            body: "설명",
+            commits: "커밋",
+            copied: "복사됨",
+            copyLink: "링크 복사",
+            deletions: "삭제",
+            description: "앱에서 열기 전에 풀 리퀘스트를 미리 봅니다.",
+            emptyBody: "설명이 없습니다.",
+            filesChanged: "변경된 파일",
+            loadFailed: "풀 리퀘스트 세부 정보를 불러올 수 없습니다.",
+            open: "열림",
+            title: "풀 리퀘스트 #{{number}}",
+          },
           retry: "다시 시도",
           short: "PR 만들기",
           title: "풀 리퀘스트 만들기",
