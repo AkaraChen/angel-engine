@@ -27,8 +27,10 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { defaultToolDetailsOpen } from "@/features/chat/transcript-density";
-import { useTranscriptDensityStore } from "@/features/chat/transcript-density-store";
+import {
+  defaultToolDetailsOpen,
+  densityForWorkspaceMode,
+} from "@/features/chat/transcript-density";
 import { cn } from "@/platform/utils";
 
 const ANIMATION_DURATION = 200;
@@ -195,9 +197,7 @@ const ToolGroupImpl: FC<
 > = ({ children, endIndex, startIndex }) => {
   const { t } = useTranslation();
   const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
-  const density = useTranscriptDensityStore((state) =>
-    state.densityFor(workspaceMode),
-  );
+  const density = densityForWorkspaceMode(workspaceMode);
   const active = useAuiState((state) =>
     hasActiveToolGroupPart(state.message.parts, startIndex, endIndex),
   );

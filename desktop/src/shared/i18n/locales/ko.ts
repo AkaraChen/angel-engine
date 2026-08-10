@@ -126,20 +126,7 @@ export const ko = {
       statsBranch: "브랜치",
       statsChanges: "변경 사항",
       statsLastActive: "마지막 활동",
-      transcriptDensity: {
-        descriptions: {
-          compact: "도구 세부 정보를 접고, 필요할 때만 펼칩니다.",
-          debug: "도구와 추론 세부 정보를 기본으로 펼칩니다.",
-          normal: "뒤에 본문이 없을 때 도구를 자동으로 펼칩니다.",
-        },
-        menuLabel: "트랜스크립트 밀도: {{density}}",
-        options: {
-          compact: "간결",
-          debug: "디버그",
-          normal: "표준",
-        },
-        title: "트랜스크립트 밀도",
-      },
+
       tools: {
         checks: {
           fixFailures: "실패 수정",
@@ -430,15 +417,6 @@ export const ko = {
           light: "라이트",
           system: "시스템",
         },
-        transcriptDensityDescription:
-          "현재 워크스페이스 모드에서 트랜스크립트가 기본적으로 얼마나 많은 도구 세부 정보를 보여줄지 정합니다. Chat은 간결, Work/Power는 표준으로 시작합니다.",
-        transcriptDensityLabel: "트랜스크립트 밀도",
-        transcriptDensityOptions: {
-          compact: "간결",
-          debug: "디버그",
-          normal: "표준",
-        },
-        transcriptDensityTitle: "트랜스크립트 밀도",
       },
       archived: {
         allProjects: "모든 프로젝트",

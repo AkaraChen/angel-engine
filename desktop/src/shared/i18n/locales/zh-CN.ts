@@ -124,20 +124,7 @@ export const zhCN = {
       statsBranch: "分支",
       statsChanges: "更改",
       statsLastActive: "最近活动",
-      transcriptDensity: {
-        descriptions: {
-          compact: "默认折叠工具细节，需要时可展开单条。",
-          debug: "默认展开工具与推理细节，便于排查。",
-          normal: "后面没有正文时自动展开工具。",
-        },
-        menuLabel: "时间线密度：{{density}}",
-        options: {
-          compact: "简洁",
-          debug: "调试",
-          normal: "标准",
-        },
-        title: "时间线密度",
-      },
+
       tools: {
         checks: {
           fixFailures: "修复失败",
@@ -425,15 +412,6 @@ export const zhCN = {
           light: "浅色",
           system: "跟随系统",
         },
-        transcriptDensityDescription:
-          "当前工作区模式下时间线默认展示多少工具细节。Chat 默认简洁；Work / Power 默认标准。",
-        transcriptDensityLabel: "时间线密度",
-        transcriptDensityOptions: {
-          compact: "简洁",
-          debug: "调试",
-          normal: "标准",
-        },
-        transcriptDensityTitle: "时间线密度",
       },
       archived: {
         allProjects: "所有项目",
