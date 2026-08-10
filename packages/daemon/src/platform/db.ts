@@ -120,7 +120,13 @@ function openDatabase(
         },
       });
       const database = drizzle(client, {
-        schema: { chatDiffAnchors, chats, customAgents, projects, pullRequests },
+        schema: {
+          chatDiffAnchors,
+          chats,
+          customAgents,
+          projects,
+          pullRequests,
+        },
       }) as AppDatabase;
       const migrationsFolder = yield* resolveMigrationsFolder(configuration);
       yield* Effect.tryPromise({
