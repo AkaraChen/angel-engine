@@ -57,7 +57,10 @@ export const PromptGitHubAttachButton: FC<PromptGitHubAttachButtonProps> = ({
   const cwd = environment.projectPath ?? environment.cwd;
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [attachError, setAttachError] = useState<string | null>(null);
+  const [attachError, setAttachError] = useState<{
+    message: string;
+    url: string;
+  } | null>(null);
   const [pendingUrl, setPendingUrl] = useState<string | null>(null);
   const [errorsVisible, setErrorsVisible] = useState(false);
   const debouncedSearch = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
@@ -127,7 +130,7 @@ export const PromptGitHubAttachButton: FC<PromptGitHubAttachButtonProps> = ({
       if (activeRequestId.current !== requestId) return;
 
       setPendingUrl(null);
-      setAttachError(taskLinkErrorMessage(cause, t));
+      setAttachError({ message: taskLinkErrorMessage(cause, t), url });
     }
   };
 
@@ -140,7 +143,7 @@ export const PromptGitHubAttachButton: FC<PromptGitHubAttachButtonProps> = ({
   const visibleQueryError = errorsVisible ? queryError : null;
   const localHintIsError = errorsVisible && localHint !== null;
   const errorMessage =
-    attachError ??
+    attachError?.message ??
     (visibleQueryError === null || needsLinearAuth
       ? null
       : taskLinkErrorMessage(visibleQueryError, t));
@@ -193,6 +196,7 @@ export const PromptGitHubAttachButton: FC<PromptGitHubAttachButtonProps> = ({
             }}
             onValueChange={(value) => {
               setErrorsVisible(false);
+              setAttachError(null);
               setSearch(value);
             }}
             placeholder={t("composer.fromLinkPlaceholder")}
@@ -235,13 +239,17 @@ export const PromptGitHubAttachButton: FC<PromptGitHubAttachButtonProps> = ({
             {is.nonEmptyString(errorMessage) ? (
               <div className="flex flex-col items-center gap-2 px-3 py-6 text-center text-sm text-destructive">
                 <p>{errorMessage}</p>
-                {visibleQueryError === null ? null : (
+                {attachError === null && visibleQueryError === null ? null : (
                   <Button
-                    onClick={() =>
+                    onClick={() => {
+                      if (attachError !== null) {
+                        void attachUrl(attachError.url);
+                        return;
+                      }
                       void (directUrl === null
                         ? itemsQuery.refetch()
-                        : directItemQuery.refetch())
-                    }
+                        : directItemQuery.refetch());
+                    }}
                     size="sm"
                     type="button"
                     variant="outline"

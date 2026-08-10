@@ -245,6 +245,44 @@ describe("PromptGitHubAttachButton", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
+  it("clears a failed item attachment when the user continues editing", async () => {
+    mocks.resolveUrl.mockRejectedValue(new Error("remote attach failed"));
+
+    renderButton(vi.fn());
+    openDialog();
+    fireEvent.click(await screen.findByText("First issue"));
+    expect(await screen.findByText("remote attach failed")).toBeDefined();
+
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        "Paste a GitHub or Linear issue link, or search GitHub",
+      ),
+      { target: { value: "next search" } },
+    );
+
+    expect(screen.queryByText("remote attach failed")).toBeNull();
+  });
+
+  it("retries a failed item attachment", async () => {
+    mocks.resolveUrl
+      .mockRejectedValueOnce(new Error("remote attach failed"))
+      .mockResolvedValueOnce(firstTaskLink);
+    const onAttached = vi.fn<(attachment: ComposerGitHubAttachment) => void>();
+
+    renderButton(onAttached);
+    openDialog();
+    fireEvent.click(await screen.findByText("First issue"));
+    expect(await screen.findByText("remote attach failed")).toBeDefined();
+
+    fireEvent.click(screen.getByRole("button", { name: "common.retry" }));
+
+    await waitFor(() => expect(onAttached).toHaveBeenCalledOnce());
+    expect(mocks.resolveUrl).toHaveBeenCalledTimes(2);
+    expect(mocks.resolveUrl).toHaveBeenLastCalledWith({ url: firstIssue.url });
+    expect(onAttached.mock.lastCall?.[0]).toMatchObject(firstTaskLink);
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
   it("renders nothing without an active project", () => {
     mocks.projectPath = undefined;
 
