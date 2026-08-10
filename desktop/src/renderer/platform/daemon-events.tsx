@@ -81,6 +81,14 @@ export function DaemonEventSync() {
           void queryClient.invalidateQueries({
             queryKey: queryKeys.chatActivity.all(),
           });
+          // Shepherd holdReason is projected from activity/gate on GET.
+          if (event.type === "chat-activity-changed") {
+            for (const chatId of event.chatIds) {
+              void queryClient.invalidateQueries({
+                queryKey: queryKeys.shepherd.session(chatId),
+              });
+            }
+          }
           return;
         case "chat-conversation-changed":
           queueConversations(event.chatIds);

@@ -11,7 +11,7 @@ import {
 } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Command,
@@ -37,9 +37,9 @@ import {
   stopShepherdMutationOptions,
 } from "@/features/shepherd/api/queries";
 import { parseGitHubPullRequestUrl } from "@/features/shepherd/parse-github-pr-url";
-import { useApi } from "@/platform/use-api";
 import { useCommand, useContextKey } from "@/platform/keymap/provider";
 import { queryKeys } from "@/platform/query-keys";
+import { useApi } from "@/platform/use-api";
 
 const MAX_PALETTE_ITEMS = 20;
 
@@ -84,7 +84,9 @@ export const WorkspaceCommandPalette: FC<WorkspaceCommandPaletteProps> = ({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
-  const shepherdPr = async () => {
+  // Read tool context inside the callback (and list it as a dep) so switching
+  // chat/workspace never keeps a stale chatId/root from a memoized entry.
+  const shepherdPr = useCallback(async () => {
     const chatId = toolContext.chatId;
     const root = toolContext.root;
     const contextKey = toolContext.contextKey;
@@ -167,7 +169,19 @@ export const WorkspaceCommandPalette: FC<WorkspaceCommandPaletteProps> = ({
         variant: "destructive",
       });
     }
-  };
+  }, [
+    api,
+    queryClient,
+    setRightSidebarOpen,
+    startMutation,
+    stopMutation,
+    t,
+    toast,
+    toolContext.chatId,
+    toolContext.contextKey,
+    toolContext.root,
+    updateWorkspaceToolSnapshot,
+  ]);
 
   const entries = useMemo<CommandPaletteEntry[]>(
     () => [
@@ -204,9 +218,7 @@ export const WorkspaceCommandPalette: FC<WorkspaceCommandPaletteProps> = ({
           title: displayChatTitle(chat.title, t),
         })),
     ],
-    // shepherdPr closes over latest api/context; title strings depend on t only.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional palette entry snapshot
-    [chats, onNewWorkspace, onOpenSession, onOpenSettings, t],
+    [chats, onNewWorkspace, onOpenSession, onOpenSettings, shepherdPr, t],
   );
   const search = useMemo(() => createTitleSearch(entries), [entries]);
   const results = search(query, MAX_PALETTE_ITEMS);

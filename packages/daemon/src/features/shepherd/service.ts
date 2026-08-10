@@ -5,6 +5,7 @@ import type {
   GitHubReviewThreadsResult,
 } from "@angel-engine/daemon-api/github";
 import type {
+  ShepherdHoldReason,
   ShepherdSession,
   ShepherdSettledReason,
   ShepherdStartInput,
@@ -118,6 +119,8 @@ export class ShepherdService {
   readonly #ports: ShepherdPorts;
   readonly #setTimer: NonNullable<ShepherdServiceDeps["setTimer"]>;
   readonly #clearTimer: NonNullable<ShepherdServiceDeps["clearTimer"]>;
+  /** Last projected hold reason published per chat — avoids poll spam. */
+  readonly #publishedHold = new Map<string, ShepherdHoldReason | null>();
 
   /** One daemon-level poller for all watching/queued sessions. */
   #pollTimer: ReturnType<typeof setTimeout> | undefined;
@@ -153,7 +156,9 @@ export class ShepherdService {
   }
 
   async getByChatId(chatId: string): Promise<ShepherdSession | null> {
-    return this.#ports.getSessionByChatId(chatId);
+    const session = await this.#ports.getSessionByChatId(chatId);
+    if (session === null) return null;
+    return this.#projectHoldReason(session);
   }
 
   async startSession(input: ShepherdStartInput): Promise<ShepherdSession> {
@@ -192,6 +197,7 @@ export class ShepherdService {
         headSha: snapshot.checks.headOid,
         state: "watching",
         settledReason: null,
+        holdReason: null,
         round: 0,
         maxRounds,
         consecutiveNoProgress: 0,
@@ -228,37 +234,47 @@ export class ShepherdService {
 
   async stopSession(id: string): Promise<ShepherdSession> {
     const session = await this.#requireSession(id);
-    if (session.state === "settled" && session.settledReason === "stopped") {
-      return session;
+    if (
+      session.state === "settled" &&
+      (session.settledReason === "stopped" ||
+        session.settledReason === "yielded")
+    ) {
+      return { ...session, holdReason: null };
     }
     const next = await this.#ports.settleSession(session, "stopped");
     this.#awaitingProgress.delete(session.chatId);
     this.#publish(next.chatId);
-    return next;
+    return { ...next, holdReason: null };
   }
 
   async resumeSession(id: string): Promise<ShepherdSession> {
     const session = await this.#requireSession(id);
-    if (session.state !== "settled" || session.settledReason !== "stopped") {
+    if (
+      session.state !== "settled" ||
+      (session.settledReason !== "stopped" &&
+        session.settledReason !== "yielded")
+    ) {
       throw DE.invalidRequest(
-        "Only a user-stopped shepherd session can be resumed.",
+        "Only a stopped or yielded shepherd session can be resumed.",
       );
     }
     const next = await this.#ports.saveSession({
       ...session,
       state: "watching",
       settledReason: null,
+      holdReason: null,
       pendingPrompt: null,
       pendingFingerprints: [],
     });
     this.#publish(next.chatId);
     this.#ensureStarted();
     this.#schedulePoll(0);
-    return next;
+    return this.#projectHoldReason(next);
   }
 
   /**
-   * User send yield: non-shepherd origin + active session → settled/stopped.
+   * User send yield: non-shepherd origin + active session → settled/yielded.
+   * Distinct from manual stop (`settled/stopped`) so the UI can toast resume.
    * Returns true when yield happened.
    *
    * Swallows store failures so chat-send paths still work when the DB is not
@@ -278,7 +294,7 @@ export class ShepherdService {
       ) {
         return false;
       }
-      await this.#ports.settleSession(session, "stopped");
+      await this.#ports.settleSession(session, "yielded");
       this.#awaitingProgress.delete(session.chatId);
       this.#publish(session.chatId);
       return true;
@@ -497,13 +513,17 @@ export class ShepherdService {
     const gate = await this.#gateFor(session.chatId);
     if (gate.action === "hold") {
       // Stay watching; do not stage fingerprints so we re-evaluate later.
+      // Publish only when the projected hold reason changes.
+      this.#publishHoldChange(session.chatId, gate.reason);
       return;
     }
+    this.#publishHoldChange(session.chatId, null);
 
     if (gate.action === "queue") {
       const next = await this.#ports.saveSession({
         ...session,
         state: "queued",
+        holdReason: null,
         pendingPrompt: mergedPrompt,
         pendingFingerprints: mergedFingerprints,
         headSha: snapshot.checks.headOid ?? session.headSha,
@@ -562,6 +582,7 @@ export class ShepherdService {
     const claimed = await this.#ports.saveSession({
       ...session,
       state: "watching",
+      holdReason: null,
       round: nextRound,
       headSha: headSha ?? session.headSha,
       handledFingerprints: uniqueStrings([
@@ -662,8 +683,30 @@ export class ShepherdService {
     return session;
   }
 
+  /**
+   * Project the live send-gate hold onto a watching session. Not persisted —
+   * every GET recomputes so the panel never re-derives idle/activity itself.
+   */
+  async #projectHoldReason(session: ShepherdSession): Promise<ShepherdSession> {
+    if (session.state !== "watching") {
+      return { ...session, holdReason: null };
+    }
+    const gate = await this.#gateFor(session.chatId);
+    if (gate.action === "hold") {
+      return { ...session, holdReason: gate.reason };
+    }
+    return { ...session, holdReason: null };
+  }
+
   #publish(chatId: string): void {
     this.#chatEvents.shepherdChanged(chatId);
+  }
+
+  #publishHoldChange(chatId: string, reason: ShepherdHoldReason | null): void {
+    const previous = this.#publishedHold.get(chatId) ?? null;
+    if (previous === reason) return;
+    this.#publishedHold.set(chatId, reason);
+    this.#publish(chatId);
   }
 }
 
