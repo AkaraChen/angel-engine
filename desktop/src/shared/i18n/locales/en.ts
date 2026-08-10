@@ -196,6 +196,7 @@ export const en = {
               "No merge base exists for {{ref}} and HEAD. Temporarily showing {{fallback}}.",
             notRepository: "This workspace is not a Git repository.",
           },
+          fileCount: "{{count}} files",
           label: "Diff base",
           session: "Since session start",
           turn: "Since previous turn",

@@ -192,6 +192,7 @@ export const zhTW = {
             noMergeBase: "{{ref}} 與 HEAD 沒有合併基準，暫時顯示{{fallback}}。",
             notRepository: "此工作區不是 Git 儲存庫。",
           },
+          fileCount: "{{count}} 個檔案",
           label: "差異基準",
           session: "自工作階段開始",
           turn: "自上一輪開始",

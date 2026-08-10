@@ -102,6 +102,7 @@ export interface LocaleResourceTranslationWorkspaceToolsDiffBase {
     noMergeBase: string;
     notRepository: string;
   };
+  fileCount: string;
   label: string;
   session: string;
   turn: string;

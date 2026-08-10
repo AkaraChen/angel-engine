@@ -200,6 +200,7 @@ export const es = {
               "No hay una base de fusión para {{ref}} y HEAD. Se muestra temporalmente {{fallback}}.",
             notRepository: "Este espacio de trabajo no es un repositorio Git.",
           },
+          fileCount: "{{count}} archivos",
           label: "Base de diferencias",
           session: "Desde el inicio de la sesión",
           turn: "Desde el turno anterior",

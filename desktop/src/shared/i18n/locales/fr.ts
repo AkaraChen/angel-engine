@@ -199,6 +199,7 @@ export const fr = {
               "Il n’existe aucune base de fusion entre {{ref}} et HEAD. {{fallback}} est affiché temporairement.",
             notRepository: "Cet espace de travail n’est pas un dépôt Git.",
           },
+          fileCount: "{{count}} fichiers",
           label: "Base du diff",
           session: "Depuis le début de la session",
           turn: "Depuis le tour précédent",

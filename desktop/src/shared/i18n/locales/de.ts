@@ -197,6 +197,7 @@ export const de = {
               "Für {{ref}} und HEAD gibt es keine Merge-Basis. Vorübergehend wird {{fallback}} angezeigt.",
             notRepository: "Dieser Workspace ist kein Git-Repository.",
           },
+          fileCount: "{{count}} Dateien",
           label: "Diff-Basis",
           session: "Seit Sitzungsbeginn",
           turn: "Seit der letzten Runde",

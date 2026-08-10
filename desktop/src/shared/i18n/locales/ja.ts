@@ -198,6 +198,7 @@ export const ja = {
             notRepository:
               "このワークスペースは Git リポジトリではありません。",
           },
+          fileCount: "{{count}} ファイル",
           label: "差分ベース",
           session: "セッション開始以降",
           turn: "前のターン以降",
