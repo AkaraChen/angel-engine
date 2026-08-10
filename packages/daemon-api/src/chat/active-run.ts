@@ -3,6 +3,7 @@ import is from "@sindresorhus/is";
 import type {
   ChatActiveRunResult,
   ChatActiveRunSnapshot,
+  ChatAmbiguousRunResult,
   ChatElicitationResponse,
   ChatHistoryMessage,
   ChatRunObserverEvent,
@@ -160,6 +161,20 @@ export function isChatActiveRunResult(
   return (
     isBoundaryRecord(value) &&
     (value.run === null || isChatActiveRunSnapshot(value.run))
+  );
+}
+
+export function isChatAmbiguousRunResult(
+  value: unknown,
+): value is ChatAmbiguousRunResult {
+  if (!isBoundaryRecord(value)) return false;
+  if (value.run === null) return true;
+  return (
+    isBoundaryRecord(value.run) &&
+    isNonEmptyString(value.run.chatId) &&
+    isCanonicalTimestamp(value.run.createdAt) &&
+    isNonEmptyString(value.run.runId) &&
+    value.run.status === "dispatching"
   );
 }
 

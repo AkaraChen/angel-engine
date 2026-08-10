@@ -10,11 +10,12 @@ import {
   WarningCircle as AlertCircleIcon,
   Check,
   Copy,
+  GitBranch,
   Pencil,
 } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
@@ -26,6 +27,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 import { CollapsibleMessageBody } from "@/features/chat/components/collapsible-message-body";
 import { ChatComposer } from "@/features/chat/components/composer/chat-composer";
 import { useComposerEditor } from "@/features/chat/components/composer/use-composer-editor";
@@ -45,6 +47,8 @@ import {
   workspaceContentColumnClass,
 } from "@/features/chat/components/thread-styles";
 import { ToolActionMessagePart } from "@/features/chat/components/tool-action-message";
+import { useChatRuntimeActions } from "@/features/chat/runtime/use-chat-runtime-actions";
+import { getErrorMessage } from "@/app/workspace/workspace-display";
 import { cn } from "@/platform/utils";
 
 /** Icon-only action buttons need a visible label on hover: the sr-only text
@@ -144,6 +148,7 @@ export function UserMessage() {
                 <span className="sr-only">{t("common.copy")}</span>
               </ActionBarPrimitive.Copy>
             </ActionTooltip>
+            <ForkSessionAction />
           </ActionBarPrimitive.Root>
         </div>
       </div>
@@ -257,10 +262,53 @@ export function AssistantMessage() {
                 <span className="sr-only">{t("common.copy")}</span>
               </ActionBarPrimitive.Copy>
             </ActionTooltip>
+            <ForkSessionAction />
           </ActionBarPrimitive.Root>
         </div>
       </div>
     </MessagePrimitive.Root>
+  );
+}
+
+function ForkSessionAction() {
+  const { t } = useTranslation();
+  const toast = useToast();
+  const { forkSession } = useChatRuntimeActions();
+  const messageId = useAuiState((state) => state.message.id);
+  const [forking, setForking] = useState(false);
+
+  if (!forkSession) return null;
+
+  const fork = () => {
+    if (forking) return;
+    setForking(true);
+    forkSession(messageId)
+      .catch((error) => {
+        toast({
+          description: getErrorMessage(error),
+          title: t("messages.toasts.couldNotForkSession"),
+          variant: "destructive",
+        });
+      })
+      .finally(() => {
+        setForking(false);
+      });
+  };
+
+  return (
+    <ActionTooltip label={t("messages.forkSession")}>
+      <Button
+        aria-label={t("messages.forkSession")}
+        className={iconButtonClass}
+        disabled={forking}
+        onClick={fork}
+        size="icon"
+        type="button"
+        variant="ghost"
+      >
+        <GitBranch className="size-3.5" />
+      </Button>
+    </ActionTooltip>
   );
 }
 

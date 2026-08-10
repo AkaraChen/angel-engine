@@ -10,10 +10,13 @@ import {
 } from "../daemon/supervisor";
 import { listMobileHostingListenAddresses } from "../daemon/mobile-hosting";
 import { chatPlatformIpcRouter } from "../features/chat/ipc";
+import { keybindingsPlatformIpcRouter } from "../features/keybindings/ipc";
 import { pathLauncherPlatformIpcRouter } from "../features/path-launcher/ipc";
 import { projectPlatformIpcRouter } from "../features/projects/ipc";
+import { trayPlatformIpcRouter } from "../features/tray/ipc";
 import { MainIpcError } from "../platform/errors";
 import { setMainLanguage } from "../platform/i18n";
+import { scheduleTrayRefresh } from "../features/tray/service";
 import { readClipboardSourceUrl } from "./clipboard-source";
 import { fetchUrlPreview } from "./url-preview";
 
@@ -74,7 +77,11 @@ const appIpcRouter = {
         }
         return yield* Effect.try({
           catch: (cause) => MainIpcError.operationFailed(cause),
-          try: () => setMainLanguage(value),
+          try: () => {
+            const language = setMainLanguage(value);
+            scheduleTrayRefresh();
+            return language;
+          },
         });
       }),
     ),
@@ -101,8 +108,10 @@ export function createAppRouter() {
   return {
     ...appIpcRouter,
     ...chatPlatformIpcRouter,
+    ...keybindingsPlatformIpcRouter,
     ...pathLauncherPlatformIpcRouter,
     ...projectPlatformIpcRouter,
+    ...trayPlatformIpcRouter,
   };
 }
 

@@ -14,12 +14,27 @@ import {
 import { Trash as Trash2 } from "@phosphor-icons/react";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useCallback, useId, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import { confirmAction } from "@/components/ui/confirm-dialog";
 import { Switch } from "@/components/ui/switch";
 import { useAgentCatalog } from "@/features/agents/agent-catalog-context";
+import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
+import {
+  TRANSCRIPT_DENSITY_VALUES,
+  type TranscriptDensity,
+} from "@/features/chat/transcript-density";
+import { useTranscriptDensityStore } from "@/features/chat/transcript-density-store";
 import { useKeybindingHintsStore } from "@/features/keybindings/keybinding-hints-store";
+import { KeyboardSettings } from "@/features/keybindings/keyboard-settings";
 import { ArchivedSettingsPanel } from "@/features/settings/archived-settings-panel";
 import { BuiltinAgentsSettingsGroup } from "@/features/settings/builtin-agent-settings";
 import { CustomAgentsSettingsGroup } from "@/features/settings/custom-agent-settings";
@@ -36,6 +51,7 @@ import { findSettingsTab } from "@/features/settings/settings-tabs";
 import { UpdateSettings } from "@/features/settings/update-settings";
 import { useSettingsTab } from "@/features/settings/use-settings-tab";
 import { useThemeSettings } from "@/features/settings/use-theme-settings";
+import { useTraySettings } from "@/features/settings/use-tray-settings";
 import { languageOptions } from "@/i18n";
 import { queryKeys } from "@/platform/query-keys";
 import { cn } from "@/platform/utils";
@@ -161,6 +177,14 @@ export function SettingsPage({
 
           <SettingsTabPanel
             activeTab={activeTab}
+            tab="keyboard"
+            tabPanelId={tabPanelId}
+          >
+            <KeyboardSettings />
+          </SettingsTabPanel>
+
+          <SettingsTabPanel
+            activeTab={activeTab}
             tab="workspace"
             tabPanelId={tabPanelId}
           >
@@ -256,6 +280,13 @@ function AppearanceSettings() {
     (state) => state.setEnabled,
   );
   const setLanguage = useSettingsStore((state) => state.setLanguage);
+  const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
+  const transcriptDensity = useTranscriptDensityStore((state) =>
+    state.densityFor(workspaceMode),
+  );
+  const setTranscriptDensity = useTranscriptDensityStore(
+    (state) => state.setDensity,
+  );
 
   return (
     <SettingsGroup>
@@ -289,6 +320,23 @@ function AppearanceSettings() {
       />
       <SettingsRow
         after={
+          <SettingsSelect
+            label={t("settings.appearance.transcriptDensityLabel")}
+            onValueChange={(value) =>
+              setTranscriptDensity(workspaceMode, value as TranscriptDensity)
+            }
+            options={TRANSCRIPT_DENSITY_VALUES.map((value) => ({
+              label: t(`settings.appearance.transcriptDensityOptions.${value}`),
+              value,
+            }))}
+            value={transcriptDensity}
+          />
+        }
+        description={t("settings.appearance.transcriptDensityDescription")}
+        title={t("settings.appearance.transcriptDensityTitle")}
+      />
+      <SettingsRow
+        after={
           <Switch
             aria-label={t("settings.appearance.keybindingHintsSwitchLabel")}
             checked={keybindingHintsEnabled}
@@ -314,6 +362,8 @@ function WorkspaceSettings() {
   const setWorktreeDirtyPromptEnabled = useSettingsStore(
     (state) => state.setWorktreeDirtyPromptEnabled,
   );
+  const { enabled: trayEnabled, setEnabled: setTrayEnabled } =
+    useTraySettings();
   const modEnterShortcut =
     window.desktopEnvironment.platform === "darwin" ? "⌘+Enter" : "Ctrl+Enter";
 
@@ -347,7 +397,59 @@ function WorkspaceSettings() {
         description={t("settings.workspace.dirtyPromptDescription")}
         title={t("settings.workspace.dirtyPromptTitle")}
       />
+      <SettingsRow
+        after={
+          <Switch
+            aria-label={t("settings.workspace.trayEnabledSwitchLabel")}
+            checked={trayEnabled}
+            onCheckedChange={(checked) => {
+              void setTrayEnabled(checked);
+            }}
+          />
+        }
+        description={t("settings.workspace.trayEnabledDescription")}
+        title={t("settings.workspace.trayEnabledTitle")}
+      />
+      <OsNotificationSettings />
     </SettingsGroup>
+  );
+}
+
+function OsNotificationSettings() {
+  const { t } = useTranslation();
+  const [osEnabled, setOsEnabled] = useState(true);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void window.desktopWindow.getNotificationPreferences().then((prefs) => {
+      if (cancelled) return;
+      setOsEnabled(prefs.osEnabled);
+      setReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <SettingsRow
+      after={
+        <Switch
+          aria-label={t("settings.workspace.osNotificationsSwitchLabel")}
+          checked={osEnabled}
+          disabled={!ready}
+          onCheckedChange={(checked) => {
+            setOsEnabled(checked);
+            void window.desktopWindow.setNotificationPreferences({
+              osEnabled: checked,
+            });
+          }}
+        />
+      }
+      description={t("settings.workspace.osNotificationsDescription")}
+      title={t("settings.workspace.osNotificationsTitle")}
+    />
   );
 }
 
@@ -472,11 +574,17 @@ function DangerSettings({
   const { t } = useTranslation();
 
   const deleteAllChats = useCallback(async () => {
-    const confirmed = await window.desktopWindow.confirmDeleteAllChats();
+    const confirmed = await confirmAction({
+      cancelLabel: t("common.cancel"),
+      confirmLabel: t("common.delete"),
+      description: t("settings.danger.description"),
+      title: t("settings.danger.confirmDeleteAll"),
+      tone: "danger",
+    });
     if (!confirmed) return;
 
     await onDeleteAllChats();
-  }, [onDeleteAllChats]);
+  }, [onDeleteAllChats, t]);
 
   return (
     <SettingsGroup title={t("settings.danger.title")} tone="danger">

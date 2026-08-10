@@ -14,29 +14,19 @@ export interface DesktopThemeSetInput {
   mode: DesktopThemeMode;
 }
 
-export interface DesktopConfirmDeleteCustomAgentInput {
-  chatCount: number;
-  label: string;
+/**
+ * Update notices the main process needs the user to see. The renderer owns the
+ * presentation (an in-app dialog), so main sends the already-translated copy
+ * plus the actions the dialog should offer.
+ */
+export interface DesktopUpdateMessageEvent {
+  actions: DesktopUpdateMessageAction[];
+  detail: string;
+  message: string;
+  tone: "error" | "info";
 }
 
-export interface DesktopConfirmDeleteArchivedChatsInput {
-  chatCount: number;
-  managedWorktreeCount: number;
-}
-
-export interface DesktopConfirmDeleteManagedWorktreesInput {
-  chatCount: number;
-  managedWorktreeCount: number;
-}
-
-export interface DesktopConfirmSaveWorkspaceFileChangesInput {
-  path: string;
-}
-
-export type DesktopConfirmSaveWorkspaceFileChangesResult =
-  | "cancel"
-  | "discard"
-  | "save";
+export type DesktopUpdateMessageAction = "install";
 
 export interface DesktopUpdateDownloadedEvent {
   releaseName: string;
@@ -51,22 +41,25 @@ export const DESKTOP_UPDATE_STATUS_CHANGED_CHANNEL =
   "desktop-window:update:status:changed";
 export const DESKTOP_UPDATE_STATUS_GET_CHANNEL =
   "desktop-window:update:status:get";
-export const DESKTOP_CONFIRM_DELETE_CUSTOM_AGENT_CHANNEL =
-  "desktop-window:confirm-delete-custom-agent";
-export const DESKTOP_CONFIRM_DELETE_ALL_CHATS_CHANNEL =
-  "desktop-window:confirm-delete-all-chats";
-export const DESKTOP_CONFIRM_DELETE_ARCHIVED_CHATS_CHANNEL =
-  "desktop-window:confirm-delete-archived-chats";
-export const DESKTOP_CONFIRM_DELETE_MANAGED_WORKTREES_CHANNEL =
-  "desktop-window:confirm-delete-managed-worktrees";
-export const DESKTOP_CONFIRM_SAVE_WORKSPACE_FILE_CHANGES_CHANNEL =
-  "desktop-window:confirm-save-workspace-file-changes";
+export const DESKTOP_UPDATE_MESSAGE_CHANNEL = "desktop-window:update:message";
 export const DESKTOP_COMMAND_CHANNEL = "desktop-window:command";
 export const DESKTOP_WINDOW_CONTENT_READY_CHANNEL =
   "desktop-window:content-ready";
 export const DESKTOP_INSTALL_UPDATE_CHANNEL = "desktop-window:update:install";
 export const DESKTOP_OPEN_CHAT_FROM_NOTIFICATION_CHANNEL =
   "desktop-window:notification:open-chat";
+export const DESKTOP_NOTIFICATION_HISTORY_CHANGED_CHANNEL =
+  "desktop-window:notification:history-changed";
+export const DESKTOP_NOTIFICATION_HISTORY_CLEAR_CHANNEL =
+  "desktop-window:notification:history:clear";
+export const DESKTOP_NOTIFICATION_HISTORY_GET_CHANNEL =
+  "desktop-window:notification:history:get";
+export const DESKTOP_NOTIFICATION_HISTORY_MARK_READ_CHANNEL =
+  "desktop-window:notification:history:mark-read";
+export const DESKTOP_NOTIFICATION_PREFERENCES_GET_CHANNEL =
+  "desktop-window:notification:preferences:get";
+export const DESKTOP_NOTIFICATION_PREFERENCES_SET_CHANNEL =
+  "desktop-window:notification:preferences:set";
 export const DESKTOP_SETTINGS_OPEN_CHANNEL = "desktop-window:settings:open";
 export const DESKTOP_THEME_SET_CHANNEL = "desktop-window:theme:set";
 export const DESKTOP_UPDATE_DOWNLOADED_CHANNEL =

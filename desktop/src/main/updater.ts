@@ -1,12 +1,16 @@
 import type { UpdateCheckResult, UpdateInfo } from "electron-updater";
-import type { DesktopUpdateDownloadedEvent } from "../shared/desktop-window";
+import type {
+  DesktopUpdateDownloadedEvent,
+  DesktopUpdateMessageAction,
+  DesktopUpdateMessageEvent,
+} from "../shared/desktop-window";
 import type {
   DesktopUpdateChannel,
   DesktopUpdateState,
   DesktopUpdateStatus,
 } from "../shared/update-channel";
 
-import { app, BrowserWindow, dialog, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain } from "electron";
 import log from "electron-log/main";
 import { autoUpdater, CancellationToken } from "electron-updater";
 
@@ -14,6 +18,7 @@ import {
   DESKTOP_UPDATE_CHANNEL_SET_CHANNEL,
   DESKTOP_UPDATE_CHECK_CHANNEL,
   DESKTOP_UPDATE_DOWNLOADED_CHANNEL,
+  DESKTOP_UPDATE_MESSAGE_CHANNEL,
   DESKTOP_UPDATE_STATUS_CHANGED_CHANNEL,
   DESKTOP_UPDATE_STATUS_GET_CHANNEL,
 } from "../shared/desktop-window";
@@ -106,17 +111,10 @@ export function checkForUpdatesInBackground() {
 
 export function checkForUpdatesFromMenu() {
   if (state === "downloaded") {
-    void showUpdateMessage({
-      buttons: [
-        translate("updates.restartAndInstall"),
-        translate("common.cancel"),
-      ],
+    showUpdateMessage({
+      actions: ["install"],
       detail: translate("updates.downloadedDetail"),
       message: translate("updates.downloaded"),
-    }).then(({ response }) => {
-      if (response === 0) {
-        installDownloadedUpdate();
-      }
     });
     return;
   }
@@ -133,7 +131,7 @@ export function checkForUpdatesFromMenu() {
   }
 
   if (!supportsAutoUpdates) {
-    void showUpdateMessage({
+    showUpdateMessage({
       detail: translate("updates.unsupportedPlatformDetail"),
       message: translate("updates.unsupportedPlatform"),
     });
@@ -141,7 +139,7 @@ export function checkForUpdatesFromMenu() {
   }
 
   if (state === "checking" || state === "downloading") {
-    void showUpdateMessage({
+    showUpdateMessage({
       detail: translate("updates.checkingDetail"),
       message: translate("updates.checking"),
     });
@@ -247,7 +245,7 @@ async function handleCheckResult(
   if (result === null || version === undefined || !result.isUpdateAvailable) {
     availableVersion = undefined;
     setState("idle");
-    await showUpToDateMessage();
+    showUpToDateMessage();
     return;
   }
 
@@ -322,10 +320,10 @@ function handleUpdateError(error: unknown, checkGeneration: number) {
   if (!userInitiatedCheck) return;
 
   userInitiatedCheck = false;
-  void showUpdateMessage({
+  showUpdateMessage({
     detail,
     message: translate("updates.checkFailed"),
-    type: "error",
+    tone: "error",
   });
 }
 
@@ -368,11 +366,11 @@ function notifyUpdateDownloaded(
   }
 }
 
-async function showUpToDateMessage() {
+function showUpToDateMessage() {
   if (!userInitiatedCheck) return;
 
   userInitiatedCheck = false;
-  await showUpdateMessage({
+  showUpdateMessage({
     detail: translate("updates.upToDateDetail", {
       version: app.getVersion(),
     }),
@@ -412,30 +410,30 @@ function sendUpdateDownloaded(
   window.webContents.send(DESKTOP_UPDATE_DOWNLOADED_CHANNEL, event);
 }
 
-async function showUpdateMessage({
-  buttons,
+/**
+ * Update notices render as an in-app dialog in the renderer. The focused window
+ * gets it so the notice lands where the user is looking; with no window open
+ * there is nothing to show and the notice is dropped, exactly as a message box
+ * with no parent would be dismissed unseen.
+ */
+function showUpdateMessage({
+  actions = [],
   detail,
   message,
-  type = "info",
+  tone = "info",
 }: {
-  buttons?: string[];
+  actions?: DesktopUpdateMessageAction[];
   detail: string;
   message: string;
-  type?: "error" | "info";
+  tone?: "error" | "info";
 }) {
-  const options = {
-    buttons: buttons ?? [translate("common.close")],
-    defaultId: 0,
-    detail,
-    message,
-    noLink: true,
-    title: translate("updates.title"),
-    type,
-  };
-  const parentWindow =
+  const targetWindow =
     BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+  if (targetWindow === undefined || targetWindow.isDestroyed()) {
+    log.info(`Dropping update notice with no window to show it in: ${message}`);
+    return;
+  }
 
-  return parentWindow !== undefined
-    ? dialog.showMessageBox(parentWindow, options)
-    : dialog.showMessageBox(options);
+  const event: DesktopUpdateMessageEvent = { actions, detail, message, tone };
+  targetWindow.webContents.send(DESKTOP_UPDATE_MESSAGE_CHANNEL, event);
 }

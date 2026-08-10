@@ -44,6 +44,32 @@ export async function runGhCli(
   };
 }
 
+/**
+ * Like `runGhCli`, but keeps stdout/stderr when the process exits non-zero.
+ * Used for commands such as `gh pr checks` that return 1 (failed) or 8
+ * (pending) while still printing JSON on stdout.
+ */
+export async function runGhCliCapturingExit(
+  args: string[],
+  options: { cwd?: string } = {},
+): Promise<{ exitCode: number; stderr: string; stdout: string }> {
+  try {
+    const result = await runGhCli(args, options);
+    return { exitCode: 0, stderr: result.stderr, stdout: result.stdout };
+  } catch (cause) {
+    const stdout = extractProcessOutput(cause, "stdout");
+    const stderr = extractProcessOutput(cause, "stderr");
+    if (stdout !== null || stderr !== null) {
+      return {
+        exitCode: exitCodeFromCause(cause) ?? 1,
+        stderr: stderr ?? "",
+        stdout: stdout ?? "",
+      };
+    }
+    throw cause;
+  }
+}
+
 export function mapGhFailure(cause: unknown): DaemonError {
   const message = stderrOrMessage(cause).toLowerCase();
   if (
@@ -56,6 +82,11 @@ export function mapGhFailure(cause: unknown): DaemonError {
       "GitHub CLI is not authenticated. Run `gh auth login` and try again.",
     );
   }
+  if (isNoPullRequestMessage(message)) {
+    return DaemonError.githubItemNotFound(
+      "No pull request is associated with the current branch.",
+    );
+  }
   if (
     message.includes("could not resolve") ||
     message.includes("not found") ||
@@ -65,6 +96,35 @@ export function mapGhFailure(cause: unknown): DaemonError {
     return DaemonError.githubItemNotFound();
   }
   return DaemonError.githubFetchFailed(cause);
+}
+
+export function isNoPullRequestMessage(message: string) {
+  const lower = message.toLowerCase();
+  return (
+    lower.includes("no pull requests found") ||
+    lower.includes("no pull request found") ||
+    lower.includes("no open pull requests found")
+  );
+}
+
+export function extractProcessOutput(
+  cause: unknown,
+  field: "stderr" | "stdout",
+): string | null {
+  if (!is.object(cause)) return null;
+  const value = (cause as Record<string, unknown>)[field];
+  if (is.string(value)) return value;
+  if (typeof Buffer !== "undefined" && Buffer.isBuffer(value)) {
+    return value.toString("utf8");
+  }
+  return null;
+}
+
+function exitCodeFromCause(cause: unknown): number | null {
+  if (!is.object(cause)) return null;
+  const code = (cause as { code?: unknown }).code;
+  if (is.number(code) && Number.isInteger(code)) return code;
+  return null;
 }
 
 export function normalizeText(value: string) {

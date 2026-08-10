@@ -20,6 +20,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { WorkspaceDiffCommentPanel } from "@/app/workspace/workspace-diff-comment-panel";
 import { getErrorMessage } from "@/app/workspace/workspace-file-display";
 import {
   useWorkspaceGitPanelState,
@@ -205,7 +206,10 @@ export function WorkspaceGitPanel({
     return (
       <div className="flex h-full min-h-0 flex-col">
         {statusBar}
-        {changeColumn}
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          {changeColumn}
+        </div>
+        <WorkspaceDiffCommentPanel root={root} />
       </div>
     );
   }
@@ -251,7 +255,10 @@ export function WorkspaceGitPanel({
         />
         <div className="min-w-0 flex-1 overflow-hidden">
           {panelView === "changes" ? (
-            <WorkspaceGitDiffViewer file={activeFile} />
+            <div className="flex h-full min-h-0 flex-col">
+              <WorkspaceGitDiffViewer file={activeFile} />
+              <WorkspaceDiffCommentPanel root={root} />
+            </div>
           ) : (
             <WorkspaceGitHistoryDiff hash={activeCommitHash} root={root} />
           )}

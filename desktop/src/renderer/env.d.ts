@@ -1,15 +1,16 @@
 import type { DaemonApi } from "@shared/daemon";
 import type {
-  DesktopConfirmDeleteArchivedChatsInput,
-  DesktopConfirmDeleteCustomAgentInput,
-  DesktopConfirmDeleteManagedWorktreesInput,
-  DesktopConfirmSaveWorkspaceFileChangesInput,
-  DesktopConfirmSaveWorkspaceFileChangesResult,
   DesktopOpenChatFromNotificationEvent,
   DesktopThemeSetInput,
   DesktopUpdateDownloadedEvent,
+  DesktopUpdateMessageEvent,
   DesktopWindowCommand,
 } from "@shared/desktop-window";
+import type {
+  DesktopNotificationHistory,
+  DesktopNotificationPreferences,
+  DesktopNotificationPreferencesSetInput,
+} from "@shared/notification-preferences";
 import type {
   DesktopUpdateChannelSetInput,
   DesktopUpdateStatus,
@@ -51,28 +52,38 @@ declare global {
     };
     desktopWindow: {
       closeCurrent: () => void;
-      confirmDeleteAllChats: () => Promise<boolean>;
-      confirmDeleteArchivedChats: (
-        input: DesktopConfirmDeleteArchivedChatsInput,
-      ) => Promise<boolean>;
-      confirmDeleteCustomAgent: (
-        input: DesktopConfirmDeleteCustomAgentInput,
-      ) => Promise<boolean>;
-      confirmDeleteManagedWorktrees: (
-        input: DesktopConfirmDeleteManagedWorktreesInput,
-      ) => Promise<boolean>;
-      confirmSaveWorkspaceFileChanges: (
-        input: DesktopConfirmSaveWorkspaceFileChangesInput,
-      ) => Promise<DesktopConfirmSaveWorkspaceFileChangesResult>;
       notifyContentReady: () => void;
       onCommand: (
         handler: (command: DesktopWindowCommand) => void,
       ) => () => void;
+      onKeymapUserBindingsChanged: (
+        handler: (state: {
+          file: { version: 1; bindings: unknown[] };
+          warnings: unknown[];
+          fatal?: unknown;
+          path: string;
+        }) => void,
+      ) => () => void;
       onOpenChatFromNotification: (
         handler: (event: DesktopOpenChatFromNotificationEvent) => void,
       ) => () => void;
+      onNotificationHistoryChanged: (
+        handler: (history: DesktopNotificationHistory) => void,
+      ) => () => void;
+      getNotificationHistory: () => Promise<DesktopNotificationHistory>;
+      clearNotificationHistory: () => Promise<DesktopNotificationHistory>;
+      markNotificationHistoryRead: (
+        ids: string[],
+      ) => Promise<DesktopNotificationHistory>;
+      getNotificationPreferences: () => Promise<DesktopNotificationPreferences>;
+      setNotificationPreferences: (
+        input: DesktopNotificationPreferencesSetInput,
+      ) => Promise<DesktopNotificationPreferences>;
       onUpdateDownloaded: (
         handler: (event: DesktopUpdateDownloadedEvent) => void,
+      ) => () => void;
+      onUpdateMessage: (
+        handler: (event: DesktopUpdateMessageEvent) => void,
       ) => () => void;
       onUpdateStatusChanged: (
         handler: (status: DesktopUpdateStatus) => void,

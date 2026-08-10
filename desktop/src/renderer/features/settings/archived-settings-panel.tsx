@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getProjectDisplayName } from "@/app/workspace/workspace-display";
 import { Button } from "@/components/ui/button";
+import { confirmAction } from "@/components/ui/confirm-dialog";
 import { NativeSelectOption } from "@/components/ui/native-select";
 import { useToast } from "@/components/ui/toast";
 import {
@@ -145,12 +146,21 @@ export function ArchivedSettingsPanel() {
       try {
         const chatIds = chats.map((chat) => chat.id);
         const impact = await api.chats.archivedDeleteImpact({ chatIds });
-        const confirmed = await window.desktopWindow.confirmDeleteArchivedChats(
-          {
-            chatCount: impact.chatCount,
-            managedWorktreeCount: impact.managedWorktreeCount,
-          },
-        );
+        const confirmed = await confirmAction({
+          cancelLabel: t("common.cancel"),
+          confirmLabel: t("common.delete"),
+          description:
+            impact.managedWorktreeCount > 0
+              ? t("settings.archived.confirmDeleteWorktreeDetail", {
+                  chatCount: impact.chatCount,
+                  managedWorktreeCount: impact.managedWorktreeCount,
+                })
+              : t("settings.archived.confirmDeleteDetail", {
+                  chatCount: impact.chatCount,
+                }),
+          title: t("settings.archived.confirmDeleteTitle"),
+          tone: "danger",
+        });
         if (!confirmed) return;
 
         const result = await deleteArchivedChatsMutation.mutateAsync({

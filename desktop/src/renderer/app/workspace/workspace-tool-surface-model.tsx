@@ -254,6 +254,7 @@ export function useWorkspaceToolSurfaceModel({
   const tabItems = useMemo(
     () =>
       workspaceToolTabItems(snapshot.tabs, {
+        checks: t("workspace.tools.tabs.checks"),
         files: t("workspace.tools.tabs.files"),
         gitChanges: t("workspace.tools.tabs.gitChanges"),
         processes: t("workspace.tools.tabs.processes"),

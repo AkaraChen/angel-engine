@@ -9,8 +9,12 @@
 const LANGUAGE_STORAGE_KEY = "angel-engine.language";
 
 export function appLocale(): string {
-  return (
-    window.localStorage.getItem(LANGUAGE_STORAGE_KEY) ??
-    window.navigator.language
-  );
+  try {
+    return (
+      window.localStorage?.getItem(LANGUAGE_STORAGE_KEY) ??
+      window.navigator.language
+    );
+  } catch {
+    return window.navigator.language;
+  }
 }

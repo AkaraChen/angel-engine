@@ -105,6 +105,8 @@ export interface StartRunOptions {
   projectId?: string;
   reasoningEffort?: string;
   runtime?: string;
+  /** Optional title for chats created by this run (e.g. session handoff). */
+  title?: string;
   worktreeSetupApproval?: string;
 }
 

@@ -121,8 +121,12 @@ export function useWorkspaceChatActions({
     });
   }
   const [renameChatId, setRenameChatId] = useState<string | null>(null);
+  const [handoffChatId, setHandoffChatId] = useState<string | null>(null);
   const renameTargetChat = is.nonEmptyString(renameChatId)
     ? (chats.find((chat) => chat.id === renameChatId) ?? null)
+    : null;
+  const handoffTargetChat = is.nonEmptyString(handoffChatId)
+    ? (chats.find((chat) => chat.id === handoffChatId) ?? null)
     : null;
   const [settingsProjectId, setSettingsProjectId] = useState<string | null>(
     null,
@@ -373,12 +377,17 @@ export function useWorkspaceChatActions({
   const openRenameChatDialog = useCallback((chat: Chat) => {
     setRenameChatId(chat.id);
   }, []);
+  const openSessionHandoffDialog = useCallback((chat: Chat) => {
+    setHandoffChatId(chat.id);
+  }, []);
   const showChatContextMenu = useCallback(
     async (chat: Chat) => {
       try {
         const action = await showChatContextMenuMutation.mutateAsync(chat);
         if (action === "rename") {
           openRenameChatDialog(chat);
+        } else if (action === "handoff") {
+          openSessionHandoffDialog(chat);
         } else if (action === "deleted") {
           removeChatFromCache(chat.id);
         }
@@ -392,6 +401,7 @@ export function useWorkspaceChatActions({
     },
     [
       openRenameChatDialog,
+      openSessionHandoffDialog,
       removeChatFromCache,
       showChatContextMenuMutation,
       t,
@@ -399,6 +409,10 @@ export function useWorkspaceChatActions({
     ],
   );
   const closeRenameChatDialog = useCallback(() => setRenameChatId(null), []);
+  const closeSessionHandoffDialog = useCallback(
+    () => setHandoffChatId(null),
+    [],
+  );
   const closeProjectSettingsDialog = useCallback(
     () => setSettingsProjectId(null),
     [],
@@ -550,9 +564,11 @@ export function useWorkspaceChatActions({
     archiveChat,
     closeProjectSettingsDialog,
     closeRenameChatDialog,
+    closeSessionHandoffDialog,
     createProjectFromPicker,
     deleteAllChats,
     deleteAllChatsPending: deleteAllChatsMutation.isPending,
+    handoffTargetChat,
     renameChat,
     renameChatPending: renameChatMutation.isPending,
     renameTargetChat,
