@@ -7,6 +7,7 @@ import { Effect } from "effect";
 import { isCustomAgentRuntime } from "@angel-engine/daemon-api/agents";
 import { DaemonError } from "../../platform/errors";
 import { getCustomAgent } from "../agents/repository";
+import { isHostControlEnabled } from "../host-control";
 import { DesktopAngelSession } from "./desktop-angel-session";
 
 export type DesktopChatSession =
@@ -65,7 +66,7 @@ export function createChatSession(
             needAuth: agent.needAuth,
           },
           command: agent.command,
-          environment: agent.environment,
+          environment: mergeHostControlEnvironment(agent.environment),
           clientName: "angel-engine",
           clientTitle: "Angel Engine",
           processLabel: agent.label,
@@ -77,9 +78,51 @@ export function createChatSession(
       createRuntimeOptions(runtime ?? null, {
         clientName: "angel-engine",
         clientTitle: "Angel Engine",
+        environment: mergeHostControlEnvironment(),
       }),
     );
   });
+}
+
+const HOST_CONTROL_ENV_KEYS = [
+  "ANGEL_DAEMON_URL",
+  "ANGEL_DAEMON_TOKEN",
+  "ANGELCTL_BIN",
+  "ANGELCTL_BIN_DIR",
+  "ANGEL_HOST_SKILL_DIR",
+  "ANGEL_HOST_SKILL_ROOT",
+  "PATH",
+] as const;
+
+/**
+ * Merge host-control env (daemon URL/token + angelctl PATH) into agent spawn
+ * env. Values already set by the custom agent win so operators can override.
+ * Skill-first path only — does not configure MCP.
+ *
+ * Relies on `installHostControl` having written these onto `process.env`
+ * after the daemon handshake.
+ */
+function mergeHostControlEnvironment(
+  existing: Array<{ name: string; value: string }> | undefined = undefined,
+): Array<{ name: string; value: string }> | undefined {
+  if (!isHostControlEnabled()) {
+    return existing;
+  }
+
+  const byName = new Map<string, string>();
+  for (const key of HOST_CONTROL_ENV_KEYS) {
+    const value = process.env[key];
+    if (typeof value === "string" && value.length > 0) {
+      byName.set(key, value);
+    }
+  }
+  if (byName.size === 0) {
+    return existing;
+  }
+  for (const variable of existing ?? []) {
+    byName.set(variable.name, variable.value);
+  }
+  return [...byName.entries()].map(([name, value]) => ({ name, value }));
 }
 
 function createPiAgentSession(): Effect.Effect<

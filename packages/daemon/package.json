@@ -30,6 +30,7 @@
     "@angel-engine/claude-client": "workspace:*",
     "@angel-engine/client-napi": "workspace:*",
     "@angel-engine/daemon-api": "workspace:*",
+    "@angel-engine/host-skill": "workspace:*",
     "@angel-engine/js-client": "workspace:*",
     "@angel-engine/pi-client": "workspace:*",
     "@hono/node-server": "^1.19.9",
