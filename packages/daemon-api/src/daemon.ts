@@ -43,6 +43,8 @@ export interface ProcessRegistrySnapshotEntry extends ProcessRegistryEntry {
  * on `error` message text.
  */
 export type DaemonErrorCode =
+  | "automation-not-found"
+  | "automation-run-conflict"
   | "chat-cwd-invalid"
   | "chat-id-required"
   | "chat-ids-required"

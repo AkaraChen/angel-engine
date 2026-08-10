@@ -234,7 +234,9 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
     return context.json({ code: "internal", error: error.message }, 500);
   });
 
-  registerApi(app, runtime, chatEvents);
+  const stopApiServices = registerApi(app, runtime, chatEvents, {
+    startAutomationScheduler: true,
+  });
 
   app.put("/api/process-registry", async (context) => {
     const body = await context.req.json<unknown>();
@@ -286,6 +288,7 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
   });
 
   const close = async () => {
+    stopApiServices();
     if (server === undefined) return;
     const activeServer = server;
     server = undefined;

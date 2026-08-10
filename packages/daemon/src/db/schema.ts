@@ -91,6 +91,67 @@ export const queuedChatRuns = sqliteTable(
   (table) => [index("queued_chat_runs_chat_id_idx").on(table.chatId)],
 );
 
+export const automations = sqliteTable(
+  "automations",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    cron: text("cron").notNull(),
+    prompt: text("prompt").notNull(),
+    runtime: text("runtime").notNull(),
+    projectId: text("project_id").references(() => projects.id, {
+      onDelete: "set null",
+    }),
+    workspaceKind: text("workspace_kind", {
+      enum: ["project", "worktree"],
+    })
+      .notNull()
+      .default("project"),
+    notifyOnFailure: integer("notify_on_failure", { mode: "boolean" })
+      .notNull()
+      .default(true),
+    enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+    nextRunAt: text("next_run_at"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (table) => [
+    index("automations_enabled_next_run_idx").on(
+      table.enabled,
+      table.nextRunAt,
+    ),
+    index("automations_project_id_idx").on(table.projectId),
+  ],
+);
+
+export const automationRuns = sqliteTable(
+  "automation_runs",
+  {
+    id: text("id").primaryKey(),
+    automationId: text("automation_id")
+      .notNull()
+      .references(() => automations.id, { onDelete: "cascade" }),
+    chatId: text("chat_id").references(() => chats.id, {
+      onDelete: "set null",
+    }),
+    trigger: text("trigger", { enum: ["manual", "scheduled"] }).notNull(),
+    status: text("status", {
+      enum: ["cancelled", "failed", "missed", "running", "succeeded"],
+    }).notNull(),
+    scheduledFor: text("scheduled_for"),
+    startedAt: text("started_at").notNull(),
+    finishedAt: text("finished_at"),
+    error: text("error"),
+  },
+  (table) => [
+    index("automation_runs_automation_started_idx").on(
+      table.automationId,
+      table.startedAt,
+    ),
+    index("automation_runs_chat_id_idx").on(table.chatId),
+  ],
+);
+
 export type ProjectRow = typeof projects.$inferSelect;
 export type NewProjectRow = typeof projects.$inferInsert;
 export type CustomAgentRow = typeof customAgents.$inferSelect;
@@ -100,3 +161,5 @@ export type NewChatRow = typeof chats.$inferInsert;
 export type ChatDiffAnchorRow = typeof chatDiffAnchors.$inferSelect;
 export type WorktreeCreationJobRow = typeof worktreeCreationJobs.$inferSelect;
 export type QueuedChatRunRow = typeof queuedChatRuns.$inferSelect;
+export type AutomationRow = typeof automations.$inferSelect;
+export type AutomationRunRow = typeof automationRuns.$inferSelect;

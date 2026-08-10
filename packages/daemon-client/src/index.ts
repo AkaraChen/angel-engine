@@ -7,6 +7,12 @@ import type {
   UpdateCustomAgentInput,
 } from "@angel-engine/daemon-api/agents";
 import type {
+  Automation,
+  AutomationRun,
+  CreateAutomationInput,
+  UpdateAutomationInput,
+} from "@angel-engine/daemon-api/automations";
+import type {
   Chat,
   ChatActiveRunResult,
   ChatAmbiguousRunResult,
@@ -391,6 +397,38 @@ export function createDaemonClient(options: DaemonClientOptions) {
         request<CustomAgent>(
           `/api/agents/custom/${encodeURIComponent(input.id)}`,
           json("PUT", input),
+        ),
+    },
+    automations: {
+      create: (input: CreateAutomationInput) =>
+        request<Automation>("/api/automations", json("POST", input)),
+      delete: (id: string) =>
+        request<{ ok: boolean }>(`/api/automations/${encodeURIComponent(id)}`, {
+          method: "DELETE",
+        }),
+      list: () => request<Automation[]>("/api/automations"),
+      listRuns: (id: string, limit?: number) =>
+        request<AutomationRun[]>(
+          `/api/automations/${encodeURIComponent(id)}/runs${limit === undefined ? "" : `?${query({ limit })}`}`,
+        ),
+      pause: (id: string) =>
+        request<Automation>(
+          `/api/automations/${encodeURIComponent(id)}/pause`,
+          { method: "POST" },
+        ),
+      resume: (id: string) =>
+        request<Automation>(
+          `/api/automations/${encodeURIComponent(id)}/resume`,
+          { method: "POST" },
+        ),
+      runNow: (id: string) =>
+        request<Automation>(`/api/automations/${encodeURIComponent(id)}/run`, {
+          method: "POST",
+        }),
+      update: (id: string, input: UpdateAutomationInput) =>
+        request<Automation>(
+          `/api/automations/${encodeURIComponent(id)}`,
+          json("PATCH", input),
         ),
     },
     chatRuns: {

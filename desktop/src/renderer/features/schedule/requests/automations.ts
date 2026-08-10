@@ -1,13 +1,13 @@
 import type { QueryClient } from "@tanstack/react-query";
+import type { Automation as DaemonAutomation } from "@angel-engine/daemon-api/automations";
 import type {
   Automation,
   CreateAutomationInput,
 } from "@/features/schedule/schedule-model";
 
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
-import { nanoid } from "nanoid";
-import { scheduleFixture } from "@/features/schedule/requests/fixtures";
 import { scheduleQueryKeys } from "@/features/schedule/requests/keys";
+import { getApiClient } from "@/platform/api-client";
 
 export function automationListQueryOptions({
   staleTime = Number.POSITIVE_INFINITY,
@@ -16,7 +16,7 @@ export function automationListQueryOptions({
 } = {}) {
   return queryOptions({
     queryFn: async (): Promise<Automation[]> =>
-      structuredClone(scheduleFixture),
+      (await getApiClient().automations.list()).map(toRendererAutomation),
     queryKey: scheduleQueryKeys.automations.list(),
     staleTime,
   });
@@ -28,20 +28,22 @@ export function createAutomationMutationOptions({
   queryClient: QueryClient;
 }) {
   return mutationOptions({
-    mutationFn: async (input: CreateAutomationInput): Promise<Automation> => ({
-      ...input,
-      enabled: true,
-      id: nanoid(),
-      nextRunAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-      runs: [],
-      status: "active",
-    }),
-    onSuccess: (automation) => {
-      queryClient.setQueryData<Automation[]>(
-        scheduleQueryKeys.automations.list(),
-        (current = []) => [...current, automation],
-      );
-    },
+    mutationFn: async (input: CreateAutomationInput): Promise<Automation> =>
+      toRendererAutomation(
+        await getApiClient().automations.create({
+          cron: input.cron,
+          name: input.name,
+          notifyOnFailure: input.notifyOnFailure,
+          projectId: input.projectId,
+          prompt: input.prompt,
+          runtime: "codex",
+          workspaceKind: "project",
+        }),
+      ),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: scheduleQueryKeys.automations.all(),
+      }),
   });
 }
 
@@ -51,20 +53,16 @@ export function setAutomationEnabledMutationOptions({
   queryClient: QueryClient;
 }) {
   return mutationOptions({
-    mutationFn: async ({ enabled, id }: { enabled: boolean; id: string }) => ({
-      enabled,
-      id,
-    }),
-    onSuccess: ({ enabled, id }) => {
-      updateAutomation(queryClient, id, (automation) => ({
-        ...automation,
-        enabled,
-        nextRunAt: enabled
-          ? new Date(Date.now() + 60 * 60 * 1000).toISOString()
-          : undefined,
-        status: enabled ? "active" : "paused",
-      }));
-    },
+    mutationFn: async ({ enabled, id }: { enabled: boolean; id: string }) =>
+      toRendererAutomation(
+        enabled
+          ? await getApiClient().automations.resume(id)
+          : await getApiClient().automations.pause(id),
+      ),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: scheduleQueryKeys.automations.all(),
+      }),
   });
 }
 
@@ -74,22 +72,12 @@ export function runAutomationNowMutationOptions({
   queryClient: QueryClient;
 }) {
   return mutationOptions({
-    mutationFn: async (id: string) => id,
-    onSuccess: (id) => {
-      updateAutomation(queryClient, id, (automation) => ({
-        ...automation,
-        runs: [
-          {
-            id: nanoid(),
-            startedAt: new Date().toISOString(),
-            status: "running",
-            trigger: "manual",
-          },
-          ...automation.runs,
-        ],
-        status: "running",
-      }));
-    },
+    mutationFn: async (id: string) =>
+      toRendererAutomation(await getApiClient().automations.runNow(id)),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: scheduleQueryKeys.automations.all(),
+      }),
   });
 }
 
@@ -99,26 +87,44 @@ export function deleteAutomationMutationOptions({
   queryClient: QueryClient;
 }) {
   return mutationOptions({
-    mutationFn: async (id: string) => id,
-    onSuccess: (id) => {
-      queryClient.setQueryData<Automation[]>(
-        scheduleQueryKeys.automations.list(),
-        (current = []) => current.filter((automation) => automation.id !== id),
-      );
-    },
+    mutationFn: async (id: string) => getApiClient().automations.delete(id),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: scheduleQueryKeys.automations.all(),
+      }),
   });
 }
 
-function updateAutomation(
-  queryClient: QueryClient,
-  id: string,
-  update: (automation: Automation) => Automation,
-): void {
-  queryClient.setQueryData<Automation[]>(
-    scheduleQueryKeys.automations.list(),
-    (current = []) =>
-      current.map((automation) =>
-        automation.id === id ? update(automation) : automation,
-      ),
-  );
+function toRendererAutomation(automation: DaemonAutomation): Automation {
+  return {
+    agentLabel: automation.runtime,
+    cron: automation.cron,
+    enabled: automation.enabled,
+    id: automation.id,
+    name: automation.name,
+    nextRunAt: automation.nextRunAt ?? undefined,
+    notifyOnFailure: automation.notifyOnFailure,
+    projectId: automation.projectId ?? undefined,
+    prompt: automation.prompt,
+    runs: automation.runs.map((run) => ({
+      durationSeconds:
+        run.finishedAt === null
+          ? undefined
+          : Math.max(
+              0,
+              Math.round(
+                (new Date(run.finishedAt).getTime() -
+                  new Date(run.startedAt).getTime()) /
+                  1_000,
+              ),
+            ),
+      error: run.error ?? undefined,
+      id: run.id,
+      startedAt: run.startedAt,
+      status: run.status,
+      trigger: run.trigger,
+    })),
+    scheduleLabel: automation.cron,
+    status: automation.status,
+  };
 }
