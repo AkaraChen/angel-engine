@@ -43,6 +43,8 @@ where
             options: TransportOptions {
                 client_info,
                 experimental_api: options.experimental_api,
+                mcp_injection: options.mcp_injection,
+                skill_injection: options.skill_injection,
             },
             auto_authenticate: options.auth.auto_authenticate,
         }

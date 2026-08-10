@@ -1,3 +1,4 @@
+use angel_engine::{McpInjectionConfig, SkillInjectionConfig};
 use garde::Validate;
 use serde::{Deserialize, Serialize};
 
@@ -33,6 +34,16 @@ pub struct ClientOptions {
     #[serde(default)]
     #[garde(skip)]
     pub process_label: Option<String>,
+    /// Host skill injection (roots / ensure / materialize). Applied by the
+    /// host before spawn and forwarded on transport options for adapters.
+    #[serde(default)]
+    #[garde(skip)]
+    pub skill_injection: SkillInjectionConfig,
+    /// Host MCP server descriptors. Forwarded into ACP `mcpServers`; empty
+    /// means no MCP inject. Stage 3 does not start a host MCP server.
+    #[serde(default)]
+    #[garde(skip)]
+    pub mcp_injection: McpInjectionConfig,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -269,6 +280,16 @@ impl ClientOptionsBuilder {
         self
     }
 
+    pub fn skill_injection(mut self, config: SkillInjectionConfig) -> Self {
+        self.options.skill_injection = config;
+        self
+    }
+
+    pub fn mcp_injection(mut self, config: McpInjectionConfig) -> Self {
+        self.options.mcp_injection = config;
+        self
+    }
+
     pub fn build(self) -> ClientOptions {
         self.options
     }
@@ -288,6 +309,8 @@ impl Default for ClientOptionsBuilder {
                 environment: Vec::new(),
                 experimental_api: default_experimental_api(),
                 process_label: None,
+                skill_injection: SkillInjectionConfig::default(),
+                mcp_injection: McpInjectionConfig::default(),
             },
         }
     }

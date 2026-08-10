@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use strum::Display;
 
+use angel_engine::{McpInjectionConfig, SkillInjectionConfig};
+
 use crate::{
     ClientAuthOptions, ClientEnvironmentVariable, ClientError, ClientIdentity, ClientOptions,
     ClientProtocol, ClientResult,
@@ -48,6 +50,10 @@ pub struct RuntimeOptionsOverrides {
     pub client_title: Option<String>,
     #[serde(default)]
     pub default_reasoning_effort: Option<String>,
+    #[serde(default)]
+    pub skill_injection: Option<SkillInjectionConfig>,
+    #[serde(default)]
+    pub mcp_injection: Option<McpInjectionConfig>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -260,6 +266,12 @@ pub fn create_runtime_options(
     if let Some(process_label) = overrides.process_label {
         client.process_label = Some(process_label);
     }
+    if let Some(skill_injection) = overrides.skill_injection {
+        client.skill_injection = skill_injection;
+    }
+    if let Some(mcp_injection) = overrides.mcp_injection {
+        client.mcp_injection = mcp_injection;
+    }
 
     Ok(RuntimeOptions {
         client,
@@ -443,5 +455,44 @@ mod tests {
         );
         assert!(options.client.auth.need_auth);
         assert!(options.client.auth.auto_authenticate);
+    }
+
+    #[test]
+    fn runtime_overrides_accept_host_injection_config() {
+        use angel_engine::{
+            McpInjectionConfig, McpServerConfig, McpServerTransport, SkillInjectionConfig,
+        };
+        use std::collections::BTreeMap;
+        use std::path::PathBuf;
+
+        let options = create_runtime_options(
+            Some("opencode"),
+            RuntimeOptionsOverrides {
+                skill_injection: Some(SkillInjectionConfig {
+                    roots: vec![PathBuf::from("/app/host-skills")],
+                    ensure: vec!["angel-host".into()],
+                    materialize_into_runtime_roots: true,
+                }),
+                mcp_injection: Some(McpInjectionConfig {
+                    servers: vec![McpServerConfig {
+                        name: "stub".into(),
+                        transport: McpServerTransport::Stdio {
+                            command: "true".into(),
+                            args: Vec::new(),
+                            env: BTreeMap::new(),
+                        },
+                    }],
+                }),
+                ..RuntimeOptionsOverrides::default()
+            },
+        )
+        .expect("valid runtime");
+
+        assert_eq!(
+            options.client.skill_injection.ensure,
+            vec!["angel-host".to_string()]
+        );
+        assert_eq!(options.client.mcp_injection.servers.len(), 1);
+        assert_eq!(options.client.mcp_injection.servers[0].name, "stub");
     }
 }

@@ -196,6 +196,8 @@ pub struct AvailableCommandSnapshot {
 pub struct SkillsSnapshot {
     pub can_list: bool,
     pub can_mention: bool,
+    pub can_inject: Option<bool>,
+    pub can_inject_mcp: Option<bool>,
     pub skills: Vec<SkillSnapshot>,
 }
 

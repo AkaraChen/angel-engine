@@ -56,7 +56,14 @@ pub use settings::{
     ModelListSettingSnapshot, ModelOptionSnapshot, PermissionModeOptionSnapshot,
     ReasoningLevelSettingSnapshot, ThreadSettingsSnapshot,
 };
-pub use skills::{list_agent_skills, list_agent_skills_from_dirs};
+pub use angel_engine::{
+    HostInjectionConfig, McpInjectionConfig, McpServerConfig, McpServerTransport,
+    SkillInjectionConfig,
+};
+pub use skills::{
+    SkillMaterializeReport, find_skill_package_dir, list_agent_skills,
+    list_agent_skills_from_dirs, list_agent_skills_with_injection, materialize_skill_injection,
+};
 pub use snapshot::{
     ActionOutputSnapshot, ActionSnapshot, AgentStateSnapshot, AvailableCommandSnapshot,
     ClientSnapshot, ContentChunk, ContextSnapshot, ConversationSnapshot,

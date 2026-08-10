@@ -38,6 +38,12 @@ impl Default for TransportClientInfo {
 pub struct TransportOptions {
     pub client_info: TransportClientInfo,
     pub experimental_api: bool,
+    /// Host MCP server descriptors forwarded by adapters that support
+    /// session-level MCP config (ACP `mcpServers`). Default empty.
+    pub mcp_injection: crate::McpInjectionConfig,
+    /// Host skill injection intent available to adapters that can apply
+    /// config-time skill paths. Filesystem materialization is client-owned.
+    pub skill_injection: crate::SkillInjectionConfig,
 }
 
 impl Default for TransportOptions {
@@ -45,6 +51,8 @@ impl Default for TransportOptions {
         Self {
             client_info: TransportClientInfo::default(),
             experimental_api: true,
+            mcp_injection: crate::McpInjectionConfig::default(),
+            skill_injection: crate::SkillInjectionConfig::default(),
         }
     }
 }

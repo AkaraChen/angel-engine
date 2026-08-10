@@ -39,17 +39,21 @@ impl AcpAdapter {
         if let ProtocolMethod::Extension(method) = &effect.method
             && method == AGENT_METHOD_NAMES.session_fork
         {
-            return lifecycle::acp_fork_params(engine, effect);
+            return lifecycle::acp_fork_params(engine, effect, &options.mcp_injection);
         }
         match &effect.method {
             ProtocolMethod::Initialize => Ok(initialize::initialize_params(self, options)),
             ProtocolMethod::Authenticate => Ok(initialize::authenticate_params(effect)),
-            ProtocolMethod::StartConversation => {
-                Ok(lifecycle::start_conversation_params(engine, effect))
-            }
-            ProtocolMethod::ResumeConversation => {
-                Ok(lifecycle::resume_conversation_params(engine, effect))
-            }
+            ProtocolMethod::StartConversation => Ok(lifecycle::start_conversation_params(
+                engine,
+                effect,
+                &options.mcp_injection,
+            )),
+            ProtocolMethod::ResumeConversation => Ok(lifecycle::resume_conversation_params(
+                engine,
+                effect,
+                &options.mcp_injection,
+            )),
             ProtocolMethod::StartTurn => prompt::start_turn_params(engine, effect),
             ProtocolMethod::CancelTurn | ProtocolMethod::CloseConversation => {
                 lifecycle::session_id_params(engine, effect)
@@ -64,7 +68,9 @@ impl AcpAdapter {
                 message: "permission responses are encoded by encode_permission_response"
                     .to_string(),
             }),
-            ProtocolMethod::ForkConversation => lifecycle::acp_fork_params(engine, effect),
+            ProtocolMethod::ForkConversation => {
+                lifecycle::acp_fork_params(engine, effect, &options.mcp_injection)
+            }
             ProtocolMethod::ArchiveConversation
             | ProtocolMethod::UnarchiveConversation
             | ProtocolMethod::Unsubscribe => lifecycle::session_id_params(engine, effect),

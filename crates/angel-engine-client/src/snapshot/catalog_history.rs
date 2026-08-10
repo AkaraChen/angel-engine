@@ -29,6 +29,12 @@ impl From<&AvailableCommand> for AvailableCommandSnapshot {
 pub struct SkillsSnapshot {
     pub can_list: bool,
     pub can_mention: bool,
+    /// Host may inject skill roots / ensure packages (filesystem path).
+    #[serde(default)]
+    pub can_inject: bool,
+    /// Host may pass MCP server descriptors into the session (extension slot).
+    #[serde(default)]
+    pub can_inject_mcp: bool,
     pub skills: Vec<SkillSnapshot>,
 }
 
@@ -37,6 +43,8 @@ impl SkillsSnapshot {
         Self {
             can_list: conversation.capabilities.skills.list.is_supported(),
             can_mention: conversation.capabilities.skills.mention.is_supported(),
+            can_inject: conversation.capabilities.skills.inject.is_supported(),
+            can_inject_mcp: conversation.capabilities.mcp.inject.is_supported(),
             skills: conversation
                 .available_skills
                 .iter()

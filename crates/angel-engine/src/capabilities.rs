@@ -63,6 +63,7 @@ pub struct ConversationCapabilities {
     pub context: ContextCapabilities,
     pub observer: ObserverCapabilities,
     pub skills: SkillsCapabilities,
+    pub mcp: McpCapabilities,
 }
 
 impl ConversationCapabilities {
@@ -114,6 +115,10 @@ impl ConversationCapabilities {
             skills: SkillsCapabilities {
                 list: CapabilitySupport::Unknown,
                 mention: CapabilitySupport::Unknown,
+                inject: CapabilitySupport::Unknown,
+            },
+            mcp: McpCapabilities {
+                inject: CapabilitySupport::Unknown,
             },
         }
     }
@@ -180,4 +185,17 @@ pub struct ObserverCapabilities {
 pub struct SkillsCapabilities {
     pub list: CapabilitySupport,
     pub mention: CapabilitySupport,
+    /// Host can inject skill roots / ensure skill packages into the session
+    /// (filesystem materialization and/or provider config). Skill-first path.
+    pub inject: CapabilitySupport,
+}
+
+/// MCP-related conversation capabilities. Stage 3 only exposes `inject` as a
+/// config plumbing slot — not a full host MCP server.
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct McpCapabilities {
+    /// Host can pass MCP server descriptors into session start/load/fork.
+    /// Supported does **not** mean Angel Engine runs an MCP server; only that
+    /// the adapter forwards `McpInjectionConfig` to the agent.
+    pub inject: CapabilitySupport,
 }
