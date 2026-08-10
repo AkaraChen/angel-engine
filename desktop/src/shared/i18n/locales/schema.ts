@@ -565,6 +565,7 @@ export interface LocaleResourceTranslationSettingsTabs {
   mobile: string;
   updates: string;
   workspace: string;
+  usage: string;
 }
 
 export interface LocaleResourceTranslationSettingsTabDescriptions {
@@ -576,6 +577,46 @@ export interface LocaleResourceTranslationSettingsTabDescriptions {
   mobile: string;
   updates: string;
   workspace: string;
+  usage: string;
+}
+
+export interface LocaleResourceTranslationUsageUnavailableReasons {
+  "binary-missing": string;
+  "exec-failed": string;
+  "schema-mismatch": string;
+  timeout: string;
+}
+
+export interface LocaleResourceTranslationUsage {
+  activeBlock: string;
+  activeRuns: string;
+  burnRate: string;
+  burnRateThreshold: string;
+  burnRateWarning: string;
+  burnRateWarningActive: string;
+  burnRateWarningDescription: string;
+  byAgent: string;
+  cacheCreationTokens: string;
+  cacheReadTokens: string;
+  collecting: string;
+  contextNearLimit: string;
+  contextUsed: string;
+  month: string;
+  noData: string;
+  projected: string;
+  inputTokens: string;
+  lastCollected: string;
+  outputTokens: string;
+  refresh: string;
+  source: string;
+  sourceDescription: string;
+  sessionCost: string;
+  today: string;
+  tokens: string;
+  unavailable: string;
+  unavailableReasons: LocaleResourceTranslationUsageUnavailableReasons;
+  warnings: string;
+  week: string;
 }
 
 export interface LocaleResourceTranslationSettingsUpdates {
@@ -1162,6 +1203,7 @@ export interface LocaleResourceTranslation {
   ui: LocaleResourceTranslationUi;
   promptInput: LocaleResourceTranslationPromptInput;
   runtimeValues: LocaleResourceTranslationRuntimeValues;
+  usage?: LocaleResourceTranslationUsage;
 }
 
 export interface LocaleResource {

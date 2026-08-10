@@ -178,6 +178,12 @@ export function runtimeConfigFromConversationSnapshot(
       label: effort.label,
       value: effort.value,
     })),
+    usage: snapshot.usage
+      ? {
+          size: snapshot.usage.size,
+          used: snapshot.usage.used,
+        }
+      : undefined,
   };
 }
 

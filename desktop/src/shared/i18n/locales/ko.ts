@@ -570,6 +570,7 @@ export const ko = {
           "이 컴퓨터에 저장된 모든 채팅에 영향을 주는 되돌릴 수 없는 작업입니다.",
         mobile: "로컬 네트워크를 통해 이 컴퓨터에서 모바일 웹 앱을 제공합니다.",
         updates: "이 앱이 어떤 릴리스를 언제 설치할지 정합니다.",
+        usage: "ccusage에서 추정한 로컬 토큰 및 비용 활동입니다.",
         workspace: "작업 중 입력창과 워크트리가 동작하는 방식입니다.",
       },
       tabs: {
@@ -580,6 +581,7 @@ export const ko = {
         danger: "고급",
         mobile: "모바일 보기",
         updates: "업데이트",
+        usage: "사용량",
         workspace: "작업 공간",
       },
       title: "설정",
@@ -620,6 +622,47 @@ export const ko = {
         trayEnabledSwitchLabel: "메뉴 막대 함대 요약 표시",
         trayEnabledTitle: "메뉴 막대 함대 요약",
       },
+    },
+    usage: {
+      activeBlock: "현재 결제 블록",
+      activeRuns: "실행 중인 세션",
+      burnRate: "현재 사용률",
+      burnRateThreshold: "경고 임계값",
+      burnRateWarning: "사용률 경고",
+      burnRateWarningActive: "현재 사용률이 {{threshold}}을(를) 초과했습니다.",
+      burnRateWarningDescription:
+        "시간당 사용률이 임계값을 넘으면 사용량 표시기를 강조합니다.",
+      byAgent: "에이전트별",
+      cacheCreationTokens: "캐시 쓰기",
+      cacheReadTokens: "캐시 읽기",
+      collecting: "로컬 사용량 수집 중…",
+      contextNearLimit:
+        "컨텍스트가 한도에 가까워졌습니다. 새 채팅을 시작해 보세요.",
+      contextUsed: "사용한 컨텍스트",
+      month: "이번 달",
+      noData: "로컬 사용량 기록이 없습니다",
+      projected: "현재 사용률 기준 예상",
+      inputTokens: "입력",
+      lastCollected: "마지막 수집: {{time}}.",
+      outputTokens: "출력",
+      refresh: "새로 고침",
+      source: "데이터 소스",
+      sourceDescription:
+        "로컬 에이전트 로그에서 추정합니다. 지원 제공자: {{agents}}. 기타 및 사용자 지정 제공자는 사용할 수 없습니다.",
+      sessionCost: "비용",
+      today: "오늘",
+      tokens: "토큰",
+      unavailable: "사용량을 확인할 수 없음",
+      unavailableReasons: {
+        "binary-missing":
+          "사용량을 확인할 수 없음: 패키지된 ccusage 바이너리가 없습니다.",
+        "exec-failed": "사용량을 확인할 수 없음: ccusage 실행에 실패했습니다.",
+        "schema-mismatch":
+          "사용량을 확인할 수 없음: ccusage 출력 형식이 변경되었습니다.",
+        timeout: "사용량을 확인할 수 없음: 수집 시간이 초과되었습니다.",
+      },
+      warnings: "경고",
+      week: "이번 주",
     },
     updates: {
       checkFailed: "업데이트를 확인할 수 없음",

@@ -17,6 +17,7 @@ import type {
   ChatRuntimeConfigInput as JsChatRuntimeConfigInput,
   ChatRuntimeConfigOption as JsChatRuntimeConfigOption,
   ChatSendInput as JsChatSendInput,
+  ChatSessionUsage as JsChatSessionUsage,
   ChatToolAction as JsChatToolAction,
   ChatToolActionError as JsChatToolActionError,
   ChatToolActionOutput as JsChatToolActionOutput,
@@ -150,6 +151,7 @@ export interface ImportChatInput {
 export type ImportChatResult = ChatLoadResult;
 export type ChatRuntimeConfigInput = JsChatRuntimeConfigInput;
 export type ChatRuntimeConfigOption = JsChatRuntimeConfigOption;
+export type ChatSessionUsage = JsChatSessionUsage;
 export type ChatAgentState = JsChatAgentState;
 export type ChatHistoryMessage = Omit<JsChatHistoryMessage, "content"> & {
   content: ChatHistoryMessagePart[];
@@ -202,6 +204,7 @@ export interface ChatRuntimeConfig {
   models: ChatRuntimeConfigOption[];
   permissionModes: ChatRuntimeConfigOption[];
   reasoningEfforts: ChatRuntimeConfigOption[];
+  usage?: ChatSessionUsage;
 }
 
 export type ChatToolAction = JsChatToolAction;

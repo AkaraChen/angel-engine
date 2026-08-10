@@ -578,6 +578,8 @@ export const fr = {
         mobile:
           "Diffusez l’application web mobile depuis cet ordinateur sur votre réseau local.",
         updates: "Quelles versions cette application installe, et quand.",
+        usage:
+          "Estimation par ccusage de l’activité locale des jetons et des coûts.",
         workspace:
           "Comportement du champ de saisie et des worktrees pendant votre travail.",
       },
@@ -589,6 +591,7 @@ export const fr = {
         danger: "Avancé",
         mobile: "Vue mobile",
         updates: "Mises à jour",
+        usage: "Utilisation",
         workspace: "Espace de travail",
       },
       title: "Paramètres",
@@ -633,6 +636,47 @@ export const fr = {
           "Afficher le résumé de flotte dans la barre de menus",
         trayEnabledTitle: "Résumé de flotte dans la barre de menus",
       },
+    },
+    usage: {
+      activeBlock: "Bloc de facturation actif",
+      activeRuns: "Sessions en cours",
+      burnRate: "Débit actuel",
+      burnRateThreshold: "Seuil d’alerte",
+      burnRateWarning: "Alerte de débit de dépense",
+      burnRateWarningActive: "Le débit actuel dépasse {{threshold}}.",
+      burnRateWarningDescription:
+        "Met en évidence l’indicateur d’utilisation lorsque le débit horaire dépasse votre seuil.",
+      byAgent: "Par agent",
+      cacheCreationTokens: "Écriture du cache",
+      cacheReadTokens: "Lecture du cache",
+      collecting: "Collecte de l’utilisation locale…",
+      contextNearLimit:
+        "Le contexte approche de sa limite. Envisagez une nouvelle discussion.",
+      contextUsed: "Contexte utilisé",
+      month: "Ce mois-ci",
+      noData: "Aucune donnée d’utilisation locale",
+      projected: "Projection au débit actuel",
+      inputTokens: "Entrée",
+      lastCollected: "Dernière collecte à {{time}}.",
+      outputTokens: "Sortie",
+      refresh: "Actualiser",
+      source: "Source des données",
+      sourceDescription:
+        "Estimation à partir des journaux locaux des agents. Fournisseurs pris en charge : {{agents}} ; les autres fournisseurs et les fournisseurs personnalisés ne sont pas disponibles.",
+      sessionCost: "Coût",
+      today: "Aujourd’hui",
+      tokens: "jetons",
+      unavailable: "Utilisation indisponible",
+      unavailableReasons: {
+        "binary-missing":
+          "Utilisation indisponible : le binaire ccusage intégré est absent.",
+        "exec-failed": "Utilisation indisponible : échec de ccusage.",
+        "schema-mismatch":
+          "Utilisation indisponible : la sortie de ccusage a changé.",
+        timeout: "Utilisation indisponible : délai de collecte dépassé.",
+      },
+      warnings: "Alertes",
+      week: "Cette semaine",
     },
     updates: {
       checkFailed: "Impossible de rechercher les mises à jour",

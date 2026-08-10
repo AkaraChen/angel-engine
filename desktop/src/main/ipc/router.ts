@@ -13,6 +13,7 @@ import { chatPlatformIpcRouter } from "../features/chat/ipc";
 import { keybindingsPlatformIpcRouter } from "../features/keybindings/ipc";
 import { pathLauncherPlatformIpcRouter } from "../features/path-launcher/ipc";
 import { projectPlatformIpcRouter } from "../features/projects/ipc";
+import { usagePlatformIpcRouter } from "../features/usage/ipc";
 import { trayPlatformIpcRouter } from "../features/tray/ipc";
 import { MainIpcError } from "../platform/errors";
 import { setMainLanguage } from "../platform/i18n";
@@ -111,6 +112,7 @@ export function createAppRouter() {
     ...keybindingsPlatformIpcRouter,
     ...pathLauncherPlatformIpcRouter,
     ...projectPlatformIpcRouter,
+    ...usagePlatformIpcRouter,
     ...trayPlatformIpcRouter,
   };
 }
