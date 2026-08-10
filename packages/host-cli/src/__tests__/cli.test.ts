@@ -162,4 +162,83 @@ describe("runCli", () => {
     expect(JSON.parse(stdout).token).toBe("[redacted]");
     expect(JSON.parse(stdout).url).toBe("http://127.0.0.1:9");
   });
+
+  it("lists skills for a runtime (skill visibility path)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse([
+        {
+          description: "Control the local host via angelctl",
+          name: "angel-host",
+          path: "/tmp/angel-host",
+          scope: "system",
+        },
+      ]),
+    );
+    let stdout = "";
+    const code = await runCli(
+      [
+        "--url",
+        "http://127.0.0.1:9",
+        "--token",
+        "t",
+        "--json",
+        "skill",
+        "ls",
+        "--runtime",
+        "claude",
+      ],
+      {
+        fetchImpl: fetchMock as unknown as typeof fetch,
+        stdout: {
+          write(chunk: string) {
+            stdout += chunk;
+            return true;
+          },
+        } as NodeJS.WritableStream,
+      },
+    );
+    expect(code).toBe(ExitCode.success);
+    const body = JSON.parse(stdout) as Array<{ name: string }>;
+    expect(body.some((skill) => skill.name === "angel-host")).toBe(true);
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain(
+      "/api/agents/skills",
+    );
+  });
+
+  it("sends a chat message (write path, mocked daemon)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        chatId: "c1",
+        runId: "r1",
+      }),
+    );
+    let stdout = "";
+    const code = await runCli(
+      [
+        "--url",
+        "http://127.0.0.1:9",
+        "--token",
+        "t",
+        "--json",
+        "chat",
+        "send",
+        "c1",
+        "hello from agent",
+      ],
+      {
+        fetchImpl: fetchMock as unknown as typeof fetch,
+        stdout: {
+          write(chunk: string) {
+            stdout += chunk;
+            return true;
+          },
+        } as NodeJS.WritableStream,
+      },
+    );
+    expect(code).toBe(ExitCode.success);
+    expect(JSON.parse(stdout)).toEqual({ chatId: "c1", runId: "r1" });
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "http://127.0.0.1:9/api/chats/send",
+    );
+  });
 });

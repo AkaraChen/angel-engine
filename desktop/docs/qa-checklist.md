@@ -299,6 +299,46 @@
 7. 重启后打开 Claude chat。
 8. 期望历史能恢复。
 
+## Host control (Skill path)
+
+覆盖：bundled `angelctl`、`angel-host` skill 注入、agent 进程 env、只读/受控写操作。  
+实现参考：`packages/host-cli`、`packages/host-skill`、`packages/daemon` `features/host-control`。  
+MCP **不在本清单范围**（扩展点见 `docs/design/mcp-host-control-followup.md`）。
+
+### 自动化（优先）
+
+```sh
+bun run --filter @angel-engine/host-cli test
+bun run --filter @angel-engine/host-skill test
+bun run --filter @angel-engine/daemon test -- src/features/host-control
+```
+
+期望：CLI 解析/鉴权 exit code、token redaction、skill materialize、`installHostControl` env 注入均通过。
+
+### 手动冒烟（有 desktop + daemon 时）
+
+1. 启动 desktop（或 `packages/daemon` dev + handshake），确认 `~/.angel-engine/daemon.json`（或 Dev 路径）存在且权限受限。
+2. 解析 CLI：
+
+   ```sh
+   # 打包后：App Contents/Resources/bin/angelctl
+   # 开发：bun run host-cli:build && packages/host-cli/dist/bin/angelctl
+   angelctl --help
+   angelctl --json which    # URL 可见；token 必须 redacted
+   angelctl --json health
+   ```
+
+3. 鉴权：错误 token 时 `health` 以非 0 退出（auth 类），且 stderr/stdout 不打印真实 token。
+4. Skill 可见：检查 `~/.agents/skills/angel-host/SKILL.md`（或对应 runtime skill root）在 daemon 启动后存在；`angelctl --json skill ls --runtime claude` 能列出 skills（含 host skill，视 runtime 扫描规则而定）。
+5. 只读：`chat ls` / `project ls` / `agent ls` 成功。
+6. 写操作（确认环境可丢数据）：`chat create` 一条测试 chat，可选 `chat send` 短消息；不要在生产数据上 bulk archive。
+7. 关闭 host control：设置 `ANGEL_HOST_CONTROL=0` 后重启 daemon，期望不再注入 env / 不再强制 materialize（若 skill 已 symlink 到用户目录，需手工清理验证「关闭后不再更新」）。
+
+### Agent 侧（可选）
+
+1. 在支持 shell + skills 的 runtime（Claude / Pi）新 chat 中确认进程 env 含 `ANGEL_DAEMON_URL`（不要在 UI/日志打印 token）。
+2. Agent 能按 `angel-host` skill 调用 `angelctl --json health` 得到成功结果。
+
 ## Notifications
 
 覆盖：main window notification、active chat tracking、click-to-open route。

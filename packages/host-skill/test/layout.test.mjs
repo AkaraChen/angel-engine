@@ -17,3 +17,12 @@ test("angel-host skill package exists with required frontmatter", () => {
   assert.match(body, /MCP/);
   assert.match(body, /Never.*token/i);
 });
+
+test("angel-host progressive references document CLI and security", () => {
+  const cliRef = path.join(skillDir, "references", "cli-commands.md");
+  const securityRef = path.join(skillDir, "references", "security.md");
+  assert.equal(existsSync(cliRef), true);
+  assert.equal(existsSync(securityRef), true);
+  assert.match(readFileSync(cliRef, "utf8"), /health/);
+  assert.match(readFileSync(securityRef, "utf8"), /token/i);
+});
