@@ -159,6 +159,11 @@ function hostCliBinDir() {
   return path.join(workspaceRoot, "packages", "host-cli", "dist", "bin");
 }
 
+/** Host skill package for Skill-first injection (KIT-832). */
+function hostSkillDir() {
+  return path.join(workspaceRoot, "packages", "host-skill", "angel-host");
+}
+
 function assertHostCliBundled() {
   const binary = path.join(hostCliBinDir(), "angelctl");
   if (!fs.existsSync(binary)) {
@@ -166,6 +171,28 @@ function assertHostCliBundled() {
       "Host CLI not found at packages/host-cli/dist/bin/angelctl. Run `bun run host-cli:build` (or desktop runtime:build) first.",
     );
   }
+}
+
+function assertHostSkillBundled() {
+  const skill = path.join(hostSkillDir(), "SKILL.md");
+  if (!fs.existsSync(skill)) {
+    throw new Error(
+      "Host skill not found at packages/host-skill/angel-host/SKILL.md.",
+    );
+  }
+}
+
+/** Lands at Contents/Resources/skills/angel-host (Skill-first host control). */
+function copyHostSkillIntoResources(buildPath: string) {
+  // packageAfterCopy buildPath is …/Contents/Resources/app
+  const resourcesDir = path.join(buildPath, "..");
+  const target = path.join(resourcesDir, "skills", "angel-host");
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.cpSync(hostSkillDir(), target, {
+    dereference: true,
+    force: true,
+    recursive: true,
+  });
 }
 
 function resolveRuntimeModulePackageJson(moduleName: string): string {
@@ -302,6 +329,8 @@ const config: ForgeConfig = {
   hooks: {
     packageAfterCopy: async (_config, buildPath) => {
       assertHostCliBundled();
+      assertHostSkillBundled();
+      copyHostSkillIntoResources(buildPath);
       copyRuntimePath(buildPath, "drizzle");
       copyMobileBundle(buildPath);
       copyNativeRuntimeDependencies(buildPath);

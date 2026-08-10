@@ -430,10 +430,11 @@ Do **not** design schedules/browser/voice tools now.
 
 ### Stage 4 — Skill-first E2E
 
-- [ ] Ship `angel-host` skill content  
-- [ ] Materialize into runtime skill roots when host control enabled  
-- [ ] Inject daemon env into agent process  
-- [ ] Demo: agent runs `angelctl chat ls` (or health) successfully  
+- [x] Ship `angel-host` skill content (`packages/host-skill/angel-host`)  
+- [x] Materialize into runtime skill roots when host control enabled (`packages/daemon` `installHostControl`)  
+- [x] Inject daemon env into agent process (`ANGEL_DAEMON_*`, `ANGELCTL_*`, PATH)  
+- [x] Demo: host skill materialize + `angelctl health` via daemon.json / env  
+
 
 ### Stage 5 — Verify + MCP follow-up
 
@@ -529,3 +530,39 @@ MCP is optional; do not require it for host control.
 - Production `angel-host` skill body + desktop/daemon wire-up.
 - Codex/app-server MCP config pass-through.
 - Full host MCP server process wrapping daemon APIs.
+
+## 13. Stage 4 implementation (KIT-832)
+
+Status: Skill-first host control wired end-to-end without MCP.
+
+### 13.1 Skill package
+
+| Path | Role |
+| --- | --- |
+| `packages/host-skill/angel-host/SKILL.md` | Teaching layer: find `angelctl`, connect, safe commands, security |
+| `packages/host-skill/angel-host/references/` | Progressive disclosure (CLI map, security) |
+
+### 13.2 Daemon install (`packages/daemon/src/features/host-control/`)
+
+On daemon bind (after `daemon.json` write):
+
+1. Resolve skill dir + `angelctl` bin (env → packaged resources → monorepo packages).
+2. `materializeHostSkill` → symlink/copy into runtime global skill roots from `AGENT_SKILL_DIRECTORY_RULES` (skips `/etc/*`).
+3. Apply `ANGEL_DAEMON_URL` / `ANGEL_DAEMON_TOKEN` / `ANGELCTL_*` / PATH onto **daemon** `process.env` so Claude/Pi children that inherit env also see them.
+4. `createChatSession` merges the same keys into Angel runtime `environment` for explicit spawn injection.
+
+Disable with `ANGEL_HOST_CONTROL=0`.
+
+### 13.3 Desktop packaging
+
+| Surface | Location |
+| --- | --- |
+| CLI | `Resources/bin/angelctl` (KIT-830) |
+| Skill | `Resources/skills/angel-host` (Forge `packageAfterCopy` + electron-builder extraResources) |
+| Dev supervisor env | `ANGELCTL_BIN_DIR` + `ANGEL_HOST_SKILL_ROOT` from monorepo |
+| Packaged supervisor env | `ANGEL_RESOURCES_PATH` + derived bin/skill roots |
+
+### 13.4 MCP
+
+**Not implemented.** Host control is Skill + CLI only. Engine `mcp_injection` remains an empty extension slot from Stage 3.
+

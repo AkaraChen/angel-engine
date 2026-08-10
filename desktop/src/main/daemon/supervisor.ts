@@ -109,12 +109,40 @@ function buildDaemonArgs(): string[] {
 // parent env is spread through.
 function buildDaemonEnv(): NodeJS.ProcessEnv | undefined {
   const config = getMobileConfig();
+  const hostControl = hostControlResourceEnv();
   return {
     ...process.env,
     ANGEL_MAIN_BRIDGE_SECRET: MAIN_BRIDGE_SECRET,
+    ...hostControl,
     ...(mobileServingEnabled(config)
       ? { ANGEL_MOBILE_PASSWORD: config.password }
       : {}),
+  };
+}
+
+/**
+ * Stage 4 (KIT-832): point the daemon at bundled angelctl + angel-host skill
+ * so Skill-first host control works in packaged and dev layouts.
+ */
+function hostControlResourceEnv(): NodeJS.ProcessEnv {
+  if (app.isPackaged) {
+    return {
+      ANGEL_RESOURCES_PATH: process.resourcesPath,
+      ANGELCTL_BIN_DIR: path.join(process.resourcesPath, "bin"),
+      ANGEL_HOST_SKILL_ROOT: path.join(process.resourcesPath, "skills"),
+    };
+  }
+
+  const workspaceRoot = path.resolve(app.getAppPath(), "..");
+  return {
+    ANGELCTL_BIN_DIR: path.join(
+      workspaceRoot,
+      "packages",
+      "host-cli",
+      "dist",
+      "bin",
+    ),
+    ANGEL_HOST_SKILL_ROOT: path.join(workspaceRoot, "packages", "host-skill"),
   };
 }
 
