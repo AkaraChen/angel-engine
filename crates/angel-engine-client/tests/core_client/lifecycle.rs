@@ -13,7 +13,8 @@ fn client_hides_engine_behind_thread_updates_and_snapshots() {
         .arg("acp")
         .need_auth(false)
         .client_name("ide-test")
-        .build_client().expect("client");
+        .build_client()
+        .expect("client");
 
     let initialize = client.initialize().expect("initialize command");
     assert_eq!(

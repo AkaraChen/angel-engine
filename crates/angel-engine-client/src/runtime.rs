@@ -501,7 +501,9 @@ mod tests {
 
     #[test]
     fn codex_runtime_rejects_non_empty_mcp_injection() {
-        use angel_engine::{McpInjectionConfig, McpServerConfig, McpServerTransport, MCP_INJECT_CAPABILITY};
+        use angel_engine::{
+            MCP_INJECT_CAPABILITY, McpInjectionConfig, McpServerConfig, McpServerTransport,
+        };
         use std::collections::BTreeMap;
 
         let err = create_runtime_options(
@@ -523,7 +525,9 @@ mod tests {
         .expect_err("codex mcp inject must fail");
 
         match err {
-            ClientError::Engine(angel_engine::EngineError::CapabilityUnsupported { capability }) => {
+            ClientError::Engine(angel_engine::EngineError::CapabilityUnsupported {
+                capability,
+            }) => {
                 assert_eq!(capability, MCP_INJECT_CAPABILITY);
             }
             other => panic!("expected CapabilityUnsupported, got {other}"),

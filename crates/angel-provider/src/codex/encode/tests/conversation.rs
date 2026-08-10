@@ -50,7 +50,9 @@ fn thread_start_enables_raw_response_events() {
 
 #[test]
 fn thread_start_rejects_non_empty_mcp_injection() {
-    use angel_engine::{McpInjectionConfig, McpServerConfig, McpServerTransport, MCP_INJECT_CAPABILITY};
+    use angel_engine::{
+        MCP_INJECT_CAPABILITY, McpInjectionConfig, McpServerConfig, McpServerTransport,
+    };
     use std::collections::BTreeMap;
 
     let adapter = CodexAdapter::app_server();

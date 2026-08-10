@@ -9,7 +9,8 @@ use super::helpers::response;
 fn codex_discover_projects_importable_sessions_from_thread_list() {
     let mut client = ClientOptions::builder()
         .codex_app_server("codex")
-        .build_client().expect("client");
+        .build_client()
+        .expect("client");
     let initialize = client.initialize().expect("initialize");
     client
         .receive_json_value(response(
@@ -69,7 +70,8 @@ fn acp_discover_projects_importable_sessions_from_session_list() {
     let mut client = ClientOptions::builder()
         .acp("fake-agent")
         .need_auth(false)
-        .build_client().expect("client");
+        .build_client()
+        .expect("client");
     let initialize = client.initialize().expect("initialize");
     client
         .receive_json_value(response(
@@ -132,7 +134,8 @@ fn acp_discover_projects_importable_sessions_from_session_list() {
 fn codex_resume_binds_remote_id_for_import_open() {
     let mut client = ClientOptions::builder()
         .codex_app_server("codex")
-        .build_client().expect("client");
+        .build_client()
+        .expect("client");
     let initialize = client.initialize().expect("initialize");
     client
         .receive_json_value(response(

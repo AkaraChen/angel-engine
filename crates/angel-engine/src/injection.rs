@@ -128,15 +128,9 @@ impl McpServerConfig {
     /// inventing a second config type.
     pub fn to_acp_value(&self) -> Value {
         match &self.transport {
-            McpServerTransport::Stdio {
-                command,
-                args,
-                env,
-            } => {
-                let env_obj: BTreeMap<&str, &str> = env
-                    .iter()
-                    .map(|(k, v)| (k.as_str(), v.as_str()))
-                    .collect();
+            McpServerTransport::Stdio { command, args, env } => {
+                let env_obj: BTreeMap<&str, &str> =
+                    env.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
                 json!({
                     "name": self.name,
                     "command": command,

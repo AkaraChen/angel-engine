@@ -10,10 +10,7 @@ pub(super) fn start_conversation_params(
     let mut params = serde_json::Map::new();
     params.insert("cwd".to_string(), json!(acp_effect_cwd(engine, effect)));
     insert_additional_directories(&mut params, effect);
-    params.insert(
-        "mcpServers".to_string(),
-        mcp_injection.to_acp_mcp_servers(),
-    );
+    params.insert("mcpServers".to_string(), mcp_injection.to_acp_mcp_servers());
     Value::Object(params)
 }
 
@@ -37,10 +34,7 @@ pub(super) fn resume_conversation_params(
     );
     params.insert("cwd".to_string(), json!(acp_effect_cwd(engine, effect)));
     insert_additional_directories(&mut params, effect);
-    params.insert(
-        "mcpServers".to_string(),
-        mcp_injection.to_acp_mcp_servers(),
-    );
+    params.insert("mcpServers".to_string(), mcp_injection.to_acp_mcp_servers());
     Value::Object(params)
 }
 
@@ -102,10 +96,7 @@ pub(super) fn acp_fork_params(
     params.insert("sessionId".to_string(), json!(session_id));
     params.insert("cwd".to_string(), json!(cwd));
     insert_additional_directories(&mut params, effect);
-    params.insert(
-        "mcpServers".to_string(),
-        mcp_injection.to_acp_mcp_servers(),
-    );
+    params.insert("mcpServers".to_string(), mcp_injection.to_acp_mcp_servers());
     Ok(Value::Object(params))
 }
 

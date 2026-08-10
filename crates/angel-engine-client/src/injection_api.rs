@@ -1,7 +1,7 @@
 //! Host injection query/apply API over client options and adapters.
 
 use angel_engine::{
-    CapabilitySupport, EngineError, McpInjectionConfig, MCP_INJECT_CAPABILITY,
+    CapabilitySupport, EngineError, MCP_INJECT_CAPABILITY, McpInjectionConfig,
     ensure_mcp_injection_allowed,
 };
 use angel_provider::ProtocolAdapter;
@@ -94,9 +94,7 @@ mod tests {
 
     #[test]
     fn codex_protocol_reports_mcp_inject_unsupported() {
-        let options = ClientOptions::builder()
-            .codex_app_server("codex")
-            .build();
+        let options = ClientOptions::builder().codex_app_server("codex").build();
         assert!(!can_inject_mcp(&options));
         assert_eq!(
             mcp_injection_capability(&options),
@@ -131,9 +129,7 @@ mod tests {
 
     #[test]
     fn inject_mcp_into_options_errors_when_unsupported() {
-        let mut options = ClientOptions::builder()
-            .codex_app_server("codex")
-            .build();
+        let mut options = ClientOptions::builder().codex_app_server("codex").build();
         let err = inject_mcp_into_options(&mut options, sample_injection())
             .expect_err("codex inject must fail");
         assert!(matches!(
