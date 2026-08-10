@@ -430,7 +430,6 @@ export interface LocaleResourceTranslationFleet {
 export interface LocaleResourceTranslationSchedule {
   agent: string;
   alreadyRunning: string;
-  backToList: string;
   createAction: string;
   createDescription: string;
   createTitle: string;
@@ -439,18 +438,11 @@ export interface LocaleResourceTranslationSchedule {
   deleteConfirm: string;
   discardConfirm: string;
   disconnected: string;
-  duration: string;
-  emptyDetail: string;
-  emptyDetailDescription: string;
   invalidCron: string;
-  lastResult: string;
   name: string;
-  neverRun: string;
   newAutomation: string;
-  nextRun: string;
   nextThreeRuns: string;
   noProject: string;
-  noRuns: string;
   notifyOnFailure: string;
   pause: string;
   paused: string;
@@ -465,9 +457,7 @@ export interface LocaleResourceTranslationSchedule {
     nightlyTestsDescription: string;
     title: string;
   };
-  result: string;
   resume: string;
-  runHistory: string;
   runNow: string;
   runStatus: {
     cancelled: string;
@@ -485,10 +475,7 @@ export interface LocaleResourceTranslationSchedule {
     weekdays: string;
     weekly: string;
   };
-  seconds: string;
-  sleepNotice: string;
   startFromScratch: string;
-  started: string;
   status: {
     active: string;
     failing: string;
@@ -497,7 +484,6 @@ export interface LocaleResourceTranslationSchedule {
   };
   subtitle: string;
   title: string;
-  trigger: string;
   triggerType: {
     manual: string;
     scheduled: string;

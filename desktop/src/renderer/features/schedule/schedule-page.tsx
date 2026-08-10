@@ -5,16 +5,12 @@ import type {
   Automation,
   AutomationRun,
   AutomationRunStatus,
-  AutomationStatus,
   SchedulePreset,
 } from "@/features/schedule/schedule-model";
 
 import {
-  ArrowLeft,
   CalendarDots,
-  ClockCountdown,
-  Pause,
-  Play,
+  CaretRight,
   Plus,
   Trash,
   WarningCircle,
@@ -49,28 +45,17 @@ import {
   setAutomationEnabledMutationOptions,
 } from "@/features/schedule/requests/automations";
 import {
-  hasMissedRun,
   nextRunPreview,
   PRESET_CRON,
+  presetForCron,
   sortedRuns,
   validateCron,
 } from "@/features/schedule/schedule-model";
 import { formatDateTime, formatRelativeTime } from "@/platform/format-time";
 import { cn } from "@/platform/utils";
 
-const STATUS_TONE: Record<AutomationStatus, string> = {
-  active: "bg-status-success",
-  failing: "bg-status-danger",
-  paused: "bg-muted-foreground",
-  running: "animate-pulse bg-status-success",
-};
-
-const STATUS_LABEL_KEY: Record<AutomationStatus, string> = {
-  active: "schedule.status.active",
-  failing: "schedule.status.failing",
-  paused: "schedule.status.paused",
-  running: "schedule.status.running",
-};
+/** Older runs stop informing the decision to keep or fix an automation. */
+const RUN_HISTORY_LIMIT = 5;
 
 const RUN_LABEL_KEY: Record<AutomationRunStatus, string> = {
   cancelled: "schedule.runStatus.cancelled",
@@ -84,19 +69,23 @@ interface SchedulePageProps {
   projects: Project[];
 }
 
+/**
+ * One column of automations, each expandable in place.
+ *
+ * The screen is deliberately spare. An automation page is not a record viewer:
+ * between visits the only things that changed are "when does this run next" and
+ * "did anything break", so those are the only two facts a collapsed row spends
+ * pixels on. Configuration the user typed in themselves stays in the create
+ * flow; the expanded row is for actions and changing run history.
+ */
 export const SchedulePage: FC<SchedulePageProps> = ({ projects }) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const listQuery = useQuery(automationListQueryOptions());
   const automations = listQuery.data ?? [];
-  const [selectedAutomationId, setSelectedAutomationId] = useState<string>();
   const [createOpen, setCreateOpen] = useState(false);
-  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
+  const [expandedId, setExpandedId] = useState<string>();
   const listRef = useRef<HTMLDivElement>(null);
-  const selectedAutomation =
-    automations.find(({ id }) => id === selectedAutomationId) ?? automations[0];
-  const selectedId = selectedAutomation?.id;
-  const showRecipes = listQuery.isSuccess && automations.length === 0;
 
   const runNowMutation = useMutation(
     runAutomationNowMutationOptions({ queryClient }),
@@ -108,33 +97,30 @@ export const SchedulePage: FC<SchedulePageProps> = ({ projects }) => {
     deleteAutomationMutationOptions({ queryClient }),
   );
 
-  const openAutomation = (id: string) => {
-    setSelectedAutomationId(id);
-    setMobileDetailOpen(true);
-  };
+  const broken = automations.filter(
+    (automation) => automation.status === "failing",
+  );
+  const rest = automations
+    .filter((automation) => automation.status !== "failing")
+    .sort(byNextRun);
 
-  const moveSelection = (
+  const moveFocus = (
     event: KeyboardEvent<HTMLButtonElement>,
     direction: -1 | 1,
   ) => {
     event.preventDefault();
-    const buttons = Array.from(
+    const headers = Array.from(
       listRef.current?.querySelectorAll<HTMLButtonElement>(
-        "[data-automation-row]",
+        "[data-automation-card]",
       ) ?? [],
     );
-    const currentIndex = buttons.indexOf(event.currentTarget);
-    const nextButton = buttons.at(
-      (currentIndex + direction + buttons.length) % buttons.length,
-    );
-    nextButton?.focus();
-    const id = nextButton?.dataset.automationRow;
-    if (id) setSelectedAutomationId(id);
+    const currentIndex = headers.indexOf(event.currentTarget);
+    headers
+      .at((currentIndex + direction + headers.length) % headers.length)
+      ?.focus();
   };
 
-  const deleteSelected = () => {
-    if (!selectedAutomation) return;
-    const automation = selectedAutomation;
+  const requestDelete = (automation: Automation) => {
     void confirmAction({
       cancelLabel: t("common.cancel"),
       confirmLabel: t("common.delete"),
@@ -143,101 +129,55 @@ export const SchedulePage: FC<SchedulePageProps> = ({ projects }) => {
     }).then((confirmed) => {
       if (!confirmed) return;
       deleteMutation.mutate(automation.id);
-      setSelectedAutomationId(undefined);
-      setMobileDetailOpen(false);
+      setExpandedId(undefined);
     });
   };
 
+  const renderCard = (automation: Automation) => (
+    <AutomationCard
+      automation={automation}
+      expanded={automation.id === expandedId}
+      key={automation.id}
+      onDelete={() => requestDelete(automation)}
+      onKeyDown={moveFocus}
+      onRunNow={() => runNowMutation.mutate(automation.id)}
+      onSetEnabled={(enabled) =>
+        setEnabledMutation.mutate({ enabled, id: automation.id })
+      }
+      onToggle={() =>
+        setExpandedId((current) =>
+          current === automation.id ? undefined : automation.id,
+        )
+      }
+      runNowPending={runNowMutation.isPending}
+      setEnabledPending={setEnabledMutation.isPending}
+    />
+  );
+
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-background">
-      <div className="flex items-center justify-between gap-4 border-b border-border-subtle px-5 py-3">
-        <div>
-          <h1 className="font-display text-lg font-semibold tracking-tight">
-            {t("schedule.title")}
-          </h1>
-          <p className="text-xs text-muted-foreground">
-            {t("schedule.subtitle")}
-          </p>
-        </div>
+      <div className="flex items-center justify-between gap-4 px-6 py-4">
+        <h1 className="font-display text-lg font-semibold tracking-tight">
+          {t("schedule.title")}
+        </h1>
         <Button size="sm" onClick={() => setCreateOpen(true)}>
           <Plus weight="bold" />
           {t("schedule.newAutomation")}
         </Button>
       </div>
 
-      {hasMissedRun(automations) ? (
-        <div className="mx-4 mt-3 flex items-start gap-2 rounded-md border border-status-info-border bg-status-info-soft px-3 py-2 text-xs">
-          <ClockCountdown
-            className="mt-0.5 size-4 shrink-0 text-status-info"
-            weight="duotone"
-          />
-          <span>{t("schedule.sleepNotice")}</span>
-        </div>
-      ) : null}
-
-      <div className="flex min-h-0 flex-1">
-        {listQuery.isPending || listQuery.isError || automations.length > 0 ? (
-          <div
-            className={cn(
-              "min-h-0 w-full shrink-0 overflow-y-auto border-border-subtle bg-sidebar md:block md:w-72 md:border-r",
-              mobileDetailOpen ? "hidden" : "block",
-            )}
-            ref={listRef}
-          >
-            {listQuery.isPending ? (
-              <ScheduleSkeleton />
-            ) : listQuery.isError ? (
-              <ScheduleNotice text={t("schedule.disconnected")} />
-            ) : (
-              <div className="space-y-1 p-2">
-                {automations.map((automation) => (
-                  <AutomationRow
-                    automation={automation}
-                    key={automation.id}
-                    onKeyDown={moveSelection}
-                    onOpen={openAutomation}
-                    selected={automation.id === selectedId}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        ) : null}
-
-        <div
-          className={cn(
-            "min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-background md:flex",
-            mobileDetailOpen || showRecipes ? "flex" : "hidden",
-          )}
-        >
-          {selectedAutomation ? (
-            <AutomationDetail
-              automation={selectedAutomation}
-              deletePending={deleteMutation.isPending}
-              onBack={() => setMobileDetailOpen(false)}
-              onDelete={deleteSelected}
-              onRunNow={() => runNowMutation.mutate(selectedAutomation.id)}
-              onSetEnabled={(enabled) =>
-                setEnabledMutation.mutate({
-                  enabled,
-                  id: selectedAutomation.id,
-                })
-              }
-              runNowPending={runNowMutation.isPending}
-              setEnabledPending={setEnabledMutation.isPending}
-            />
-          ) : showRecipes ? (
+      <div className="min-h-0 flex-1 overflow-y-auto" ref={listRef}>
+        <div className="mx-auto w-full max-w-2xl px-6 pb-6">
+          {listQuery.isPending ? (
+            <ScheduleSkeleton />
+          ) : listQuery.isError ? (
+            <ScheduleNotice text={t("schedule.disconnected")} />
+          ) : automations.length === 0 ? (
             <ScheduleRecipes onCreate={() => setCreateOpen(true)} />
           ) : (
-            <div className="m-auto max-w-sm px-6 text-center">
-              <CalendarDots
-                className="mx-auto mb-3 size-8 text-muted-foreground"
-                weight="duotone"
-              />
-              <p className="font-medium">{t("schedule.emptyDetail")}</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {t("schedule.emptyDetailDescription")}
-              </p>
+            <div className="space-y-1.5">
+              {broken.map(renderCard)}
+              {rest.map(renderCard)}
             </div>
           )}
         </div>
@@ -252,246 +192,180 @@ export const SchedulePage: FC<SchedulePageProps> = ({ projects }) => {
   );
 };
 
-function AutomationRow({
-  automation,
-  onKeyDown,
-  onOpen,
-  selected,
-}: {
-  automation: Automation;
-  onKeyDown: (
-    event: KeyboardEvent<HTMLButtonElement>,
-    direction: -1 | 1,
-  ) => void;
-  onOpen: (id: string) => void;
-  selected: boolean;
-}) {
-  const { t } = useTranslation();
-  return (
-    <button
-      className={cn(
-        "w-full rounded-lg px-3 py-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
-        selected ? "bg-overlay-active" : "hover:bg-overlay-hover",
-        automation.status === "paused" && "opacity-60",
-      )}
-      data-automation-row={automation.id}
-      onClick={() => onOpen(automation.id)}
-      onKeyDown={(event) => {
-        if (event.key === "ArrowDown") onKeyDown(event, 1);
-        if (event.key === "ArrowUp") onKeyDown(event, -1);
-        if (event.key === "Enter") onOpen(automation.id);
-      }}
-      tabIndex={selected ? 0 : -1}
-      type="button"
-    >
-      <div className="flex items-start gap-2">
-        <span
-          className={cn(
-            "mt-1.5 size-1.5 shrink-0 rounded-full",
-            STATUS_TONE[automation.status],
-          )}
-        />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-baseline justify-between gap-2">
-            <span className="truncate font-medium">{automation.name}</span>
-            <span className="shrink-0 text-xs text-muted-foreground">
-              {automation.nextRunAt
-                ? formatRelativeTime(automation.nextRunAt)
-                : t("schedule.paused")}
-            </span>
-          </div>
-          <p className="mt-0.5 truncate text-xs text-muted-foreground">
-            {automation.scheduleLabel}
-            {automation.projectName ? ` · ${automation.projectName}` : ""}
-          </p>
-          <p className="mt-1 text-xs font-medium">
-            {t(STATUS_LABEL_KEY[automation.status])}
-          </p>
-        </div>
-      </div>
-    </button>
-  );
+/** Paused automations have no next run, and sort last rather than first. */
+function byNextRun(left: Automation, right: Automation): number {
+  const leftAt = left.nextRunAt ?? "";
+  const rightAt = right.nextRunAt ?? "";
+  if (leftAt === "") return rightAt === "" ? 0 : 1;
+  if (rightAt === "") return -1;
+  return leftAt.localeCompare(rightAt);
 }
 
-function AutomationDetail({
+function AutomationCard({
   automation,
-  deletePending,
-  onBack,
+  expanded,
   onDelete,
+  onKeyDown,
   onRunNow,
   onSetEnabled,
+  onToggle,
   runNowPending,
   setEnabledPending,
 }: {
   automation: Automation;
-  deletePending: boolean;
-  onBack: () => void;
+  expanded: boolean;
   onDelete: () => void;
+  onKeyDown: (
+    event: KeyboardEvent<HTMLButtonElement>,
+    direction: -1 | 1,
+  ) => void;
   onRunNow: () => void;
   onSetEnabled: (enabled: boolean) => void;
+  onToggle: () => void;
   runNowPending: boolean;
   setEnabledPending: boolean;
 }) {
   const { t } = useTranslation();
   const runs = sortedRuns(automation.runs);
+  const panelId = `automation-panel-${automation.id}`;
+
   return (
-    <>
-      <div className="flex flex-wrap items-center gap-2 border-b border-border-subtle px-5 py-4">
-        <Button
-          className="md:hidden"
-          size="icon-sm"
-          variant="ghost"
-          onClick={onBack}
-        >
-          <ArrowLeft />
-          <span className="sr-only">{t("schedule.backToList")}</span>
-        </Button>
-        <div className="mr-auto min-w-0">
-          <div className="flex items-center gap-2">
-            <h2 className="truncate font-display text-base font-semibold">
-              {automation.name}
-            </h2>
-            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-surface-2 px-2 py-1 text-xs font-medium">
-              <span
-                className={cn(
-                  "size-1.5 rounded-full",
-                  STATUS_TONE[automation.status],
-                )}
-              />
-              {t(STATUS_LABEL_KEY[automation.status])}
-            </span>
-          </div>
-        </div>
-        <Button
-          disabled={runNowPending || automation.status === "running"}
-          size="sm"
-          variant="outline"
-          onClick={onRunNow}
-        >
-          <Play weight="fill" />
-          {automation.status === "running"
-            ? t("schedule.alreadyRunning")
-            : t("schedule.runNow")}
-        </Button>
-        <Button
-          disabled={setEnabledPending}
-          size="sm"
-          variant="outline"
-          onClick={() => onSetEnabled(!automation.enabled)}
-        >
-          {automation.enabled ? (
-            <Pause weight="fill" />
-          ) : (
-            <Play weight="fill" />
+    <div
+      className={cn(
+        "overflow-hidden rounded-lg border bg-card",
+        expanded ? "border-border" : "border-border-subtle",
+      )}
+    >
+      <button
+        aria-controls={panelId}
+        aria-expanded={expanded}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left outline-none transition-colors hover:bg-overlay-hover focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+        data-automation-card={automation.id}
+        onClick={onToggle}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowDown") onKeyDown(event, 1);
+          if (event.key === "ArrowUp") onKeyDown(event, -1);
+        }}
+        type="button"
+      >
+        <CaretRight
+          className={cn(
+            "size-3.5 shrink-0 text-muted-foreground transition-transform",
+            expanded && "rotate-90",
           )}
-          {automation.enabled ? t("schedule.pause") : t("schedule.resume")}
-        </Button>
-        <Button
-          aria-label={t("common.delete")}
-          disabled={deletePending}
-          size="icon-sm"
-          variant="destructive"
-          onClick={onDelete}
+          weight="bold"
+        />
+        <div className="min-w-0 flex-1">
+          <span
+            className={cn(
+              "block truncate font-medium",
+              !automation.enabled && "text-muted-foreground",
+            )}
+          >
+            {automation.name}
+          </span>
+          <span className="block truncate text-xs text-muted-foreground">
+            {scheduleLabel(t, automation.cron)}
+          </span>
+        </div>
+        {/* Only a broken automation gets a word. "Active" is the absence of
+            news, and the next-run time already implies it. */}
+        {automation.status === "failing" ? (
+          <span className="shrink-0 text-xs text-status-danger">
+            {t("schedule.status.failing")}
+          </span>
+        ) : null}
+        <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+          {automation.nextRunAt
+            ? formatRelativeTime(automation.nextRunAt)
+            : t("schedule.paused")}
+        </span>
+      </button>
+
+      {expanded ? (
+        <div
+          className="border-t border-border-subtle pt-3 pr-4 pb-4 pl-[2.625rem]"
+          id={panelId}
         >
-          <Trash />
-        </Button>
-      </div>
+          <p className="text-sm">{automation.prompt}</p>
 
-      <div className="space-y-6 p-5">
-        <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          <SummaryItem
-            label={t("schedule.schedule")}
-            value={`${automation.scheduleLabel}\n${automation.cron}`}
-          />
-          <SummaryItem
-            label={t("schedule.nextRun")}
-            value={
-              automation.nextRunAt
-                ? formatDateTime(automation.nextRunAt)
-                : t("schedule.paused")
-            }
-          />
-          <SummaryItem
-            label={t("schedule.agent")}
-            value={automation.agentLabel}
-          />
-          <SummaryItem
-            label={t("schedule.project")}
-            value={automation.projectName ?? t("schedule.noProject")}
-          />
-          <SummaryItem
-            label={t("schedule.lastResult")}
-            value={
-              runs[0]
-                ? t(RUN_LABEL_KEY[runs[0].status])
-                : t("schedule.neverRun")
-            }
-          />
-        </dl>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Button
+              disabled={runNowPending || automation.status === "running"}
+              size="sm"
+              variant="outline"
+              onClick={onRunNow}
+            >
+              {automation.status === "running"
+                ? t("schedule.alreadyRunning")
+                : t("schedule.runNow")}
+            </Button>
+            <Button
+              disabled={setEnabledPending}
+              size="sm"
+              variant="outline"
+              onClick={() => onSetEnabled(!automation.enabled)}
+            >
+              {automation.enabled ? t("schedule.pause") : t("schedule.resume")}
+            </Button>
+            <Button
+              aria-label={t("common.delete")}
+              className="ml-auto"
+              size="icon-sm"
+              variant="ghost"
+              onClick={onDelete}
+            >
+              <Trash className="text-status-danger" />
+            </Button>
+          </div>
 
-        <section>
-          <h3 className="mb-2 font-display text-sm font-semibold">
-            {t("schedule.runHistory")}
-          </h3>
-          {runs.length === 0 ? (
-            <div className="rounded-lg border border-border-subtle bg-surface-1 px-4 py-8 text-center text-sm text-muted-foreground">
-              {t("schedule.noRuns")}
-            </div>
-          ) : (
-            <div className="overflow-hidden rounded-lg border border-border-subtle bg-surface-1">
-              <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(6rem,0.7fr)_minmax(5rem,0.5fr)] gap-3 border-b border-border-subtle px-4 py-2 text-xs font-medium text-muted-foreground sm:grid-cols-[minmax(0,1.4fr)_minmax(6rem,0.7fr)_minmax(5rem,0.5fr)_minmax(5rem,0.5fr)]">
-                <span>{t("schedule.started")}</span>
-                <span>{t("schedule.result")}</span>
-                <span>{t("schedule.trigger")}</span>
-                <span className="hidden sm:block">
-                  {t("schedule.duration")}
-                </span>
-              </div>
-              {runs.map((run) => (
+          {runs.length > 0 ? (
+            <div className="mt-4 space-y-1.5">
+              {runs.slice(0, RUN_HISTORY_LIMIT).map((run) => (
                 <RunRow key={run.id} run={run} />
               ))}
             </div>
-          )}
-        </section>
-      </div>
-    </>
-  );
-}
-
-function SummaryItem({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-border-subtle bg-surface-1 p-3">
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className="mt-1 whitespace-pre-line text-sm font-medium">{value}</dd>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
 
+/**
+ * A run is worth one line: what happened, when, and — only when it failed —
+ * why. Duration and the "Scheduled" trigger were dropped: they were printed on
+ * every row and nobody changes anything because of either.
+ */
 function RunRow({ run }: { run: AutomationRun }) {
   const { t } = useTranslation();
+  const failed = run.status === "failed";
+  const missed = run.status === "missed";
+
   return (
-    <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(6rem,0.7fr)_minmax(5rem,0.5fr)] gap-3 border-b border-border-subtle px-4 py-3 text-sm last:border-b-0 sm:grid-cols-[minmax(0,1.4fr)_minmax(6rem,0.7fr)_minmax(5rem,0.5fr)_minmax(5rem,0.5fr)]">
-      <span className="truncate">{formatDateTime(run.startedAt)}</span>
-      <span
-        className={cn(
-          "min-w-0",
-          run.status === "failed" && "text-status-danger",
-          run.status === "missed" && "text-status-attention",
-        )}
-      >
-        <span>{t(RUN_LABEL_KEY[run.status])}</span>
-        {run.error ? (
-          <span className="block truncate text-xs">{run.error}</span>
+    <div className="text-xs">
+      <span className="flex items-baseline gap-2">
+        <span
+          className={cn(
+            failed && "text-status-danger",
+            missed && "text-status-attention",
+            !failed && !missed && "text-muted-foreground",
+          )}
+        >
+          {t(RUN_LABEL_KEY[run.status])}
+        </span>
+        <span className="text-muted-foreground">
+          {formatRelativeTime(run.startedAt)}
+        </span>
+        {run.trigger === "manual" ? (
+          <span className="text-muted-foreground">
+            {t("schedule.triggerType.manual")}
+          </span>
         ) : null}
       </span>
-      <span className="text-muted-foreground">
-        {t(`schedule.triggerType.${run.trigger}`)}
-      </span>
-      <span className="hidden text-muted-foreground sm:block">
-        {run.durationSeconds === undefined
-          ? "—"
-          : t("schedule.seconds", { count: run.durationSeconds })}
-      </span>
+      {run.error ? (
+        <p className="mt-0.5 text-muted-foreground">{run.error}</p>
+      ) : null}
     </div>
   );
 }
@@ -588,17 +462,11 @@ function CreateAutomationDialog({
     if (!canSubmit) return;
     createMutation.mutate(
       {
-        agentLabel: t("schedule.currentAgent"),
         cron: state.cron,
         name: state.name.trim(),
         notifyOnFailure: state.notifyOnFailure,
         projectId: project?.id,
-        projectName:
-          project === undefined
-            ? undefined
-            : getProjectDisplayName(project.path),
         prompt: state.prompt.trim(),
-        scheduleLabel: presetLabel(t, state.preset),
       },
       {
         onSuccess: () => {
@@ -850,4 +718,9 @@ function ScheduleNotice({ text }: { text: string }) {
 
 function presetLabel(t: TFunction, preset: SchedulePreset): string {
   return t(`schedule.schedulePresets.${preset}`);
+}
+
+function scheduleLabel(t: TFunction, cron: string): string {
+  const preset = presetForCron(cron);
+  return preset === undefined ? cron.trim() : presetLabel(t, preset);
 }

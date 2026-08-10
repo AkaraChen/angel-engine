@@ -116,6 +116,33 @@ describe("createDaemonClient", () => {
     );
   });
 
+  it("uses daemon automation routes for mutations and history", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(async () => jsonResponse({ ok: true }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createDaemonClient({ baseUrl: "", token: null });
+    await client.automations.update("automation/1", { enabled: false });
+    await client.automations.listRuns("automation/1", 25);
+    await client.automations.runNow("automation/1");
+
+    expect(fetchMock.mock.calls[0]).toEqual([
+      "/api/automations/automation%2F1",
+      expect.objectContaining({
+        body: JSON.stringify({ enabled: false }),
+        method: "PATCH",
+      }),
+    ]);
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(
+      "/api/automations/automation%2F1/runs?limit=25",
+    );
+    expect(fetchMock.mock.calls[2]).toEqual([
+      "/api/automations/automation%2F1/run",
+      expect.objectContaining({ method: "POST" }),
+    ]);
+  });
+
   it("lists and acknowledges daemon-owned chat attention", async () => {
     const attention = {
       chatId: "chat-1",
