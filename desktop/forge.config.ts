@@ -409,6 +409,12 @@ const config: ForgeConfig = {
           config: "vite.preload.config.ts",
           target: "preload",
         },
+        {
+          // Guest-only Design Mode preload for workspace-browser WebContentsView.
+          entry: "src/preload/design-mode.ts",
+          config: "vite.design-mode-preload.config.ts",
+          target: "preload",
+        },
       ],
       renderer: [
         {
