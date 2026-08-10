@@ -14,6 +14,7 @@ import {
   customAgents,
   projects,
   queuedChatRuns,
+  pullRequests,
   worktreeCreationJobs,
 } from "../../db/schema";
 import { Db } from "../../platform/db";
@@ -490,6 +491,7 @@ async function memoryDatabase(): Promise<AppDatabase> {
       customAgents,
       projects,
       queuedChatRuns,
+      pullRequests,
       worktreeCreationJobs,
     },
   }) as AppDatabase;

@@ -29,6 +29,9 @@ const MAX_LIMIT = 100;
 const positiveInteger = arkType("number").narrow(
   (value) => Number.isInteger(value) && value > 0,
 );
+const nonNegativeInteger = arkType("number").narrow(
+  (value) => Number.isInteger(value) && value >= 0,
+);
 const gitHubAuthorSchema = arkType({
   "+": "ignore",
   login: "string > 0",
@@ -55,10 +58,14 @@ const pullRequestCommentSchema = arkType({
 });
 const pullRequestDetailPayloadSchema = arkType({
   "+": "ignore",
+  additions: nonNegativeInteger,
   author: gitHubAuthorSchema,
   baseRefName: "string > 0",
   body: "string | null",
+  changedFiles: nonNegativeInteger,
   comments: pullRequestCommentSchema.array(),
+  commits: "unknown[]",
+  deletions: nonNegativeInteger,
   headRefName: "string > 0",
   isDraft: "boolean",
   number: positiveInteger,
@@ -75,7 +82,7 @@ const createPullRequestPayloadSchema = arkType({
 
 const LIST_FIELDS =
   "number,title,state,author,url,updatedAt,isDraft,baseRefName,headRefName";
-const VIEW_FIELDS = `${LIST_FIELDS},body,comments`;
+const VIEW_FIELDS = `${LIST_FIELDS},additions,body,changedFiles,comments,commits,deletions`;
 
 export function listPullRequests(
   input: GitHubListPullRequestsInput,
@@ -196,10 +203,14 @@ export function viewPullRequest(
     );
 
     return {
+      additions: payload.additions,
       author: payload.author?.login ?? null,
       baseRefName: payload.baseRefName,
       body,
+      changedFiles: payload.changedFiles,
       comments,
+      commitCount: payload.commits.length,
+      deletions: payload.deletions,
       headRefName: payload.headRefName,
       isDraft: payload.isDraft,
       number: payload.number,

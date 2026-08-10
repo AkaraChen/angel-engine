@@ -245,6 +245,28 @@ export class DaemonError extends Data.TaggedError(
     });
   }
 
+  static gitPushDenied(message = "No push access to this repository.") {
+    return new DaemonError({ code: "git-push-denied", message, status: 403 });
+  }
+
+  static gitPushNotFastForward(
+    message = "Remote branch has diverged. Pull and retry.",
+  ) {
+    return new DaemonError({
+      code: "git-push-not-fast-forward",
+      message,
+      status: 409,
+    });
+  }
+
+  static gitRemoteMissing(message = "Git remote origin is not configured.") {
+    return new DaemonError({
+      code: "git-remote-missing",
+      message,
+      status: 409,
+    });
+  }
+
   static githubCliMissing() {
     return new DaemonError({
       code: "github-cli-missing",
@@ -312,6 +334,16 @@ export class DaemonError extends Data.TaggedError(
     });
   }
 
+  static githubNetworkUnavailable(
+    message = "GitHub is unavailable. Check your network and retry.",
+  ) {
+    return new DaemonError({
+      code: "github-network-unavailable",
+      message,
+      status: 500,
+    });
+  }
+
   static linkUnsupported() {
     return new DaemonError({
       code: "link-unsupported",
@@ -353,6 +385,16 @@ export class DaemonError extends Data.TaggedError(
     });
   }
 
+  static pullRequestAlreadyExists(
+    message = "A pull request already exists for this branch.",
+  ) {
+    return new DaemonError({
+      code: "pull-request-already-exists",
+      message,
+      status: 409,
+    });
+  }
+
   static prFromForkUnsupported() {
     return new DaemonError({
       code: "pr-from-fork-unsupported",
@@ -365,6 +407,14 @@ export class DaemonError extends Data.TaggedError(
     return new DaemonError({
       code: "worktree-branch-conflict",
       message: `Local branch ${branch} has commits that are not in the pull request head. Rename or reconcile it before retrying.`,
+      status: 409,
+    });
+  }
+
+  static pullRequestNoCommits(message = "There are no commits to merge.") {
+    return new DaemonError({
+      code: "pull-request-no-commits",
+      message,
       status: 409,
     });
   }

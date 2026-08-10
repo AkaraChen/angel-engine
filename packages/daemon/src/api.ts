@@ -46,6 +46,7 @@ import {
   githubPullRequestTemplateInputSchema,
   githubResolveThreadInputSchema,
   githubViewPullRequestInputSchema,
+  pullRequestCreateInputSchema,
 } from "@angel-engine/daemon-api/github";
 import { taskLinkResolveInputSchema } from "@angel-engine/daemon-api/links";
 import {
@@ -84,6 +85,11 @@ import {
 import { resolveGitHubUrl } from "./features/github/resolve";
 import { fetchGitHubReviewThreads } from "./features/github/review-threads";
 import { createWorkspaceFromPullRequest } from "./features/github/workspace-from-pr";
+import {
+  createPullRequest as createWorkspacePullRequest,
+  getStoredPullRequest,
+  pullRequestPreflight,
+} from "./features/github/pull-request-create";
 import {
   getGitHubPullRequestStatus,
   mergeGitHubPullRequest,
@@ -830,16 +836,36 @@ export function registerApi(
     }
     return context.json(await run(buildGitHubPrChecksFixPrompt(input)));
   });
-  app.get("/api/github/pull-request", async (context) =>
+  app.get("/api/github/pull-request/preflight", async (context) =>
     context.json(
+      await run(
+        pullRequestPreflight(
+          requireQuery(context.req.query("root"), "root"),
+          context.req.query("base"),
+        ),
+      ),
+    ),
+  );
+  app.get("/api/github/pull-request", async (context) => {
+    const root = context.req.query("root");
+    if (root !== undefined) {
+      return context.json(await run(getStoredPullRequest(root)));
+    }
+    return context.json(
       await run(
         getGitHubPullRequestStatus({
           cwd: requireQuery(context.req.query("cwd"), "cwd"),
           number: optionalNumber(context.req.query("number")),
         }),
       ),
-    ),
-  );
+    );
+  });
+  app.post("/api/github/pull-request", async (context) => {
+    const input = pullRequestCreateInputSchema(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Pull request input is invalid.");
+    return context.json(await run(createWorkspacePullRequest(input)));
+  });
   app.post("/api/github/pull-request/merge", async (context) => {
     const input = githubMergeInputSchema(await context.req.json());
     if (input instanceof arkType.errors)

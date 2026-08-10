@@ -39,6 +39,8 @@ export const queryKeys = {
       ["github", "repositories", owner] as const,
     repositoryOwners: () => ["github", "repository-owners"] as const,
     resolve: (url: string | null) => ["github", "resolve", url] as const,
+    pullRequestPreflight: (root: string | null, base?: string) =>
+      ["github", "pull-request", "preflight", root, base] as const,
   },
   projects: {
     all: () => ["projects"] as const,

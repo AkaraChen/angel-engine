@@ -1,5 +1,6 @@
 import { WorkspaceBrowserTabContent } from "@/app/workspace/workspace-browser-tab";
 import { WorkspaceChecksPanel } from "@/app/workspace/workspace-checks-panel";
+import { openPullRequestInSystemBrowser } from "@/app/workspace/workspace-create-pr-action";
 import { WorkspaceFilesPanel } from "@/app/workspace/workspace-files-panels";
 import { WorkspaceGitPanel } from "@/app/workspace/workspace-git-panels";
 import { WorkspaceProcessesView } from "@/app/workspace/workspace-processes-view";
@@ -43,6 +44,7 @@ export function WorkspaceToolContent({ root }: { root: string }) {
         layout={layout}
         root={root}
         onOpenBrowser={openBrowserTab}
+        onOpenExternal={openPullRequestInSystemBrowser}
       />
     );
   }

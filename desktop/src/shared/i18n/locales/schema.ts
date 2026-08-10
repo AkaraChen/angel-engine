@@ -91,6 +91,7 @@ export interface LocaleResourceTranslationWorkspaceToolsGit {
   noBranches: string;
   noCommits: string;
   noHistory: string;
+  noCommitsToPropose: string;
   noUpstream: string;
   publish: string;
   pull: string;
@@ -119,6 +120,45 @@ export interface LocaleResourceTranslationWorkspaceToolsDiffBase {
   turn: string;
   unstaged: string;
   worktree: string;
+}
+
+export interface LocaleResourceTranslationWorkspaceToolsPullRequestPreview {
+  additions: string;
+  body: string;
+  commits: string;
+  copied: string;
+  copyLink: string;
+  deletions: string;
+  description: string;
+  emptyBody: string;
+  filesChanged: string;
+  loadFailed: string;
+  open: string;
+  title: string;
+}
+
+export interface LocaleResourceTranslationWorkspaceToolsCreatePullRequest {
+  ahead: string;
+  base: string;
+  bodyPlaceholder: string;
+  create: string;
+  created: string;
+  creating: string;
+  description: string;
+  existing: string;
+  noCommits: string;
+  openInBrowser: string;
+  pushedRetry: string;
+  pushing: string;
+  preview: LocaleResourceTranslationWorkspaceToolsPullRequestPreview;
+  retry: string;
+  short: string;
+  title: string;
+  titlePlaceholder: string;
+  view: string;
+  viewShort: string;
+  willPushMany: string;
+  willPushOne: string;
 }
 
 export interface LocaleResourceTranslationWorkspaceToolsEmpty {
@@ -252,6 +292,7 @@ export interface LocaleResourceTranslationWorkspaceTools {
   comments: LocaleResourceTranslationWorkspaceToolsComments;
   commit: LocaleResourceTranslationWorkspaceToolsCommit;
   diffBase: LocaleResourceTranslationWorkspaceToolsDiffBase;
+  createPullRequest: LocaleResourceTranslationWorkspaceToolsCreatePullRequest;
   dockInSidebar: string;
   empty: LocaleResourceTranslationWorkspaceToolsEmpty;
   git: LocaleResourceTranslationWorkspaceToolsGit;

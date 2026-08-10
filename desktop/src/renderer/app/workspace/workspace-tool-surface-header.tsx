@@ -38,11 +38,13 @@ export function WorkspaceToolWindowTitleBridge({
 export function WorkspaceToolSidebarHeader({
   api,
   root,
+  showRepositoryName = false,
   trailingActions,
   onRequestHost,
 }: {
   api: ApiClient;
   root?: string | null;
+  showRepositoryName?: boolean;
   trailingActions?: ReactNode;
   onRequestHost: (host: WorkspaceToolSurfaceHost) => void;
 }) {
@@ -54,7 +56,11 @@ export function WorkspaceToolSidebarHeader({
         [&_button_svg]:size-[16px]!
       "
     >
-      <WorkspaceToolContextLabel api={api} root={root} />
+      <WorkspaceToolContextLabel
+        api={api}
+        root={root}
+        showRepositoryName={showRepositoryName}
+      />
       <WorkspaceToolHeaderButton
         icon={<WindowIcon weight="regular" />}
         label="Open in window"
@@ -68,13 +74,15 @@ export function WorkspaceToolSidebarHeader({
 function WorkspaceToolContextLabel({
   api,
   root,
+  showRepositoryName,
 }: {
   api?: ApiClient;
   root?: string | null;
+  showRepositoryName: boolean;
 }) {
   const hasRoot = is.nonEmptyString(root);
   const branchQuery = useQuery({
-    enabled: api !== undefined && hasRoot,
+    enabled: api !== undefined && hasRoot && !showRepositoryName,
     queryFn: async () => {
       if (api === undefined || !hasRoot) {
         throw new Error("Workspace git branch query requires an api and root.");
@@ -88,7 +96,7 @@ function WorkspaceToolContextLabel({
     staleTime: 5_000,
   });
   const branch = branchQuery.data;
-  const showBranch = is.nonEmptyString(branch);
+  const showBranch = !showRepositoryName && is.nonEmptyString(branch);
   const LabelIcon = showBranch ? GitBranch : FolderOpen;
   const label = showBranch
     ? branch
