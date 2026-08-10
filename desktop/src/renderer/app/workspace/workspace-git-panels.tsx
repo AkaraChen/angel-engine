@@ -1,7 +1,6 @@
 import type { FormEvent } from "react";
 import type { WorkspaceToolPanelLayout } from "@/app/workspace/workspace-files-panels";
 import type { WorkspaceToolPatchFile } from "@/app/workspace/workspace-tool-patch-model";
-import type { WorkspaceGitDiffBaseKind } from "@angel-engine/daemon-api/workspace-tools";
 
 import { GitBranch } from "@phosphor-icons/react";
 import { useCallback, useState } from "react";
@@ -41,6 +40,7 @@ import {
   getWorkspaceToolPatchFileLineChanges,
 } from "@/app/workspace/workspace-tool-patch-model";
 import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
+import { useWorkspaceGitBasePreference } from "@/app/workspace/use-workspace-git-base-preference";
 
 export function WorkspaceGitPanel({
   layout,
@@ -51,8 +51,7 @@ export function WorkspaceGitPanel({
 }) {
   const { api, chatId } = useWorkspaceToolSurface();
   const { t } = useTranslation();
-  const [baseKind, setBaseKind] =
-    useState<WorkspaceGitDiffBaseKind>("worktree");
+  const { baseKind, setBaseKind } = useWorkspaceGitBasePreference(root);
   const {
     commitDescription,
     commitMutation,
