@@ -429,6 +429,21 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
   };
   await writeDaemonInfo(options.dataDir, info);
 
+  // Stage 4 (KIT-832): Skill-first host control — materialize angel-host skill
+  // into runtime skill roots and expose daemon URL/token + angelctl on PATH.
+  // MCP is not started; Skill + CLI is the supported path.
+  try {
+    const { installHostControl } = await import("./features/host-control");
+    const report = installHostControl(info);
+    if (report.enabled && report.materialize.missing) {
+      console.warn(
+        "[host-control] angel-host skill package not found; agents will not receive host skill injection.",
+      );
+    }
+  } catch (error) {
+    console.warn("[host-control] install failed:", error);
+  }
+
   return { app, close, info };
 }
 

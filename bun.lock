@@ -274,6 +274,7 @@
         "@angel-engine/claude-client": "workspace:*",
         "@angel-engine/client-napi": "workspace:*",
         "@angel-engine/daemon-api": "workspace:*",
+        "@angel-engine/host-skill": "workspace:*",
         "@angel-engine/js-client": "workspace:*",
         "@angel-engine/pi-client": "workspace:*",
         "@hono/node-server": "^1.19.9",
@@ -353,6 +354,10 @@
         "typescript": "^7.0.2",
         "vitest": "^4.1.9",
       },
+    },
+    "packages/host-skill": {
+      "name": "@angel-engine/host-skill",
+      "version": "0.1.0",
     },
     "packages/js-client": {
       "name": "@angel-engine/js-client",
@@ -485,6 +490,8 @@
     "@angel-engine/daemon-client": ["@angel-engine/daemon-client@workspace:packages/daemon-client"],
 
     "@angel-engine/host-cli": ["@angel-engine/host-cli@workspace:packages/host-cli"],
+
+    "@angel-engine/host-skill": ["@angel-engine/host-skill@workspace:packages/host-skill"],
 
     "@angel-engine/js-client": ["@angel-engine/js-client@workspace:packages/js-client"],
 
