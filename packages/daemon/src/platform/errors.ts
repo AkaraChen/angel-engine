@@ -25,6 +25,22 @@ interface DaemonErrorProps {
 export class DaemonError extends Data.TaggedError(
   "DaemonError",
 )<DaemonErrorProps> {
+  static automationNotFound() {
+    return new DaemonError({
+      code: "automation-not-found",
+      message: "Automation not found.",
+      status: 404,
+    });
+  }
+
+  static automationRunConflict() {
+    return new DaemonError({
+      code: "automation-run-conflict",
+      message: "Automation already has an active run.",
+      status: 409,
+    });
+  }
+
   static invalidRequest(message: string) {
     return new DaemonError({ code: "invalid-request", message, status: 400 });
   }

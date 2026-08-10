@@ -6,6 +6,7 @@ import type {
   ChatStreamElicitationResolveInput,
 } from "@angel-engine/daemon-api/chat";
 import type { ProjectCloneEvent } from "@angel-engine/daemon-api/projects";
+import type { AutomationRow } from "./db/schema";
 import type { Context, Hono } from "hono";
 import type { ChatEventsApi } from "./features/chat/chat-events";
 import type { Db } from "./platform/db";
@@ -16,9 +17,14 @@ import { Effect } from "effect";
 import { streamSSE } from "hono/streaming";
 import {
   createCustomAgentInputSchema,
+  isAgentRuntime,
   isCustomAgentRuntime,
   updateCustomAgentInputSchema,
 } from "@angel-engine/daemon-api/agents";
+import {
+  createAutomationInputSchema,
+  updateAutomationInputSchema,
+} from "@angel-engine/daemon-api/automations";
 import {
   chatCreateInputSchema,
   chatPrewarmInputSchema,
@@ -107,6 +113,23 @@ import {
 } from "./features/agents/repository";
 import { listSkillsForAgent } from "./features/agents/skills";
 import { ChatActivityStore } from "./features/chat/activity";
+import { isValidCron, nextCronRun } from "./features/automations/cron";
+import {
+  attachAutomationRunChat,
+  createAutomationRecord,
+  createAutomationRun,
+  deleteAutomationRecord,
+  finishAutomationRun,
+  getAutomation,
+  hasActiveAutomationRun,
+  listAutomationRuns,
+  listAutomations,
+  listDueAutomationRecords,
+  requireAutomationRecord,
+  setAutomationNextRun,
+  updateAutomationRecord,
+} from "./features/automations/repository";
+import { AutomationRuntime } from "./features/automations/runtime";
 import { ChatEngine } from "./features/chat/engine-runtime";
 import { ChatRunRegistry } from "./features/chat/run-registry";
 import {
@@ -170,7 +193,10 @@ export function registerApi(
   app: Hono,
   runtime: DaemonRuntime,
   chatEvents: ChatEventsApi,
-  options: { internalBridgeSecret?: string } = {},
+  options: {
+    internalBridgeSecret?: string;
+    startAutomationScheduler?: boolean;
+  } = {},
 ) {
   const activity = new ChatActivityStore({
     onChange: (chatId) => chatEvents.activityChanged(chatId),
@@ -183,6 +209,7 @@ export function registerApi(
       chatEngine: Effect.Effect.Success<typeof ChatEngine>,
     ) => Effect.Effect<A, DaemonError, Db>,
   ) => Effect.flatMap(ChatEngine, use);
+  let automationRuntime: AutomationRuntime | undefined;
   const chatRuns = new ChatRunRegistry({
     execute: async (input, onEvent, signal, controls, runId) => {
       await run(engine((e) => e.waitForChatSetup(input.chatId, signal)));
@@ -213,6 +240,9 @@ export function registerApi(
       if (event.type === "result" || event.type === "error") {
         chatEvents.conversationChanged([chatId]);
       }
+      void automationRuntime
+        ?.handleChatRunEvent(runId, event)
+        .catch(() => undefined);
     },
   });
   const queuedRunRecovery = run(
@@ -234,6 +264,178 @@ export function registerApi(
       ),
     ),
   ).catch(() => undefined);
+
+  const runEffect = <A>(effect: Effect.Effect<A, DaemonError, Db>) =>
+    runDaemonApi(runtime, effect);
+  automationRuntime = new AutomationRuntime({
+    attachRunChat: (runId, chatId) =>
+      runEffect(attachAutomationRunChat(runId, chatId)).then(() => undefined),
+    createChat: (automation: AutomationRow) =>
+      run(
+        engine((chatEngine) =>
+          chatEngine.createChatFromInput(
+            {
+              creationLocation: automation.workspaceKind,
+              projectId: automation.projectId ?? undefined,
+              runtime: automation.runtime,
+              title: automation.name,
+            },
+            new AbortController().signal,
+          ),
+        ),
+      ),
+    createRun: (input) => runEffect(createAutomationRun(input)),
+    finishRun: (runId, status, error) =>
+      runEffect(finishAutomationRun(runId, status, error)),
+    getAutomation: async (id) => {
+      const automation = await runEffect(getAutomation(id));
+      if (!automation) throw DaemonError.automationNotFound();
+      return automation;
+    },
+    getRecord: (id) => runEffect(requireAutomationRecord(id)),
+    hasActiveRun: (id) => runEffect(hasActiveAutomationRun(id)),
+    listDue: (now) => runEffect(listDueAutomationRecords(now)),
+    onChanged: (ids) => chatEvents.automationsChanged(ids),
+    setNextRun: (id, nextRunAt) =>
+      runEffect(setAutomationNextRun(id, nextRunAt)).then(() => undefined),
+    startChatRun: async (runId, input) => {
+      await queuedRunRecovery;
+      chatRuns.reserve(runId, input);
+      try {
+        await run(
+          engine((chatEngine) => chatEngine.queueChatRun(runId, input)),
+        );
+      } catch (error) {
+        chatRuns.stop(runId);
+        throw error;
+      }
+      activity.start(input.chatId, runId);
+      chatEvents.conversationChanged([input.chatId]);
+      chatRuns.begin(runId);
+    },
+    stopChatRun: async (runId) => {
+      try {
+        const snapshot = chatRuns.snapshot(runId);
+        activity.cancel(snapshot.chatId, runId);
+        chatRuns.stop(runId);
+        await run(
+          engine((chatEngine) => chatEngine.cancelQueuedChatRun(runId)),
+        );
+        chatEvents.conversationChanged([snapshot.chatId]);
+      } catch {
+        await run(
+          engine((chatEngine) => chatEngine.cancelQueuedChatRun(runId)),
+        );
+      }
+    },
+  });
+  if (options.startAutomationScheduler === true) automationRuntime.start();
+
+  const validateAutomation = (input: {
+    cron: string;
+    projectId?: string | null;
+    runtime: string;
+    workspaceKind?: "project" | "worktree";
+  }) => {
+    if (!isValidCron(input.cron))
+      throw DaemonError.invalidRequest("Cron expression is invalid.");
+    if (!isAgentRuntime(input.runtime)) throw DaemonError.chatRuntimeUnknown();
+    if (input.workspaceKind === "worktree" && !input.projectId)
+      throw DaemonError.projectRequiredForWorktree();
+  };
+  const validateAutomationProject = async (projectId?: string | null) => {
+    if (projectId && (await runEffect(getProject(projectId))) === null)
+      throw DaemonError.projectNotFound();
+  };
+
+  app.get("/api/automations", async (context) =>
+    context.json(await runEffect(listAutomations())),
+  );
+  app.get("/api/automations/:id/runs", async (context) =>
+    context.json(
+      await runEffect(
+        listAutomationRuns(
+          context.req.param("id"),
+          optionalNumber(context.req.query("limit")),
+        ),
+      ),
+    ),
+  );
+  app.post("/api/automations", async (context) => {
+    const input = createAutomationInputSchema(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Automation input is invalid.");
+    validateAutomation(input);
+    await validateAutomationProject(input.projectId);
+    const enabled = input.enabled ?? true;
+    const nextRunAt = enabled
+      ? (nextCronRun(input.cron, new Date())?.toISOString() ?? null)
+      : null;
+    const automation = await runEffect(
+      createAutomationRecord(input, nextRunAt),
+    );
+    chatEvents.automationsChanged([automation.id]);
+    return context.json(automation, 201);
+  });
+  app.patch("/api/automations/:id", async (context) => {
+    const id = context.req.param("id");
+    const input = updateAutomationInputSchema(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Automation input is invalid.");
+    const current = await runEffect(requireAutomationRecord(id));
+    validateAutomation({
+      cron: input.cron ?? current.cron,
+      projectId:
+        input.projectId === undefined ? current.projectId : input.projectId,
+      runtime: input.runtime ?? current.runtime,
+      workspaceKind: input.workspaceKind ?? current.workspaceKind,
+    });
+    await validateAutomationProject(
+      input.projectId === undefined ? current.projectId : input.projectId,
+    );
+    const enabled = input.enabled ?? current.enabled;
+    const recalculate = input.cron !== undefined || input.enabled !== undefined;
+    const nextRunAt = recalculate
+      ? enabled
+        ? (nextCronRun(input.cron ?? current.cron, new Date())?.toISOString() ??
+          null)
+        : null
+      : undefined;
+    const automation = await runEffect(
+      updateAutomationRecord(id, input, nextRunAt),
+    );
+    chatEvents.automationsChanged([id]);
+    return context.json(automation);
+  });
+  app.post("/api/automations/:id/pause", async (context) => {
+    const id = context.req.param("id");
+    const automation = await runEffect(
+      updateAutomationRecord(id, { enabled: false }, null),
+    );
+    chatEvents.automationsChanged([id]);
+    return context.json(automation);
+  });
+  app.post("/api/automations/:id/resume", async (context) => {
+    const id = context.req.param("id");
+    const current = await runEffect(requireAutomationRecord(id));
+    const nextRunAt =
+      nextCronRun(current.cron, new Date())?.toISOString() ?? null;
+    const automation = await runEffect(
+      updateAutomationRecord(id, { enabled: true }, nextRunAt),
+    );
+    chatEvents.automationsChanged([id]);
+    return context.json(automation);
+  });
+  app.post("/api/automations/:id/run", async (context) =>
+    context.json(await automationRuntime.runNow(context.req.param("id"))),
+  );
+  app.delete("/api/automations/:id", async (context) => {
+    const id = context.req.param("id");
+    await automationRuntime.cancelActiveRuns(id);
+    await runEffect(deleteAutomationRecord(id));
+    chatEvents.automationsChanged([id]);
+    return context.json({ ok: true });
+  });
 
   app.get("/api/chat-activity", (context) => context.json(activity.list()));
   app.get("/api/chat-attention", (context) =>
@@ -1224,6 +1426,8 @@ export function registerApi(
     activity.resolveInput(snapshot.chatId, runId, body.elicitationId);
     return context.json({ resolved: true });
   });
+
+  return () => automationRuntime?.stop();
 }
 
 function observeChatRun(

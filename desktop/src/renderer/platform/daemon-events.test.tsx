@@ -5,6 +5,7 @@ import { cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { queryKeys } from "@/platform/query-keys";
+import { scheduleQueryKeys } from "@/features/schedule/requests/keys";
 
 import { DaemonEventSync } from "./daemon-events";
 
@@ -138,5 +139,27 @@ describe("daemonEventSync", () => {
     vi.advanceTimersByTime(200);
 
     expect(reconciledChatIds()).toEqual(["chat-a", "chat-b"]);
+  });
+
+  it("invalidates automation state when the daemon publishes a change", () => {
+    vi.stubGlobal("WebSocket", FakeWebSocket);
+    const queryClient = new QueryClient();
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <DaemonEventSync />
+      </QueryClientProvider>,
+    );
+    FakeWebSocket.instances.at(0)?.emit("message", {
+      data: JSON.stringify({
+        automationIds: ["automation-1"],
+        type: "automations-changed",
+      }),
+    });
+
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: scheduleQueryKeys.automations.all(),
+    });
   });
 });

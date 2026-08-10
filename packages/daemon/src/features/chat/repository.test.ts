@@ -9,6 +9,8 @@ import { Cause, Effect, Exit, Layer } from "effect";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  automationRuns,
+  automations,
   chatDiffAnchors,
   chats,
   customAgents,
@@ -486,6 +488,8 @@ async function memoryDatabase(): Promise<AppDatabase> {
   `);
   return drizzle(client, {
     schema: {
+      automationRuns,
+      automations,
       chatDiffAnchors,
       chats,
       customAgents,
