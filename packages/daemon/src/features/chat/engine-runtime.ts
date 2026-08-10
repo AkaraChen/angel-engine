@@ -87,7 +87,9 @@ import {
   updateWorktreeCreationJob,
 } from "./repository";
 import { DesktopAngelSession } from "./desktop-angel-session";
+import { recordChatTurnStart, setTurnDiffAnchorTurnId } from "./diff-anchors";
 import { WorktreeCreationGate } from "./worktree-creation-gate";
+import { workspaceGitHeadSha } from "../workspace-tools/service";
 
 export { cwdForNewChat };
 
@@ -502,6 +504,10 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
           chatEvents.metadataChanged([chat.id]);
 
           const cwd = yield* cwdForChat(chat, input.projectId);
+          const turnStartSha = yield* workspaceGitHeadSha(cwd);
+          const turnAnchor = turnStartSha
+            ? yield* recordChatTurnStart(chat.id, turnStartSha)
+            : undefined;
           const result = yield* session
             .sendText({
               cwd,
@@ -522,6 +528,9 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
             .pipe(Effect.mapError(sessionFailure));
 
           const projected = projectTurnRunResult(result);
+          if (turnAnchor && is.nonEmptyString(projected.turnId)) {
+            yield* setTurnDiffAnchorTurnId(turnAnchor.id, projected.turnId);
+          }
           const finalChat = yield* is.nonEmptyString(projected.remoteThreadId)
             ? setChatRemoteThreadId(chat.id, projected.remoteThreadId)
             : touchChat(chat.id);

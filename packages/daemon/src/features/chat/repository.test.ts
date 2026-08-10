@@ -9,6 +9,7 @@ import { Cause, Effect, Exit, Layer } from "effect";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  chatDiffAnchors,
   chats,
   customAgents,
   projects,
@@ -397,6 +398,17 @@ async function memoryDatabase(): Promise<AppDatabase> {
     )
   `);
   await client.execute(`
+    CREATE TABLE chat_diff_anchors (
+      id TEXT PRIMARY KEY,
+      chat_id TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      recorded_at TEXT NOT NULL,
+      sha TEXT NOT NULL,
+      turn_id TEXT,
+      FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE CASCADE
+    )
+  `);
+  await client.execute(`
     CREATE TABLE worktree_creation_jobs (
       chat_id TEXT PRIMARY KEY,
       error TEXT,
@@ -420,6 +432,7 @@ async function memoryDatabase(): Promise<AppDatabase> {
   `);
   return drizzle(client, {
     schema: {
+      chatDiffAnchors,
       chats,
       customAgents,
       projects,

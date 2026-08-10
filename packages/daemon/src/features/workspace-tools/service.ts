@@ -77,15 +77,22 @@ export function workspaceFileTree(
   });
 }
 
-export function workspaceGitDiff(input: {
-  baseKind?: string;
-  baseRef?: string;
-  chatId?: string;
-  root: string;
-}): Effect.Effect<WorkspaceGitDiffResult, DaemonError> {
+export function workspaceGitDiff<R = never>(
+  input:
+    | string
+    | {
+        baseKind?: string;
+        baseRef?: string;
+        chatId?: string;
+        root: string;
+      },
+  anchorResolver: WorkspaceGitAnchorResolver<R> = (() =>
+    Effect.succeed(undefined)) as WorkspaceGitAnchorResolver<R>,
+): Effect.Effect<WorkspaceGitDiffResult, DaemonError, R> {
   return Effect.gen(function* () {
-    const root = yield* resolveWorkspaceRoot(input.root);
-    const requestedBaseKind = parseWorkspaceGitDiffBaseKind(input.baseKind);
+    const options = typeof input === "string" ? { root: input } : input;
+    const root = yield* resolveWorkspaceRoot(options.root);
+    const requestedBaseKind = parseWorkspaceGitDiffBaseKind(options.baseKind);
     const gitRoot = yield* gitRootFor(root);
     if (!is.nonEmptyString(gitRoot)) {
       return {
@@ -153,26 +160,25 @@ export function workspaceGitDiff(input: {
       kind: "unstaged",
       ref: "index",
     };
-    const branchBase = yield* resolveBranchBase(gitRoot, input.baseRef);
-    const unavailableSession: WorkspaceGitResolvedBase = {
-      available: false,
+    const branchBase = yield* resolveBranchBase(gitRoot, options.baseRef);
+    const sessionBase = yield* resolveChatAnchorBase({
+      anchorResolver,
+      chatId: options.chatId,
+      gitRoot,
       kind: "session",
-      unavailableReason: {
-        anchorKind: "session",
-        code: "anchor-unavailable",
-      },
-    };
-    const unavailableTurn: WorkspaceGitResolvedBase = {
-      available: false,
+    });
+    const turnBase = yield* resolveChatAnchorBase({
+      anchorResolver,
+      chatId: options.chatId,
+      gitRoot,
       kind: "turn",
-      unavailableReason: { anchorKind: "turn", code: "anchor-unavailable" },
-    };
+    });
     const bases = [
       worktreeBase,
       unstagedBase,
       branchBase,
-      unavailableSession,
-      unavailableTurn,
+      sessionBase,
+      turnBase,
     ];
     const requestedBase = bases.find((base) => base.kind === requestedBaseKind);
     const selectedBase = requestedBase?.available
@@ -217,6 +223,27 @@ export function workspaceGitDiff(input: {
       warnings: untrackedResult.warnings,
     };
   });
+}
+
+export interface WorkspaceGitAnchor {
+  ref?: string;
+  sha: string;
+}
+
+export type WorkspaceGitAnchorResolver<R = never> = (
+  chatId: string,
+  kind: "session" | "turn",
+) => Effect.Effect<WorkspaceGitAnchor | undefined, DaemonError, R>;
+
+export function workspaceGitHeadSha(
+  rootInput: string,
+): Effect.Effect<string | undefined, never> {
+  return Effect.gen(function* () {
+    const root = yield* resolveWorkspaceRoot(rootInput);
+    const gitRoot = yield* gitRootFor(root);
+    if (!gitRoot) return undefined;
+    return yield* workspaceGitOutput(gitRoot, ["rev-parse", "HEAD"]);
+  }).pipe(Effect.orElseSucceed(() => undefined));
 }
 
 const workspaceGitDiffBaseKinds = new Set<WorkspaceGitDiffBaseKind>([
@@ -320,6 +347,44 @@ function resolveBranchBase(gitRoot: string, requestedRef?: string) {
       yield* resolveCommit(gitRoot, mergeBase),
       ref,
     );
+  });
+}
+
+function resolveChatAnchorBase<R>({
+  anchorResolver,
+  chatId,
+  gitRoot,
+  kind,
+}: {
+  anchorResolver: WorkspaceGitAnchorResolver<R>;
+  chatId?: string;
+  gitRoot: string;
+  kind: "session" | "turn";
+}): Effect.Effect<WorkspaceGitResolvedBase, DaemonError, R> {
+  return Effect.gen(function* () {
+    const unavailableReason = {
+      anchorKind: kind,
+      code: "anchor-unavailable",
+    } as const;
+    if (!is.nonEmptyString(chatId)) {
+      return { available: false, kind, unavailableReason };
+    }
+    const anchor = yield* anchorResolver(chatId, kind);
+    if (!anchor) return { available: false, kind, unavailableReason };
+    const commit = yield* resolveCommit(gitRoot, anchor.sha);
+    if (!commit) {
+      return {
+        available: false,
+        kind,
+        ref: anchor.ref,
+        unavailableReason: {
+          anchorKind: kind,
+          code: "anchor-missing",
+          shortSha: anchor.sha.slice(0, 7),
+        },
+      };
+    }
+    return resolvedBase(kind, commit, anchor.ref);
   });
 }
 

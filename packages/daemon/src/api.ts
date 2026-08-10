@@ -129,6 +129,7 @@ import {
   listProjects,
   updateProject,
 } from "./features/projects/repository";
+import { getChatDiffAnchor } from "./features/chat/diff-anchors";
 import {
   workspaceFileTree,
   workspaceGitCommit,
@@ -933,12 +934,22 @@ export function registerApi(
   app.get("/api/workspace/git-diff", async (context) =>
     context.json(
       await run(
-        workspaceGitDiff({
-          baseKind: context.req.query("baseKind"),
-          baseRef: context.req.query("baseRef"),
-          chatId: context.req.query("chatId"),
-          root: requireQuery(context.req.query("root"), "root"),
-        }),
+        workspaceGitDiff(
+          {
+            baseKind: context.req.query("baseKind"),
+            baseRef: context.req.query("baseRef"),
+            chatId: context.req.query("chatId"),
+            root: requireQuery(context.req.query("root"), "root"),
+          },
+          (chatId, kind) =>
+            getChatDiffAnchor(chatId, kind).pipe(
+              Effect.map((anchor) =>
+                anchor
+                  ? { ref: anchor.turnId ?? undefined, sha: anchor.sha }
+                  : undefined,
+              ),
+            ),
+        ),
       ),
     ),
   );
