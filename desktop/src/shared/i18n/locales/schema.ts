@@ -893,6 +893,7 @@ export interface LocaleResourceTranslationDialog {
   chatName: string;
   importSession: LocaleResourceTranslationDialogImportSession;
   renameChat: string;
+  sessionHandoff: LocaleResourceTranslationDialogSessionHandoff;
 }
 
 export interface LocaleResourceTranslationDialogImportSession {
@@ -907,6 +908,26 @@ export interface LocaleResourceTranslationDialogImportSession {
   searchFailed: string;
   searching: string;
   title: string;
+}
+
+export interface LocaleResourceTranslationDialogSessionHandoff {
+  contextPackLabel: string;
+  description: string;
+  dirtyDescription: string;
+  dirtyTitle: string;
+  keyFilesCount: string;
+  loadFailed: string;
+  loadingContext: string;
+  notesLabel: string;
+  notesPlaceholder: string;
+  otherAgentsSection: string;
+  sameAgentHint: string;
+  sameAgentSection: string;
+  sameAgentUnavailable: string;
+  submitFailed: string;
+  title: string;
+  titleFrom: string;
+  titleUntitled: string;
 }
 
 export interface LocaleResourceTranslationNotifications {

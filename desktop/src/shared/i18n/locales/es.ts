@@ -788,6 +788,29 @@ export const es = {
         title: "Importar sesión",
       },
       renameChat: "Renombrar chat",
+      sessionHandoff: {
+        contextPackLabel: "Paquete de contexto",
+        description:
+          "Inicia una sesión nueva en el mismo workspace con un resumen de este chat. La sesión original sigue disponible.",
+        dirtyDescription:
+          "Este workspace tiene cambios sin confirmar{{branch}}. Seguirán presentes en la nueva sesión.",
+        dirtyTitle: "Árbol de trabajo dirty",
+        keyFilesCount: "{{count}} archivo(s) clave referenciado(s)",
+        loadFailed: "No se pudo cargar el historial para la transferencia.",
+        loadingContext: "Generando paquete de contexto…",
+        notesLabel: "Notas para la siguiente sesión",
+        notesPlaceholder:
+          "Opcional: ¿con qué debe continuar el siguiente agente?",
+        otherAgentsSection: "Transferir a otro agente",
+        sameAgentHint: "Mismo harness · nueva sesión · mismo workspace",
+        sameAgentSection: "Continuar con el mismo agente",
+        sameAgentUnavailable:
+          "Este agente no está disponible en tu lista de agentes.",
+        submitFailed: "No se pudo iniciar la sesión de transferencia.",
+        title: "Transferir sesión",
+        titleFrom: "Transferencia: {{title}}",
+        titleUntitled: "Sesión de transferencia",
+      },
     },
     notifications: {
       agentFailedNoDetail: "El Agent se detuvo con un error.",

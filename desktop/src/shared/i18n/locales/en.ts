@@ -780,6 +780,28 @@ export const en = {
         title: "Import session",
       },
       renameChat: "Rename chat",
+      sessionHandoff: {
+        contextPackLabel: "Context pack",
+        description:
+          "Start a new session in the same workspace with a summary of this chat. The original session stays available.",
+        dirtyDescription:
+          "This workspace has uncommitted changes{{branch}}. They will still be present in the new session.",
+        dirtyTitle: "Dirty working tree",
+        keyFilesCount: "{{count}} key file(s) referenced",
+        loadFailed: "Could not load chat history for handoff.",
+        loadingContext: "Building context pack…",
+        notesLabel: "Notes for the next session",
+        notesPlaceholder: "Optional: what should the next agent continue with?",
+        otherAgentsSection: "Hand off to another agent",
+        sameAgentHint: "Same harness · new session · same workspace",
+        sameAgentSection: "Continue with same agent",
+        sameAgentUnavailable:
+          "This agent is not currently available in your agent list.",
+        submitFailed: "Could not start handoff session.",
+        title: "Hand off session",
+        titleFrom: "Handoff: {{title}}",
+        titleUntitled: "Handoff session",
+      },
     },
     notifications: {
       agentFailedNoDetail: "The agent stopped with an error.",

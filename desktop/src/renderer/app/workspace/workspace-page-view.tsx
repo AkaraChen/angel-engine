@@ -38,6 +38,7 @@ import { WorktreeDirtyDialog } from "@/app/workspace/worktree-dirty-dialog";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { ImportSessionDialog } from "@/features/chat/components/import-session-dialog";
 import { RenameChatDialog } from "@/features/chat/components/rename-chat-dialog";
+import { SessionHandoffDialog } from "@/features/chat/components/session-handoff-dialog";
 import { WorkspaceCommandPalette } from "@/features/command-palette/workspace-command-palette";
 import { FleetPage } from "@/features/fleet/fleet-page";
 import { CloneProgressDialog } from "@/features/projects/components/clone-progress-dialog";
@@ -152,7 +153,9 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     archiveChat,
     closeProjectSettingsDialog,
     closeRenameChatDialog,
+    closeSessionHandoffDialog,
     createProjectFromPicker,
+    handoffTargetChat,
     renameChat,
     renameChatPending,
     renameTargetChat,
@@ -388,6 +391,12 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
             isSaving={renameChatPending}
             onClose={closeRenameChatDialog}
             onRename={renameChat}
+          />
+          <SessionHandoffDialog
+            api={api}
+            chat={handoffTargetChat}
+            onClose={closeSessionHandoffDialog}
+            runtimeOptions={runtimeOptions}
           />
           <ImportSessionDialog
             api={api}

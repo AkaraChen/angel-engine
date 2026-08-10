@@ -788,6 +788,28 @@ export const de = {
         title: "Sitzung importieren",
       },
       renameChat: "Chat umbenennen",
+      sessionHandoff: {
+        contextPackLabel: "Kontextpaket",
+        description:
+          "Startet eine neue Session im selben Workspace mit einer Zusammenfassung dieses Chats. Die Originalsession bleibt verfügbar.",
+        dirtyDescription:
+          "Dieser Workspace hat uncommittete Änderungen{{branch}}. Sie bleiben in der neuen Session sichtbar.",
+        dirtyTitle: "Dirty Working Tree",
+        keyFilesCount: "{{count}} Schlüsseldatei(en) referenziert",
+        loadFailed: "Chatverlauf für Handoff konnte nicht geladen werden.",
+        loadingContext: "Kontextpaket wird erstellt…",
+        notesLabel: "Notizen für die nächste Session",
+        notesPlaceholder: "Optional: womit soll der nächste Agent fortfahren?",
+        otherAgentsSection: "An anderen Agent übergeben",
+        sameAgentHint: "Gleicher Harness · neue Session · gleicher Workspace",
+        sameAgentSection: "Mit demselben Agent fortfahren",
+        sameAgentUnavailable:
+          "Dieser Agent ist derzeit nicht in deiner Agent-Liste.",
+        submitFailed: "Handoff-Session konnte nicht gestartet werden.",
+        title: "Session übergeben",
+        titleFrom: "Handoff: {{title}}",
+        titleUntitled: "Handoff-Session",
+      },
     },
     notifications: {
       agentFailedNoDetail: "Der Agent wurde mit einem Fehler beendet.",

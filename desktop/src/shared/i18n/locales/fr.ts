@@ -788,6 +788,28 @@ export const fr = {
         title: "Importer une session",
       },
       renameChat: "Renommer la discussion",
+      sessionHandoff: {
+        contextPackLabel: "Pack de contexte",
+        description:
+          "Démarre une nouvelle session dans le même espace de travail avec un résumé de cette discussion. La session d’origine reste disponible.",
+        dirtyDescription:
+          "Cet espace de travail a des modifications non validées{{branch}}. Elles resteront présentes dans la nouvelle session.",
+        dirtyTitle: "Arbre de travail dirty",
+        keyFilesCount: "{{count}} fichier(s) clé référencé(s)",
+        loadFailed: "Impossible de charger l’historique pour le transfert.",
+        loadingContext: "Préparation du pack de contexte…",
+        notesLabel: "Notes pour la prochaine session",
+        notesPlaceholder: "Facultatif : que doit continuer le prochain agent ?",
+        otherAgentsSection: "Transférer à un autre agent",
+        sameAgentHint: "Même harness · nouvelle session · même workspace",
+        sameAgentSection: "Continuer avec le même agent",
+        sameAgentUnavailable:
+          "Cet agent n’est pas disponible dans votre liste d’agents.",
+        submitFailed: "Impossible de démarrer la session de transfert.",
+        title: "Transférer la session",
+        titleFrom: "Transfert : {{title}}",
+        titleUntitled: "Session de transfert",
+      },
     },
     notifications: {
       agentFailedNoDetail: "L’agent s’est arrêté avec une erreur.",
