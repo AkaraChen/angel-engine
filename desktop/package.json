@@ -14,8 +14,8 @@
   "keywords": [],
   "main": ".vite/build/main.js",
   "scripts": {
-    "runtime:build": "turbo run build --filter @angel-engine/client-napi --filter @angel-engine/js-client --filter @angel-engine/claude-client --filter @angel-engine/pi-client --filter @angel-engine/daemon-api --filter @angel-engine/daemon-client --filter @angel-engine/daemon --filter mobile",
-    "runtime:build:debug": "turbo run build:debug --filter @angel-engine/client-napi --filter @angel-engine/js-client --filter @angel-engine/claude-client --filter @angel-engine/pi-client --filter @angel-engine/daemon-api --filter @angel-engine/daemon-client --filter @angel-engine/daemon",
+    "runtime:build": "turbo run build --filter @angel-engine/client-napi --filter @angel-engine/js-client --filter @angel-engine/claude-client --filter @angel-engine/pi-client --filter @angel-engine/daemon-api --filter @angel-engine/daemon-client --filter @angel-engine/daemon --filter @angel-engine/host-cli --filter mobile",
+    "runtime:build:debug": "turbo run build:debug --filter @angel-engine/client-napi --filter @angel-engine/js-client --filter @angel-engine/claude-client --filter @angel-engine/pi-client --filter @angel-engine/daemon-api --filter @angel-engine/daemon-client --filter @angel-engine/daemon --filter @angel-engine/host-cli",
     "start": "bun run runtime:build:debug && electron-forge start",
     "package": "bun run runtime:build && bun run rebuild:native && node scripts/package-app.cjs",
     "make": "bun run package && node scripts/build-prepackaged.cjs --publish never",

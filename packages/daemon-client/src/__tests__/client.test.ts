@@ -93,6 +93,29 @@ describe("createDaemonClient", () => {
     );
   });
 
+  it("sends a chat message through POST /api/chats/send", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        chat: { id: "c1" },
+        chatId: "c1",
+        content: [],
+        text: "ok",
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createDaemonClient({ baseUrl: "", token: null });
+    await client.chats.send({ chatId: "c1", text: "hello" });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/chats/send",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ chatId: "c1", text: "hello" }),
+      }),
+    );
+  });
+
   it("lists and acknowledges daemon-owned chat attention", async () => {
     const attention = {
       chatId: "chat-1",

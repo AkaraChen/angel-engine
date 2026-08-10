@@ -1,0 +1,34 @@
+{
+  "name": "@angel-engine/host-cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Host control CLI (angelctl) for the Angel Engine desktop daemon.",
+  "bin": {
+    "angelctl": "./dist/bin/angelctl"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup && node scripts/stage-bin.mjs",
+    "build:debug": "tsup && node scripts/stage-bin.mjs",
+    "lint": "oxlint --type-aware src",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "angelctl": "node --import tsx src/main.ts"
+  },
+  "dependencies": {
+    "@angel-engine/daemon-api": "workspace:*",
+    "@angel-engine/daemon-client": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "oxlint": "^1.73.0",
+    "oxlint-tsgolint": "^0.24.0",
+    "tsup": "^8.5.1",
+    "tsx": "^4.21.0",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.9"
+  }
+}

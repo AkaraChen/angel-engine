@@ -33,6 +33,8 @@ import type {
   ChatRuntimeConfigInput,
   ChatRunObserverEvent,
   ChatRunStartInput,
+  ChatSendInput,
+  ChatSendResult,
   ChatSetModeInput,
   ChatSetModeResult,
   ChatSetPermissionModeInput,
@@ -507,6 +509,8 @@ export function createDaemonClient(options: DaemonClientOptions) {
           `/api/chats/${encodeURIComponent(input.chatId)}`,
           json("PATCH", { title: input.title }),
         ),
+      send: (input: ChatSendInput) =>
+        request<ChatSendResult>("/api/chats/send", json("POST", input)),
       setMode: (input: ChatSetModeInput) =>
         request<ChatSetModeResult>(
           `/api/chats/${encodeURIComponent(input.chatId)}/mode`,
