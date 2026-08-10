@@ -142,6 +142,19 @@ export const de = {
         title: "Transkript-Dichte",
       },
       tools: {
+        checks: {
+          fixFailures: "Fehler beheben",
+          fixNeedsChat: "Öffne einen Chat, um einen Fix-Turn zu senden.",
+          fixStarted:
+            "Fix-Turn mit gekürzter Fehlerlog-Zusammenfassung gestartet.",
+          fixing: "Fix wird gestartet…",
+          openCheck: "Check-Details öffnen",
+          openPullRequest: "Pull Request öffnen",
+          refresh: "Checks aktualisieren",
+          summaryFail: "{{count}} fehlgeschlagen",
+          summaryPass: "{{count}} bestanden",
+          summaryPending: "{{count}} ausstehend",
+        },
         addToChat: "Zum Chat hinzufügen",
         comments: {
           delete: "Löschen",
@@ -171,12 +184,17 @@ export const de = {
         },
         dockInSidebar: "In Seitenleiste andocken",
         empty: {
+          checksUnavailable: "Checks nicht verfügbar",
           fileTreeUnavailable: "Dateibaum nicht verfügbar",
           fileUnavailable: "Datei nicht verfügbar",
           gitUnavailable: "Git nicht verfügbar",
           noChanges: "Keine Änderungen",
+          noChecks: "Keine Checks für diesen Pull Request",
           noDiffForFile: "Kein Diff für Datei",
           noProcesses: "Keine Agent-Unterprozesse aktiv",
+          noPullRequest: "Kein Pull Request für diesen Branch",
+          noPullRequestDetail:
+            "Öffne oder binde einen PR auf dem aktuellen Branch, um CI-Checks zu laden.",
           noWorkspace: "Kein Workspace für diesen Chat",
           notGitRepository: "Kein Git-Repository",
           processesUnavailable: "Prozesse nicht verfügbar",
@@ -209,6 +227,7 @@ export const de = {
         resizeGitList: "Breite der Änderungsliste anpassen",
         subprocesses: "Unterprozesse",
         tabs: {
+          checks: "Checks",
           files: "Dateien",
           gitChanges: "Git-Änderungen",
           newTab: "Neuer Tab",

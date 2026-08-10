@@ -145,6 +145,19 @@ export const es = {
         title: "Densidad de la transcripción",
       },
       tools: {
+        checks: {
+          fixFailures: "Corregir fallos",
+          fixNeedsChat: "Abre un chat para enviar un turno de corrección.",
+          fixStarted:
+            "Turno de corrección iniciado con un resumen truncado del log.",
+          fixing: "Iniciando corrección…",
+          openCheck: "Abrir detalles del check",
+          openPullRequest: "Abrir pull request",
+          refresh: "Actualizar checks",
+          summaryFail: "{{count}} fallidos",
+          summaryPass: "{{count}} correctos",
+          summaryPending: "{{count}} pendientes",
+        },
         addToChat: "Añadir al chat",
         comments: {
           delete: "Eliminar",
@@ -174,12 +187,17 @@ export const es = {
         },
         dockInSidebar: "Acoplar a la barra lateral",
         empty: {
+          checksUnavailable: "Checks no disponibles",
           fileTreeUnavailable: "Árbol de archivos no disponible",
           fileUnavailable: "Archivo no disponible",
           gitUnavailable: "Git no disponible",
           noChanges: "Sin cambios",
+          noChecks: "No hay checks reportados para este pull request",
           noDiffForFile: "No hay diff para el archivo",
           noProcesses: "No hay subprocesos de agente en ejecución",
+          noPullRequest: "No hay pull request para esta rama",
+          noPullRequestDetail:
+            "Abre o vincula un PR en la rama actual para cargar los checks de CI.",
           noWorkspace: "No hay espacio de trabajo para este chat",
           notGitRepository: "No es un repositorio Git",
           processesUnavailable: "Procesos no disponibles",
@@ -211,6 +229,7 @@ export const es = {
         resizeGitList: "Redimensionar la lista de cambios",
         subprocesses: "Subprocesos",
         tabs: {
+          checks: "Checks",
           files: "Archivos",
           gitChanges: "Cambios de Git",
           newTab: "Nueva pestaña",

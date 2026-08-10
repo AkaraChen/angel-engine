@@ -139,6 +139,18 @@ export const zhCN = {
         title: "时间线密度",
       },
       tools: {
+        checks: {
+          fixFailures: "修复失败",
+          fixNeedsChat: "打开一个聊天以发送修复回合。",
+          fixStarted: "已启动修复回合（含截断后的失败日志摘要）。",
+          fixing: "正在启动修复…",
+          openCheck: "打开检查详情",
+          openPullRequest: "打开 Pull Request",
+          refresh: "刷新检查",
+          summaryFail: "{{count}} 失败",
+          summaryPass: "{{count}} 通过",
+          summaryPending: "{{count}} 进行中",
+        },
         addToChat: "添加到聊天",
         comments: {
           delete: "删除",
@@ -168,12 +180,16 @@ export const zhCN = {
         },
         dockInSidebar: "停靠到侧栏",
         empty: {
+          checksUnavailable: "检查不可用",
           fileTreeUnavailable: "文件树不可用",
           fileUnavailable: "文件不可用",
           gitUnavailable: "Git 不可用",
           noChanges: "没有更改",
+          noChecks: "此 Pull Request 没有报告检查",
           noDiffForFile: "该文件没有差异",
           noProcesses: "没有运行中的 Agent 子进程",
+          noPullRequest: "当前分支没有 Pull Request",
+          noPullRequestDetail: "在当前分支打开或绑定 PR 后即可加载 CI 检查。",
           noWorkspace: "此聊天没有工作区",
           notGitRepository: "不是 Git 仓库",
           processesUnavailable: "进程信息不可用",
@@ -204,6 +220,7 @@ export const zhCN = {
         resizeGitList: "调整更改列表宽度",
         subprocesses: "子进程",
         tabs: {
+          checks: "检查",
           files: "文件",
           gitChanges: "Git 更改",
           newTab: "新建标签页",

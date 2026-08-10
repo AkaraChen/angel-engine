@@ -35,12 +35,13 @@ import {
   normalizeChatAttachmentsInput,
 } from "@angel-engine/daemon-api/chat";
 import {
+  githubPrChecksFixPromptInputSchema,
+  githubResolveUrlInputSchema,
   githubAddPullRequestCommentInputSchema,
   githubCreatePullRequestInputSchema,
   githubCreateWorkspaceFromPullRequestInputSchema,
   githubListPullRequestsInputSchema,
   githubPullRequestTemplateInputSchema,
-  githubResolveUrlInputSchema,
   githubViewPullRequestInputSchema,
 } from "@angel-engine/daemon-api/github";
 import {
@@ -56,6 +57,10 @@ import {
   workspaceToolGitPushInputSchema,
   workspaceToolWriteFileInputSchema,
 } from "@angel-engine/daemon-api/workspace-tools";
+import {
+  buildGitHubPrChecksFixPrompt,
+  listGitHubPrChecks,
+} from "./features/github/checks";
 import { listGitHubItems } from "./features/github/list";
 import { discoverPullRequestTemplates } from "./features/github/pr-template";
 import {
@@ -633,6 +638,15 @@ export function registerApi(
       ),
     ),
   );
+  app.get("/api/github/pr-checks", async (context) =>
+    context.json(
+      await run(
+        listGitHubPrChecks({
+          cwd: requireQuery(context.req.query("cwd"), "cwd"),
+        }),
+      ),
+    ),
+  );
   app.get("/api/github/pull-request-template", async (context) => {
     const input = githubPullRequestTemplateInputSchema({
       cwd: requireQuery(context.req.query("cwd"), "cwd"),
@@ -716,6 +730,13 @@ export function registerApi(
       ),
     ),
   );
+  app.post("/api/github/pr-checks/fix-prompt", async (context) => {
+    const input = githubPrChecksFixPromptInputSchema(await context.req.json());
+    if (input instanceof arkType.errors) {
+      throw DaemonError.invalidRequest("GitHub checks fix input is invalid.");
+    }
+    return context.json(await run(buildGitHubPrChecksFixPrompt(input)));
+  });
 
   app.get("/api/projects", async (context) =>
     context.json(await run(listProjects())),

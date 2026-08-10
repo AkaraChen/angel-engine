@@ -141,6 +141,18 @@ export const ko = {
         title: "트랜스크립트 밀도",
       },
       tools: {
+        checks: {
+          fixFailures: "실패 수정",
+          fixNeedsChat: "수정 턴을 보내려면 채팅을 여세요.",
+          fixStarted: "잘린 실패 로그 요약과 함께 수정 턴을 시작했습니다.",
+          fixing: "수정 시작 중…",
+          openCheck: "검사 세부정보 열기",
+          openPullRequest: "풀 리퀘스트 열기",
+          refresh: "검사 새로고침",
+          summaryFail: "{{count}} 실패",
+          summaryPass: "{{count}} 통과",
+          summaryPending: "{{count}} 진행 중",
+        },
         addToChat: "채팅에 추가",
         comments: {
           delete: "삭제",
@@ -170,12 +182,17 @@ export const ko = {
         },
         dockInSidebar: "사이드바에 고정",
         empty: {
+          checksUnavailable: "검사를 사용할 수 없습니다",
           fileTreeUnavailable: "파일 트리를 사용할 수 없습니다",
           fileUnavailable: "파일을 사용할 수 없습니다",
           gitUnavailable: "Git을 사용할 수 없습니다",
           noChanges: "변경 사항 없음",
+          noChecks: "이 풀 리퀘스트에 보고된 검사가 없습니다",
           noDiffForFile: "해당 파일에 차이가 없습니다",
           noProcesses: "실행 중인 에이전트 하위 프로세스가 없습니다",
+          noPullRequest: "이 브랜치에 풀 리퀘스트가 없습니다",
+          noPullRequestDetail:
+            "현재 브랜치에서 PR을 열거나 연결하면 CI 검사를 불러옵니다.",
           noWorkspace: "이 채팅에는 워크스페이스가 없습니다",
           notGitRepository: "Git 저장소가 아닙니다",
           processesUnavailable: "프로세스 정보를 사용할 수 없습니다",
@@ -206,6 +223,7 @@ export const ko = {
         resizeGitList: "변경 목록 너비 조정",
         subprocesses: "하위 프로세스",
         tabs: {
+          checks: "검사",
           files: "파일",
           gitChanges: "Git 변경",
           newTab: "새 탭",

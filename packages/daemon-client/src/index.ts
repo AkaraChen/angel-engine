@@ -69,6 +69,10 @@ import type {
   GitHubCreateWorkspaceFromPullRequestResult,
   GitHubListItemsInput,
   GitHubListItemsResult,
+  GitHubPrChecksFixPromptInput,
+  GitHubPrChecksFixPromptResult,
+  GitHubPrChecksInput,
+  GitHubPrChecksResult,
   GitHubListPullRequestsInput,
   GitHubListPullRequestsResult,
   GitHubPullRequestDetail,
@@ -552,6 +556,13 @@ export function createDaemonClient(options: DaemonClientOptions) {
         ),
       listItems: (input: GitHubListItemsInput) =>
         request<GitHubListItemsResult>(`/api/github/items?${query(input)}`),
+      listPrChecks: (input: GitHubPrChecksInput) =>
+        request<GitHubPrChecksResult>(`/api/github/pr-checks?${query(input)}`),
+      prChecksFixPrompt: (input: GitHubPrChecksFixPromptInput) =>
+        request<GitHubPrChecksFixPromptResult>(
+          "/api/github/pr-checks/fix-prompt",
+          json("POST", input),
+        ),
       listPullRequests: (input: GitHubListPullRequestsInput) =>
         request<GitHubListPullRequestsResult>(
           `/api/github/pull-requests?${query(input)}`,

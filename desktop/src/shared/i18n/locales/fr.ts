@@ -144,6 +144,19 @@ export const fr = {
         title: "Densité de la transcription",
       },
       tools: {
+        checks: {
+          fixFailures: "Corriger les échecs",
+          fixNeedsChat: "Ouvrez un chat pour envoyer un tour de correction.",
+          fixStarted:
+            "Tour de correction démarré avec un résumé de logs tronqué.",
+          fixing: "Démarrage de la correction…",
+          openCheck: "Ouvrir les détails du check",
+          openPullRequest: "Ouvrir la pull request",
+          refresh: "Actualiser les checks",
+          summaryFail: "{{count}} en échec",
+          summaryPass: "{{count}} réussis",
+          summaryPending: "{{count}} en cours",
+        },
         addToChat: "Ajouter au chat",
         comments: {
           delete: "Supprimer",
@@ -173,12 +186,17 @@ export const fr = {
         },
         dockInSidebar: "Ancrer dans la barre latérale",
         empty: {
+          checksUnavailable: "Checks indisponibles",
           fileTreeUnavailable: "Arborescence indisponible",
           fileUnavailable: "Fichier indisponible",
           gitUnavailable: "Git indisponible",
           noChanges: "Aucune modification",
+          noChecks: "Aucun check signalé pour cette pull request",
           noDiffForFile: "Aucun diff pour ce fichier",
           noProcesses: "Aucun sous-processus d’agent en cours",
+          noPullRequest: "Aucune pull request pour cette branche",
+          noPullRequestDetail:
+            "Ouvrez ou liez une PR sur la branche actuelle pour charger les checks CI.",
           noWorkspace: "Aucun espace de travail pour cette conversation",
           notGitRepository: "Pas un dépôt Git",
           processesUnavailable: "Processus indisponibles",
@@ -210,6 +228,7 @@ export const fr = {
         resizeGitList: "Redimensionner la liste des changements",
         subprocesses: "Sous-processus",
         tabs: {
+          checks: "Checks",
           files: "Fichiers",
           gitChanges: "Changements Git",
           newTab: "Nouvel onglet",

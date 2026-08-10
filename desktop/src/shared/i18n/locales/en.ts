@@ -142,6 +142,18 @@ export const en = {
         title: "Transcript density",
       },
       tools: {
+        checks: {
+          fixFailures: "Fix failures",
+          fixNeedsChat: "Open a chat to send a fix turn.",
+          fixStarted: "Fix turn started with a truncated failure log summary.",
+          fixing: "Starting fix…",
+          openCheck: "Open check details",
+          openPullRequest: "Open pull request",
+          refresh: "Refresh checks",
+          summaryFail: "{{count}} failed",
+          summaryPass: "{{count}} passed",
+          summaryPending: "{{count}} pending",
+        },
         addToChat: "Add to chat",
         comments: {
           delete: "Delete",
@@ -171,12 +183,17 @@ export const en = {
         },
         dockInSidebar: "Dock in sidebar",
         empty: {
+          checksUnavailable: "Checks unavailable",
           fileTreeUnavailable: "File tree unavailable",
           fileUnavailable: "File unavailable",
           gitUnavailable: "Git unavailable",
           noChanges: "No changes",
+          noChecks: "No checks reported for this pull request",
           noDiffForFile: "No diff for file",
           noProcesses: "No agent subprocesses running",
+          noPullRequest: "No pull request for this branch",
+          noPullRequestDetail:
+            "Open or bind a PR on the current branch to load CI checks.",
           noWorkspace: "No workspace for this chat",
           notGitRepository: "Not a Git repository",
           processesUnavailable: "Processes unavailable",
@@ -208,6 +225,7 @@ export const en = {
         resizeGitList: "Resize Git change list",
         subprocesses: "Subprocesses",
         tabs: {
+          checks: "Checks",
           files: "Files",
           gitChanges: "Git changes",
           newTab: "New tab",
