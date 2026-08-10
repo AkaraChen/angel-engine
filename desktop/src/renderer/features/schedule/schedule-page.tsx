@@ -473,7 +473,14 @@ function CreateAutomationDialog({
             ? undefined
             : getProjectDisplayName(project.path),
         prompt: state.prompt.trim(),
-        scheduleLabel: presetLabel(t, state.preset),
+        // A custom schedule has no plain-language name, and "Custom cron…" is
+        // the label of the menu item rather than a statement of when anything
+        // runs. The expression itself is the only honest answer, so it becomes
+        // the label instead of being printed beside a placeholder.
+        scheduleLabel:
+          state.preset === "custom"
+            ? state.cron.trim()
+            : presetLabel(t, state.preset),
       },
       {
         onSuccess: () => {
