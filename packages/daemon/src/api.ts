@@ -933,7 +933,12 @@ export function registerApi(
   app.get("/api/workspace/git-diff", async (context) =>
     context.json(
       await run(
-        workspaceGitDiff(requireQuery(context.req.query("root"), "root")),
+        workspaceGitDiff({
+          baseKind: context.req.query("baseKind"),
+          baseRef: context.req.query("baseRef"),
+          chatId: context.req.query("chatId"),
+          root: requireQuery(context.req.query("root"), "root"),
+        }),
       ),
     ),
   );
