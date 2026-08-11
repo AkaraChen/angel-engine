@@ -6,7 +6,6 @@ import {
   WorkspaceChatPage,
   WorkspaceDraftPage,
   WorkspaceFleetPage,
-  WorkspacePullRequestsPage,
   WorkspaceSchedulePage,
 } from "@/app/workspace/workspace-page";
 import { WorkspaceToolWindowPage } from "@/app/workspace/workspace-tool-host";
@@ -32,10 +31,6 @@ export function AppRouter() {
         </Route>
         <Route component={ChatRoutePage} path="/chat/:chatId" />
         <Route
-          component={ProjectPullRequestsRoutePage}
-          path="/project/:projectId/pulls"
-        />
-        <Route
           component={ProjectChatRoutePage}
           path="/project/:projectId/:chatId"
         />
@@ -56,12 +51,6 @@ function ProjectDraftRoutePage({
   params,
 }: RouteComponentProps<{ projectId: string }>) {
   return <WorkspaceDraftPage projectId={params.projectId} />;
-}
-
-function ProjectPullRequestsRoutePage({
-  params,
-}: RouteComponentProps<{ projectId: string }>) {
-  return <WorkspacePullRequestsPage projectId={params.projectId} />;
 }
 
 function ProjectChatRoutePage({
