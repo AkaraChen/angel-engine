@@ -43,6 +43,7 @@ export interface LocaleResourceTranslationCommon {
   search: string;
   searching: string;
   send: string;
+  loadMore: string;
   showLess: string;
   showMore: string;
   speak: string;
@@ -190,6 +191,9 @@ export interface LocaleResourceTranslationWorkspaceToolsTabs {
 }
 
 export interface LocaleResourceTranslationWorkspaceToolsChecks {
+  allPassed: string;
+  collapse: string;
+  expand: string;
   fixFailures: string;
   fixNeedsChat: string;
   fixStarted: string;
@@ -197,6 +201,7 @@ export interface LocaleResourceTranslationWorkspaceToolsChecks {
   openCheck: string;
   openPullRequest: string;
   refresh: string;
+  sectionTitle: string;
   summaryFail: string;
   summaryPass: string;
   summaryPending: string;
@@ -263,6 +268,8 @@ export interface LocaleResourceTranslationWorkspaceToolsPullRequest {
     unauthenticated: string;
     unauthenticatedDetail: string;
   };
+  body: string;
+  emptyBody: string;
   generalComment: string;
   merge: string;
   mergeChanged: string;

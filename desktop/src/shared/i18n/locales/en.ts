@@ -72,6 +72,7 @@ export const en = {
       search: "Search",
       searching: "Searching...",
       send: "Send",
+      loadMore: "Load more",
       showLess: "Show less",
       showMore: "Show more",
       speak: "Speak",
@@ -133,6 +134,9 @@ export const en = {
 
       tools: {
         checks: {
+          allPassed: "All {{count}} checks passed",
+          collapse: "Collapse checks",
+          expand: "Expand checks",
           fixFailures: "Fix failures",
           fixNeedsChat: "Open a chat to send a fix turn.",
           fixStarted: "Fix turn started with a truncated failure log summary.",
@@ -140,6 +144,7 @@ export const en = {
           openCheck: "Open check details",
           openPullRequest: "Open pull request",
           refresh: "Refresh checks",
+          sectionTitle: "Checks",
           summaryFail: "{{count}} failed",
           summaryPass: "{{count}} passed",
           summaryPending: "{{count}} pending",

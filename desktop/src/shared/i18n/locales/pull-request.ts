@@ -10,6 +10,7 @@ export const pullRequestEn = {
     "The worktree at {{path}} has uncommitted changes. Archiving removes it and permanently discards those changes.",
   archiveConfirmTitle: "Archive this workspace?",
   archiveUnavailable: "This workspace is not attached to a chat.",
+  body: "Description",
   blocked: "Unable to merge",
   blockers: {
     behindBase_one: "The branch is {{count}} commit behind the base branch.",
@@ -32,6 +33,7 @@ export const pullRequestEn = {
   checkingMergeability: "GitHub is still calculating mergeability.",
   continue: "Continue working",
   deleteBranch: "Delete the remote branch after merging",
+  emptyBody: "No description provided.",
   errors: {
     cliMissing: "GitHub CLI is required",
     cliMissingDetail: "Install gh to merge pull requests inside Angel Engine.",
@@ -127,6 +129,8 @@ export const pullRequestZhCN = {
   ...pullRequestEn,
   archive: "归档此工作区",
   archiveDetail: "归档会关闭此聊天并移除其受管 worktree。",
+  body: "描述",
+  emptyBody: "未提供描述。",
   archiveFailed: "无法归档工作区",
   archiveConfirmDetail: "这会归档聊天并移除位于 {{path}} 的受管 worktree。",
   archiveConfirmDirtyDetail:
@@ -250,7 +254,9 @@ export const pullRequestZhTW = {
     "位於 {{path}} 的 worktree 有未提交的變更。封存會移除它並永久捨棄這些變更。",
   archiveConfirmTitle: "要封存此工作區嗎？",
   archiveUnavailable: "此工作區未連結聊天。",
+  body: "描述",
   blocked: "暫時無法合併",
+  emptyBody: "未提供描述。",
   blockers: {
     behindBase_one: "目前分支落後目標分支 {{count}} 個提交。",
     behindBase_other: "目前分支落後目標分支 {{count}} 個提交。",

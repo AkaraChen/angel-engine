@@ -73,6 +73,7 @@ export const zhTW = {
       searching: "搜尋中...",
       send: "傳送",
       showLess: "收合",
+      loadMore: "載入更多",
       showMore: "展開",
       speak: "朗讀",
       stopSpeaking: "停止朗讀",
@@ -130,12 +131,16 @@ export const zhTW = {
 
       tools: {
         checks: {
+          allPassed: "全部 {{count}} 項檢查已通過",
+          collapse: "收合檢查",
+          expand: "展開檢查",
           fixFailures: "修復失敗",
           fixNeedsChat: "開啟聊天以傳送修復回合。",
           fixStarted: "已啟動修復回合（含截斷後的失敗日誌摘要）。",
           fixing: "正在啟動修復…",
           openCheck: "開啟檢查詳情",
           openPullRequest: "開啟 Pull Request",
+          sectionTitle: "檢查",
           refresh: "重新整理檢查",
           summaryFail: "{{count}} 失敗",
           summaryPass: "{{count}} 通過",

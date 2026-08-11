@@ -73,6 +73,7 @@ export const ko = {
       searching: "검색 중...",
       send: "보내기",
       showLess: "접기",
+      loadMore: "더 불러오기",
       showMore: "더 보기",
       speak: "읽어주기",
       stopSpeaking: "읽기 중지",
@@ -132,12 +133,16 @@ export const ko = {
 
       tools: {
         checks: {
+          allPassed: "검사 {{count}}개 모두 통과",
+          collapse: "검사 접기",
+          expand: "검사 펼치기",
           fixFailures: "실패 수정",
           fixNeedsChat: "수정 턴을 보내려면 채팅을 여세요.",
           fixStarted: "잘린 실패 로그 요약과 함께 수정 턴을 시작했습니다.",
           fixing: "수정 시작 중…",
           openCheck: "검사 세부정보 열기",
           openPullRequest: "풀 리퀘스트 열기",
+          sectionTitle: "검사",
           refresh: "검사 새로고침",
           summaryFail: "{{count}} 실패",
           summaryPass: "{{count}} 통과",

@@ -73,6 +73,7 @@ export const zhCN = {
       searching: "搜索中...",
       send: "发送",
       showLess: "收起",
+      loadMore: "加载更多",
       showMore: "展开",
       speak: "朗读",
       stopSpeaking: "停止朗读",
@@ -130,12 +131,16 @@ export const zhCN = {
 
       tools: {
         checks: {
+          allPassed: "全部 {{count}} 项检查已通过",
+          collapse: "折叠检查",
+          expand: "展开检查",
           fixFailures: "修复失败",
           fixNeedsChat: "打开一个聊天以发送修复回合。",
           fixStarted: "已启动修复回合（含截断后的失败日志摘要）。",
           fixing: "正在启动修复…",
           openCheck: "打开检查详情",
           openPullRequest: "打开 Pull Request",
+          sectionTitle: "检查",
           refresh: "刷新检查",
           summaryFail: "{{count}} 失败",
           summaryPass: "{{count}} 通过",

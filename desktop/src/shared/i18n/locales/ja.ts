@@ -73,6 +73,7 @@ export const ja = {
       searching: "検索中...",
       send: "送信",
       showLess: "折りたたむ",
+      loadMore: "もっと読み込む",
       showMore: "もっと見る",
       speak: "読み上げ",
       stopSpeaking: "読み上げを停止",
@@ -133,6 +134,9 @@ export const ja = {
 
       tools: {
         checks: {
+          allPassed: "全 {{count}} 件のチェックが成功",
+          collapse: "チェックを折りたたむ",
+          expand: "チェックを展開",
           fixFailures: "失敗を修正",
           fixNeedsChat: "修正ターンを送るにはチャットを開いてください。",
           fixStarted:
@@ -140,6 +144,7 @@ export const ja = {
           fixing: "修正を開始中…",
           openCheck: "チェック詳細を開く",
           openPullRequest: "プルリクエストを開く",
+          sectionTitle: "チェック",
           refresh: "チェックを更新",
           summaryFail: "{{count}} 失敗",
           summaryPass: "{{count}} 成功",
