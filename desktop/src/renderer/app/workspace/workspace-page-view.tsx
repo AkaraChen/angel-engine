@@ -220,13 +220,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     paletteImportProject === undefined
       ? null
       : () => openImportSessionForProject(paletteImportProject);
-  const importCwd =
-    selectedChat?.cwd ??
-    pinnedDraftCwd ??
-    powerDraftContext?.cwd ??
-    powerHomePageContext?.cwd ??
-    draftProject.path ??
-    null;
   const {
     closeWorktreeDirtyPrompt,
     confirmProjectWorktreeCreation,

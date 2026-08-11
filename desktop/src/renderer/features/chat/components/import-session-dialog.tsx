@@ -1,12 +1,6 @@
 import type { ReactElement } from "react";
-import type {
-  ImportableRuntimeOption,
-  ImportableSessionRow,
-} from "./import-session-handlers";
 
-import type { Icon } from "@phosphor-icons/react";
-
-import { Check, MagnifyingGlass, Tray } from "@phosphor-icons/react";
+import { type Icon, Check, MagnifyingGlass, Tray } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -24,6 +18,8 @@ import { formatRelativeTime } from "@/platform/format-time";
 import { cn } from "@/platform/utils";
 import {
   type ImportSessionApi,
+  type ImportableRuntimeOption,
+  type ImportableSessionRow,
   filterImportableSessionRows,
   importSessionAndOpen,
   importableSessionPrimaryLabel,
