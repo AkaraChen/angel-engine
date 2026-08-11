@@ -579,3 +579,13 @@
     stroke-dashoffset: 0;
   }
 }
+
+/* Update download with unknown Content-Length: slide a short bar, never invent %. */
+@keyframes update-progress-indeterminate {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}

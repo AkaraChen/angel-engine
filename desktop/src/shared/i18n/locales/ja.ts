@@ -632,15 +632,23 @@ export const ja = {
         currentVersionTitle: "現在のバージョン",
         description:
           "Angel Engine は GitHub Releases からバックグラウンドでアップデートをダウンロードします。",
+        downloadIndeterminate: "{{transferred}} をダウンロード済み",
+        downloadIndeterminateWithSpeed:
+          "{{transferred}} をダウンロード済み · {{speed}}",
+        downloadProgress: "{{percent}}% · {{transferred}} / {{total}}",
+        downloadProgressWithSpeed:
+          "{{percent}}% · {{transferred}} / {{total}} · {{speed}}",
+        downloadStarting: "ダウンロードを開始しています…",
         installButton: "再起動してインストール",
         stateChecking: "アップデートを確認しています…",
         stateDownloaded:
           "バージョン {{version}} をインストールする準備ができました。",
         stateDownloading: "バージョン {{version}} をダウンロードしています…",
-        stateError: "前回の確認に失敗しました: {{detail}}",
-        stateIdle:
-          "このチャンネルでは最新バージョンです。前回の確認: {{time}}。",
+        stateError: "アップデートに失敗しました: {{detail}}",
+        stateIdleDetail: "前回の確認: {{time}}。",
+        stateInstalling: "バージョン {{version}} を検証しています…",
         stateUnchecked: "アップデートはまだ確認されていません。",
+        stateUpToDate: "このチャンネルでは最新バージョンです。",
         unsupported: "自動アップデートは現在 macOS でのみ利用できます。",
       },
       workspace: {

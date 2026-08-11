@@ -33,6 +33,7 @@ describe("shouldRunBackgroundCheck", () => {
   it.each([
     "checking",
     "downloading",
+    "installing",
     "downloaded",
   ] as const)("skips while %s", (state) => {
     expect(shouldRunBackgroundCheck({ ...baseInput, state })).toBe(false);

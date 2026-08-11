@@ -636,14 +636,22 @@ export const fr = {
         currentVersionTitle: "Version actuelle",
         description:
           "Angel Engine télécharge les mises à jour depuis GitHub Releases en arrière-plan.",
+        downloadIndeterminate: "{{transferred}} téléchargés",
+        downloadIndeterminateWithSpeed:
+          "{{transferred}} téléchargés · {{speed}}",
+        downloadProgress: "{{percent}} % · {{transferred}} / {{total}}",
+        downloadProgressWithSpeed:
+          "{{percent}} % · {{transferred}} / {{total}} · {{speed}}",
+        downloadStarting: "Démarrage du téléchargement…",
         installButton: "Redémarrer et installer",
         stateChecking: "Recherche de mises à jour…",
         stateDownloaded: "La version {{version}} est prête à être installée.",
         stateDownloading: "Téléchargement de la version {{version}}…",
-        stateError: "La dernière vérification a échoué : {{detail}}",
-        stateIdle:
-          "Vous disposez de la dernière version de ce canal. Dernière vérification : {{time}}.",
+        stateError: "Échec de la mise à jour : {{detail}}",
+        stateIdleDetail: "Dernière vérification : {{time}}.",
+        stateInstalling: "Vérification de la version {{version}}…",
         stateUnchecked: "Les mises à jour n'ont pas encore été vérifiées.",
+        stateUpToDate: "Vous disposez de la dernière version de ce canal.",
         unsupported:
           "Les mises à jour automatiques ne sont disponibles que sur macOS.",
       },
