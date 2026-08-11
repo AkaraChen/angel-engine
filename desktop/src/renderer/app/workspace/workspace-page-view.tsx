@@ -184,13 +184,17 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     selectDraftProject,
   } = navigation;
   const handleImportedSession = useCallback(
-    async (chatId: string) => {
+    async (chatIds: string[]) => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.chats.list() });
+      if (chatIds.length === 0) return;
       const chats = await queryClient.fetchQuery({
         queryFn: async () => api.chats.list(),
         queryKey: queryKeys.chats.list(),
       });
-      const chat = chats.find((entry) => entry.id === chatId);
+      // Open the last successfully imported chat so multi-import lands on a
+      // concrete session rather than leaving the user on the previous view.
+      const openId = chatIds[chatIds.length - 1];
+      const chat = chats.find((entry) => entry.id === openId);
       if (chat) {
         navigateToChat(chat);
       }
@@ -408,11 +412,14 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           <ImportSessionDialog
             api={api}
             cwd={importCwd}
+            existingChats={chats}
+            initialProjectId={selectedProjectId ?? draftProject.id ?? null}
+            initialRuntime={activeRuntime}
             onClose={closeImportSession}
             onImported={handleImportedSession}
             open={importSessionOpen}
-            projectId={selectedProjectId ?? draftProject.id ?? null}
-            runtime={activeRuntime}
+            projects={projects}
+            runtimeOptions={runtimeOptions}
           />
           <ProjectSettingsDialog
             onClose={closeProjectSettingsDialog}

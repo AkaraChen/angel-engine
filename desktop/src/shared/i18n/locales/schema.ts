@@ -1120,17 +1120,42 @@ export interface LocaleResourceTranslationDialogConfirm {
 }
 
 export interface LocaleResourceTranslationDialogImportSession {
+  alreadyImported: string;
+  clearSelection: string;
   cwdLabel: string;
   description: string;
+  done: string;
   empty: string;
+  emptyFilter: string;
   importAction: string;
   importFailed: string;
+  importMore: string;
   importing: string;
+  importingProgress: string;
+  projectPlaceholder: string;
+  projectRequired: string;
+  retryFailed: string;
   runtimeLabel: string;
   runtimeRequired: string;
   searchFailed: string;
+  searchPlaceholder: string;
   searching: string;
+  selectAll: string;
+  selectedCount: string;
+  selectionRequired: string;
+  sessionList: string;
+  sourceAgent: string;
+  status: {
+    failed: string;
+    importing: string;
+    pending: string;
+    skipped: string;
+    success: string;
+  };
+  summary: string;
+  targetProject: string;
   title: string;
+  willCreateCopy: string;
 }
 
 export interface LocaleResourceTranslationDialogSessionHandoff {
