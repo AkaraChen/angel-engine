@@ -253,6 +253,7 @@ export interface GitHubPullRequestStatus {
   author: string | null;
   baseRefName: string;
   behindBy: number;
+  body: string;
   checks: GitHubPullRequestCheck[];
   defaultMergeMethod: GitHubMergeMethod;
   deleteBranchOnMerge: boolean;

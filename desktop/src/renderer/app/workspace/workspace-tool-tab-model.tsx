@@ -6,7 +6,6 @@ import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 
 import {
   Globe as Browser,
-  CheckCircle,
   Cpu,
   FileText,
   Folder,
@@ -133,11 +132,21 @@ export interface WorkspaceToolTabItem {
 }
 
 export interface WorkspaceToolPinnedTabLabels {
-  checks: string;
   files: string;
   gitChanges: string;
   pullRequest: string;
   processes: string;
+}
+
+/**
+ * Legacy `"checks"` tab ids redirect to the merged Pull Request tab so
+ * command-palette paths and persisted snapshots never open a blank panel.
+ */
+export function resolveWorkspaceToolTabId(tabId: string) {
+  if (tabId === workspaceToolChecksTabId) {
+    return workspaceToolPullRequestTabId;
+  }
+  return tabId;
 }
 
 export function workspaceToolTabItems(
@@ -156,12 +165,6 @@ export function workspaceToolTabItems(
       id: workspaceToolGitTabId,
       pinned: true,
       title: labels.gitChanges,
-    },
-    {
-      icon: CheckCircle,
-      id: workspaceToolChecksTabId,
-      pinned: true,
-      title: labels.checks,
     },
     {
       icon: GitPullRequest,
@@ -188,15 +191,15 @@ export function workspaceToolTabItems(
 export function visibleActiveWorkspaceToolTabId(
   snapshot: WorkspaceToolSurfaceSnapshot,
 ) {
+  const activeTabId = resolveWorkspaceToolTabId(snapshot.activeTabId);
   if (
-    snapshot.activeTabId === workspaceToolFilesTabId ||
-    snapshot.activeTabId === workspaceToolGitTabId ||
-    snapshot.activeTabId === workspaceToolChecksTabId ||
-    snapshot.activeTabId === workspaceToolPullRequestTabId ||
-    snapshot.activeTabId === workspaceToolProcessesTabId ||
-    snapshot.tabs.some((tab) => tab.id === snapshot.activeTabId)
+    activeTabId === workspaceToolFilesTabId ||
+    activeTabId === workspaceToolGitTabId ||
+    activeTabId === workspaceToolPullRequestTabId ||
+    activeTabId === workspaceToolProcessesTabId ||
+    snapshot.tabs.some((tab) => tab.id === activeTabId)
   ) {
-    return snapshot.activeTabId;
+    return activeTabId;
   }
 
   return workspaceToolFilesTabId;

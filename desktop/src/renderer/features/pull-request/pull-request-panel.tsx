@@ -20,11 +20,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { WorkspaceChecksSection } from "@/app/workspace/workspace-checks-panel";
 import {
   WorkspaceToolBanner,
   WorkspaceToolEmpty,
 } from "@/app/workspace/workspace-tool-layout";
+import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
 import { Button } from "@/components/ui/button";
+import { CollapsibleText } from "@/components/ui/collapsible-text";
 import { confirmAction } from "@/components/ui/confirm-dialog";
 import {
   NativeSelect,
@@ -43,11 +46,14 @@ import {
   type MergeBlocker,
 } from "@/features/pull-request/derive-merge-blockers";
 import { ShepherdSection } from "@/features/shepherd/shepherd-section";
-import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
 
 const mergeMethods: GitHubMergeMethod[] = ["squash", "merge", "rebase"];
 
-export const PullRequestPanel: FC<{ root: string }> = ({ root }) => {
+export const PullRequestPanel: FC<{
+  focusSection?: "checks" | null;
+  onFocusSectionHandled?: () => void;
+  root: string;
+}> = ({ focusSection = null, onFocusSectionHandled, root }) => {
   const { active, api, chatId, openBrowserTab } = useWorkspaceToolSurface();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
@@ -223,6 +229,26 @@ export const PullRequestPanel: FC<{ root: string }> = ({ root }) => {
           </div>
         </header>
 
+        <section className="space-y-1.5">
+          <h3 className="text-xs font-medium">
+            {t("workspace.tools.pullRequest.body")}
+          </h3>
+          {is.nonEmptyString(status.body.trim()) ? (
+            <CollapsibleText
+              fadeClassName="from-background"
+              resetKey={`pr-body:${status.number}`}
+            >
+              <p className="wrap-break-word whitespace-pre-wrap text-xs select-text">
+                {status.body}
+              </p>
+            </CollapsibleText>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              {t("workspace.tools.pullRequest.emptyBody")}
+            </p>
+          )}
+        </section>
+
         {checkingMergeability ? (
           <WorkspaceToolBanner tone="attention">
             {t("workspace.tools.pullRequest.checkingMergeability")}
@@ -278,33 +304,7 @@ export const PullRequestPanel: FC<{ root: string }> = ({ root }) => {
           </WorkspaceToolBanner>
         ) : null}
 
-        {status.unresolvedThreads.length > 0 ? (
-          <section className="space-y-2">
-            <h3 className="text-xs font-medium">
-              {t("workspace.tools.pullRequest.unresolvedTitle", {
-                count: status.unresolvedThreads.length,
-              })}
-            </h3>
-            {status.unresolvedThreads.map((thread) => (
-              <ReviewThreadRow
-                key={thread.id}
-                pending={resolveMutation.isPending}
-                thread={thread}
-                onOpen={() => openBrowserTab(thread.url)}
-                onResolve={() =>
-                  resolveMutation.mutateAsync({
-                    cwd: root,
-                    threadId: thread.id,
-                  })
-                }
-              />
-            ))}
-          </section>
-        ) : null}
-
-        <ShepherdSection status={status} />
-
-        <div className="mt-1 space-y-2 border-t border-border-subtle pt-3">
+        <div className="space-y-2 border-t border-border-subtle pt-3">
           <div className="flex gap-2">
             <NativeSelect
               aria-label={t("workspace.tools.pullRequest.method")}
@@ -350,6 +350,39 @@ export const PullRequestPanel: FC<{ root: string }> = ({ root }) => {
             {t("workspace.tools.pullRequest.deleteBranch")}
           </label>
         </div>
+
+        <WorkspaceChecksSection
+          focus={focusSection === "checks"}
+          onFocusHandled={onFocusSectionHandled}
+          root={root}
+        />
+
+        {status.unresolvedThreads.length > 0 ? (
+          <section className="space-y-2 border-t border-border-subtle pt-3">
+            <h3 className="text-xs font-medium">
+              {t("workspace.tools.pullRequest.unresolvedTitle", {
+                count: status.unresolvedThreads.length,
+              })}
+            </h3>
+            {status.unresolvedThreads.map((thread) => (
+              <ReviewThreadRow
+                key={thread.id}
+                pending={resolveMutation.isPending}
+                prNumber={status.number}
+                thread={thread}
+                onOpen={() => openBrowserTab(thread.url)}
+                onResolve={() =>
+                  resolveMutation.mutateAsync({
+                    cwd: root,
+                    threadId: thread.id,
+                  })
+                }
+              />
+            ))}
+          </section>
+        ) : null}
+
+        <ShepherdSection status={status} />
       </div>
     </div>
   );
@@ -466,8 +499,9 @@ const ReviewThreadRow: FC<{
   onOpen: () => void;
   onResolve: () => Promise<unknown>;
   pending: boolean;
+  prNumber: number;
   thread: GitHubPullRequestReviewThread;
-}> = ({ onOpen, onResolve, pending, thread }) => {
+}> = ({ onOpen, onResolve, pending, prNumber, thread }) => {
   const { t } = useTranslation();
   return (
     <article className="space-y-2 rounded-md border border-border-subtle p-2.5 text-xs">
@@ -476,9 +510,14 @@ const ReviewThreadRow: FC<{
         {thread.line === null ? "" : `:${thread.line}`}
         {thread.author === null ? "" : ` · @${thread.author}`}
       </div>
-      <p className="wrap-break-word whitespace-pre-wrap select-text">
-        {thread.body}
-      </p>
+      <CollapsibleText
+        fadeClassName="from-background"
+        resetKey={`pr-thread:${prNumber}:${thread.id}`}
+      >
+        <p className="wrap-break-word whitespace-pre-wrap select-text">
+          {thread.body}
+        </p>
+      </CollapsibleText>
       <div className="flex justify-end gap-1">
         <Button onClick={onOpen} size="sm" variant="ghost">
           {t("workspace.tools.pullRequest.open")}

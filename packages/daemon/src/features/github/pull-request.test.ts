@@ -11,6 +11,7 @@ import {
 const pullRequestPayload = {
   author: { login: "alice" },
   baseRefName: "main",
+  body: "Implements the feature.\n\n## Notes\n\nLong description.",
   headRefName: "feature",
   isDraft: false,
   mergeable: "MERGEABLE",
@@ -115,6 +116,7 @@ describe("GitHub pull request operations", () => {
     expect(result).toMatchObject({
       allowedMergeMethods: ["squash", "rebase"],
       behindBy: 3,
+      body: "Implements the feature.\n\n## Notes\n\nLong description.",
       defaultMergeMethod: "squash",
       deleteBranchOnMerge: true,
       viewerCanMerge: true,

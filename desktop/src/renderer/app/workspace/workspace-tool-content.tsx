@@ -1,6 +1,4 @@
 import { WorkspaceBrowserTabContent } from "@/app/workspace/workspace-browser-tab";
-import { WorkspaceChecksPanel } from "@/app/workspace/workspace-checks-panel";
-import { openPullRequestInSystemBrowser } from "@/app/workspace/workspace-create-pr-action";
 import { WorkspaceFilesPanel } from "@/app/workspace/workspace-files-panels";
 import { WorkspaceGitPanel } from "@/app/workspace/workspace-git-panels";
 import { WorkspaceProcessesView } from "@/app/workspace/workspace-processes-view";
@@ -12,7 +10,6 @@ import {
   WorkspaceGitDiffTool,
 } from "@/app/workspace/workspace-tool-results";
 import {
-  workspaceToolChecksTabId,
   workspaceToolFilesTabId,
   workspaceToolGitTabId,
   workspaceToolPullRequestTabId,
@@ -25,8 +22,10 @@ export function WorkspaceToolContent({ root }: { root: string }) {
     active,
     activeDynamicTab,
     activeTabId,
+    clearPullRequestFocusSection,
     host,
     openBrowserTab,
+    pullRequestFocusSection,
     updateSnapshot,
   } = useWorkspaceToolSurface();
   const layout = host === "sidebar" ? "compact" : "split";
@@ -37,19 +36,14 @@ export function WorkspaceToolContent({ root }: { root: string }) {
   if (activeTabId === workspaceToolGitTabId) {
     return <WorkspaceGitPanel layout={layout} root={root} />;
   }
-  if (activeTabId === workspaceToolChecksTabId) {
+  if (activeTabId === workspaceToolPullRequestTabId) {
     return (
-      <WorkspaceChecksPanel
-        active={active}
-        layout={layout}
+      <PullRequestPanel
+        focusSection={pullRequestFocusSection}
+        onFocusSectionHandled={clearPullRequestFocusSection}
         root={root}
-        onOpenBrowser={openBrowserTab}
-        onOpenExternal={openPullRequestInSystemBrowser}
       />
     );
-  }
-  if (activeTabId === workspaceToolPullRequestTabId) {
-    return <PullRequestPanel root={root} />;
   }
   if (activeTabId === workspaceToolProcessesTabId) {
     return (

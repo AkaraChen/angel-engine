@@ -17,6 +17,7 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useState,
 } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -24,9 +25,12 @@ import { browserTitleFromUrl } from "@/app/workspace/workspace-browser-url";
 import {
   currentWorkspaceToolSnapshot,
   useWorkspaceToolStore,
+  workspaceToolChecksTabId,
   workspaceToolFilesTabId,
+  workspaceToolPullRequestTabId,
 } from "@/app/workspace/workspace-tool-store";
 import {
+  resolveWorkspaceToolTabId,
   visibleActiveWorkspaceToolTabId,
   workspaceToolTabItems,
 } from "@/app/workspace/workspace-tool-tab-model";
@@ -42,6 +46,8 @@ type WorkspaceToolSnapshotUpdater = (
   current: WorkspaceToolSurfaceSnapshot,
 ) => WorkspaceToolSurfaceSnapshot;
 
+export type WorkspaceToolPullRequestFocusSection = "checks";
+
 export interface WorkspaceToolSurfaceModel {
   active: boolean;
   activeDynamicTab?: WorkspaceToolSurfaceDynamicTab;
@@ -50,11 +56,13 @@ export interface WorkspaceToolSurfaceModel {
   addBrowserTab: () => void;
   addTerminalTab: () => void;
   api: ApiClient;
+  clearPullRequestFocusSection: () => void;
   contextKey: string | null;
   closeDynamicTab: (tab: WorkspaceToolSurfaceDynamicTab) => void;
   host: WorkspaceToolSurfaceHost;
   openBrowserTab: (url: string) => void;
   openFileTab: (path: string) => void;
+  pullRequestFocusSection: WorkspaceToolPullRequestFocusSection | null;
   requestSurfaceHost: (host: WorkspaceToolSurfaceHost) => Promise<void>;
   root: string | null;
   selectTab: (tabId: WorkspaceToolTabId) => Promise<boolean>;
@@ -91,6 +99,26 @@ export function useWorkspaceToolSurfaceModel({
   const chatId = context.chatId ?? null;
   const root = propRoot ?? context.root ?? null;
   const snapshot = currentWorkspaceToolSnapshot(contextKey, snapshots);
+  const [pullRequestFocusSection, setPullRequestFocusSection] =
+    useState<WorkspaceToolPullRequestFocusSection | null>(null);
+  const clearPullRequestFocusSection = useCallback(() => {
+    setPullRequestFocusSection(null);
+  }, []);
+  // Migrate persisted `"checks"` to `"pr"` and focus the Checks section once.
+  useEffect(() => {
+    if (snapshot.activeTabId !== workspaceToolChecksTabId) {
+      return;
+    }
+    if (!is.nonEmptyString(contextKey)) {
+      return;
+    }
+    setPullRequestFocusSection("checks");
+    storeUpdateSnapshot(contextKey, (current) =>
+      current.activeTabId === workspaceToolChecksTabId
+        ? { ...current, activeTabId: workspaceToolPullRequestTabId }
+        : current,
+    );
+  }, [contextKey, snapshot.activeTabId, storeUpdateSnapshot]);
   const activeTabId = visibleActiveWorkspaceToolTabId(snapshot);
   const activeDynamicTab = snapshot.tabs.find((tab) => tab.id === activeTabId);
   const openWorkspaceWindowFile = useWorkspaceWindowFileOpener(api);
@@ -143,10 +171,20 @@ export function useWorkspaceToolSurfaceModel({
   }, [host, openWorkspaceWindowFile, updateSnapshot, windowFileOpenRequest]);
   const selectTab = useCallback(
     async (tabId: WorkspaceToolTabId) => {
-      if (tabId !== activeTabId && !(await confirmWindowFilesEditorExit())) {
+      const resolvedTabId = resolveWorkspaceToolTabId(tabId);
+      if (
+        resolvedTabId !== activeTabId &&
+        !(await confirmWindowFilesEditorExit())
+      ) {
         return false;
       }
-      updateSnapshot((current) => ({ ...current, activeTabId: tabId }));
+      if (tabId === workspaceToolChecksTabId) {
+        setPullRequestFocusSection("checks");
+      }
+      updateSnapshot((current) => ({
+        ...current,
+        activeTabId: resolvedTabId,
+      }));
       return true;
     },
     [activeTabId, confirmWindowFilesEditorExit, updateSnapshot],
@@ -256,7 +294,6 @@ export function useWorkspaceToolSurfaceModel({
   const tabItems = useMemo(
     () =>
       workspaceToolTabItems(snapshot.tabs, {
-        checks: t("workspace.tools.tabs.checks"),
         files: t("workspace.tools.tabs.files"),
         gitChanges: t("workspace.tools.tabs.gitChanges"),
         pullRequest: t("workspace.tools.tabs.pullRequest"),
@@ -274,11 +311,13 @@ export function useWorkspaceToolSurfaceModel({
       addTerminalTab,
       api,
       chatId,
+      clearPullRequestFocusSection,
       contextKey,
       closeDynamicTab,
       host,
       openBrowserTab,
       openFileTab,
+      pullRequestFocusSection,
       requestSurfaceHost,
       root,
       selectTab,
@@ -293,11 +332,13 @@ export function useWorkspaceToolSurfaceModel({
       addTerminalTab,
       api,
       chatId,
+      clearPullRequestFocusSection,
       contextKey,
       closeDynamicTab,
       host,
       openBrowserTab,
       openFileTab,
+      pullRequestFocusSection,
       requestSurfaceHost,
       root,
       selectTab,

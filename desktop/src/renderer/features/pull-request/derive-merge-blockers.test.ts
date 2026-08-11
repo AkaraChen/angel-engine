@@ -12,6 +12,7 @@ const readyStatus: GitHubPullRequestStatus = {
   author: "alice",
   baseRefName: "main",
   behindBy: 0,
+  body: "",
   checks: [],
   defaultMergeMethod: "squash",
   deleteBranchOnMerge: false,
