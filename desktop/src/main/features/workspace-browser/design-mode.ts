@@ -2,8 +2,10 @@ import type { WebContents } from "electron";
 import type {
   DesignGuestCommand,
   DesignGuestEvent,
+  DesignOutputDetail,
   DesignRuntimeEvent,
   WorkspaceBrowserDesignSetAllowedOriginsInput,
+  WorkspaceBrowserDesignStartInput,
   WorkspaceBrowserDesignState,
   WorkspaceBrowserDesignStartOutcome,
 } from "../../../shared/workspace-browser";
@@ -12,6 +14,7 @@ import is from "@sindresorhus/is";
 import { type } from "arktype";
 import { ipcMain } from "electron";
 
+import { normalizeDesignOutputDetail } from "../../../shared/design-mode-capture";
 import {
   WORKSPACE_BROWSER_DESIGN_GUEST_COMMAND_CHANNEL,
   WORKSPACE_BROWSER_DESIGN_GUEST_EVENT_CHANNEL,
@@ -32,6 +35,7 @@ export interface DesignModeHostEmitter {
 interface DesignModeSession {
   active: boolean;
   allowedOrigins: string[];
+  outputDetail: DesignOutputDetail;
 }
 
 const nonEmptyTrimmedString = type("string.trim").to("string > 0");
@@ -39,6 +43,7 @@ const nonEmptyTrimmedString = type("string.trim").to("string > 0");
 const designModeCommandInput = type({
   "+": "ignore",
   browserViewId: nonEmptyTrimmedString,
+  "outputDetail?": "'compact'|'standard'|'detailed'",
 });
 
 const designModeSetAllowedOriginsInput = type({
@@ -157,7 +162,10 @@ export class WorkspaceBrowserDesignModeService {
     return this.getState(input.browserViewId);
   }
 
-  start(browserViewId: string): WorkspaceBrowserDesignStartOutcome {
+  start(
+    browserViewId: string,
+    outputDetail?: DesignOutputDetail,
+  ): WorkspaceBrowserDesignStartOutcome {
     const view = this.resolveView(browserViewId);
     if (!view || view.webContents.isDestroyed()) {
       return {
@@ -173,6 +181,9 @@ export class WorkspaceBrowserDesignModeService {
     }
 
     const session = this.ensureSession(browserViewId);
+    if (outputDetail) {
+      session.outputDetail = normalizeDesignOutputDetail(outputDetail);
+    }
     this.rememberWebContents(browserViewId, view.webContents);
     const pageUrl = view.webContents.getURL();
     const origin = designModeOriginFromUrl(pageUrl);
@@ -202,11 +213,19 @@ export class WorkspaceBrowserDesignModeService {
     }
 
     if (session.active) {
+      // Already active: push detail tier updates without remounting.
+      this.sendGuestCommand(view.webContents, {
+        outputDetail: session.outputDetail,
+        type: "setOutputDetail",
+      });
       return { ok: true, state: { ...state, active: true } };
     }
 
     session.active = true;
-    this.sendGuestCommand(view.webContents, { type: "start" });
+    this.sendGuestCommand(view.webContents, {
+      outputDetail: session.outputDetail,
+      type: "start",
+    });
     const nextState: WorkspaceBrowserDesignState = {
       active: true,
       allowed: true,
@@ -264,12 +283,17 @@ export class WorkspaceBrowserDesignModeService {
     }
   }
 
-  parseCommandInput(input: unknown): { browserViewId: string } {
+  parseCommandInput(input: unknown): WorkspaceBrowserDesignStartInput {
     const value = designModeCommandInput(input);
     if (value instanceof type.errors) {
       throw new TypeError(value.summary);
     }
-    return value;
+    return {
+      browserViewId: value.browserViewId,
+      outputDetail: value.outputDetail
+        ? normalizeDesignOutputDetail(value.outputDetail)
+        : undefined,
+    };
   }
 
   parseSetAllowedOriginsInput(
@@ -293,6 +317,7 @@ export class WorkspaceBrowserDesignModeService {
     const created: DesignModeSession = {
       active: false,
       allowedOrigins: [],
+      outputDetail: "standard",
     };
     this.sessions.set(browserViewId, created);
     return created;
@@ -388,10 +413,20 @@ export function parseDesignGuestEvent(
     return { type: payload.type };
   }
 
-  // Stage 1 does not emit selection; still accept a minimal shape so stage 2
-  // can land without main rewrites. Malformed selection payloads are dropped.
+  // Stage 2 emits element/region selections. Drop reserved text/point kinds
+  // and malformed payloads so host never sees junk.
   if (payload.type === "selection") {
     if (!is.plainObject(payload.anchor) || !is.string(payload.anchor.kind)) {
+      return null;
+    }
+    const kind = payload.anchor.kind;
+    if (kind !== "element" && kind !== "region") {
+      return null;
+    }
+    if (!is.plainObject(payload.anchor.rect)) {
+      return null;
+    }
+    if (kind === "element" && !is.string(payload.anchor.selector)) {
       return null;
     }
     return payload as DesignGuestEvent;
