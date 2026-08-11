@@ -1,17 +1,18 @@
 import type { ReactNode } from "react";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/platform/utils";
 
-const DEFAULT_COLLAPSED_MAX_HEIGHT = 240;
+/** ~12 lines of text-xs. */
+export const defaultCollapsedTextMaxHeight = 240;
 
 export function CollapsibleText({
   children,
   className,
-  collapsedMaxHeight = DEFAULT_COLLAPSED_MAX_HEIGHT,
+  collapsedMaxHeight = defaultCollapsedTextMaxHeight,
   resetKey,
   text,
 }: {
@@ -32,11 +33,13 @@ export function CollapsibleText({
     setContentHeight(contentRef.current?.scrollHeight ?? 0);
   }, []);
 
-  useEffect(() => {
+  // Switching PR / thread resets to collapsed.
+  useLayoutEffect(() => {
     setExpanded(false);
   }, [resetKey]);
 
-  useEffect(() => {
+  // Measure unclamped content height; re-run when content changes or resizes.
+  useLayoutEffect(() => {
     const content = contentRef.current;
     if (content === null) {
       return;
@@ -48,16 +51,26 @@ export function CollapsibleText({
   }, [children, measure, text]);
 
   const toggle = () => {
-    if (expanded && (rootRef.current?.getBoundingClientRect().top ?? 0) < 0) {
-      rootRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (expanded) {
+      setExpanded(false);
+      // Always align the block top after collapse. `nearest` can no-op when the
+      // block is still partially visible, leaving the viewport mid-body.
+      window.requestAnimationFrame(() => {
+        rootRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      });
+      return;
     }
-    setExpanded((current) => !current);
+    setExpanded(true);
   };
 
   return (
     <div className={cn("relative", className)} ref={rootRef}>
       <div
         className="overflow-hidden transition-[max-height] duration-200 ease-out"
+        data-collapsed={overflowing && !expanded ? "true" : "false"}
         data-testid="collapsible-text-content"
         style={{
           maxHeight: overflowing
@@ -74,7 +87,12 @@ export function CollapsibleText({
           {!expanded ? (
             <div className="pointer-events-none absolute inset-x-0 bottom-full h-12 bg-linear-to-t from-background via-background/90 to-transparent" />
           ) : null}
-          <Button onClick={toggle} size="xs" variant="ghost">
+          <Button
+            data-testid="collapsible-text-toggle"
+            onClick={toggle}
+            size="xs"
+            variant="ghost"
+          >
             {t(expanded ? "common.showLess" : "common.loadMore")}
           </Button>
         </div>

@@ -25,7 +25,7 @@ import {
   WorkspaceToolEmpty,
 } from "@/app/workspace/workspace-tool-layout";
 import { WorkspaceChecksSection } from "@/app/workspace/workspace-checks-panel";
-import { workspaceToolPullRequestTabId } from "@/app/workspace/workspace-tool-store";
+import { clearPullRequestChecksFocus } from "@/app/workspace/workspace-tool-checks-focus";
 import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
 import { Button } from "@/components/ui/button";
 import { CollapsibleText } from "@/components/ui/collapsible-text";
@@ -83,13 +83,33 @@ export const PullRequestPanel: FC<{ root: string }> = ({ root }) => {
   const [checksHighlighted, setChecksHighlighted] = useState(false);
   const checksSectionRef = useRef<HTMLDivElement>(null);
   const highlightTimeoutRef = useRef<number | null>(null);
+  // Checks section only mounts for an OPEN PR; keep focus intent parked while
+  // status is still loading or the panel is on a non-open empty/merged state.
+  const checksSectionReady =
+    !statusQuery.isPending &&
+    statusQuery.error === null &&
+    status !== undefined &&
+    status.state === "OPEN";
 
   useEffect(() => {
     if (!focusChecksSection) {
       return;
     }
+    // Still waiting for an OPEN PR body — do not consume the focus signal yet.
+    if (statusQuery.isPending) {
+      return;
+    }
+    if (!checksSectionReady) {
+      // No Checks section will mount (error / no open PR). Drop the intent.
+      updateSnapshot(clearPullRequestChecksFocus);
+      return;
+    }
     const frame = window.requestAnimationFrame(() => {
-      checksSectionRef.current?.scrollIntoView({
+      const section = checksSectionRef.current;
+      if (section === null) {
+        return;
+      }
+      section.scrollIntoView({
         behavior: "smooth",
         block: "start",
       });
@@ -101,13 +121,15 @@ export const PullRequestPanel: FC<{ root: string }> = ({ root }) => {
         () => setChecksHighlighted(false),
         1600,
       );
-      updateSnapshot((current) => ({
-        ...current,
-        activeTabId: workspaceToolPullRequestTabId,
-      }));
+      updateSnapshot(clearPullRequestChecksFocus);
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [focusChecksSection, updateSnapshot]);
+  }, [
+    checksSectionReady,
+    focusChecksSection,
+    statusQuery.isPending,
+    updateSnapshot,
+  ]);
   useEffect(
     () => () => {
       if (highlightTimeoutRef.current !== null) {
@@ -385,8 +407,6 @@ export const PullRequestPanel: FC<{ root: string }> = ({ root }) => {
           </label>
         </section>
 
-        <ShepherdSection status={status} />
-
         <div
           className={cn(
             "rounded-md transition-[background-color,box-shadow] duration-300",
@@ -422,6 +442,8 @@ export const PullRequestPanel: FC<{ root: string }> = ({ root }) => {
             ))}
           </section>
         ) : null}
+
+        <ShepherdSection status={status} />
       </div>
     </div>
   );

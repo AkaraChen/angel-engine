@@ -2,6 +2,7 @@ import type { WorkspaceToolSurfaceSnapshot } from "@shared/workspace-tool-surfac
 
 import { describe, expect, it } from "vitest";
 
+import { redirectChecksTabToPullRequest } from "./workspace-tool-checks-focus";
 import {
   visibleActiveWorkspaceToolTabId,
   workspaceToolTabItems,
@@ -17,6 +18,11 @@ describe("workspace tool pinned tabs", () => {
     };
 
     expect(visibleActiveWorkspaceToolTabId(snapshot)).toBe("pr");
+    expect(redirectChecksTabToPullRequest(snapshot)).toEqual({
+      ...snapshot,
+      activeTabId: "pr",
+      focusSection: "checks",
+    });
     expect(
       workspaceToolTabItems([], {
         files: "Files",
