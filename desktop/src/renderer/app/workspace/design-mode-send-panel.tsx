@@ -112,7 +112,7 @@ export function DesignModeSendPanel({
         </Button>
         <Button disabled={busy} size="sm" type="submit">
           <PaperPlaneTilt className="size-3.5" weight="fill" />
-          {busy ? "Sending…" : "Send to chat"}
+          {busy ? "Please wait…" : "Send to chat"}
         </Button>
       </div>
     </form>

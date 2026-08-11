@@ -19,7 +19,7 @@ import {
   ArrowClockwise as Refresh,
   WarningCircle,
 } from "@phosphor-icons/react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { buildDesignSendPackage } from "@/app/workspace/design-mode-send";
@@ -87,10 +87,18 @@ export function WorkspaceBrowserTabContent({
     useState<DesignSelectionDraft | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [capturingSelection, setCapturingSelection] = useState(false);
+  /** Bumps on each new pick so stale async captures cannot overwrite a newer selection. */
+  const selectionCaptureGenerationRef = useRef(0);
 
   const noActiveSessionMessage = useMemo(
     () =>
       "No active chat session. Open a chat in this workspace, then send the Design Mode selection.",
+    [],
+  );
+  const captureFailedMessage = useMemo(
+    () =>
+      "Failed to capture the selection screenshot. Reselect the element and try again.",
     [],
   );
 
@@ -145,8 +153,10 @@ export function WorkspaceBrowserTabContent({
             active: false,
             origin: event.origin || current.origin,
           }));
+          selectionCaptureGenerationRef.current += 1;
           setSelectionDraft(null);
           setSendError(null);
+          setCapturingSelection(false);
           return;
         }
         if (event.type === "error") {
@@ -154,7 +164,12 @@ export function WorkspaceBrowserTabContent({
           return;
         }
         if (event.type === "selection") {
+          // Capture immediately on pick so rect + viewport bitmap stay aligned
+          // while the user types (avoids scroll/reflow drift before Send).
+          const generation = selectionCaptureGenerationRef.current + 1;
+          selectionCaptureGenerationRef.current = generation;
           setSendError(null);
+          setCapturingSelection(true);
           setSelectionDraft({
             anchor: event.anchor,
             browserViewId: event.browserViewId,
@@ -162,7 +177,48 @@ export function WorkspaceBrowserTabContent({
             element: event.element,
             origin: event.origin,
             pageUrl: browserState.url || tab.url,
+            screenshot: null,
           });
+
+          void window.workspaceBrowser
+            .captureDesignScreenshot({
+              browserViewId: event.browserViewId,
+            })
+            .then((capture) => {
+              if (
+                cancelled ||
+                selectionCaptureGenerationRef.current !== generation
+              ) {
+                return;
+              }
+              if (!capture.ok) {
+                setCapturingSelection(false);
+                setSendError(capture.message || captureFailedMessage);
+                return;
+              }
+              setSelectionDraft((current) => {
+                if (
+                  !current ||
+                  selectionCaptureGenerationRef.current !== generation
+                ) {
+                  return current;
+                }
+                return { ...current, screenshot: capture.screenshot };
+              });
+              setCapturingSelection(false);
+            })
+            .catch((error: unknown) => {
+              if (
+                cancelled ||
+                selectionCaptureGenerationRef.current !== generation
+              ) {
+                return;
+              }
+              setCapturingSelection(false);
+              setSendError(
+                error instanceof Error ? error.message : captureFailedMessage,
+              );
+            });
         }
       },
     );
@@ -171,7 +227,13 @@ export function WorkspaceBrowserTabContent({
       cancelled = true;
       unsubscribe();
     };
-  }, [browserState.url, tab.browserViewId, tab.id, tab.url]);
+  }, [
+    browserState.url,
+    captureFailedMessage,
+    tab.browserViewId,
+    tab.id,
+    tab.url,
+  ]);
 
   const updateBrowserTab = useCallback(
     (
@@ -321,8 +383,10 @@ export function WorkspaceBrowserTabContent({
   }, [designState.active, designState.allowed, tab.browserViewId, tab.id]);
 
   const clearSelectionDraft = useCallback(() => {
+    selectionCaptureGenerationRef.current += 1;
     setSelectionDraft(null);
     setSendError(null);
+    setCapturingSelection(false);
   }, []);
 
   const handleDesignSend = useCallback(
@@ -349,20 +413,26 @@ export function WorkspaceBrowserTabContent({
         return;
       }
 
+      if (capturingSelection || !selectionDraft.screenshot) {
+        const message = capturingSelection
+          ? "Still capturing the selection screenshot…"
+          : captureFailedMessage;
+        setSendError(message);
+        toast({
+          description: message,
+          title: "Cannot send Design Mode selection",
+          variant: "destructive",
+        });
+        return;
+      }
+
       setSending(true);
       setSendError(null);
       try {
-        const capture = await window.workspaceBrowser.captureDesignScreenshot({
-          browserViewId: tab.browserViewId,
-        });
-        if (!capture.ok) {
-          throw new Error(capture.message);
-        }
-
         const pageUrl =
           browserState.url || selectionDraft.pageUrl || selectionDraft.origin;
         const packed = await buildDesignSendPackage({
-          screenshot: capture.screenshot,
+          screenshot: selectionDraft.screenshot,
           selection: {
             ...selectionDraft,
             pageUrl,
@@ -370,6 +440,16 @@ export function WorkspaceBrowserTabContent({
           userAttachments: userAttachments ?? [],
           userText,
         });
+
+        // Require both viewport + target crop attachments (crop failures throw).
+        const hasTargetCrop = packed.attachments.some(
+          (file) => file.filename === "design-target.png",
+        );
+        if (!hasTargetCrop) {
+          throw new Error(
+            "Could not create the target crop (design-target.png). Reselect the element and try again.",
+          );
+        }
 
         await sendChatMessage.sendPromptMessage({
           attachments: packed.attachments,
@@ -379,6 +459,7 @@ export function WorkspaceBrowserTabContent({
           text: packed.text,
         });
 
+        selectionCaptureGenerationRef.current += 1;
         setSelectionDraft(null);
         toast({
           title: "Selection sent to chat",
@@ -401,12 +482,13 @@ export function WorkspaceBrowserTabContent({
     },
     [
       browserState.url,
+      capturingSelection,
+      captureFailedMessage,
       chatId,
       noActiveSessionMessage,
       selectionDraft,
       sendChatMessage,
       t,
-      tab.browserViewId,
       toast,
     ],
   );
@@ -531,10 +613,13 @@ export function WorkspaceBrowserTabContent({
       </form>
       {selectionDraft ? (
         <DesignModeSendPanel
-          busy={sending}
+          busy={sending || capturingSelection}
           error={sendError}
           onCancel={clearSelectionDraft}
-          onSend={handleDesignSend}
+          onSend={(input) => {
+            // Wrap async handler so prop stays void (no-misused-promises).
+            void handleDesignSend(input);
+          }}
           selection={selectionDraft}
         />
       ) : null}

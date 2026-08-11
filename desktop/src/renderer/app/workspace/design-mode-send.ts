@@ -17,6 +17,12 @@ import { formatDesignPromptText } from "@shared/design-mode-prompt";
 
 const TARGET_CROP_PADDING_CSS = 8;
 
+export const DESIGN_TARGET_CROP_REQUIRED_ERROR =
+  "Could not create the target crop (design-target.png). Reselect the element and try again.";
+
+export const DESIGN_TARGET_RECT_MISSING_ERROR =
+  "Design Mode selection has no crop rect for the target screenshot.";
+
 export interface DesignSelectionDraft {
   anchor: DesignAnchor;
   browserViewId: string;
@@ -24,6 +30,11 @@ export interface DesignSelectionDraft {
   element?: DesignElement;
   origin: string;
   pageUrl: string;
+  /**
+   * Screenshot captured immediately on selection so rect + bitmap stay aligned
+   * even if the guest scrolls/reflows while the user types an instruction.
+   */
+  screenshot: WorkspaceBrowserDesignScreenshot | null;
 }
 
 export interface DesignSendPackage {
@@ -34,6 +45,9 @@ export interface DesignSendPackage {
 /**
  * Build the text + image attachments for a Design Mode send.
  * Reuses the normal chat attachment shape so `sendPromptMessage` is unchanged.
+ *
+ * Requires both `design-viewport.png` and `design-target.png`. Crop failure
+ * throws — callers must surface the error instead of toasting success.
  */
 export async function buildDesignSendPackage(input: {
   selection: DesignSelectionDraft;
@@ -54,20 +68,21 @@ export async function buildDesignSendPackage(input: {
     viewport,
   });
 
+  const cropRect = resolveCropRect(input.selection);
+  if (!cropRect) {
+    throw new Error(DESIGN_TARGET_RECT_MISSING_ERROR);
+  }
+
+  const padded = expandCssRect(cropRect, TARGET_CROP_PADDING_CSS, viewport);
+  const cropDataUrl = await cropScreenshotToDataUrl(input.screenshot, padded);
+  if (!cropDataUrl) {
+    throw new Error(DESIGN_TARGET_CROP_REQUIRED_ERROR);
+  }
+
   const attachments: PromptInputFile[] = [
     promptImageFromDataUrl(input.screenshot.dataUrl, "design-viewport.png"),
+    promptImageFromDataUrl(cropDataUrl, "design-target.png"),
   ];
-
-  const cropRect = resolveCropRect(input.selection);
-  if (cropRect) {
-    const padded = expandCssRect(cropRect, TARGET_CROP_PADDING_CSS, viewport);
-    const cropDataUrl = await cropScreenshotToDataUrl(input.screenshot, padded);
-    if (cropDataUrl) {
-      attachments.push(
-        promptImageFromDataUrl(cropDataUrl, "design-target.png"),
-      );
-    }
-  }
 
   if (input.userAttachments) {
     attachments.push(...input.userAttachments);
@@ -76,7 +91,9 @@ export async function buildDesignSendPackage(input: {
   return { attachments, text };
 }
 
-function resolveCropRect(selection: DesignSelectionDraft): DesignRect | null {
+export function resolveCropRect(
+  selection: Pick<DesignSelectionDraft, "anchor" | "element">,
+): DesignRect | null {
   if (selection.element?.rect) {
     return selection.element.rect;
   }
