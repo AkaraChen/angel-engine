@@ -131,7 +131,8 @@ describe("design-mode-capture selectors + react names", () => {
       expect(Object.keys(standard.computedStyles).length).toBeGreaterThan(0);
     }
 
-    expect(DESIGN_COMPUTED_STYLE_PROPS).toHaveLength(37);
+    // Full capture list covers CSS inspector groups (F04-4).
+    expect(DESIGN_COMPUTED_STYLE_PROPS).toHaveLength(46);
   });
 });
 

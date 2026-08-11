@@ -7,6 +7,8 @@ import type {
   WorkspaceBrowserCreateInput,
   WorkspaceBrowserDesignCaptureScreenshotInput,
   WorkspaceBrowserDesignSetAllowedOriginsInput,
+  WorkspaceBrowserDesignSetDraftInput,
+  WorkspaceBrowserDesignSetFrozenInput,
   WorkspaceBrowserDesignStartInput,
   WorkspaceBrowserDesignStopInput,
   WorkspaceBrowserDetachInput,
@@ -25,6 +27,8 @@ import {
   WORKSPACE_BROWSER_DESIGN_CAPTURE_SCREENSHOT_CHANNEL,
   WORKSPACE_BROWSER_DESIGN_GET_STATE_CHANNEL,
   WORKSPACE_BROWSER_DESIGN_SET_ALLOWED_ORIGINS_CHANNEL,
+  WORKSPACE_BROWSER_DESIGN_SET_DRAFT_CHANNEL,
+  WORKSPACE_BROWSER_DESIGN_SET_FROZEN_CHANNEL,
   WORKSPACE_BROWSER_DESIGN_START_CHANNEL,
   WORKSPACE_BROWSER_DESIGN_STOP_CHANNEL,
   WORKSPACE_BROWSER_GET_STATE_CHANNEL,
@@ -152,6 +156,18 @@ export function exposeWorkspaceBrowserBridge() {
         WORKSPACE_BROWSER_DESIGN_SET_ALLOWED_ORIGINS_CHANNEL,
         input,
       ) as ReturnType<WorkspaceBrowserApi["setDesignAllowedOrigins"]>;
+    },
+    async setDesignDraft(input: WorkspaceBrowserDesignSetDraftInput) {
+      return ipcRenderer.invoke(
+        WORKSPACE_BROWSER_DESIGN_SET_DRAFT_CHANNEL,
+        input,
+      ) as ReturnType<WorkspaceBrowserApi["setDesignDraft"]>;
+    },
+    async setDesignFrozen(input: WorkspaceBrowserDesignSetFrozenInput) {
+      return ipcRenderer.invoke(
+        WORKSPACE_BROWSER_DESIGN_SET_FROZEN_CHANNEL,
+        input,
+      ) as ReturnType<WorkspaceBrowserApi["setDesignFrozen"]>;
     },
     async startDesignMode(input: WorkspaceBrowserDesignStartInput) {
       return ipcRenderer.invoke(
