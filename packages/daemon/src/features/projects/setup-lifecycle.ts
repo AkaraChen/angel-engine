@@ -1,4 +1,7 @@
-import type { ProjectSetupLifecycleView } from "@angel-engine/daemon-api/projects";
+import type {
+  ProjectSetupLifecycleContext,
+  ProjectSetupLifecycleView,
+} from "@angel-engine/daemon-api/projects";
 
 import path from "node:path";
 import {
@@ -59,6 +62,8 @@ export class ProjectSetupLifecycleCoordinator {
 
   restore(input: {
     approvedDigest: string;
+    context?: ProjectSetupLifecycleContext;
+    projectId: string;
     projectRoot: string;
     worktreePath: string;
   }): void {
@@ -66,23 +71,22 @@ export class ProjectSetupLifecycleCoordinator {
     if (this.#registrations.has(key)) return;
     this.#registrations.set(key, {
       approvedDigest: input.approvedDigest,
+      baseRef: input.context?.baseRef,
+      branch: input.context?.branch,
       continued: false,
       discarded: false,
-      projectRoot: input.projectRoot,
+      projectRoot: input.context?.projectRoot ?? input.projectRoot,
+      projectId: input.context?.projectId ?? input.projectId,
       revision: 0,
       waiters: new Set(),
     });
   }
 
-  retry(
-    worktreePath: string,
-    approval: { approvedDigest: string; projectRoot: string },
-  ): void {
+  retry(worktreePath: string, approval: { approvedDigest: string }): void {
     const key = path.resolve(worktreePath);
     const registration = this.#require(key);
     if (registration.running !== undefined) return;
     registration.approvedDigest = approval.approvedDigest;
-    registration.projectRoot = approval.projectRoot;
     registration.continued = false;
     registration.discarded = false;
     this.#launch(key, registration);

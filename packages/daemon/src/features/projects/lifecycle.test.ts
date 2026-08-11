@@ -105,6 +105,16 @@ describe("project lifecycle runtime", () => {
       ANGEL_WORKTREE_BRANCH: "angel/feature",
       ANGEL_WORKTREE_PATH: worktreePath,
     });
+
+    runtime = new ProjectLifecycleRuntime({ storageRoot });
+    await expect(runtime.snapshot(worktreePath)).resolves.toMatchObject({
+      setupContext: {
+        baseRef: "origin/main",
+        branch: "angel/feature",
+        projectId: "project-1",
+        projectRoot: root,
+      },
+    });
   });
 
   it("serializes cross-track state updates without losing either track", async () => {

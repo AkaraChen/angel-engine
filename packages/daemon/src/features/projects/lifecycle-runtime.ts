@@ -1,6 +1,7 @@
 import type {
   ProjectLifecycleKind,
   ProjectLifecycleSnapshot,
+  ProjectSetupLifecycleContext,
 } from "@angel-engine/daemon-api/projects";
 
 import os from "node:os";
@@ -108,6 +109,16 @@ export class ProjectLifecycleRuntime {
       const commands =
         kind === "setup" ? config.setupScript : config.teardownScript;
       let logTail = await this.#storage.log(record, kind);
+
+      if (kind === "setup") {
+        const context = setupLifecycleContext(options);
+        if (context !== undefined) {
+          await this.#storage.update(record, options.onState, (snapshot) => {
+            snapshot.approvedDigest = config.digest;
+            snapshot.setupContext = context;
+          });
+        }
+      }
 
       for (const [index, command] of commands.entries()) {
         await this.#storage.update(record, options.onState, (snapshot) => {
@@ -357,6 +368,24 @@ export class ProjectLifecycleRuntime {
       if (active.size === 0) this.#activeTracks.delete(key);
     };
   }
+}
+
+function setupLifecycleContext(
+  options: ProjectLifecycleExecutionOptions,
+): ProjectSetupLifecycleContext | undefined {
+  if (
+    options.baseRef === undefined ||
+    options.branch === undefined ||
+    options.projectId === undefined
+  ) {
+    return undefined;
+  }
+  return {
+    baseRef: options.baseRef,
+    branch: options.branch,
+    projectId: options.projectId,
+    projectRoot: options.projectRoot,
+  };
 }
 
 function lifecycleContractEnvironment(

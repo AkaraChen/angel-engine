@@ -1045,6 +1045,8 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
             if (snapshot.approvedDigest !== undefined) {
               projectSetupLifecycle.restore({
                 approvedDigest: snapshot.approvedDigest,
+                context: snapshot.setupContext,
+                projectId: project.id,
                 projectRoot: project.path,
                 worktreePath,
               });

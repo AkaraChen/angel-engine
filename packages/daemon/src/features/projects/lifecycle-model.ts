@@ -89,10 +89,26 @@ export function isLifecycleSnapshot(
   ) {
     return false;
   }
+  if (
+    value.setupContext !== undefined &&
+    !isSetupLifecycleContext(value.setupContext)
+  ) {
+    return false;
+  }
   return (
     isSetupState(value.setup) &&
     isRunState(value.run) &&
     isTeardownState(value.teardown)
+  );
+}
+
+function isSetupLifecycleContext(value: unknown) {
+  return (
+    isRecord(value) &&
+    typeof value.baseRef === "string" &&
+    typeof value.branch === "string" &&
+    typeof value.projectId === "string" &&
+    typeof value.projectRoot === "string"
   );
 }
 

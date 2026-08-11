@@ -41,6 +41,7 @@ export async function loadProjectLifecycleConfig(
 export async function saveProjectLifecycleConfig(
   projectRoot: string,
   input: {
+    migrateLegacyInitScript?: boolean;
     runScript: string;
     scriptShell?: ProjectScriptShell;
     setupScript: string[];
@@ -55,9 +56,11 @@ export async function saveProjectLifecycleConfig(
   const setupScript = normalizeCommands(input.setupScript);
   const teardownScript = normalizeCommands(input.teardownScript);
   const runScript = input.runScript.trim();
-  const scriptShell = input.scriptShell ?? "auto";
-  const { init_script: _legacyInitScript, ...preservedConfig } =
-    file?.config ?? {};
+  const scriptShell = input.scriptShell ?? readScriptShell(file?.config ?? {});
+  const preservedConfig = { ...file?.config };
+  if (input.migrateLegacyInitScript === true) {
+    delete preservedConfig.init_script;
+  }
   const config = {
     ...preservedConfig,
     run_script: runScript,
@@ -73,7 +76,7 @@ export async function saveProjectLifecycleConfig(
   );
 
   return {
-    legacyInitScript: [],
+    legacyInitScript: readCommandList(config, "init_script"),
     runScript,
     scriptShell,
     setupScript,

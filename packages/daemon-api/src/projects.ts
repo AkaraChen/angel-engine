@@ -108,10 +108,18 @@ export type ProjectTeardownLifecycleState =
     }
   | { completedAt: string; status: "done" };
 
+export interface ProjectSetupLifecycleContext {
+  baseRef: string;
+  branch: string;
+  projectId: string;
+  projectRoot: string;
+}
+
 export interface ProjectLifecycleSnapshot {
   approvedDigest?: string;
   run: ProjectRunLifecycleState;
   setup: ProjectSetupLifecycleState;
+  setupContext?: ProjectSetupLifecycleContext;
   teardown: ProjectTeardownLifecycleState;
   updatedAt: string;
   version: 1;
@@ -160,6 +168,8 @@ export interface ProjectConfigInput {
 
 export interface UpdateProjectConfigInput
   extends Omit<ProjectConfig, "scriptShell"> {
+  /** Removes init_script only while explicitly migrating it to setup_script. */
+  migrateLegacyInitScript?: boolean;
   projectId: string;
   scriptShell?: ProjectScriptShell;
 }
@@ -311,6 +321,7 @@ export const managedWorktreeDeleteInputSchema = arkType({
 
 export const updateProjectConfigInputSchema = arkType({
   "+": "ignore",
+  "migrateLegacyInitScript?": "boolean",
   projectId: "string > 0",
   runScript: "string",
   "scriptShell?": "'auto' | 'bash' | 'system'",

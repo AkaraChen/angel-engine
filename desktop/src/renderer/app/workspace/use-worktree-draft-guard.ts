@@ -160,6 +160,7 @@ export function useWorktreeDraftGuard(
       const config = await api.projects.config({ projectId: draftProject.id });
       await api.projects.updateConfig({
         ...config,
+        migrateLegacyInitScript: true,
         projectId: draftProject.id,
         setupScript: legacy,
       });
