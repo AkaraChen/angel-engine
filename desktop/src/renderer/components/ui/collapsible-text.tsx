@@ -62,11 +62,12 @@ export function CollapsibleText({
   const toggle = () => {
     if (isExpanded) {
       setIsExpanded(false);
-      // Keep the block in view when collapsing long content.
+      // Align the block top after collapse. `nearest` can no-op when the block
+      // is still partially visible, which leaves the viewport mid-body.
       window.requestAnimationFrame(() => {
         rootRef.current?.scrollIntoView({
           behavior: "smooth",
-          block: "nearest",
+          block: "start",
         });
       });
       return;

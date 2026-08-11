@@ -127,4 +127,35 @@ describe("CollapsibleText", () => {
         .getAttribute("aria-expanded"),
     ).toBe("false");
   });
+
+  it("scrolls the block to the start when collapsing", () => {
+    scrollHeight = defaultCollapsedTextMaxHeight + 1;
+    const scrollIntoView = vi.fn();
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+    HTMLElement.prototype.scrollIntoView = scrollIntoView;
+    const originalRaf = window.requestAnimationFrame;
+    window.requestAnimationFrame = ((callback: FrameRequestCallback) => {
+      callback(0);
+      return 0;
+    }) as typeof window.requestAnimationFrame;
+
+    try {
+      render(<CollapsibleText>tall</CollapsibleText>);
+      const toggle = screen.getByTestId("collapsible-text-toggle");
+      fireEvent.click(toggle);
+      expect(toggle.getAttribute("aria-expanded")).toBe("true");
+      expect(scrollIntoView).not.toHaveBeenCalled();
+
+      fireEvent.click(toggle);
+      expect(toggle.getAttribute("aria-expanded")).toBe("false");
+      expect(scrollIntoView).toHaveBeenCalledTimes(1);
+      expect(scrollIntoView).toHaveBeenCalledWith({
+        behavior: "smooth",
+        block: "start",
+      });
+    } finally {
+      HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
+      window.requestAnimationFrame = originalRaf;
+    }
+  });
 });
