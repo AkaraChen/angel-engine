@@ -373,8 +373,6 @@ export const zhTW = {
       modeSwitcher: "工作區模式",
       modeWork: "工作",
       needsInput: "需要輸入",
-
-      importSession: "匯入工作階段",
       newChat: "新聊天",
       newChatInProject: "{{projectName}} 中的新聊天",
       noChats: "沒有聊天",
@@ -871,18 +869,16 @@ export const zhTW = {
         saveFileChangesTitle: "要儲存對 {{path}} 的變更嗎？",
       },
       importSession: {
-        cwdLabel: "目錄：{{cwd}}",
-        description:
-          "搜尋所選代理在目前目錄下的工作階段，並在 Angel Engine 中開啟。",
-        empty: "此代理和目錄下沒有可匯入的工作階段。",
-        importAction: "匯入並開啟",
-        importFailed: "無法匯入工作階段",
+        allAgents: "全部",
+        clearSelection: "已選 {{selected}} 筆 · 清除",
+        description: "從你已經在用的智慧體裡挑選對話，匯入到這個專案。",
+        empty: "這個專案下沒有可匯入的對話。",
+        importAction: "匯入 {{selected}} 筆到 {{projectName}}",
+        importFailed: "無法匯入對話",
         importing: "正在匯入…",
-        runtimeLabel: "代理：{{runtime}}",
-        runtimeRequired: "匯入工作階段前請先選擇代理。",
-        searchFailed: "無法搜尋工作階段",
-        searching: "正在搜尋工作階段…",
-        title: "匯入工作階段",
+        noMatches: "沒有符合的對話。",
+        retryAction: "重試 {{selected}} 筆失敗",
+        titleForProject: "匯入對話到 {{projectName}}",
       },
       renameChat: "重新命名聊天",
       sessionHandoff: {
@@ -984,6 +980,7 @@ export const zhTW = {
     },
     projects: {
       chooseFolder: "選擇專案資料夾",
+      importSession: "匯入對話…",
       openInFinder: "在 Finder 中開啟",
       settings: "設定",
       settingsLoadFailed: "無法載入專案設定",
@@ -1009,6 +1006,7 @@ export const zhTW = {
       commandNoResults: "沒有相符的命令或工作階段。",
       commandPalette: "命令面板",
       commandSessions: "工作階段",
+      commandImportSession: "匯入對話到專案",
       commandShepherdPr: "Shepherd PR",
     },
     promptInput: {

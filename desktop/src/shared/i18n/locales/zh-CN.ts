@@ -373,8 +373,6 @@ export const zhCN = {
       modeSwitcher: "工作区模式",
       modeWork: "工作",
       needsInput: "需要输入",
-
-      importSession: "导入会话",
       newChat: "新聊天",
       newChatInProject: "{{projectName}} 中的新聊天",
       noChats: "没有聊天",
@@ -870,18 +868,16 @@ export const zhCN = {
         saveFileChangesTitle: "要保存对 {{path}} 的更改吗？",
       },
       importSession: {
-        cwdLabel: "目录：{{cwd}}",
-        description:
-          "搜索所选智能体在当前目录下的会话，并在 Angel Engine 中打开。",
-        empty: "此智能体和目录下没有可导入的会话。",
-        importAction: "导入并打开",
+        allAgents: "全部",
+        clearSelection: "已选 {{selected}} 条 · 清空",
+        description: "从你已经在用的智能体里挑会话，导入到这个项目。",
+        empty: "这个项目下没有可导入的会话。",
+        importAction: "导入 {{selected}} 条到 {{projectName}}",
         importFailed: "无法导入会话",
         importing: "正在导入…",
-        runtimeLabel: "智能体：{{runtime}}",
-        runtimeRequired: "导入会话前请先选择智能体。",
-        searchFailed: "无法搜索会话",
-        searching: "正在搜索会话…",
-        title: "导入会话",
+        noMatches: "没有匹配的会话。",
+        retryAction: "重试 {{selected}} 条失败",
+        titleForProject: "导入会话到 {{projectName}}",
       },
       renameChat: "重命名聊天",
       sessionHandoff: {
@@ -983,6 +979,7 @@ export const zhCN = {
     },
     projects: {
       chooseFolder: "选择项目文件夹",
+      importSession: "导入会话…",
       openInFinder: "在 Finder 中打开",
       settings: "设置",
       settingsLoadFailed: "无法加载项目设置",
@@ -1008,6 +1005,7 @@ export const zhCN = {
       commandNoResults: "没有匹配的命令或会话。",
       commandPalette: "命令面板",
       commandSessions: "会话",
+      commandImportSession: "导入会话到项目",
       commandShepherdPr: "Shepherd PR",
     },
     promptInput: {

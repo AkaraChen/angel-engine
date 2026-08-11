@@ -384,8 +384,6 @@ export const de = {
       modeSwitcher: "Arbeitsbereichsmodus",
       modeWork: "Arbeit",
       needsInput: "Eingabe erforderlich",
-
-      importSession: "Sitzung importieren",
       newChat: "Neuer Chat",
       newChatInProject: "Neuer Chat in {{projectName}}",
       noChats: "Keine Chats",
@@ -924,20 +922,17 @@ export const de = {
         saveFileChangesTitle: "Änderungen an {{path}} sichern?",
       },
       importSession: {
-        cwdLabel: "Verzeichnis: {{cwd}}",
+        allAgents: "Alle Agenten",
+        clearSelection: "{{selected}} ausgewählt · Leeren",
         description:
-          "Anbietersitzungen für den gewählten Agenten suchen und in Angel Engine öffnen.",
-        empty:
-          "Keine importierbaren Sitzungen für diesen Agenten und dieses Verzeichnis.",
-        importAction: "Importieren und öffnen",
+          "Wähle Sitzungen aus den Agenten, die du bereits nutzt – sie landen in diesem Projekt.",
+        empty: "Keine importierbaren Sitzungen für dieses Projekt gefunden.",
+        importAction: "{{selected}} in {{projectName}} importieren",
         importFailed: "Sitzung konnte nicht importiert werden",
         importing: "Wird importiert…",
-        runtimeLabel: "Agent: {{runtime}}",
-        runtimeRequired:
-          "Wählen Sie einen Agenten, bevor Sie eine Sitzung importieren.",
-        searchFailed: "Sitzungen konnten nicht gesucht werden",
-        searching: "Sitzungen werden gesucht…",
-        title: "Sitzung importieren",
+        noMatches: "Keine Sitzung passt zur Suche.",
+        retryAction: "{{selected}} fehlgeschlagene wiederholen",
+        titleForProject: "Sitzungen in {{projectName}} importieren",
       },
       renameChat: "Chat umbenennen",
       sessionHandoff: {
@@ -1043,6 +1038,7 @@ export const de = {
     },
     projects: {
       chooseFolder: "Projektordner auswählen",
+      importSession: "Sitzungen importieren…",
       openInFinder: "Im Finder öffnen",
       settings: "Einstellungen",
       settingsLoadFailed: "Projekteinstellungen konnten nicht geladen werden",
@@ -1069,6 +1065,7 @@ export const de = {
       commandNoResults: "Keine passenden Befehle oder Sitzungen.",
       commandPalette: "Befehlspalette",
       commandSessions: "Sitzungen",
+      commandImportSession: "Sitzungen ins Projekt importieren",
       commandShepherdPr: "Shepherd PR",
     },
     promptInput: {

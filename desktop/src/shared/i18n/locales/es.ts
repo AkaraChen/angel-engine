@@ -382,8 +382,6 @@ export const es = {
       modeSwitcher: "Modo de espacio de trabajo",
       modeWork: "Trabajo",
       needsInput: "Necesita entrada",
-
-      importSession: "Importar sesión",
       newChat: "Nuevo chat",
       newChatInProject: "Nuevo chat en {{projectName}}",
       noChats: "No hay chats",
@@ -917,18 +915,17 @@ export const es = {
         saveFileChangesTitle: "¿Guardar los cambios en {{path}}?",
       },
       importSession: {
-        cwdLabel: "Directorio: {{cwd}}",
+        allAgents: "Todos los agentes",
+        clearSelection: "{{selected}} seleccionadas · Borrar",
         description:
-          "Busca sesiones del proveedor del agente seleccionado y ábrela en Angel Engine.",
-        empty: "No hay sesiones importables para este agente y directorio.",
-        importAction: "Importar y abrir",
+          "Elige sesiones de los agentes que ya usas; se importan a este proyecto.",
+        empty: "No hay sesiones importables para este proyecto.",
+        importAction: "Importar {{selected}} a {{projectName}}",
         importFailed: "No se pudo importar la sesión",
         importing: "Importando…",
-        runtimeLabel: "Agente: {{runtime}}",
-        runtimeRequired: "Selecciona un agente antes de importar una sesión.",
-        searchFailed: "No se pudieron buscar sesiones",
-        searching: "Buscando sesiones…",
-        title: "Importar sesión",
+        noMatches: "Ninguna sesión coincide con la búsqueda.",
+        retryAction: "Reintentar {{selected}} fallidas",
+        titleForProject: "Importar sesiones a {{projectName}}",
       },
       renameChat: "Renombrar chat",
       sessionHandoff: {
@@ -1032,6 +1029,7 @@ export const es = {
     },
     projects: {
       chooseFolder: "Elegir carpeta del proyecto",
+      importSession: "Importar sesiones…",
       openInFinder: "Abrir en Finder",
       settings: "Ajustes",
       settingsLoadFailed: "No se pudieron cargar los ajustes del proyecto",
@@ -1057,6 +1055,7 @@ export const es = {
       commandNoResults: "No hay comandos ni sesiones coincidentes.",
       commandPalette: "Paleta de comandos",
       commandSessions: "Sesiones",
+      commandImportSession: "Importar sesiones al proyecto",
       commandShepherdPr: "Shepherd PR",
     },
     promptInput: {

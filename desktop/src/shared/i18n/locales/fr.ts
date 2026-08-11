@@ -384,8 +384,6 @@ export const fr = {
       modeSwitcher: "Mode d'espace de travail",
       modeWork: "Travail",
       needsInput: "Saisie requise",
-
-      importSession: "Importer une session",
       newChat: "Nouvelle discussion",
       newChatInProject: "Nouvelle discussion dans {{projectName}}",
       noChats: "Aucune discussion",
@@ -926,18 +924,17 @@ export const fr = {
         saveFileChangesTitle: "Enregistrer les modifications de {{path}} ?",
       },
       importSession: {
-        cwdLabel: "Répertoire : {{cwd}}",
+        allAgents: "Tous les agents",
+        clearSelection: "{{selected}} sélectionnée(s) · Effacer",
         description:
-          "Rechercher les sessions du fournisseur pour l’agent sélectionné et les ouvrir dans Angel Engine.",
-        empty: "Aucune session importable pour cet agent et ce répertoire.",
-        importAction: "Importer et ouvrir",
+          "Choisissez des sessions parmi les agents que vous utilisez déjà ; elles arrivent dans ce projet.",
+        empty: "Aucune session importable pour ce projet.",
+        importAction: "Importer {{selected}} dans {{projectName}}",
         importFailed: "Impossible d’importer la session",
         importing: "Importation…",
-        runtimeLabel: "Agent : {{runtime}}",
-        runtimeRequired: "Sélectionnez un agent avant d’importer une session.",
-        searchFailed: "Impossible de rechercher les sessions",
-        searching: "Recherche des sessions…",
-        title: "Importer une session",
+        noMatches: "Aucune session ne correspond à la recherche.",
+        retryAction: "Réessayer {{selected}} en échec",
+        titleForProject: "Importer des sessions dans {{projectName}}",
       },
       renameChat: "Renommer la discussion",
       sessionHandoff: {
@@ -1041,6 +1038,7 @@ export const fr = {
     },
     projects: {
       chooseFolder: "Choisir le dossier du projet",
+      importSession: "Importer des sessions…",
       openInFinder: "Ouvrir dans le Finder",
       settings: "Paramètres",
       settingsLoadFailed: "Impossible de charger les paramètres du projet",
@@ -1067,6 +1065,7 @@ export const fr = {
       commandNoResults: "Aucune commande ou session correspondante.",
       commandPalette: "Palette de commandes",
       commandSessions: "Sessions",
+      commandImportSession: "Importer des sessions dans le projet",
       commandShepherdPr: "Shepherd PR",
     },
     promptInput: {

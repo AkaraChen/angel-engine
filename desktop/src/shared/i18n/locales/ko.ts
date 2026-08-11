@@ -379,8 +379,6 @@ export const ko = {
       modeSwitcher: "워크스페이스 모드",
       modeWork: "작업",
       needsInput: "입력 필요",
-
-      importSession: "세션 가져오기",
       newChat: "새 채팅",
       newChatInProject: "{{projectName}}의 새 채팅",
       noChats: "채팅이 없습니다",
@@ -902,17 +900,17 @@ export const ko = {
         saveFileChangesTitle: "{{path}}의 변경 내용을 저장할까요?",
       },
       importSession: {
-        cwdLabel: "디렉터리: {{cwd}}",
-        description: "선택한 에이전트의 세션을 검색해 Angel Engine에서 엽니다.",
-        empty: "이 에이전트와 디렉터리에 가져올 세션이 없습니다.",
-        importAction: "가져와 열기",
+        allAgents: "전체",
+        clearSelection: "{{selected}}개 선택됨 · 지우기",
+        description:
+          "사용 중인 에이전트에서 세션을 골라 이 프로젝트로 가져옵니다.",
+        empty: "이 프로젝트로 가져올 수 있는 세션이 없습니다.",
+        importAction: "{{selected}}개를 {{projectName}}(으)로 가져오기",
         importFailed: "세션을 가져올 수 없습니다",
         importing: "가져오는 중…",
-        runtimeLabel: "에이전트: {{runtime}}",
-        runtimeRequired: "세션을 가져오기 전에 에이전트를 선택하세요.",
-        searchFailed: "세션을 검색할 수 없습니다",
-        searching: "세션 검색 중…",
-        title: "세션 가져오기",
+        noMatches: "검색과 일치하는 세션이 없습니다.",
+        retryAction: "실패한 {{selected}}개 다시 시도",
+        titleForProject: "{{projectName}}(으)로 세션 가져오기",
       },
       renameChat: "채팅 이름 변경",
       sessionHandoff: {
@@ -1015,6 +1013,7 @@ export const ko = {
     },
     projects: {
       chooseFolder: "프로젝트 폴더 선택",
+      importSession: "세션 가져오기…",
       openInFinder: "Finder에서 열기",
       settings: "설정",
       settingsLoadFailed: "프로젝트 설정을 불러오지 못했습니다",
@@ -1040,6 +1039,7 @@ export const ko = {
       commandNoResults: "일치하는 명령이나 세션이 없습니다.",
       commandPalette: "명령 팔레트",
       commandSessions: "세션",
+      commandImportSession: "프로젝트로 세션 가져오기",
       commandShepherdPr: "Shepherd PR",
     },
     promptInput: {

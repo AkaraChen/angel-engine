@@ -47,6 +47,7 @@ interface ProjectSidebarSectionProps {
   onCancelWorktreeCreation: (chat: Chat) => MaybeAsync;
   onCreateProject: () => MaybeAsync;
   onCreateProjectChat: (project: Project) => MaybeAsync;
+  onImportSession: (project: Project) => void;
   onOpenChat: (chat: Chat) => MaybeAsync;
   onRetryWorktreeCreation: (chat: Chat) => MaybeAsync;
   onChatContextMenuAction: (chat: Chat, action: ChatContextMenuAction) => void;
@@ -70,6 +71,7 @@ export function ProjectSidebarSection({
   onCancelWorktreeCreation,
   onCreateProject,
   onCreateProjectChat,
+  onImportSession,
   onOpenChat,
   onRetryWorktreeCreation,
   onChatContextMenuAction,
@@ -150,6 +152,7 @@ export function ProjectSidebarSection({
                 <AnimatedSidebarMenuItem key={project.id}>
                   <ProjectContextMenu
                     onAction={onProjectContextMenuAction}
+                    onImportSession={onImportSession}
                     onPathLauncherAction={onProjectPathLauncherAction}
                     project={project}
                   >

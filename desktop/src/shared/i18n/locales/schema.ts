@@ -536,7 +536,6 @@ export interface LocaleResourceTranslationSidebar {
   modeSwitcher: string;
   modeWork: string;
   needsInput: string;
-  importSession: string;
   newChat: string;
   newChatInProject: string;
   noChats: string;
@@ -1120,17 +1119,16 @@ export interface LocaleResourceTranslationDialogConfirm {
 }
 
 export interface LocaleResourceTranslationDialogImportSession {
-  cwdLabel: string;
+  allAgents: string;
+  clearSelection: string;
   description: string;
   empty: string;
   importAction: string;
   importFailed: string;
   importing: string;
-  runtimeLabel: string;
-  runtimeRequired: string;
-  searchFailed: string;
-  searching: string;
-  title: string;
+  noMatches: string;
+  retryAction: string;
+  titleForProject: string;
 }
 
 export interface LocaleResourceTranslationDialogSessionHandoff {
@@ -1224,6 +1222,7 @@ export interface LocaleResourceTranslationProjectImport {
 
 export interface LocaleResourceTranslationProjects {
   chooseFolder: string;
+  importSession: string;
   openInFinder: string;
   settings: string;
   settingsLoadFailed: string;
@@ -1251,6 +1250,7 @@ export interface LocaleResourceTranslationUi {
   commandNoResults: string;
   commandPalette: string;
   commandSessions: string;
+  commandImportSession: string;
   commandShepherdPr: string;
 }
 
