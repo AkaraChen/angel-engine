@@ -19,6 +19,7 @@ import {
   WORKSPACE_BROWSER_CREATE_CHANNEL,
   WORKSPACE_BROWSER_DESTROY_CHANNEL,
   WORKSPACE_BROWSER_DETACH_CHANNEL,
+  WORKSPACE_BROWSER_DESIGN_CAPTURE_SCREENSHOT_CHANNEL,
   WORKSPACE_BROWSER_DESIGN_GET_STATE_CHANNEL,
   WORKSPACE_BROWSER_DESIGN_SET_ALLOWED_ORIGINS_CHANNEL,
   WORKSPACE_BROWSER_DESIGN_START_CHANNEL,
@@ -218,6 +219,14 @@ export function registerWorkspaceBrowserIpc() {
     (_event, input: unknown) => {
       const request = designModeService.parseSetAllowedOriginsInput(input);
       return designModeService.setAllowedOrigins(request);
+    },
+  );
+
+  ipcMain.handle(
+    WORKSPACE_BROWSER_DESIGN_CAPTURE_SCREENSHOT_CHANNEL,
+    async (_event, input: unknown) => {
+      const request = designModeService.parseCommandInput(input);
+      return designModeService.captureScreenshot(request.browserViewId);
     },
   );
 

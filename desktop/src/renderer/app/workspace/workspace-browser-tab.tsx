@@ -1,3 +1,4 @@
+import type { DesignSelectionDraft } from "@/app/workspace/design-mode-send";
 import type {
   WorkspaceBrowserDesignState,
   WorkspaceBrowserState,
@@ -8,6 +9,7 @@ import type {
 } from "@shared/workspace-tool-surface";
 import type { FormEvent } from "react";
 
+import is from "@sindresorhus/is";
 import {
   ArrowLeft,
   ArrowRight,
@@ -17,16 +19,21 @@ import {
   ArrowClockwise as Refresh,
   WarningCircle,
 } from "@phosphor-icons/react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { buildDesignSendPackage } from "@/app/workspace/design-mode-send";
+import { DesignModeSendPanel } from "@/app/workspace/design-mode-send-panel";
 import {
   browserTitleFromUrl,
   normalizeWorkspaceBrowserUrl,
 } from "@/app/workspace/workspace-browser-url";
 import { WorkspaceBrowserNativeView } from "@/app/workspace/workspace-browser-view";
+import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/components/ui/toast";
+import { useSendChatMessage } from "@/features/chat/runtime/use-send-chat-message";
 import { cn } from "@/platform/utils";
 
 /**
@@ -56,6 +63,14 @@ export function WorkspaceBrowserTabContent({
   tab: Extract<WorkspaceToolSurfaceDynamicTab, { kind: "browser" }>;
 }) {
   const { t } = useTranslation();
+  const toast = useToast();
+  const { chatId } = useWorkspaceToolSurface();
+  const sendChatMessage = useSendChatMessage(
+    chatId ?? "design-mode-no-session",
+    {
+      chatId: chatId ?? undefined,
+    },
+  );
   const [browserState, setBrowserState] = useState<WorkspaceBrowserState>({
     canGoBack: false,
     canGoForward: false,
@@ -68,6 +83,16 @@ export function WorkspaceBrowserTabContent({
     allowed: false,
     origin: null,
   });
+  const [selectionDraft, setSelectionDraft] =
+    useState<DesignSelectionDraft | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+
+  const noActiveSessionMessage = useMemo(
+    () =>
+      "No active chat session. Open a chat in this workspace, then send the Design Mode selection.",
+    [],
+  );
 
   useEffect(() => {
     void window.workspaceBrowser
@@ -120,10 +145,24 @@ export function WorkspaceBrowserTabContent({
             active: false,
             origin: event.origin || current.origin,
           }));
+          setSelectionDraft(null);
+          setSendError(null);
           return;
         }
         if (event.type === "error") {
           refreshDesignState();
+          return;
+        }
+        if (event.type === "selection") {
+          setSendError(null);
+          setSelectionDraft({
+            anchor: event.anchor,
+            browserViewId: event.browserViewId,
+            changes: event.changes,
+            element: event.element,
+            origin: event.origin,
+            pageUrl: browserState.url || tab.url,
+          });
         }
       },
     );
@@ -132,7 +171,7 @@ export function WorkspaceBrowserTabContent({
       cancelled = true;
       unsubscribe();
     };
-  }, [tab.browserViewId, tab.id]);
+  }, [browserState.url, tab.browserViewId, tab.id, tab.url]);
 
   const updateBrowserTab = useCallback(
     (
@@ -281,6 +320,97 @@ export function WorkspaceBrowserTabContent({
       });
   }, [designState.active, designState.allowed, tab.browserViewId, tab.id]);
 
+  const clearSelectionDraft = useCallback(() => {
+    setSelectionDraft(null);
+    setSendError(null);
+  }, []);
+
+  const handleDesignSend = useCallback(
+    async ({
+      userAttachments,
+      userText,
+    }: {
+      userAttachments: Parameters<
+        typeof buildDesignSendPackage
+      >[0]["userAttachments"];
+      userText: string;
+    }) => {
+      if (!selectionDraft) {
+        return;
+      }
+
+      if (!is.nonEmptyString(chatId)) {
+        setSendError(noActiveSessionMessage);
+        toast({
+          description: noActiveSessionMessage,
+          title: "Cannot send Design Mode selection",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setSending(true);
+      setSendError(null);
+      try {
+        const capture = await window.workspaceBrowser.captureDesignScreenshot({
+          browserViewId: tab.browserViewId,
+        });
+        if (!capture.ok) {
+          throw new Error(capture.message);
+        }
+
+        const pageUrl =
+          browserState.url || selectionDraft.pageUrl || selectionDraft.origin;
+        const packed = await buildDesignSendPackage({
+          screenshot: capture.screenshot,
+          selection: {
+            ...selectionDraft,
+            pageUrl,
+          },
+          userAttachments: userAttachments ?? [],
+          userText,
+        });
+
+        await sendChatMessage.sendPromptMessage({
+          attachments: packed.attachments,
+          mentionedFiles: [],
+          selectedSkills: [],
+          t,
+          text: packed.text,
+        });
+
+        setSelectionDraft(null);
+        toast({
+          title: "Selection sent to chat",
+          variant: "default",
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to send Design Mode selection.";
+        setSendError(message);
+        toast({
+          description: message,
+          title: "Design Mode send failed",
+          variant: "destructive",
+        });
+      } finally {
+        setSending(false);
+      }
+    },
+    [
+      browserState.url,
+      chatId,
+      noActiveSessionMessage,
+      selectionDraft,
+      sendChatMessage,
+      t,
+      tab.browserViewId,
+      toast,
+    ],
+  );
+
   const SiteIcon = workspaceBrowserSiteIcon(tab.url);
   const designModeDisabled = !designState.active && !designState.allowed;
   const designModeTitle = designState.active
@@ -399,6 +529,15 @@ export function WorkspaceBrowserTabContent({
           />
         )}
       </form>
+      {selectionDraft ? (
+        <DesignModeSendPanel
+          busy={sending}
+          error={sendError}
+          onCancel={clearSelectionDraft}
+          onSend={handleDesignSend}
+          selection={selectionDraft}
+        />
+      ) : null}
       <WorkspaceBrowserNativeView
         active={active}
         browserViewId={tab.browserViewId}

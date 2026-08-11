@@ -24,6 +24,12 @@ export const WORKSPACE_BROWSER_DESIGN_SET_ALLOWED_ORIGINS_CHANNEL =
 /** Host → main: read Design Mode state for a browser view. */
 export const WORKSPACE_BROWSER_DESIGN_GET_STATE_CHANNEL =
   "workspace-browser:design:get-state";
+/**
+ * Host → main: capture a full-viewport PNG of the guest webContents.
+ * Uses `capturePage()` with CDP `Page.captureScreenshot` fallback.
+ */
+export const WORKSPACE_BROWSER_DESIGN_CAPTURE_SCREENSHOT_CHANNEL =
+  "workspace-browser:design:capture-screenshot";
 
 /**
  * Main → guest preload: start/stop commands for the design-mode runtime.
@@ -244,6 +250,25 @@ export interface WorkspaceBrowserDesignStartInput
 export interface WorkspaceBrowserDesignStopInput
   extends WorkspaceBrowserCommandInput {}
 
+export interface WorkspaceBrowserDesignCaptureScreenshotInput
+  extends WorkspaceBrowserCommandInput {}
+
+/**
+ * Full-viewport screenshot for Design Mode send.
+ * `surface*` is CSS viewport size; `width`/`height` are bitmap pixels.
+ */
+export interface WorkspaceBrowserDesignScreenshot {
+  dataUrl: string;
+  height: number;
+  surfaceHeight: number;
+  surfaceWidth: number;
+  width: number;
+}
+
+export type WorkspaceBrowserDesignCaptureScreenshotOutcome =
+  | { ok: true; screenshot: WorkspaceBrowserDesignScreenshot }
+  | { code: DesignModeErrorCode; message: string; ok: false };
+
 export interface WorkspaceBrowserDesignSetAllowedOriginsInput
   extends WorkspaceBrowserCommandInput {
   /** Extra origins (e.g. `http://192.168.1.10:5173`) beyond default localhost. */
@@ -278,6 +303,9 @@ export interface WorkspaceBrowserApi {
   attach: (
     input: WorkspaceBrowserAttachInput,
   ) => Promise<WorkspaceBrowserState>;
+  captureDesignScreenshot: (
+    input: WorkspaceBrowserDesignCaptureScreenshotInput,
+  ) => Promise<WorkspaceBrowserDesignCaptureScreenshotOutcome>;
   create: (
     input: WorkspaceBrowserCreateInput,
   ) => Promise<WorkspaceBrowserState>;
