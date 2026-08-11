@@ -36,6 +36,7 @@ import {
 import { WorkspaceToolContextBridge } from "@/app/workspace/workspace-tool-host";
 import { useWorkspaceToolStore } from "@/app/workspace/workspace-tool-store";
 import { WorktreeDirtyDialog } from "@/app/workspace/worktree-dirty-dialog";
+import { WorktreeSetupGuidance } from "@/app/workspace/worktree-setup-guidance";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { ImportSessionDialog } from "@/features/chat/components/import-session-dialog";
 import { RenameChatDialog } from "@/features/chat/components/rename-chat-dialog";
@@ -103,6 +104,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     dockedWorkspaceToolContext,
     draftCreationLocation,
     draftProject,
+    initialDraftPrompt,
     isMacOS,
     isProjectMode,
     modeOverride,
@@ -206,11 +208,16 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     null;
   const {
     closeWorktreeDirtyPrompt,
+    configureSetupWithAgent,
     confirmProjectWorktreeCreation,
+    dismissSetupGuidance,
     ensureDraftChatCanSubmit,
+    migrateLegacyInitScript,
     rememberWorktreeDirtyChoice,
     setDraftCreationLocation,
     setRememberWorktreeDirtyChoice,
+    setupGuidanceVisible,
+    setupLegacyInitScript,
     worktreeDirtyPrompt,
   } = draftGuard;
   const {
@@ -587,8 +594,19 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                       ) : undefined
                     }
                     key={runtimePageKey}
+                    initialMarkdown={initialDraftPrompt}
                     model={modelOverride}
                     mode={modeOverride}
+                    notice={
+                      setupGuidanceVisible ? (
+                        <WorktreeSetupGuidance
+                          hasLegacyInitScript={setupLegacyInitScript.length > 0}
+                          onConfigure={configureSetupWithAgent}
+                          onDismiss={dismissSetupGuidance}
+                          onMigrate={() => void migrateLegacyInitScript()}
+                        />
+                      ) : undefined
+                    }
                     onBeforeSubmit={ensureDraftChatCanSubmit}
                     onChatCreated={updateChatFromRun}
                     onChatMessagesUpdated={setChatMessagesInCache}

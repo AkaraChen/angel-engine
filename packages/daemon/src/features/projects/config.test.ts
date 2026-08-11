@@ -35,7 +35,9 @@ describe("2code project config", () => {
 
     await expect(loadProjectLifecycleConfig(projectRoot)).resolves.toEqual({
       digest: expect.stringMatching(/^[a-f0-9]{64}$/),
+      legacyInitScript: [],
       runScript: "bun dev",
+      scriptShell: "auto",
       setupScript: ["echo first", "echo second"],
       teardownScript: ["echo teardown"],
     });
@@ -46,9 +48,26 @@ describe("2code project config", () => {
 
     await expect(loadProjectLifecycleConfig(projectRoot)).resolves.toEqual({
       digest: expect.stringMatching(/^[a-f0-9]{64}$/),
+      legacyInitScript: [],
       runScript: "",
+      scriptShell: "auto",
       setupScript: [],
       teardownScript: [],
+    });
+  });
+
+  it("reports init_script only as migration data", async () => {
+    await fs.writeFile(
+      path.join(projectRoot, "2code.json"),
+      JSON.stringify({ init_script: ["echo legacy"], script_shell: "bash" }),
+    );
+
+    await expect(
+      loadProjectLifecycleConfig(projectRoot),
+    ).resolves.toMatchObject({
+      legacyInitScript: ["echo legacy"],
+      scriptShell: "bash",
+      setupScript: [],
     });
   });
 

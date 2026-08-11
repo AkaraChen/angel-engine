@@ -303,6 +303,15 @@ export const zhTW = {
       worktreeSetupDirtyWarning:
         "這個倉庫還有未提交變更；worktree 仍會從目前 HEAD 建立。",
       worktreeSetupTitle: "執行 worktree 初始化命令？",
+      worktreeSetupConfigure: "幫我設定",
+      worktreeSetupDismiss: "不再提示",
+      worktreeSetupLegacyDescription:
+        "init_script 已停用且不會自動執行。請遷移到 setup_script，並在建立 worktree 前審核。",
+      worktreeSetupMigrate: "遷移 init_script",
+      worktreeSetupMigrationDone: "已遷移 init_script，請審核",
+      worktreeSetupMissingDescription:
+        "沒有 setup_script 時，新 worktree 可能需要重新安裝相依套件。",
+      worktreeSetupMissingTitle: "沒有 worktree 初始化腳本",
     },
     fleet: {
       allProjects: "全部專案",
@@ -993,6 +1002,10 @@ export const zhTW = {
     projects: {
       chooseFolder: "選擇專案資料夾",
       openInFinder: "在 Finder 中開啟",
+      scriptShell: "生命週期腳本 Shell",
+      scriptShellAuto: "自動（Bash 相容）",
+      scriptShellBash: "僅 Bash 相容 Shell",
+      scriptShellSystem: "系統 Shell（相容模式）",
       settings: "設定",
       settingsLoadFailed: "無法載入專案設定",
       settingsSaveFailed: "無法儲存專案設定",

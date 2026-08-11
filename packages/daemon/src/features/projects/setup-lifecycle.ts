@@ -1,4 +1,7 @@
-import type { ProjectSetupLifecycleView } from "@angel-engine/daemon-api/projects";
+import type {
+  ProjectSetupLifecycleContext,
+  ProjectSetupLifecycleView,
+} from "@angel-engine/daemon-api/projects";
 
 import path from "node:path";
 import {
@@ -9,10 +12,13 @@ import {
 
 interface SetupRegistration {
   approvedDigest: string;
+  baseRef?: string;
+  branch?: string;
   controller?: AbortController;
   continued: boolean;
   discarded: boolean;
   projectRoot: string;
+  projectId?: string;
   revision: number;
   running?: Promise<void>;
   waiters: Set<() => void>;
@@ -23,6 +29,9 @@ export class ProjectSetupLifecycleCoordinator {
 
   start(input: {
     approvedDigest: string;
+    baseRef: string;
+    branch: string;
+    projectId: string;
     projectRoot: string;
     worktreePath: string;
   }): void {
@@ -31,14 +40,20 @@ export class ProjectSetupLifecycleCoordinator {
       this.#registrations.get(key) ??
       ({
         approvedDigest: input.approvedDigest,
+        baseRef: input.baseRef,
+        branch: input.branch,
         continued: false,
         discarded: false,
         projectRoot: input.projectRoot,
+        projectId: input.projectId,
         revision: 0,
         waiters: new Set(),
       } satisfies SetupRegistration);
     registration.approvedDigest = input.approvedDigest;
+    registration.baseRef = input.baseRef;
+    registration.branch = input.branch;
     registration.projectRoot = input.projectRoot;
+    registration.projectId = input.projectId;
     registration.continued = false;
     registration.discarded = false;
     this.#registrations.set(key, registration);
@@ -47,6 +62,8 @@ export class ProjectSetupLifecycleCoordinator {
 
   restore(input: {
     approvedDigest: string;
+    context?: ProjectSetupLifecycleContext;
+    projectId: string;
     projectRoot: string;
     worktreePath: string;
   }): void {
@@ -54,23 +71,22 @@ export class ProjectSetupLifecycleCoordinator {
     if (this.#registrations.has(key)) return;
     this.#registrations.set(key, {
       approvedDigest: input.approvedDigest,
+      baseRef: input.context?.baseRef,
+      branch: input.context?.branch,
       continued: false,
       discarded: false,
-      projectRoot: input.projectRoot,
+      projectRoot: input.context?.projectRoot ?? input.projectRoot,
+      projectId: input.context?.projectId ?? input.projectId,
       revision: 0,
       waiters: new Set(),
     });
   }
 
-  retry(
-    worktreePath: string,
-    approval: { approvedDigest: string; projectRoot: string },
-  ): void {
+  retry(worktreePath: string, approval: { approvedDigest: string }): void {
     const key = path.resolve(worktreePath);
     const registration = this.#require(key);
     if (registration.running !== undefined) return;
     registration.approvedDigest = approval.approvedDigest;
-    registration.projectRoot = approval.projectRoot;
     registration.continued = false;
     registration.discarded = false;
     this.#launch(key, registration);
@@ -152,6 +168,9 @@ export class ProjectSetupLifecycleCoordinator {
     registration.controller = controller;
     const running = executeProjectLifecycle("setup", {
       approvedDigest: registration.approvedDigest,
+      baseRef: registration.baseRef,
+      branch: registration.branch,
+      projectId: registration.projectId,
       projectRoot: registration.projectRoot,
       signal: controller.signal,
       worktreePath: key,

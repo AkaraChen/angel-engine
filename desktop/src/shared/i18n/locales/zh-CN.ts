@@ -303,6 +303,15 @@ export const zhCN = {
       worktreeSetupDirtyWarning:
         "这个仓库还有未提交更改；worktree 仍会从当前 HEAD 创建。",
       worktreeSetupTitle: "运行 worktree 初始化命令？",
+      worktreeSetupConfigure: "帮我配置",
+      worktreeSetupDismiss: "不再提示",
+      worktreeSetupLegacyDescription:
+        "init_script 已停用且不会自动执行。请迁移到 setup_script，并在创建 worktree 前审核。",
+      worktreeSetupMigrate: "迁移 init_script",
+      worktreeSetupMigrationDone: "已迁移 init_script，请审核",
+      worktreeSetupMissingDescription:
+        "没有 setup_script 时，新 worktree 可能需要重新安装依赖。",
+      worktreeSetupMissingTitle: "没有 worktree 初始化脚本",
     },
     fleet: {
       allProjects: "全部项目",
@@ -992,6 +1001,10 @@ export const zhCN = {
     projects: {
       chooseFolder: "选择项目文件夹",
       openInFinder: "在 Finder 中打开",
+      scriptShell: "生命周期脚本 Shell",
+      scriptShellAuto: "自动（Bash 兼容）",
+      scriptShellBash: "仅 Bash 兼容 Shell",
+      scriptShellSystem: "系统 Shell（兼容模式）",
       settings: "设置",
       settingsLoadFailed: "无法加载项目设置",
       settingsSaveFailed: "无法保存项目设置",

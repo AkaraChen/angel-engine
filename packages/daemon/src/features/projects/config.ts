@@ -1,12 +1,15 @@
 import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
+import type { ProjectScriptShell } from "@angel-engine/daemon-api/projects";
 
 export const PROJECT_CONFIG_FILE = "2code.json";
 
 export interface ProjectLifecycleConfig {
   digest: string;
+  legacyInitScript: string[];
   runScript: string;
+  scriptShell: ProjectScriptShell;
   setupScript: string[];
   teardownScript: string[];
 }
@@ -23,7 +26,9 @@ export async function loadProjectLifecycleConfig(
 
   return {
     digest: createHash("sha256").update(file.content).digest("hex"),
+    legacyInitScript: readCommandList(file.config, "init_script"),
     runScript: readRunScript(file.config),
+    scriptShell: readScriptShell(file.config),
     setupScript: readCommandList(file.config, "setup_script"),
     teardownScript: readCommandList(file.config, "teardown_script"),
   };
@@ -36,7 +41,9 @@ export async function loadProjectLifecycleConfig(
 export async function saveProjectLifecycleConfig(
   projectRoot: string,
   input: {
+    migrateLegacyInitScript?: boolean;
     runScript: string;
+    scriptShell?: ProjectScriptShell;
     setupScript: string[];
     teardownScript: string[];
   },
@@ -49,9 +56,15 @@ export async function saveProjectLifecycleConfig(
   const setupScript = normalizeCommands(input.setupScript);
   const teardownScript = normalizeCommands(input.teardownScript);
   const runScript = input.runScript.trim();
+  const scriptShell = input.scriptShell ?? readScriptShell(file?.config ?? {});
+  const preservedConfig = { ...file?.config };
+  if (input.migrateLegacyInitScript === true) {
+    delete preservedConfig.init_script;
+  }
   const config = {
-    ...file?.config,
+    ...preservedConfig,
     run_script: runScript,
+    script_shell: scriptShell,
     setup_script: setupScript,
     teardown_script: teardownScript,
   };
@@ -62,7 +75,13 @@ export async function saveProjectLifecycleConfig(
     "utf8",
   );
 
-  return { runScript, setupScript, teardownScript };
+  return {
+    legacyInitScript: readCommandList(config, "init_script"),
+    runScript,
+    scriptShell,
+    setupScript,
+    teardownScript,
+  };
 }
 
 async function readProjectConfigFile(projectRoot: string) {
@@ -97,7 +116,7 @@ async function readProjectConfigFile(projectRoot: string) {
 
 function readCommandList(
   config: Record<string, unknown>,
-  key: "setup_script" | "teardown_script",
+  key: "init_script" | "setup_script" | "teardown_script",
 ): string[] {
   const scripts = config[key];
   if (scripts === undefined) return [];
@@ -121,10 +140,23 @@ function readRunScript(config: Record<string, unknown>): string {
   return script;
 }
 
+function readScriptShell(config: Record<string, unknown>): ProjectScriptShell {
+  const shell = config.script_shell;
+  if (shell === undefined) return "auto";
+  if (shell !== "auto" && shell !== "bash" && shell !== "system") {
+    throw new Error(
+      `${PROJECT_CONFIG_FILE} script_shell must be auto, bash, or system.`,
+    );
+  }
+  return shell;
+}
+
 function validateLifecycleConfig(config: Record<string, unknown>) {
   readCommandList(config, "setup_script");
   readCommandList(config, "teardown_script");
+  readCommandList(config, "init_script");
   readRunScript(config);
+  readScriptShell(config);
 }
 
 function normalizeCommands(commands: string[]) {

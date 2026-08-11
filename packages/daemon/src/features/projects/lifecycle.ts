@@ -22,6 +22,7 @@ export {
   type LifecycleProcessSession,
   type LifecycleProcessStartOptions,
   SpawnLifecycleProcessAdapter,
+  scriptCommand,
   terminateProcessTree,
 } from "./lifecycle-process";
 export {

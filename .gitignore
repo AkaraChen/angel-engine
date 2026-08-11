@@ -6,6 +6,7 @@ asahi.db
 
 /qa-runs
 /node_modules
+/desktop/.runtime/
 .turbo/
 /packages/*/dist
 /packages/*/playground/dist

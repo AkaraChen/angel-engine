@@ -250,14 +250,25 @@ export const SetupLifecycleBanner: FC<SetupLifecycleBannerProps> = ({
               ) : null}
             </div>
             {setup.status === "running" ? (
-              <Button
-                disabled={pending}
-                size="sm"
-                variant="ghost"
-                onClick={() => cancel.mutate(undefined)}
-              >
-                {t("common.cancel")}
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  data-testid="lifecycle-continue"
+                  disabled={pending}
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => continueSetup.mutate(undefined)}
+                >
+                  {t("workspace.setup.continueAnyway")}
+                </Button>
+                <Button
+                  disabled={pending}
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => cancel.mutate(undefined)}
+                >
+                  {t("common.cancel")}
+                </Button>
+              </div>
             ) : null}
           </LifecycleShell>
         ) : null}

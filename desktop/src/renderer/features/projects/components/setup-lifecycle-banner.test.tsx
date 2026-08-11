@@ -59,6 +59,8 @@ describe("SetupLifecycleBanner", () => {
 
     expect(await screen.findByTestId("lifecycle-banner")).toBeDefined();
     expect(screen.getByTestId("lifecycle-banner-step")).toBeDefined();
+    fireEvent.click(screen.getByTestId("lifecycle-continue"));
+    await waitFor(() => expect(continueSetup).toHaveBeenCalledOnce());
     fireEvent.click(
       screen.getByRole("button", { name: "workspace.setup.viewLog" }),
     );

@@ -495,7 +495,6 @@ export function registerApi(
     }
     projectSetupLifecycle.retry(chat.worktreePath, {
       approvedDigest: input.setupApproval,
-      projectRoot: chat.project.path,
     });
     return context.json(await projectSetupLifecycle.view(chat.worktreePath));
   });
@@ -573,6 +572,8 @@ export function registerApi(
     if (snapshot.approvedDigest !== undefined) {
       projectSetupLifecycle.restore({
         approvedDigest: snapshot.approvedDigest,
+        context: snapshot.setupContext,
+        projectId: project.id,
         projectRoot: project.path,
         worktreePath,
       });

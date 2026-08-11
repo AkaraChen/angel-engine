@@ -36,8 +36,10 @@ export function readProjectConfig(
     return {
       configPath,
       exists: config !== undefined,
+      legacyInitScript: config?.legacyInitScript ?? [],
       projectId: input.projectId,
       runScript: config?.runScript ?? "",
+      scriptShell: config?.scriptShell ?? "auto",
       setupScript: config?.setupScript ?? [],
       teardownScript: config?.teardownScript ?? [],
     };

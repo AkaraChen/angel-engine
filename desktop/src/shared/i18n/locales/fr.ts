@@ -314,6 +314,15 @@ export const fr = {
       worktreeSetupDirtyWarning:
         "Ce dépôt contient aussi des modifications non validées. Le worktree partira tout de même du HEAD actuel.",
       worktreeSetupTitle: "Exécuter les commandes de configuration ?",
+      worktreeSetupConfigure: "M’aider à configurer",
+      worktreeSetupDismiss: "Ne plus afficher",
+      worktreeSetupLegacyDescription:
+        "init_script est obsolète et ne sera pas exécuté automatiquement. Migrez-le vers setup_script et vérifiez-le avant la création.",
+      worktreeSetupMigrate: "Migrer init_script",
+      worktreeSetupMigrationDone: "init_script migré pour vérification",
+      worktreeSetupMissingDescription:
+        "Sans setup_script, les dépendances devront peut-être être réinstallées.",
+      worktreeSetupMissingTitle: "Aucun script de configuration",
     },
     fleet: {
       allProjects: "Tous les projets",
@@ -1050,6 +1059,10 @@ export const fr = {
     projects: {
       chooseFolder: "Choisir le dossier du projet",
       openInFinder: "Ouvrir dans le Finder",
+      scriptShell: "Shell des scripts de cycle de vie",
+      scriptShellAuto: "Automatique (compatible Bash)",
+      scriptShellBash: "Compatible Bash uniquement",
+      scriptShellSystem: "Shell système (compatibilité)",
       settings: "Paramètres",
       settingsLoadFailed: "Impossible de charger les paramètres du projet",
       settingsSaveFailed: "Impossible d'enregistrer les paramètres du projet",

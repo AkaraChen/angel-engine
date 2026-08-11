@@ -107,8 +107,10 @@ interface NewChatComposerProps {
   creationLocation?: ChatCreationLocation;
   creationLocationAccessory?: ReactNode;
   cwd?: string;
+  initialMarkdown?: string;
   model?: string;
   mode?: string;
+  notice?: ReactNode;
   onBeforeSubmit?: () =>
     | ChatComposerBeforeSubmitResult
     | Promise<ChatComposerBeforeSubmitResult>;
@@ -141,8 +143,10 @@ export function NewChatComposer({
   creationLocation,
   creationLocationAccessory,
   cwd,
+  initialMarkdown,
   model,
   mode,
+  notice,
   onBeforeSubmit,
   onChatCreated,
   onChatMessagesUpdated,
@@ -167,7 +171,7 @@ export function NewChatComposer({
     ? projectSuggestionKeys
     : chatSuggestionKeys;
 
-  const editor = useComposerEditor();
+  const editor = useComposerEditor({ initialMarkdown });
   useTerminalSelectionInsert(editor);
   const sourceAttachment = editor.githubAttachments[0];
   const isPullRequest =
@@ -312,6 +316,7 @@ export function NewChatComposer({
             onDragEnd={handleDragEnd}
             onDrop={handleDragEnd}
           >
+            {notice}
             <ChatComposer
               blockSubmit={isRunning}
               canCancel={isRunning}

@@ -1,6 +1,7 @@
 import type {
   ProjectLifecycleKind,
   ProjectLifecycleSnapshot,
+  ProjectSetupLifecycleContext,
 } from "@angel-engine/daemon-api/projects";
 
 import os from "node:os";
@@ -32,9 +33,12 @@ import {
 
 export interface ProjectLifecycleExecutionOptions {
   approvedDigest: string;
+  baseRef?: string;
+  branch?: string;
   killGraceMs?: number;
   onState?: (snapshot: ProjectLifecycleSnapshot) => void;
   port?: number;
+  projectId?: string;
   projectRoot: string;
   signal?: AbortSignal;
   timeoutMs?: number;
@@ -106,6 +110,16 @@ export class ProjectLifecycleRuntime {
         kind === "setup" ? config.setupScript : config.teardownScript;
       let logTail = await this.#storage.log(record, kind);
 
+      if (kind === "setup") {
+        const context = setupLifecycleContext(options);
+        if (context !== undefined) {
+          await this.#storage.update(record, options.onState, (snapshot) => {
+            snapshot.approvedDigest = config.digest;
+            snapshot.setupContext = context;
+          });
+        }
+      }
+
       for (const [index, command] of commands.entries()) {
         await this.#storage.update(record, options.onState, (snapshot) => {
           snapshot.approvedDigest = config.digest;
@@ -120,6 +134,7 @@ export class ProjectLifecycleRuntime {
         try {
           const session = await this.#processAdapter.start({
             cwd: options.worktreePath,
+            environment: lifecycleContractEnvironment(kind, options),
             killGraceMs: options.killGraceMs ?? TERMINATION_GRACE_MS,
             onOutput: async (chunk) => {
               logTail = tail(logTail + chunk, LOG_TAIL_LENGTH);
@@ -127,6 +142,7 @@ export class ProjectLifecycleRuntime {
               await this.#storage.appendLog(record, kind, chunk);
             },
             script: command,
+            shell: config.scriptShell,
             signal: options.signal,
             timeoutMs:
               options.timeoutMs ??
@@ -259,6 +275,7 @@ export class ProjectLifecycleRuntime {
       const session = await this.#runProcessAdapter.start({
         cwd: options.worktreePath,
         environment: {
+          ...lifecycleContractEnvironment("run", options),
           ANGEL_WORKSPACE_PORT: String(port),
           PORT: String(port),
         },
@@ -269,6 +286,7 @@ export class ProjectLifecycleRuntime {
           await this.#storage.appendLog(record!, "run", chunk);
         },
         script: config.runScript,
+        shell: config.scriptShell,
         signal: operation.controller.signal,
         timeoutMs: options.timeoutMs,
       });
@@ -350,6 +368,40 @@ export class ProjectLifecycleRuntime {
       if (active.size === 0) this.#activeTracks.delete(key);
     };
   }
+}
+
+function setupLifecycleContext(
+  options: ProjectLifecycleExecutionOptions,
+): ProjectSetupLifecycleContext | undefined {
+  if (
+    options.baseRef === undefined ||
+    options.branch === undefined ||
+    options.projectId === undefined
+  ) {
+    return undefined;
+  }
+  return {
+    baseRef: options.baseRef,
+    branch: options.branch,
+    projectId: options.projectId,
+    projectRoot: options.projectRoot,
+  };
+}
+
+function lifecycleContractEnvironment(
+  kind: ProjectLifecycleKind,
+  options: ProjectLifecycleExecutionOptions,
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries({
+      ANGEL_LIFECYCLE_KIND: kind,
+      ANGEL_PROJECT_ID: options.projectId,
+      ANGEL_SOURCE_WORKTREE_PATH: options.projectRoot,
+      ANGEL_WORKTREE_BASE_REF: options.baseRef,
+      ANGEL_WORKTREE_BRANCH: options.branch,
+      ANGEL_WORKTREE_PATH: options.worktreePath,
+    }).filter((entry): entry is [string, string] => entry[1] !== undefined),
+  );
 }
 
 async function approvedConfig(options: ProjectLifecycleExecutionOptions) {

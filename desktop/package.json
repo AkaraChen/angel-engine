@@ -14,10 +14,11 @@
   "keywords": [],
   "main": ".vite/build/main.js",
   "scripts": {
+    "brush:stage": "node scripts/stage-brush.cjs",
     "runtime:build": "turbo run build --filter @angel-engine/client-napi --filter @angel-engine/js-client --filter @angel-engine/claude-client --filter @angel-engine/pi-client --filter @angel-engine/usage-collector --filter @angel-engine/daemon-api --filter @angel-engine/daemon-client --filter @angel-engine/daemon --filter @angel-engine/host-cli --filter mobile",
     "runtime:build:debug": "turbo run build:debug --filter @angel-engine/client-napi --filter @angel-engine/js-client --filter @angel-engine/claude-client --filter @angel-engine/pi-client --filter @angel-engine/usage-collector --filter @angel-engine/daemon-api --filter @angel-engine/daemon-client --filter @angel-engine/daemon --filter @angel-engine/host-cli",
     "start": "bun run runtime:build:debug && electron-forge start",
-    "package": "bun run runtime:build && bun run rebuild:native && node scripts/package-app.cjs",
+    "package": "bun run runtime:build && bun run brush:stage && bun run rebuild:native && node scripts/package-app.cjs",
     "make": "bun run package && node scripts/build-prepackaged.cjs --publish never",
     "publish": "bun run package && node scripts/build-prepackaged.cjs --publish always",
     "lint": "oxlint --type-aware .",
