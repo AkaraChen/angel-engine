@@ -56,6 +56,7 @@ export const zhCN = {
       helpful: "有帮助",
       image: "图片",
       loading: "加载中",
+      loadMore: "加载更多",
       mention: "引用",
       notHelpful: "无帮助",
       other: "其他",

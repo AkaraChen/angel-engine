@@ -56,6 +56,7 @@ export const ja = {
       helpful: "役に立つ",
       image: "画像",
       loading: "読み込み中",
+      loadMore: "さらに読み込む",
       mention: "メンション",
       notHelpful: "役に立たない",
       other: "その他",

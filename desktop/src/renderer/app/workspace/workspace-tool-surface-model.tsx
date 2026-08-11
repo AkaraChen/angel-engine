@@ -24,6 +24,7 @@ import { browserTitleFromUrl } from "@/app/workspace/workspace-browser-url";
 import {
   currentWorkspaceToolSnapshot,
   useWorkspaceToolStore,
+  workspaceToolChecksTabId,
   workspaceToolFilesTabId,
 } from "@/app/workspace/workspace-tool-store";
 import {
@@ -51,6 +52,7 @@ export interface WorkspaceToolSurfaceModel {
   addTerminalTab: () => void;
   api: ApiClient;
   contextKey: string | null;
+  focusChecksSection: boolean;
   closeDynamicTab: (tab: WorkspaceToolSurfaceDynamicTab) => void;
   host: WorkspaceToolSurfaceHost;
   openBrowserTab: (url: string) => void;
@@ -91,6 +93,7 @@ export function useWorkspaceToolSurfaceModel({
   const chatId = context.chatId ?? null;
   const root = propRoot ?? context.root ?? null;
   const snapshot = currentWorkspaceToolSnapshot(contextKey, snapshots);
+  const focusChecksSection = snapshot.activeTabId === workspaceToolChecksTabId;
   const activeTabId = visibleActiveWorkspaceToolTabId(snapshot);
   const activeDynamicTab = snapshot.tabs.find((tab) => tab.id === activeTabId);
   const openWorkspaceWindowFile = useWorkspaceWindowFileOpener(api);
@@ -256,7 +259,6 @@ export function useWorkspaceToolSurfaceModel({
   const tabItems = useMemo(
     () =>
       workspaceToolTabItems(snapshot.tabs, {
-        checks: t("workspace.tools.tabs.checks"),
         files: t("workspace.tools.tabs.files"),
         gitChanges: t("workspace.tools.tabs.gitChanges"),
         pullRequest: t("workspace.tools.tabs.pullRequest"),
@@ -275,6 +277,7 @@ export function useWorkspaceToolSurfaceModel({
       api,
       chatId,
       contextKey,
+      focusChecksSection,
       closeDynamicTab,
       host,
       openBrowserTab,
@@ -294,6 +297,7 @@ export function useWorkspaceToolSurfaceModel({
       api,
       chatId,
       contextKey,
+      focusChecksSection,
       closeDynamicTab,
       host,
       openBrowserTab,

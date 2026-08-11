@@ -27,6 +27,7 @@ export interface LocaleResourceTranslationCommon {
   helpful: string;
   image: string;
   loading: string;
+  loadMore: string;
   mention: string;
   notHelpful: string;
   other: string;
@@ -253,6 +254,7 @@ export interface LocaleResourceTranslationWorkspaceToolsPullRequest {
   checkingMergeability: string;
   continue: string;
   deleteBranch: string;
+  description: string;
   errors: {
     cliMissing: string;
     cliMissingDetail: string;

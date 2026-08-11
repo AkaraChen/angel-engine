@@ -56,6 +56,7 @@ export const zhTW = {
       helpful: "有幫助",
       image: "圖片",
       loading: "載入中",
+      loadMore: "載入更多",
       mention: "引用",
       notHelpful: "沒有幫助",
       other: "其他",

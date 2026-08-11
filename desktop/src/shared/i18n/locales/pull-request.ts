@@ -32,6 +32,7 @@ export const pullRequestEn = {
   checkingMergeability: "GitHub is still calculating mergeability.",
   continue: "Continue working",
   deleteBranch: "Delete the remote branch after merging",
+  description: "Description",
   errors: {
     cliMissing: "GitHub CLI is required",
     cliMissingDetail: "Install gh to merge pull requests inside Angel Engine.",
@@ -154,6 +155,7 @@ export const pullRequestZhCN = {
   checkingMergeability: "GitHub 仍在计算是否可合并。",
   continue: "继续在此工作",
   deleteBranch: "合并后删除远端分支",
+  description: "描述",
   errors: {
     cliMissing: "需要 GitHub CLI",
     cliMissingDetail: "安装 gh 后即可在 Angel Engine 内合并拉取请求。",
