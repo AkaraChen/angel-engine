@@ -16,6 +16,11 @@ import { PathLauncherMenuItems } from "@/features/path-launcher/components/path-
 interface ProjectContextMenuProps {
   children: ReactNode;
   onAction: (project: Project, action: ProjectContextMenuAction) => void;
+  /**
+   * Importing lives here rather than in the sidebar rail: the project you
+   * right-clicked *is* the destination, so the picker never has to ask for one.
+   */
+  onImportSession: (project: Project) => void;
   onPathLauncherAction: (
     project: Project,
     action: PathLauncherActionId,
@@ -26,6 +31,7 @@ interface ProjectContextMenuProps {
 export function ProjectContextMenu({
   children,
   onAction,
+  onImportSession,
   onPathLauncherAction,
   project,
 }: ProjectContextMenuProps): ReactElement {
@@ -39,6 +45,9 @@ export function ProjectContextMenu({
           onSelect={(action) => onPathLauncherAction(project, action)}
         />
         <ContextMenuSeparator />
+        <ContextMenuItem onSelect={() => onImportSession(project)}>
+          {t("projects.importSession")}
+        </ContextMenuItem>
         <ContextMenuItem onSelect={() => onAction(project, "settings")}>
           {t("projects.settings")}
         </ContextMenuItem>

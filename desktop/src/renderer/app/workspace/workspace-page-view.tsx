@@ -1,6 +1,8 @@
+import type { Project } from "@angel-engine/daemon-api/projects";
 import type { PathLauncherActionId } from "@shared/path-launcher";
 import type { FC } from "react";
 import type { PowerWorktreeTabs } from "@/app/workspace/use-power-worktree-tabs";
+import type { ImportSessionTarget } from "@/features/chat/components/import-session-dialog";
 import type { WorkspaceChatActions } from "@/app/workspace/use-workspace-chat-actions";
 import type { WorkspaceNavigation } from "@/app/workspace/use-workspace-navigation";
 import type { WorkspacePageModel } from "@/app/workspace/use-workspace-page-model";
@@ -12,6 +14,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ChatRestoreLoading } from "@/app/workspace/chat-restore-loading";
 import { DraftCreationLocationSelect } from "@/app/workspace/draft-project-select";
 import { NewChatThread } from "@/app/workspace/new-chat-thread";
+import { getProjectDisplayName } from "@/app/workspace/workspace-display";
 import { PowerWorktreeHistoryPage } from "@/app/workspace/power-worktree-history-page";
 import { PowerWorktreeTabBar } from "@/app/workspace/power-worktree-tab-bar";
 import {
@@ -71,12 +74,11 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
   powerTabs,
 }) => {
   const queryClient = useQueryClient();
-  const [importSessionOpen, setImportSessionOpen] = useState(false);
-  const openImportSession = useCallback(() => {
-    setImportSessionOpen(true);
-  }, []);
+  const [importTarget, setImportTarget] = useState<ImportSessionTarget | null>(
+    null,
+  );
   const closeImportSession = useCallback(() => {
-    setImportSessionOpen(false);
+    setImportTarget(null);
   }, []);
   const [cloneDialogOpen, setCloneDialogOpen] = useState(false);
   const [cloneUrl, setCloneUrl] = useState<string | null>(null);
@@ -186,26 +188,40 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     selectDraftProject,
   } = navigation;
   const handleImportedSession = useCallback(
-    async (chatId: string) => {
+    async (chatIds: string[]) => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.chats.list() });
       const chats = await queryClient.fetchQuery({
         queryFn: async () => api.chats.list(),
         queryKey: queryKeys.chats.list(),
       });
-      const chat = chats.find((entry) => entry.id === chatId);
+      // A batch import lands the user on the first thread they picked; the rest
+      // are already visible under the project in the sidebar.
+      const firstId = chatIds[0];
+      if (firstId === undefined) return;
+      const chat = chats.find((entry) => entry.id === firstId);
       if (chat) {
         navigateToChat(chat);
       }
     },
     [api, navigateToChat, queryClient],
   );
-  const importCwd =
-    selectedChat?.cwd ??
-    pinnedDraftCwd ??
-    powerDraftContext?.cwd ??
-    powerHomePageContext?.cwd ??
-    draftProject.path ??
-    null;
+  const openImportSessionForProject = useCallback((project: Project) => {
+    setImportTarget({
+      cwd: project.path,
+      projectId: project.id,
+      projectName: getProjectDisplayName(project.path),
+    });
+  }, []);
+  // The palette entry only exists when a project owns the destination; with no
+  // project in view there is nothing to import *into*, so it stays hidden
+  // rather than opening a picker that has to ask.
+  const paletteImportProject = projects.find(
+    (project) => project.id === (selectedProjectId ?? draftProject.id),
+  );
+  const importSessionForCurrentProject =
+    paletteImportProject === undefined
+      ? null
+      : () => openImportSessionForProject(paletteImportProject);
   const {
     closeWorktreeDirtyPrompt,
     configureSetupWithAgent,
@@ -342,7 +358,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
             onCreateProject={() => void createProjectFromPicker()}
             onCreateProjectChat={createChatForProject}
             onCreateStandaloneChat={createChatForSelection}
-            onImportSession={openImportSession}
+            onImportSession={openImportSessionForProject}
             onOpenChat={openChat}
             onOpenFleet={openFleet}
             onOpenSchedule={openSchedule}
@@ -372,7 +388,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
             onCreateProject={() => void createProjectFromPicker()}
             onCreateProjectChat={createChatForProject}
             onCreateStandaloneChat={createChatForSelection}
-            onImportSession={openImportSession}
+            onImportSession={openImportSessionForProject}
             onOpenChat={openChat}
             onOpenFleet={openFleet}
             onOpenSchedule={openSchedule}
@@ -396,6 +412,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           />
           <WorkspaceCommandPalette
             chats={chats}
+            onImportSession={importSessionForCurrentProject}
             onNewWorkspace={createStandaloneWorkspace}
             onOpenSession={openChatFromFleet}
             onOpenSettings={openSettings}
@@ -414,12 +431,10 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           />
           <ImportSessionDialog
             api={api}
-            cwd={importCwd}
             onClose={closeImportSession}
             onImported={handleImportedSession}
-            open={importSessionOpen}
-            projectId={selectedProjectId ?? draftProject.id ?? null}
-            runtime={activeRuntime}
+            runtimeOptions={runtimeOptions}
+            target={importTarget}
           />
           <ProjectSettingsDialog
             onClose={closeProjectSettingsDialog}

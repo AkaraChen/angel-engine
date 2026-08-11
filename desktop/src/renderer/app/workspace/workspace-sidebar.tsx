@@ -14,7 +14,6 @@ import {
   Chats as MessageSquare,
   Plus,
   CalendarDots,
-  DownloadSimple,
   GearSix as Settings,
   SquaresFour,
 } from "@phosphor-icons/react";
@@ -73,7 +72,7 @@ interface WorkspaceSidebarProps {
   onCreateProject: () => MaybeAsync;
   onCreateProjectChat: (project: Project) => MaybeAsync;
   onCreateStandaloneChat: () => MaybeAsync;
-  onImportSession: () => MaybeAsync;
+  onImportSession: (project: Project) => void;
   onOpenChat: (chat: Chat) => MaybeAsync;
   onOpenFleet: () => MaybeAsync;
   onOpenSchedule: () => MaybeAsync;
@@ -333,12 +332,6 @@ function WorkspaceSidebarContent({
             </WorkspaceSidebarMenuButton>
           </AnimatedSidebarMenuItem>
           <AnimatedSidebarMenuItem>
-            <WorkspaceSidebarMenuButton onClick={() => void onImportSession()}>
-              <DownloadSimple weight="duotone" />
-              <span>{t("sidebar.importSession")}</span>
-            </WorkspaceSidebarMenuButton>
-          </AnimatedSidebarMenuItem>
-          <AnimatedSidebarMenuItem>
             <WorkspaceSidebarMenuButton
               isActive={fleetActive}
               onClick={() => void onOpenFleet()}
@@ -366,6 +359,7 @@ function WorkspaceSidebarContent({
             onCloneRepository={onCloneRepository}
             onCreateProject={onCreateProject}
             onCreateProjectChat={onCreateProjectChat}
+            onImportSession={onImportSession}
             onCancelWorktreeCreation={onCancelWorktreeCreation}
             onOpenWorktree={onOpenWorktree}
             onOpenChat={onOpenChat}
@@ -386,6 +380,7 @@ function WorkspaceSidebarContent({
             onCancelWorktreeCreation={onCancelWorktreeCreation}
             onCreateProject={onCreateProject}
             onCreateProjectChat={onCreateProjectChat}
+            onImportSession={onImportSession}
             onOpenChat={onOpenChat}
             onRetryWorktreeCreation={onRetryWorktreeCreation}
             onChatContextMenuAction={onChatContextMenuAction}

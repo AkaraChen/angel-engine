@@ -393,8 +393,6 @@ export const ja = {
       modeSwitcher: "ワークスペースモード",
       modeWork: "作業",
       needsInput: "入力が必要",
-
-      importSession: "セッションをインポート",
       newChat: "新しいチャット",
       newChatInProject: "{{projectName}} の新しいチャット",
       noChats: "チャットはありません",
@@ -935,20 +933,22 @@ export const ja = {
         saveFileChangesTitle: "{{path}} の変更を保存しますか？",
       },
       importSession: {
-        cwdLabel: "ディレクトリ: {{cwd}}",
+        allAgents: "すべて",
+        clearSelection: "{{selected}} 件選択中 · クリア",
         description:
-          "選択したエージェントのセッションを検索し、Angel Engine で開きます。",
-        empty:
-          "このエージェントとディレクトリにインポート可能なセッションはありません。",
-        importAction: "インポートして開く",
-        importFailed: "セッションをインポートできませんでした",
-        importing: "インポート中…",
-        runtimeLabel: "エージェント: {{runtime}}",
-        runtimeRequired:
-          "セッションをインポートする前にエージェントを選択してください。",
-        searchFailed: "セッションを検索できませんでした",
-        searching: "セッションを検索中…",
-        title: "セッションをインポート",
+          "使用中のエージェントからセッションを選び、このプロジェクトに取り込みます。",
+        empty: "取り込めるセッションがありません",
+        emptyDetail:
+          "Angel Engine はこの端末にインストール済みのエージェントのセッションのみ読み取ります。",
+        importAction: "{{selected}} 件を {{projectName}} に取り込む",
+        importFailed: "セッションを取り込めませんでした",
+        importing: "取り込み中…",
+        noMatches: "一致するセッションがありません",
+        searchPlaceholder: "取り込むセッションを検索…",
+        noMatchesDetail:
+          "別のキーワードを試すか、上のエージェント絞り込みを切り替えてください。",
+        retryAction: "失敗した {{selected}} 件を再試行",
+        titleForProject: "{{projectName}} にセッションを取り込む",
       },
       renameChat: "チャット名を変更",
       sessionHandoff: {
@@ -1052,6 +1052,7 @@ export const ja = {
     },
     projects: {
       chooseFolder: "プロジェクトフォルダーを選択",
+      importSession: "セッションを取り込む…",
       openInFinder: "Finder で開く",
       scriptShell: "ライフサイクルスクリプトのシェル",
       scriptShellAuto: "自動（Bash 互換）",
@@ -1081,6 +1082,7 @@ export const ja = {
       commandNoResults: "一致するコマンドまたはセッションがありません。",
       commandPalette: "コマンドパレット",
       commandSessions: "セッション",
+      commandImportSession: "プロジェクトにセッションを取り込む",
       commandShepherdPr: "Shepherd PR",
     },
     promptInput: {

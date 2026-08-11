@@ -48,6 +48,7 @@ function renderMenu(onAction = vi.fn(), onPathLauncherAction = vi.fn()) {
     <QueryClientProvider client={new QueryClient()}>
       <SidebarProvider>
         <ProjectContextMenu
+          onImportSession={vi.fn()}
           onAction={onAction}
           onPathLauncherAction={onPathLauncherAction}
           project={project}

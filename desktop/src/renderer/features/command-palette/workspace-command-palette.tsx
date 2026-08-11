@@ -6,6 +6,7 @@ import { DaemonRequestError } from "@angel-engine/daemon-client";
 import {
   Binoculars as BinocularsIcon,
   Chats as ChatsIcon,
+  DownloadSimple as ImportIcon,
   GearSix as SettingsIcon,
   Plus as PlusIcon,
 } from "@phosphor-icons/react";
@@ -53,6 +54,7 @@ interface CommandPaletteEntry {
 
 interface WorkspaceCommandPaletteProps {
   chats: Chat[];
+  onImportSession: (() => void) | null;
   onNewWorkspace: () => void;
   onOpenSession: (chat: Chat) => void;
   onOpenSettings: () => void;
@@ -60,6 +62,7 @@ interface WorkspaceCommandPaletteProps {
 
 export const WorkspaceCommandPalette: FC<WorkspaceCommandPaletteProps> = ({
   chats,
+  onImportSession,
   onNewWorkspace,
   onOpenSession,
   onOpenSettings,
@@ -201,6 +204,19 @@ export const WorkspaceCommandPalette: FC<WorkspaceCommandPaletteProps> = ({
         },
         title: t("ui.commandShepherdPr"),
       },
+      // Import has no button anywhere in the chrome; the palette is where a
+      // rarely-used verb belongs. Hidden when no project owns the destination.
+      ...(onImportSession === null
+        ? []
+        : [
+            {
+              icon: ImportIcon,
+              id: "import-session",
+              kind: "action" as const,
+              onSelect: onImportSession,
+              title: t("ui.commandImportSession"),
+            },
+          ]),
       {
         icon: SettingsIcon,
         id: "open-settings",
@@ -218,7 +234,15 @@ export const WorkspaceCommandPalette: FC<WorkspaceCommandPaletteProps> = ({
           title: displayChatTitle(chat.title, t),
         })),
     ],
-    [chats, onNewWorkspace, onOpenSession, onOpenSettings, shepherdPr, t],
+    [
+      chats,
+      onImportSession,
+      onNewWorkspace,
+      onOpenSession,
+      onOpenSettings,
+      shepherdPr,
+      t,
+    ],
   );
   const search = useMemo(() => createTitleSearch(entries), [entries]);
   const results = search(query, MAX_PALETTE_ITEMS);

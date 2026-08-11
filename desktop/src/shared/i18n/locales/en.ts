@@ -391,7 +391,6 @@ export const en = {
       modeSwitcher: "Workspace mode",
       modeWork: "Work",
       needsInput: "Needs input",
-      importSession: "Import session",
       newChat: "New chat",
       newChatInProject: "New chat in {{projectName}}",
       noChats: "No chats",
@@ -927,18 +926,22 @@ export const en = {
         saveFileChangesTitle: "Save changes to {{path}}?",
       },
       importSession: {
-        cwdLabel: "Directory: {{cwd}}",
+        allAgents: "All agents",
+        clearSelection: "{{selected}} selected · Clear",
         description:
-          "Search provider sessions for the selected agent and open one in Angel Engine.",
-        empty: "No importable sessions found for this agent and directory.",
-        importAction: "Import and open",
+          "Pick sessions from the agents you already use; they land in this project.",
+        empty: "No sessions to import",
+        emptyDetail:
+          "Angel Engine reads sessions from agents installed on this machine.",
+        importAction: "Import {{selected}} to {{projectName}}",
         importFailed: "Could not import session",
         importing: "Importing…",
-        runtimeLabel: "Agent: {{runtime}}",
-        runtimeRequired: "Select an agent before importing a session.",
-        searchFailed: "Could not search sessions",
-        searching: "Searching sessions…",
-        title: "Import session",
+        noMatches: "No matching sessions",
+        searchPlaceholder: "Search sessions to import…",
+        noMatchesDetail:
+          "Try another keyword, or switch the agent filter above.",
+        retryAction: "Retry {{selected}} failed",
+        titleForProject: "Import sessions into {{projectName}}",
       },
       renameChat: "Rename chat",
       sessionHandoff: {
@@ -1041,6 +1044,7 @@ export const en = {
     },
     projects: {
       chooseFolder: "Choose project folder",
+      importSession: "Import sessions…",
       openInFinder: "Open in Finder",
       scriptShell: "Lifecycle script shell",
       scriptShellAuto: "Automatic (bash-compatible)",
@@ -1070,6 +1074,7 @@ export const en = {
       commandNoResults: "No matching commands or sessions.",
       commandPalette: "Command Palette",
       commandSessions: "Sessions",
+      commandImportSession: "Import sessions into project",
       commandShepherdPr: "Shepherd PR",
     },
     promptInput: {

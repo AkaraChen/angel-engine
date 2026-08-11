@@ -41,6 +41,7 @@ interface PowerProjectSidebarSectionProps {
   onCloneRepository: () => MaybeAsync;
   onCreateProject: () => MaybeAsync;
   onCreateProjectChat: (project: Project) => MaybeAsync;
+  onImportSession: (project: Project) => void;
   onCancelWorktreeCreation: (chat: Chat) => MaybeAsync;
   onOpenWorktree: (
     project: Project,
@@ -70,6 +71,7 @@ export function PowerProjectSidebarSection({
   onCloneRepository,
   onCreateProject,
   onCreateProjectChat,
+  onImportSession,
   onCancelWorktreeCreation,
   onOpenWorktree,
   onOpenChat,
@@ -162,6 +164,7 @@ export function PowerProjectSidebarSection({
                 <AnimatedSidebarMenuItem key={project.id}>
                   <ProjectContextMenu
                     onAction={onProjectContextMenuAction}
+                    onImportSession={onImportSession}
                     onPathLauncherAction={onProjectPathLauncherAction}
                     project={project}
                   >

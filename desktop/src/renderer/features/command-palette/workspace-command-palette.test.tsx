@@ -236,6 +236,7 @@ describe("WorkspaceCommandPalette", () => {
     render(
       <WorkspaceCommandPalette
         chats={[chat]}
+        onImportSession={null}
         onNewWorkspace={vi.fn()}
         onOpenSession={onOpenSession}
         onOpenSettings={vi.fn()}
@@ -258,6 +259,7 @@ describe("WorkspaceCommandPalette", () => {
     render(
       <WorkspaceCommandPalette
         chats={[]}
+        onImportSession={null}
         onNewWorkspace={onNewWorkspace}
         onOpenSession={vi.fn()}
         onOpenSettings={vi.fn()}
@@ -274,6 +276,7 @@ describe("WorkspaceCommandPalette", () => {
     render(
       <WorkspaceCommandPalette
         chats={[]}
+        onImportSession={null}
         onNewWorkspace={vi.fn()}
         onOpenSession={vi.fn()}
         onOpenSettings={vi.fn()}
@@ -301,6 +304,7 @@ describe("WorkspaceCommandPalette", () => {
     const view = render(
       <WorkspaceCommandPalette
         chats={[]}
+        onImportSession={null}
         onNewWorkspace={vi.fn()}
         onOpenSession={vi.fn()}
         onOpenSettings={vi.fn()}
@@ -332,6 +336,7 @@ describe("WorkspaceCommandPalette", () => {
     view.rerender(
       <WorkspaceCommandPalette
         chats={[]}
+        onImportSession={null}
         onNewWorkspace={vi.fn()}
         onOpenSession={vi.fn()}
         onOpenSettings={vi.fn()}
