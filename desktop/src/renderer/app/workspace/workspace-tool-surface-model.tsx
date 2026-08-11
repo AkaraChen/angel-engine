@@ -21,10 +21,13 @@ import {
 import { useTranslation } from "react-i18next";
 
 import { browserTitleFromUrl } from "@/app/workspace/workspace-browser-url";
+import { redirectChecksTabToPullRequest } from "@/app/workspace/workspace-tool-checks-focus";
 import {
   currentWorkspaceToolSnapshot,
   useWorkspaceToolStore,
+  workspaceToolChecksTabId,
   workspaceToolFilesTabId,
+  workspaceToolPullRequestTabId,
 } from "@/app/workspace/workspace-tool-store";
 import {
   visibleActiveWorkspaceToolTabId,
@@ -51,6 +54,7 @@ export interface WorkspaceToolSurfaceModel {
   addTerminalTab: () => void;
   api: ApiClient;
   contextKey: string | null;
+  focusChecksSection: boolean;
   closeDynamicTab: (tab: WorkspaceToolSurfaceDynamicTab) => void;
   host: WorkspaceToolSurfaceHost;
   openBrowserTab: (url: string) => void;
@@ -91,6 +95,22 @@ export function useWorkspaceToolSurfaceModel({
   const chatId = context.chatId ?? null;
   const root = propRoot ?? context.root ?? null;
   const snapshot = currentWorkspaceToolSnapshot(contextKey, snapshots);
+  // Immediately redirect a legacy/persisted `"checks"` tab to `"pr"` while
+  // parking the scroll/highlight intent on `focusSection` until Checks mounts.
+  useEffect(() => {
+    if (snapshot.activeTabId !== workspaceToolChecksTabId) {
+      return;
+    }
+    if (!is.nonEmptyString(contextKey)) {
+      return;
+    }
+    storeUpdateSnapshot(contextKey, (current) =>
+      redirectChecksTabToPullRequest(current),
+    );
+  }, [contextKey, snapshot.activeTabId, storeUpdateSnapshot]);
+  const focusChecksSection =
+    snapshot.focusSection === "checks" ||
+    snapshot.activeTabId === workspaceToolChecksTabId;
   const activeTabId = visibleActiveWorkspaceToolTabId(snapshot);
   const activeDynamicTab = snapshot.tabs.find((tab) => tab.id === activeTabId);
   const openWorkspaceWindowFile = useWorkspaceWindowFileOpener(api);
@@ -143,10 +163,27 @@ export function useWorkspaceToolSurfaceModel({
   }, [host, openWorkspaceWindowFile, updateSnapshot, windowFileOpenRequest]);
   const selectTab = useCallback(
     async (tabId: WorkspaceToolTabId) => {
-      if (tabId !== activeTabId && !(await confirmWindowFilesEditorExit())) {
+      const resolvedTabId =
+        tabId === workspaceToolChecksTabId
+          ? workspaceToolPullRequestTabId
+          : tabId;
+      if (
+        resolvedTabId !== activeTabId &&
+        !(await confirmWindowFilesEditorExit())
+      ) {
         return false;
       }
-      updateSnapshot((current) => ({ ...current, activeTabId: tabId }));
+      updateSnapshot((current) => ({
+        ...current,
+        activeTabId: resolvedTabId,
+        // Selecting checks parks focus intent; leaving the PR tab clears it.
+        focusSection:
+          tabId === workspaceToolChecksTabId
+            ? "checks"
+            : resolvedTabId === workspaceToolPullRequestTabId
+              ? (current.focusSection ?? null)
+              : null,
+      }));
       return true;
     },
     [activeTabId, confirmWindowFilesEditorExit, updateSnapshot],
@@ -256,7 +293,6 @@ export function useWorkspaceToolSurfaceModel({
   const tabItems = useMemo(
     () =>
       workspaceToolTabItems(snapshot.tabs, {
-        checks: t("workspace.tools.tabs.checks"),
         files: t("workspace.tools.tabs.files"),
         gitChanges: t("workspace.tools.tabs.gitChanges"),
         pullRequest: t("workspace.tools.tabs.pullRequest"),
@@ -275,6 +311,7 @@ export function useWorkspaceToolSurfaceModel({
       api,
       chatId,
       contextKey,
+      focusChecksSection,
       closeDynamicTab,
       host,
       openBrowserTab,
@@ -294,6 +331,7 @@ export function useWorkspaceToolSurfaceModel({
       api,
       chatId,
       contextKey,
+      focusChecksSection,
       closeDynamicTab,
       host,
       openBrowserTab,

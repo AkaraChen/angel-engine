@@ -6,7 +6,6 @@ import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 
 import {
   Globe as Browser,
-  CheckCircle,
   Cpu,
   FileText,
   Folder,
@@ -133,7 +132,6 @@ export interface WorkspaceToolTabItem {
 }
 
 export interface WorkspaceToolPinnedTabLabels {
-  checks: string;
   files: string;
   gitChanges: string;
   pullRequest: string;
@@ -156,12 +154,6 @@ export function workspaceToolTabItems(
       id: workspaceToolGitTabId,
       pinned: true,
       title: labels.gitChanges,
-    },
-    {
-      icon: CheckCircle,
-      id: workspaceToolChecksTabId,
-      pinned: true,
-      title: labels.checks,
     },
     {
       icon: GitPullRequest,
@@ -188,10 +180,13 @@ export function workspaceToolTabItems(
 export function visibleActiveWorkspaceToolTabId(
   snapshot: WorkspaceToolSurfaceSnapshot,
 ) {
+  if (snapshot.activeTabId === workspaceToolChecksTabId) {
+    return workspaceToolPullRequestTabId;
+  }
+
   if (
     snapshot.activeTabId === workspaceToolFilesTabId ||
     snapshot.activeTabId === workspaceToolGitTabId ||
-    snapshot.activeTabId === workspaceToolChecksTabId ||
     snapshot.activeTabId === workspaceToolPullRequestTabId ||
     snapshot.activeTabId === workspaceToolProcessesTabId ||
     snapshot.tabs.some((tab) => tab.id === snapshot.activeTabId)

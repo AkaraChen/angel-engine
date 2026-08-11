@@ -56,6 +56,7 @@ export const es = {
       helpful: "Útil",
       image: "Imagen",
       loading: "Cargando",
+      loadMore: "Cargar más",
       mention: "Mención",
       notHelpful: "No útil",
       other: "Otro",

@@ -56,6 +56,7 @@ export const ko = {
       helpful: "도움됨",
       image: "이미지",
       loading: "로드 중",
+      loadMore: "더 보기",
       mention: "멘션",
       notHelpful: "도움 안 됨",
       other: "기타",

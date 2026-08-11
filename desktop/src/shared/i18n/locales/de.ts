@@ -56,6 +56,7 @@ export const de = {
       helpful: "Hilfreich",
       image: "Bild",
       loading: "Wird geladen",
+      loadMore: "Mehr laden",
       mention: "Erwähnung",
       notHelpful: "Nicht hilfreich",
       other: "Andere",

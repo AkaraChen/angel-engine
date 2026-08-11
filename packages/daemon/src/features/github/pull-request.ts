@@ -23,6 +23,7 @@ const MERGE_TIMEOUT_MS = 60_000;
 const PR_FIELDS = [
   "author",
   "baseRefName",
+  "body",
   "headRefName",
   "isDraft",
   "mergeable",
@@ -54,6 +55,7 @@ const pullRequestPayloadSchema = arkType({
   "+": "ignore",
   author: authorSchema,
   baseRefName: "string > 0",
+  body: "string",
   headRefName: "string > 0",
   isDraft: "boolean",
   mergeable: "'CONFLICTING' | 'MERGEABLE' | 'UNKNOWN'",
@@ -245,6 +247,7 @@ export function getGitHubPullRequestStatus(
       author: pullRequest.author?.login ?? null,
       baseRefName: pullRequest.baseRefName,
       behindBy,
+      body: pullRequest.body,
       checks: parseChecks(pullRequest.statusCheckRollup, requiredContexts),
       defaultMergeMethod: allowedMergeMethods[0] ?? "squash",
       deleteBranchOnMerge: repository.deleteBranchOnMerge,

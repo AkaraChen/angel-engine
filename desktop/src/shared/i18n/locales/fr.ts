@@ -56,6 +56,7 @@ export const fr = {
       helpful: "Utile",
       image: "Image",
       loading: "Chargement",
+      loadMore: "Charger plus",
       mention: "Mention",
       notHelpful: "Pas utile",
       other: "Autre",

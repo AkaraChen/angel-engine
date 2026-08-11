@@ -56,8 +56,15 @@ export interface WorkspaceToolSurfaceBrowserTab
   url: string;
 }
 
+export type WorkspaceToolFocusSection = "checks";
+
 export interface WorkspaceToolSurfaceSnapshot {
   activeTabId: WorkspaceToolTabId;
+  /**
+   * Pending scroll/highlight target after a checks→pr redirect. Kept until the
+   * Checks section mounts; not cleared by the redirect itself.
+   */
+  focusSection?: WorkspaceToolFocusSection | null;
   nextBrowserOrdinal: number;
   nextTerminalOrdinal: number;
   tabs: WorkspaceToolSurfaceDynamicTab[];

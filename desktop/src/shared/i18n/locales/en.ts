@@ -56,6 +56,7 @@ export const en = {
       helpful: "Helpful",
       image: "Image",
       loading: "Loading",
+      loadMore: "Load more",
       mention: "Mention",
       notHelpful: "Not helpful",
       other: "Other",
