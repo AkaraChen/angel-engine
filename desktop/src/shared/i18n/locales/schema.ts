@@ -522,41 +522,6 @@ export interface LocaleResourceTranslationSchedule {
   };
 }
 
-export interface LocaleResourceTranslationPullRequestsStates {
-  all: string;
-  closed: string;
-  merged: string;
-  open: string;
-}
-
-export interface LocaleResourceTranslationPullRequests {
-  commentPlaceholder: string;
-  comments: string;
-  create: string;
-  createAsDraft: string;
-  createSubmit: string;
-  createTitle: string;
-  description: string;
-  empty: string;
-  emptyBody: string;
-  fieldBase: string;
-  fieldBasePlaceholder: string;
-  fieldBody: string;
-  fieldTitle: string;
-  filterState: string;
-  noComments: string;
-  openOnGitHub: string;
-  openWorkspace: string;
-  postComment: string;
-  search: string;
-  selectPrompt: string;
-  states: LocaleResourceTranslationPullRequestsStates;
-  subtitle: string;
-  templateApplied: string;
-  title: string;
-  unknownAuthor: string;
-}
-
 export interface LocaleResourceTranslationSidebar {
   addProject: string;
   archiveChat: string;
@@ -1351,7 +1316,6 @@ export interface LocaleResourceTranslation {
   workspace: LocaleResourceTranslationWorkspace;
   fleet: LocaleResourceTranslationFleet;
   schedule: LocaleResourceTranslationSchedule;
-  pullRequests: LocaleResourceTranslationPullRequests;
   sidebar: LocaleResourceTranslationSidebar;
   settings: LocaleResourceTranslationSettings;
   updates: LocaleResourceTranslationUpdates;
