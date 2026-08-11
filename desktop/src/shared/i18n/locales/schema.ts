@@ -1123,10 +1123,12 @@ export interface LocaleResourceTranslationDialogImportSession {
   clearSelection: string;
   description: string;
   empty: string;
+  emptyDetail: string;
   importAction: string;
   importFailed: string;
   importing: string;
   noMatches: string;
+  noMatchesDetail: string;
   retryAction: string;
   searchPlaceholder: string;
   titleForProject: string;

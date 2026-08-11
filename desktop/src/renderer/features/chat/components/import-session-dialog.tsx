@@ -4,7 +4,9 @@ import type {
   ImportableSessionRow,
 } from "./import-session-handlers";
 
-import { Check, MagnifyingGlass } from "@phosphor-icons/react";
+import type { Icon } from "@phosphor-icons/react";
+
+import { Check, MagnifyingGlass, Tray } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -315,11 +317,19 @@ export function ImportSessionDialog({
         ) : null}
 
         {!loading && visibleRows.length === 0 ? (
-          <div className="py-10 text-center text-sm text-muted-foreground">
-            {rows.length === 0
-              ? t("dialog.importSession.empty")
-              : t("dialog.importSession.noMatches")}
-          </div>
+          <EmptyState
+            detail={
+              rows.length === 0
+                ? t("dialog.importSession.emptyDetail")
+                : t("dialog.importSession.noMatchesDetail")
+            }
+            icon={rows.length === 0 ? Tray : MagnifyingGlass}
+            title={
+              rows.length === 0
+                ? t("dialog.importSession.empty")
+                : t("dialog.importSession.noMatches")
+            }
+          />
         ) : null}
 
         {!loading && visibleRows.length > 0 ? (
@@ -433,6 +443,36 @@ export function ImportSessionDialog({
         ) : null}
       </DialogContent>
     </Dialog>
+  );
+}
+
+/**
+ * Same visual language as `WorkspaceToolEmpty` -- duotone glyph, medium title,
+ * muted detail line. Rendered locally rather than imported: that component is
+ * sized for a full tool panel and drags the workspace tool layout into the
+ * chat feature.
+ */
+function EmptyState({
+  detail,
+  icon: EmptyIcon,
+  title,
+}: {
+  detail: string;
+  icon: Icon;
+  title: string;
+}): ReactElement {
+  return (
+    <div className="flex flex-col items-center gap-1 px-6 py-10 text-center">
+      <EmptyIcon
+        aria-hidden="true"
+        className="mb-1 size-7 text-muted-foreground/60"
+        weight="duotone"
+      />
+      <p className="text-sm font-medium">{title}</p>
+      {/* No width cap: the dialog plus this block's own padding already give a
+          readable measure, and a narrower one orphaned the last few glyphs. */}
+      <p className="text-xs text-muted-foreground">{detail}</p>
+    </div>
   );
 }
 

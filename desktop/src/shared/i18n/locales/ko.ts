@@ -904,12 +904,16 @@ export const ko = {
         clearSelection: "{{selected}}개 선택됨 · 지우기",
         description:
           "사용 중인 에이전트에서 세션을 골라 이 프로젝트로 가져옵니다.",
-        empty: "이 프로젝트로 가져올 수 있는 세션이 없습니다.",
+        empty: "가져올 세션이 없습니다",
+        emptyDetail:
+          "Angel Engine은 이 컴퓨터에 설치된 에이전트의 세션만 읽습니다.",
         importAction: "{{selected}}개를 {{projectName}}(으)로 가져오기",
         importFailed: "세션을 가져올 수 없습니다",
         importing: "가져오는 중…",
-        noMatches: "검색과 일치하는 세션이 없습니다.",
+        noMatches: "일치하는 세션이 없습니다",
         searchPlaceholder: "가져올 세션 검색…",
+        noMatchesDetail:
+          "다른 키워드를 사용하거나 위의 에이전트 필터를 바꿔 보세요.",
         retryAction: "실패한 {{selected}}개 다시 시도",
         titleForProject: "{{projectName}}(으)로 세션 가져오기",
       },

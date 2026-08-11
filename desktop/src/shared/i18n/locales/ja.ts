@@ -919,12 +919,16 @@ export const ja = {
         clearSelection: "{{selected}} 件選択中 · クリア",
         description:
           "使用中のエージェントからセッションを選び、このプロジェクトに取り込みます。",
-        empty: "このプロジェクトに取り込めるセッションはありません。",
+        empty: "取り込めるセッションがありません",
+        emptyDetail:
+          "Angel Engine はこの端末にインストール済みのエージェントのセッションのみ読み取ります。",
         importAction: "{{selected}} 件を {{projectName}} に取り込む",
         importFailed: "セッションを取り込めませんでした",
         importing: "取り込み中…",
-        noMatches: "一致するセッションがありません。",
+        noMatches: "一致するセッションがありません",
         searchPlaceholder: "取り込むセッションを検索…",
+        noMatchesDetail:
+          "別のキーワードを試すか、上のエージェント絞り込みを切り替えてください。",
         retryAction: "失敗した {{selected}} 件を再試行",
         titleForProject: "{{projectName}} にセッションを取り込む",
       },

@@ -926,12 +926,16 @@ export const de = {
         clearSelection: "{{selected}} ausgewählt · Leeren",
         description:
           "Wähle Sitzungen aus den Agenten, die du bereits nutzt – sie landen in diesem Projekt.",
-        empty: "Keine importierbaren Sitzungen für dieses Projekt gefunden.",
+        empty: "Keine Sitzungen zum Importieren",
+        emptyDetail:
+          "Angel Engine liest Sitzungen aus den auf diesem Rechner installierten Agenten.",
         importAction: "{{selected}} in {{projectName}} importieren",
         importFailed: "Sitzung konnte nicht importiert werden",
         importing: "Wird importiert…",
-        noMatches: "Keine Sitzung passt zur Suche.",
+        noMatches: "Keine passenden Sitzungen",
         searchPlaceholder: "Sitzungen zum Importieren suchen…",
+        noMatchesDetail:
+          "Probiere ein anderes Stichwort oder wechsle oben den Agentenfilter.",
         retryAction: "{{selected}} fehlgeschlagene wiederholen",
         titleForProject: "Sitzungen in {{projectName}} importieren",
       },

@@ -919,12 +919,16 @@ export const es = {
         clearSelection: "{{selected}} seleccionadas · Borrar",
         description:
           "Elige sesiones de los agentes que ya usas; se importan a este proyecto.",
-        empty: "No hay sesiones importables para este proyecto.",
+        empty: "No hay sesiones para importar",
+        emptyDetail:
+          "Angel Engine lee las sesiones de los agentes instalados en este equipo.",
         importAction: "Importar {{selected}} a {{projectName}}",
         importFailed: "No se pudo importar la sesión",
         importing: "Importando…",
-        noMatches: "Ninguna sesión coincide con la búsqueda.",
+        noMatches: "No hay sesiones coincidentes",
         searchPlaceholder: "Buscar sesiones para importar…",
+        noMatchesDetail:
+          "Prueba otra palabra clave o cambia el filtro de agente de arriba.",
         retryAction: "Reintentar {{selected}} fallidas",
         titleForProject: "Importar sesiones a {{projectName}}",
       },

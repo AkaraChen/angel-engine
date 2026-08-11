@@ -912,12 +912,16 @@ export const en = {
         clearSelection: "{{selected}} selected · Clear",
         description:
           "Pick sessions from the agents you already use; they land in this project.",
-        empty: "No importable sessions found for this project.",
+        empty: "No sessions to import",
+        emptyDetail:
+          "Angel Engine reads sessions from agents installed on this machine.",
         importAction: "Import {{selected}} to {{projectName}}",
         importFailed: "Could not import session",
         importing: "Importing…",
-        noMatches: "No sessions match your search.",
+        noMatches: "No matching sessions",
         searchPlaceholder: "Search sessions to import…",
+        noMatchesDetail:
+          "Try another keyword, or switch the agent filter above.",
         retryAction: "Retry {{selected}} failed",
         titleForProject: "Import sessions into {{projectName}}",
       },
