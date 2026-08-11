@@ -23,6 +23,7 @@ export const zhTW = {
       filesSave: "儲存檔案",
       paletteClose: "關閉命令面板",
       paletteOpen: "開啟命令面板",
+      settingsClose: "關閉設定",
       settingsOpen: "開啟設定",
       workspaceCloseTab: "關閉分頁",
       workspaceNewTab: "新分頁",

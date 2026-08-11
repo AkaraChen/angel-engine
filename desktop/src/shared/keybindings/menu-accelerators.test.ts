@@ -68,5 +68,13 @@ describe("acceleratorForCommand", () => {
         platform: "mac",
       }),
     ).toBeUndefined();
+
+    // settings.close is when-gated so it must not become a global menu accelerator.
+    expect(
+      acceleratorForCommand(COMMAND_IDS.settingsClose, {
+        userEntries: [],
+        platform: "mac",
+      }),
+    ).toBeUndefined();
   });
 });

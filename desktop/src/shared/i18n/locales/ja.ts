@@ -23,6 +23,7 @@ export const ja = {
       filesSave: "ファイルを保存",
       paletteClose: "コマンドパレットを閉じる",
       paletteOpen: "コマンドパレットを開く",
+      settingsClose: "設定を閉じる",
       settingsOpen: "設定を開く",
       workspaceCloseTab: "タブを閉じる",
       workspaceNewTab: "新しいタブ",

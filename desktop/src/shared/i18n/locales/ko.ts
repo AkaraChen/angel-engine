@@ -23,6 +23,7 @@ export const ko = {
       filesSave: "파일 저장",
       paletteClose: "명령 팔레트 닫기",
       paletteOpen: "명령 팔레트 열기",
+      settingsClose: "설정 닫기",
       settingsOpen: "설정 열기",
       workspaceCloseTab: "탭 닫기",
       workspaceNewTab: "새 탭",

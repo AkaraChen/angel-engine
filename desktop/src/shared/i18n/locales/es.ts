@@ -23,6 +23,7 @@ export const es = {
       filesSave: "Guardar archivo",
       paletteClose: "Cerrar la paleta de comandos",
       paletteOpen: "Abrir la paleta de comandos",
+      settingsClose: "Cerrar ajustes",
       settingsOpen: "Abrir ajustes",
       workspaceCloseTab: "Cerrar pestaña",
       workspaceNewTab: "Nueva pestaña",

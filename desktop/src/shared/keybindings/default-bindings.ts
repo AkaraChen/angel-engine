@@ -121,6 +121,12 @@ export function createDefaultKeybindingRules(
       source: "default",
     },
     {
+      key: "mod+w",
+      command: COMMAND_IDS.settingsClose,
+      when: "view.id == 'settings'",
+      source: "default",
+    },
+    {
       key: "ctrl+tab",
       command: COMMAND_IDS.workspaceNextTab,
       when: "workspace.hasMultipleTabs",

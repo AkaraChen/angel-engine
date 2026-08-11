@@ -23,6 +23,7 @@ export const de = {
       filesSave: "Datei speichern",
       paletteClose: "Befehlspalette schließen",
       paletteOpen: "Befehlspalette öffnen",
+      settingsClose: "Einstellungen schließen",
       settingsOpen: "Einstellungen öffnen",
       workspaceCloseTab: "Tab schließen",
       workspaceNewTab: "Neuer Tab",

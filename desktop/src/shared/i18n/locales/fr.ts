@@ -23,6 +23,7 @@ export const fr = {
       filesSave: "Enregistrer le fichier",
       paletteClose: "Fermer la palette de commandes",
       paletteOpen: "Ouvrir la palette de commandes",
+      settingsClose: "Fermer les paramètres",
       settingsOpen: "Ouvrir les paramètres",
       workspaceCloseTab: "Fermer l'onglet",
       workspaceNewTab: "Nouvel onglet",

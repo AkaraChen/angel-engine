@@ -807,6 +807,7 @@ export interface LocaleResourceTranslationCommands {
   filesSave: string;
   paletteClose: string;
   paletteOpen: string;
+  settingsClose: string;
   settingsOpen: string;
   workspaceCloseTab: string;
   workspaceNewTab: string;
