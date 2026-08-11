@@ -332,11 +332,11 @@ function requireGh(dependencies: PullRequestDependencies) {
   return Effect.gen(function* () {
     const whichGh = dependencies.whichGh ?? findGhPath;
     const ghPath = yield* Effect.tryPromise({
-      catch: (cause) => DaemonError.githubFetchFailed(cause),
+      catch: (cause) => DaemonError.sourceControlFetchFailed(cause),
       try: whichGh,
     });
     if (!is.nonEmptyString(ghPath)) {
-      return yield* Effect.fail(DaemonError.githubCliMissing());
+      return yield* Effect.fail(DaemonError.sourceControlCliMissing());
     }
     return dependencies.runGh ?? runGhCli;
   });
@@ -358,14 +358,14 @@ function parsePayload<T>(
   try {
     json = JSON.parse(stdout);
   } catch (cause) {
-    throw DaemonError.githubFetchFailed(
+    throw DaemonError.sourceControlFetchFailed(
       cause,
       `GitHub CLI returned invalid ${label} JSON.`,
     );
   }
   const payload = schema(json);
   if (payload instanceof arkType.errors) {
-    throw DaemonError.githubFetchFailed(
+    throw DaemonError.sourceControlFetchFailed(
       new TypeError(`Unexpected ${label} payload: ${payload.summary}`),
     );
   }
@@ -462,14 +462,14 @@ function getRequiredContexts({
       const failure = Cause.failureOption(exit.cause);
       if (
         failure._tag === "Some" &&
-        failure.value.code !== "github-cli-unauthenticated"
+        failure.value.code !== "source-control/unauthenticated"
       ) {
         return new Set<string>();
       }
       return yield* Effect.fail(
         failure._tag === "Some"
           ? failure.value
-          : DaemonError.githubFetchFailed(exit.cause),
+          : DaemonError.sourceControlFetchFailed(exit.cause),
       );
     }
     const contexts = parsePayload(
@@ -510,7 +510,7 @@ function getBehindBy({
     const behindBy = Number.parseInt(output.stdout.trim(), 10);
     if (!Number.isInteger(behindBy) || behindBy < 0) {
       return yield* Effect.fail(
-        DaemonError.githubFetchFailed(
+        DaemonError.sourceControlFetchFailed(
           new TypeError("GitHub compare response did not include behind_by."),
         ),
       );

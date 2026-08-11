@@ -102,7 +102,7 @@ describe("listGitHubItems", () => {
         DaemonError,
       );
       expect(failure._tag === "Some" ? failure.value.code : undefined).toBe(
-        "github-cli-missing",
+        "source-control/cli-missing",
       );
     }
   });

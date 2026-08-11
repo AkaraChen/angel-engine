@@ -216,7 +216,7 @@ describe("GitHub pull request operations", () => {
     if (Exit.isFailure(denied)) {
       const failure = Cause.failureOption(denied.cause);
       expect(failure._tag === "Some" ? failure.value.code : null).toBe(
-        "github-permission-denied",
+        "source-control/permission-denied",
       );
     }
 

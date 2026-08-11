@@ -41,7 +41,7 @@ export function discoverPullRequestTemplates(
 ): Effect.Effect<GitHubPullRequestTemplateResult, DaemonError> {
   return Effect.try({
     catch: (cause) =>
-      DaemonError.githubFetchFailed(
+      DaemonError.sourceControlFetchFailed(
         cause,
         "Could not read pull request templates.",
       ),

@@ -202,11 +202,11 @@ export function getStoredPullRequest(root: string) {
 function prepareRunners(deps: PullRequestDependencies) {
   return Effect.gen(function* () {
     const ghPath = yield* Effect.tryPromise({
-      catch: (cause) => DaemonError.githubFetchFailed(cause),
+      catch: (cause) => DaemonError.sourceControlFetchFailed(cause),
       try: deps.whichGh ?? findGhPath,
     });
     if (!is.nonEmptyString(ghPath)) {
-      return yield* Effect.fail(DaemonError.githubCliMissing());
+      return yield* Effect.fail(DaemonError.sourceControlCliMissing());
     }
     return {
       runGh: deps.runGh ?? runGhCli,
@@ -245,14 +245,14 @@ function parsePayload<T>(
   try {
     value = JSON.parse(json);
   } catch (cause) {
-    throw DaemonError.githubFetchFailed(
+    throw DaemonError.sourceControlFetchFailed(
       cause,
       "GitHub CLI returned invalid JSON.",
     );
   }
   const parsed = schema(value);
   if (parsed instanceof arkType.errors) {
-    throw DaemonError.githubFetchFailed(
+    throw DaemonError.sourceControlFetchFailed(
       new TypeError(`Unexpected GitHub CLI payload: ${parsed.summary}`),
     );
   }
@@ -532,7 +532,7 @@ function mapCreateFailure(error: DaemonError) {
     message.includes("network") ||
     message.includes("timed out")
   ) {
-    return DaemonError.githubNetworkUnavailable();
+    return DaemonError.sourceControlNetworkUnavailable();
   }
   if (message.includes("already exists")) {
     return DaemonError.pullRequestAlreadyExists();

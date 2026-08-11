@@ -829,7 +829,7 @@ export const en = {
       fromLink: "From link",
       fromLinkPlaceholder:
         "Paste a GitHub or Linear issue link, or search GitHub",
-      githubErrors: {
+      sourceControlErrors: {
         cliMissing:
           "GitHub CLI (gh) is not installed or not on PATH. Install it and try again.",
         cliUnauthenticated:

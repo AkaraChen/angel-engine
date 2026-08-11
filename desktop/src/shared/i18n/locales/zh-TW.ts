@@ -797,7 +797,7 @@ export const zhTW = {
       files: "檔案",
       fromLink: "從連結",
       fromLinkPlaceholder: "貼上 GitHub 或 Linear Issue 連結，或搜尋 GitHub",
-      githubErrors: {
+      sourceControlErrors: {
         cliMissing: "未安裝 GitHub CLI (gh) 或不在 PATH 中。請安裝後重試。",
         cliUnauthenticated:
           "GitHub CLI 未登入。請執行 `gh auth login` 後重試。",

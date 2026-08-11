@@ -85,7 +85,7 @@ describe("listGitHubRepositoryOwners", () => {
       expect(failure._tag).toBe("Some");
       if (failure._tag === "Some") {
         expect(failure.value).toBeInstanceOf(DaemonError);
-        expect(failure.value.code).toBe("github-cli-missing");
+        expect(failure.value.code).toBe("source-control/cli-missing");
       }
     }
   });
@@ -150,7 +150,7 @@ describe("listGitHubRepositories", () => {
     if (Exit.isFailure(exit)) {
       const failure = Cause.failureOption(exit.cause);
       if (failure._tag === "Some") {
-        expect(failure.value.code).toBe("github-fetch-failed");
+        expect(failure.value.code).toBe("source-control/fetch-failed");
       }
     }
   });

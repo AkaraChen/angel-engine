@@ -73,11 +73,11 @@ export function listGitHubPrChecks(
   return Effect.gen(function* () {
     const whichGh = deps.whichGh ?? findGhPath;
     const ghPath = yield* Effect.tryPromise({
-      catch: (cause) => DaemonError.githubFetchFailed(cause),
+      catch: (cause) => DaemonError.sourceControlFetchFailed(cause),
       try: whichGh,
     });
     if (!is.nonEmptyString(ghPath)) {
-      return yield* Effect.fail(DaemonError.githubCliMissing());
+      return yield* Effect.fail(DaemonError.sourceControlCliMissing());
     }
 
     const runGh = deps.runGh ?? runGhCli;
@@ -121,7 +121,7 @@ export function buildGitHubPrChecksFixPrompt(
     );
     if (!listed.hasPullRequest || listed.pullRequest === null) {
       return yield* Effect.fail(
-        DaemonError.githubItemNotFound(
+        DaemonError.sourceControlItemNotFound(
           "No pull request is associated with the current branch.",
         ),
       );
@@ -250,7 +250,7 @@ function loadPullRequestForCwd(
     catch: (cause) =>
       cause instanceof DaemonError
         ? cause
-        : DaemonError.githubFetchFailed(cause),
+        : DaemonError.sourceControlFetchFailed(cause),
     try: async () => {
       let output: { stderr: string; stdout: string };
       try {
@@ -268,7 +268,7 @@ function loadPullRequestForCwd(
       try {
         json = JSON.parse(output.stdout);
       } catch (cause) {
-        throw DaemonError.githubFetchFailed(
+        throw DaemonError.sourceControlFetchFailed(
           cause,
           "GitHub CLI returned invalid JSON for pull request.",
         );
@@ -276,7 +276,7 @@ function loadPullRequestForCwd(
 
       const payload = gitHubPrViewPayloadSchema(json);
       if (payload instanceof arkType.errors) {
-        throw DaemonError.githubFetchFailed(
+        throw DaemonError.sourceControlFetchFailed(
           new TypeError(`Unexpected GitHub PR payload: ${payload.summary}`),
         );
       }
@@ -317,7 +317,7 @@ function loadChecksForPr(
         return [];
       }
       return yield* Effect.fail(
-        DaemonError.githubFetchFailed(
+        DaemonError.sourceControlFetchFailed(
           new Error(result.stderr || `gh pr checks exited ${result.exitCode}`),
         ),
       );
@@ -332,7 +332,7 @@ function loadChecksForPr(
         return yield* Effect.fail(mapGhFailure(new Error(message)));
       }
       return yield* Effect.fail(
-        DaemonError.githubFetchFailed(
+        DaemonError.sourceControlFetchFailed(
           cause,
           "GitHub CLI returned invalid JSON for checks.",
         ),
@@ -342,7 +342,7 @@ function loadChecksForPr(
     const payload = gitHubCheckPayloadSchema(json);
     if (payload instanceof arkType.errors) {
       return yield* Effect.fail(
-        DaemonError.githubFetchFailed(
+        DaemonError.sourceControlFetchFailed(
           new TypeError(`Unexpected GitHub checks payload: ${payload.summary}`),
         ),
       );

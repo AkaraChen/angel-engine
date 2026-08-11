@@ -153,7 +153,7 @@ describe("listGitHubPrChecks", () => {
         { cwd: "/repos/widgets" },
         { whichGh: async () => null },
       ),
-      "github-cli-missing",
+      "source-control/cli-missing",
     );
   });
 });

@@ -796,7 +796,7 @@ export const zhCN = {
       files: "文件",
       fromLink: "从链接",
       fromLinkPlaceholder: "粘贴 GitHub 或 Linear Issue 链接，或搜索 GitHub",
-      githubErrors: {
+      sourceControlErrors: {
         cliMissing: "未安装 GitHub CLI (gh) 或不在 PATH 中。请安装后重试。",
         cliUnauthenticated:
           "GitHub CLI 未登录。请运行 `gh auth login` 后重试。",

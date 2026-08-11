@@ -239,7 +239,7 @@ describe("createPullRequest", () => {
 
     expect(result).toEqual({
       error: {
-        code: "github-network-unavailable",
+        code: "source-control/network-unavailable",
         message: "GitHub is unavailable. Check your network and retry.",
       },
       pushed: true,

@@ -151,16 +151,16 @@ export function resolveGitHubUrl(
   return Effect.gen(function* () {
     const parsed = parseGitHubUrl(input.url);
     if (parsed === null) {
-      return yield* Effect.fail(DaemonError.githubUrlUnsupported());
+      return yield* Effect.fail(DaemonError.sourceControlUrlUnsupported());
     }
 
     const whichGh = deps.whichGh ?? findGhPath;
     const ghPath = yield* Effect.tryPromise({
-      catch: (cause) => DaemonError.githubFetchFailed(cause),
+      catch: (cause) => DaemonError.sourceControlFetchFailed(cause),
       try: whichGh,
     });
     if (!is.nonEmptyString(ghPath)) {
-      return yield* Effect.fail(DaemonError.githubCliMissing());
+      return yield* Effect.fail(DaemonError.sourceControlCliMissing());
     }
 
     const runGh = deps.runGh ?? runGhCli;
@@ -183,7 +183,7 @@ export function resolveGitHubUrl(
       json = JSON.parse(output.stdout);
     } catch (cause) {
       return yield* Effect.fail(
-        DaemonError.githubFetchFailed(
+        DaemonError.sourceControlFetchFailed(
           cause,
           "GitHub CLI returned invalid JSON.",
         ),
@@ -194,7 +194,7 @@ export function resolveGitHubUrl(
       catch: (cause) =>
         cause instanceof DaemonError
           ? cause
-          : DaemonError.githubFetchFailed(cause),
+          : DaemonError.sourceControlFetchFailed(cause),
       try: () => buildResolvedItem(parsed, json),
     });
   });
@@ -278,7 +278,7 @@ function gitHubPayloadIdentity(
 }
 
 function unexpectedGitHubPayload(details: string): DaemonError {
-  return DaemonError.githubFetchFailed(
+  return DaemonError.sourceControlFetchFailed(
     new TypeError(`Unexpected GitHub CLI payload: ${details}`),
   );
 }

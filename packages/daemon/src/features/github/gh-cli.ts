@@ -104,7 +104,7 @@ export function mapGhFailure(cause: unknown): DaemonError {
     message.includes("http 403") ||
     message.includes("status 403")
   ) {
-    return DaemonError.githubPermissionDenied();
+    return DaemonError.sourceControlPermissionDenied();
   }
   if (
     message.includes("not mergeable") ||
@@ -112,7 +112,7 @@ export function mapGhFailure(cause: unknown): DaemonError {
     message.includes("head branch was modified") ||
     message.includes("base branch policy prohibits")
   ) {
-    return DaemonError.githubMergeConflict();
+    return DaemonError.sourceControlMergeConflict();
   }
   if (
     message.includes("not logged into") ||
@@ -120,12 +120,12 @@ export function mapGhFailure(cause: unknown): DaemonError {
     message.includes("authentication required") ||
     message.includes("gh auth login")
   ) {
-    return DaemonError.githubCliUnauthenticated(
+    return DaemonError.sourceControlUnauthenticated(
       "GitHub CLI is not authenticated. Run `gh auth login` and try again.",
     );
   }
   if (isNoPullRequestMessage(message)) {
-    return DaemonError.githubItemNotFound(
+    return DaemonError.sourceControlItemNotFound(
       "No pull request is associated with the current branch.",
     );
   }
@@ -135,9 +135,9 @@ export function mapGhFailure(cause: unknown): DaemonError {
     message.includes("http 404") ||
     message.includes("status 404")
   ) {
-    return DaemonError.githubItemNotFound();
+    return DaemonError.sourceControlItemNotFound();
   }
-  return DaemonError.githubFetchFailed(cause);
+  return DaemonError.sourceControlFetchFailed(cause);
 }
 
 export function isNoPullRequestMessage(message: string) {

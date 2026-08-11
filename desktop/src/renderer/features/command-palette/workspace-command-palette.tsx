@@ -156,7 +156,7 @@ export const WorkspaceCommandPalette: FC<WorkspaceCommandPaletteProps> = ({
         error instanceof DaemonRequestError
           ? (error.code ?? "unknown")
           : "unknown";
-      if (code === "github-cli-unauthenticated") {
+      if (code === "source-control/unauthenticated") {
         toast({
           description: t(
             "workspace.tools.pullRequest.errors.unauthenticatedDetail",

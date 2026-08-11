@@ -152,8 +152,8 @@ export const PullRequestPanel: FC<{ root: string }> = ({ root }) => {
     const error = statusQuery.error;
     const errorCode =
       error instanceof DaemonRequestError
-        ? (error.code ?? "github-fetch-failed")
-        : "github-fetch-failed";
+        ? (error.code ?? "source-control/fetch-failed")
+        : "source-control/fetch-failed";
     const copy = pullRequestErrorCopy(errorCode, t);
     return (
       <WorkspaceToolEmpty
@@ -636,22 +636,22 @@ function pullRequestErrorCopy(
   t: ReturnType<typeof useTranslation>["t"],
 ) {
   switch (code) {
-    case "github-cli-missing":
+    case "source-control/cli-missing":
       return {
         detail: t("workspace.tools.pullRequest.errors.cliMissingDetail"),
         title: t("workspace.tools.pullRequest.errors.cliMissing"),
       };
-    case "github-cli-unauthenticated":
+    case "source-control/unauthenticated":
       return {
         detail: t("workspace.tools.pullRequest.errors.unauthenticatedDetail"),
         title: t("workspace.tools.pullRequest.errors.unauthenticated"),
       };
-    case "github-item-not-found":
+    case "source-control/item-not-found":
       return {
         detail: t("workspace.tools.pullRequest.noOpenDetail"),
         title: t("workspace.tools.pullRequest.noOpen"),
       };
-    case "github-permission-denied":
+    case "source-control/permission-denied":
       return {
         detail: t("workspace.tools.pullRequest.errors.permissionDetail"),
         title: t("workspace.tools.pullRequest.errors.permission"),

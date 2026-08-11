@@ -836,7 +836,7 @@ export const ja = {
       fromLink: "リンクから",
       fromLinkPlaceholder:
         "GitHub または Linear の Issue リンクを貼り付けるか、GitHub を検索",
-      githubErrors: {
+      sourceControlErrors: {
         cliMissing:
           "GitHub CLI (gh) がインストールされていないか PATH にありません。",
         cliUnauthenticated:

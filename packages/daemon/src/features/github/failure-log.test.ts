@@ -74,7 +74,7 @@ describe("fetchGitHubFailureLog", () => {
           whichGh: async () => "/bin/gh",
         },
       ),
-      "github-cli-unauthenticated",
+      "source-control/unauthenticated",
     );
   });
 });

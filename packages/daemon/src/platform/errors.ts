@@ -2,6 +2,7 @@ import type {
   DaemonErrorCode,
   DaemonErrorPayload,
 } from "@angel-engine/daemon-api/daemon";
+import type { SourceControlErrorDetails } from "@angel-engine/daemon-api/source-control";
 
 import { Data } from "effect";
 
@@ -14,6 +15,7 @@ interface DaemonErrorProps {
   code: DaemonErrorCode;
   message: string;
   relatedChatId?: string;
+  sourceControl?: SourceControlErrorDetails;
   status: DaemonErrorStatus;
 }
 
@@ -283,79 +285,90 @@ export class DaemonError extends Data.TaggedError(
     });
   }
 
-  static githubCliMissing() {
+  static sourceControlCliMissing() {
     return new DaemonError({
-      code: "github-cli-missing",
+      code: "source-control/cli-missing",
       message: "GitHub CLI (gh) is not installed or not on PATH.",
+      sourceControl: sourceControlDetails("authenticate", false),
       status: 400,
     });
   }
 
-  static githubCliUnauthenticated(
+  static sourceControlUnauthenticated(
     message = "GitHub CLI is not authenticated.",
   ) {
     return new DaemonError({
-      code: "github-cli-unauthenticated",
+      code: "source-control/unauthenticated",
       message,
+      sourceControl: sourceControlDetails("authenticate", false),
       status: 400,
     });
   }
 
-  static githubUrlUnsupported(
+  static sourceControlUrlUnsupported(
     message = "Only github.com issue or pull request URLs are supported.",
   ) {
     return new DaemonError({
-      code: "github-url-unsupported",
+      code: "source-control/url-unsupported",
       message,
+      sourceControl: sourceControlDetails("resolve-url", false),
       status: 400,
     });
   }
 
-  static githubItemNotFound(
+  static sourceControlItemNotFound(
     message = "GitHub issue or pull request was not found.",
   ) {
     return new DaemonError({
-      code: "github-item-not-found",
+      code: "source-control/item-not-found",
       message,
+      sourceControl: sourceControlDetails("get-item", false),
       status: 404,
     });
   }
 
-  static githubPermissionDenied(
+  static sourceControlPermissionDenied(
     message = "You do not have permission to merge this pull request.",
   ) {
     return new DaemonError({
-      code: "github-permission-denied",
+      code: "source-control/permission-denied",
       message,
+      sourceControl: sourceControlDetails("merge", false),
       status: 403,
     });
   }
 
-  static githubMergeConflict(
+  static sourceControlMergeConflict(
     message = "The pull request can no longer be merged. Refresh its status and try again.",
   ) {
     return new DaemonError({
-      code: "github-merge-conflict",
+      code: "source-control/merge-conflict",
       message,
+      sourceControl: sourceControlDetails("merge", false),
       status: 409,
     });
   }
 
-  static githubFetchFailed(cause: unknown, fallback = "GitHub fetch failed.") {
+  static sourceControlFetchFailed(
+    cause: unknown,
+    fallback = "GitHub fetch failed.",
+  ) {
     return new DaemonError({
       cause,
-      code: "github-fetch-failed",
+      code: "source-control/fetch-failed",
       message: gitMessageFromCause(cause, fallback),
+      sourceControl: sourceControlDetails("fetch", true, cause),
       status: 500,
     });
   }
 
-  static githubNetworkUnavailable(
+  static sourceControlNetworkUnavailable(
     message = "GitHub is unavailable. Check your network and retry.",
   ) {
     return new DaemonError({
-      code: "github-network-unavailable",
+      code: "source-control/network-unavailable",
       message,
+      sourceControl: sourceControlDetails("network", true),
       status: 500,
     });
   }
@@ -616,7 +629,28 @@ export class DaemonError extends Data.TaggedError(
 }
 
 export function daemonErrorPayload(error: DaemonError): DaemonErrorPayload {
-  return { code: error.code, error: error.message };
+  return {
+    code: error.code,
+    error: error.message,
+    ...(error.sourceControl ? { sourceControl: error.sourceControl } : {}),
+  };
+}
+
+function sourceControlDetails(
+  operation: string,
+  retryable: boolean,
+  cause?: unknown,
+): SourceControlErrorDetails {
+  return {
+    providerId: "github",
+    operation,
+    retryable,
+    ...(cause instanceof Error
+      ? { providerMessage: cause.message }
+      : typeof cause === "string"
+        ? { providerMessage: cause }
+        : {}),
+  };
 }
 
 function messageFromCause(cause: unknown, fallback: string) {

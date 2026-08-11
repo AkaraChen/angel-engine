@@ -191,7 +191,7 @@ describe("resolveGitHubUrl", () => {
           whichGh: async () => "/usr/local/bin/gh",
         },
       ),
-      "github-fetch-failed",
+      "source-control/fetch-failed",
     );
   });
 
@@ -214,7 +214,7 @@ describe("resolveGitHubUrl", () => {
           whichGh: async () => "/usr/local/bin/gh",
         },
       ),
-      "github-fetch-failed",
+      "source-control/fetch-failed",
     );
   });
 
@@ -226,7 +226,7 @@ describe("resolveGitHubUrl", () => {
           whichGh: async () => null,
         },
       ),
-      "github-cli-missing",
+      "source-control/cli-missing",
     );
   });
 
@@ -236,7 +236,7 @@ describe("resolveGitHubUrl", () => {
         { url: "https://example.com/issue/1" },
         { whichGh: async () => "/bin/gh" },
       ),
-      "github-url-unsupported",
+      "source-control/url-unsupported",
     );
   });
 
@@ -256,7 +256,7 @@ describe("resolveGitHubUrl", () => {
           whichGh: async () => "/bin/gh",
         },
       ),
-      "github-cli-unauthenticated",
+      "source-control/unauthenticated",
     );
   });
 });

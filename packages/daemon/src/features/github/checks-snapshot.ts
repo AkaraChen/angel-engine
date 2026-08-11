@@ -192,7 +192,7 @@ export function fetchGitHubChecks(
     }
     const prId = prIdPayload.data.repository?.pullRequest?.id;
     if (!is.nonEmptyString(prId)) {
-      return yield* Effect.fail(DaemonError.githubItemNotFound());
+      return yield* Effect.fail(DaemonError.sourceControlItemNotFound());
     }
 
     const rollupJson = yield* runGraphql(runGh, input.cwd, CHECKS_QUERY, {
@@ -205,7 +205,7 @@ export function fetchGitHubChecks(
       catch: (cause) =>
         cause instanceof DaemonError
           ? cause
-          : DaemonError.githubFetchFailed(cause),
+          : DaemonError.sourceControlFetchFailed(cause),
       try: () => buildSnapshot(rollupJson),
     });
   });
@@ -225,7 +225,7 @@ function buildSnapshot(json: unknown): GitHubChecksSnapshot {
   }
   const pr = payload.data.repository?.pullRequest;
   if (!pr) {
-    throw DaemonError.githubItemNotFound();
+    throw DaemonError.sourceControlItemNotFound();
   }
   const commitNode = pr.commits.nodes[0]?.commit;
   const headOid = commitNode?.oid ?? null;
@@ -337,7 +337,7 @@ function runGraphql(
     });
     return yield* Effect.try({
       catch: (cause) =>
-        DaemonError.githubFetchFailed(
+        DaemonError.sourceControlFetchFailed(
           cause,
           "GitHub CLI returned invalid JSON.",
         ),
@@ -353,11 +353,11 @@ function requireGh(deps: {
   return Effect.gen(function* () {
     const whichGh = deps.whichGh ?? findGhPath;
     const ghPath = yield* Effect.tryPromise({
-      catch: (cause) => DaemonError.githubFetchFailed(cause),
+      catch: (cause) => DaemonError.sourceControlFetchFailed(cause),
       try: whichGh,
     });
     if (!is.nonEmptyString(ghPath)) {
-      return yield* Effect.fail(DaemonError.githubCliMissing());
+      return yield* Effect.fail(DaemonError.sourceControlCliMissing());
     }
     return deps.runGh ?? runGhCli;
   });
@@ -373,7 +373,7 @@ function isValidPrContext(input: GitHubChecksInput): boolean {
 }
 
 function unexpectedPayload(details: string): DaemonError {
-  return DaemonError.githubFetchFailed(
+  return DaemonError.sourceControlFetchFailed(
     new TypeError(`Unexpected GitHub GraphQL payload: ${details}`),
   );
 }

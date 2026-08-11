@@ -824,7 +824,7 @@ export const ko = {
       fromLink: "링크에서",
       fromLinkPlaceholder:
         "GitHub 또는 Linear 이슈 링크를 붙여넣거나 GitHub 검색",
-      githubErrors: {
+      sourceControlErrors: {
         cliMissing: "GitHub CLI(gh)가 설치되지 않았거나 PATH에 없습니다.",
         cliUnauthenticated:
           "GitHub CLI가 인증되지 않았습니다. `gh auth login`을 실행하세요.",

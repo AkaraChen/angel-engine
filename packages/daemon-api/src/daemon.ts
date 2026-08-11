@@ -67,14 +67,14 @@ export type DaemonErrorCode =
   | "git-push-denied"
   | "git-push-not-fast-forward"
   | "git-remote-missing"
-  | "github-cli-missing"
-  | "github-cli-unauthenticated"
-  | "github-fetch-failed"
-  | "github-item-not-found"
-  | "github-merge-conflict"
-  | "github-permission-denied"
-  | "github-network-unavailable"
-  | "github-url-unsupported"
+  | "source-control/cli-missing"
+  | "source-control/unauthenticated"
+  | "source-control/fetch-failed"
+  | "source-control/item-not-found"
+  | "source-control/merge-conflict"
+  | "source-control/permission-denied"
+  | "source-control/network-unavailable"
+  | "source-control/url-unsupported"
   | "internal"
   | "invalid-request"
   | "link-unsupported"
@@ -116,4 +116,6 @@ export type DaemonErrorCode =
 export interface DaemonErrorPayload {
   code: DaemonErrorCode;
   error: string;
+  sourceControl?: SourceControlErrorDetails;
 }
+import type { SourceControlErrorDetails } from "./source-control";

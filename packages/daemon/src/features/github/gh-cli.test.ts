@@ -31,6 +31,6 @@ describe("createGhRunner", () => {
       stderr: "not logged into GitHub",
       stdout: "ignored",
     });
-    expect(mapGhFailure(cause).code).toBe("github-cli-unauthenticated");
+    expect(mapGhFailure(cause).code).toBe("source-control/unauthenticated");
   });
 });

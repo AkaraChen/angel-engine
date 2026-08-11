@@ -51,11 +51,11 @@ export function createWorkspaceFromPullRequest(
 
     const whichGh = deps.whichGh ?? findGhPath;
     const ghPath = yield* Effect.tryPromise({
-      catch: (cause) => DaemonError.githubFetchFailed(cause),
+      catch: (cause) => DaemonError.sourceControlFetchFailed(cause),
       try: whichGh,
     });
     if (!is.nonEmptyString(ghPath)) {
-      return yield* Effect.fail(DaemonError.githubCliMissing());
+      return yield* Effect.fail(DaemonError.sourceControlCliMissing());
     }
     const runGh = deps.runGh ?? runGhCli;
 
@@ -79,7 +79,7 @@ export function createWorkspaceFromPullRequest(
       json = JSON.parse(output.stdout);
     } catch (cause) {
       return yield* Effect.fail(
-        DaemonError.githubFetchFailed(
+        DaemonError.sourceControlFetchFailed(
           cause,
           "GitHub CLI returned invalid JSON.",
         ),
@@ -89,7 +89,7 @@ export function createWorkspaceFromPullRequest(
     const payload = prHeadPayloadSchema(json);
     if (payload instanceof arkType.errors) {
       return yield* Effect.fail(
-        DaemonError.githubFetchFailed(
+        DaemonError.sourceControlFetchFailed(
           new TypeError(`Unexpected GitHub CLI payload: ${payload.summary}`),
         ),
       );
@@ -98,7 +98,7 @@ export function createWorkspaceFromPullRequest(
     const parsed = parseGitHubUrl(payload.url);
     if (parsed === null || parsed.kind !== "pullRequest") {
       return yield* Effect.fail(
-        DaemonError.githubFetchFailed(
+        DaemonError.sourceControlFetchFailed(
           new TypeError(`Unexpected GitHub CLI PR URL: ${payload.url}`),
         ),
       );

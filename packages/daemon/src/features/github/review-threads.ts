@@ -119,7 +119,7 @@ export function fetchGitHubReviewThreads(
       json = JSON.parse(output.stdout);
     } catch (cause) {
       return yield* Effect.fail(
-        DaemonError.githubFetchFailed(
+        DaemonError.sourceControlFetchFailed(
           cause,
           "GitHub CLI returned invalid JSON.",
         ),
@@ -130,7 +130,7 @@ export function fetchGitHubReviewThreads(
       catch: (cause) =>
         cause instanceof DaemonError
           ? cause
-          : DaemonError.githubFetchFailed(cause),
+          : DaemonError.sourceControlFetchFailed(cause),
       try: () => buildReviewThreadsResult(json),
     });
   });
@@ -146,13 +146,13 @@ export function buildReviewThreadsResultFromGraphql(
 function buildReviewThreadsResult(json: unknown): GitHubReviewThreadsResult {
   const payload = reviewThreadsPayloadSchema(json);
   if (payload instanceof arkType.errors) {
-    throw DaemonError.githubFetchFailed(
+    throw DaemonError.sourceControlFetchFailed(
       new TypeError(`Unexpected GitHub GraphQL payload: ${payload.summary}`),
     );
   }
   const pr = payload.data.repository?.pullRequest;
   if (!pr) {
-    throw DaemonError.githubItemNotFound();
+    throw DaemonError.sourceControlItemNotFound();
   }
 
   const threads: GitHubReviewThread[] = pr.reviewThreads.nodes.map(
@@ -199,11 +199,11 @@ function requireGh(deps: {
   return Effect.gen(function* () {
     const whichGh = deps.whichGh ?? findGhPath;
     const ghPath = yield* Effect.tryPromise({
-      catch: (cause) => DaemonError.githubFetchFailed(cause),
+      catch: (cause) => DaemonError.sourceControlFetchFailed(cause),
       try: whichGh,
     });
     if (!is.nonEmptyString(ghPath)) {
-      return yield* Effect.fail(DaemonError.githubCliMissing());
+      return yield* Effect.fail(DaemonError.sourceControlCliMissing());
     }
     return deps.runGh ?? runGhCli;
   });

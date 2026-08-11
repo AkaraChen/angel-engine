@@ -843,7 +843,7 @@ export const fr = {
       fromLink: "Depuis un lien",
       fromLinkPlaceholder:
         "Collez un lien d’issue GitHub ou Linear, ou recherchez sur GitHub",
-      githubErrors: {
+      sourceControlErrors: {
         cliMissing: "GitHub CLI (gh) n'est pas installée ou absente du PATH.",
         cliUnauthenticated:
           "GitHub CLI n'est pas authentifiée. Exécutez `gh auth login`.",

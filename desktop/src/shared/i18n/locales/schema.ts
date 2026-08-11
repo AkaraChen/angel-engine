@@ -1026,7 +1026,7 @@ export interface LocaleResourceTranslationComposerToasts {
   tooManyFiles: string;
 }
 
-export interface LocaleResourceTranslationComposerGitHubErrors {
+export interface LocaleResourceTranslationComposerSourceControlErrors {
   cliMissing: string;
   cliUnauthenticated: string;
   fetchFailed: string;
@@ -1063,7 +1063,7 @@ export interface LocaleResourceTranslationComposer {
   files: string;
   fromLink: string;
   fromLinkPlaceholder: string;
-  githubErrors: LocaleResourceTranslationComposerGitHubErrors;
+  sourceControlErrors: LocaleResourceTranslationComposerSourceControlErrors;
   githubIssue: string;
   githubPullRequest: string;
   linearConnectAction: string;

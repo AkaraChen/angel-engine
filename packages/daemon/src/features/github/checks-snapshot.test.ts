@@ -263,14 +263,14 @@ describe("fetchGitHubChecks", () => {
         },
         whichGh: async () => "/bin/gh",
       }),
-      "github-cli-unauthenticated",
+      "source-control/unauthenticated",
     );
   });
 
   it("fails when gh is missing", async () => {
     await expectDaemonFailure(
       fetchGitHubChecks(BASE_INPUT, { whichGh: async () => null }),
-      "github-cli-missing",
+      "source-control/cli-missing",
     );
   });
 });

@@ -118,7 +118,7 @@ export function listPullRequests(
     const payload = pullRequestListPayloadSchema(json);
     if (payload instanceof arkType.errors) {
       return yield* Effect.fail(
-        DaemonError.githubFetchFailed(
+        DaemonError.sourceControlFetchFailed(
           new TypeError(`Unexpected GitHub CLI payload: ${payload.summary}`),
         ),
       );
@@ -127,7 +127,7 @@ export function listPullRequests(
     const items: GitHubPullRequestListItem[] = payload.map((entry) => {
       const parsed = parseGitHubUrl(entry.url);
       if (parsed === null || parsed.kind !== "pullRequest") {
-        throw DaemonError.githubFetchFailed(
+        throw DaemonError.sourceControlFetchFailed(
           new TypeError(`Unexpected GitHub CLI PR URL: ${entry.url}`),
         );
       }
@@ -176,7 +176,7 @@ export function viewPullRequest(
     const payload = pullRequestDetailPayloadSchema(json);
     if (payload instanceof arkType.errors) {
       return yield* Effect.fail(
-        DaemonError.githubFetchFailed(
+        DaemonError.sourceControlFetchFailed(
           new TypeError(`Unexpected GitHub CLI payload: ${payload.summary}`),
         ),
       );
@@ -185,7 +185,7 @@ export function viewPullRequest(
     const parsed = parseGitHubUrl(payload.url);
     if (parsed === null || parsed.kind !== "pullRequest") {
       return yield* Effect.fail(
-        DaemonError.githubFetchFailed(
+        DaemonError.sourceControlFetchFailed(
           new TypeError(`Unexpected GitHub CLI PR URL: ${payload.url}`),
         ),
       );
@@ -260,7 +260,7 @@ export function createPullRequest(
     const payload = createPullRequestPayloadSchema(json);
     if (payload instanceof arkType.errors) {
       return yield* Effect.fail(
-        DaemonError.githubFetchFailed(
+        DaemonError.sourceControlFetchFailed(
           new TypeError(`Unexpected GitHub CLI payload: ${payload.summary}`),
         ),
       );
@@ -335,11 +335,11 @@ function requireGh(deps: {
   return Effect.gen(function* () {
     const whichGh = deps.whichGh ?? findGhPath;
     const ghPath = yield* Effect.tryPromise({
-      catch: (cause) => DaemonError.githubFetchFailed(cause),
+      catch: (cause) => DaemonError.sourceControlFetchFailed(cause),
       try: whichGh,
     });
     if (!is.nonEmptyString(ghPath)) {
-      return yield* Effect.fail(DaemonError.githubCliMissing());
+      return yield* Effect.fail(DaemonError.sourceControlCliMissing());
     }
     return deps.runGh ?? runGhCli;
   });
@@ -348,7 +348,10 @@ function requireGh(deps: {
 function parseJson(stdout: string): Effect.Effect<unknown, DaemonError> {
   return Effect.try({
     catch: (cause) =>
-      DaemonError.githubFetchFailed(cause, "GitHub CLI returned invalid JSON."),
+      DaemonError.sourceControlFetchFailed(
+        cause,
+        "GitHub CLI returned invalid JSON.",
+      ),
     try: () => JSON.parse(stdout) as unknown,
   });
 }

@@ -506,11 +506,13 @@ function formatRelativeTime(value: string) {
 }
 
 const GITHUB_ERROR_TRANSLATION_KEYS = {
-  "github-cli-missing": "composer.githubErrors.cliMissing",
-  "github-cli-unauthenticated": "composer.githubErrors.cliUnauthenticated",
-  "github-fetch-failed": "composer.githubErrors.fetchFailed",
-  "github-item-not-found": "composer.githubErrors.notFound",
-  "github-url-unsupported": "composer.githubErrors.urlUnsupported",
+  "source-control/cli-missing": "composer.sourceControlErrors.cliMissing",
+  "source-control/unauthenticated":
+    "composer.sourceControlErrors.cliUnauthenticated",
+  "source-control/fetch-failed": "composer.sourceControlErrors.fetchFailed",
+  "source-control/item-not-found": "composer.sourceControlErrors.notFound",
+  "source-control/url-unsupported":
+    "composer.sourceControlErrors.urlUnsupported",
 } as const satisfies Partial<Record<DaemonErrorCode, string>>;
 
 type GitHubErrorCode = keyof typeof GITHUB_ERROR_TRANSLATION_KEYS;
@@ -528,7 +530,7 @@ function taskLinkErrorMessage(
   if (cause instanceof Error && is.nonEmptyString(cause.message)) {
     return cause.message;
   }
-  return t("composer.githubErrors.fetchFailed");
+  return t("composer.sourceControlErrors.fetchFailed");
 }
 
 const TASK_LINK_ERROR_TRANSLATION_KEYS = {
