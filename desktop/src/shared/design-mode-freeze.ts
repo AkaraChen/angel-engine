@@ -4,12 +4,30 @@
  * While frozen:
  * - `setTimeout` / `setInterval` / `requestAnimationFrame` queue instead of firing
  * - running Web Animations are paused
+ * - outstanding pre-freeze timer handles are cancelled (not deferred) so the
+ *   page stays still for picking; only timers scheduled *during* freeze are
+ *   replayed on unfreeze
  *
- * On unfreeze, originals are restored, queued timers are re-scheduled with
- * remaining delay, and paused animations are played again.
+ * ## Main world vs preload
+ *
+ * Guest WebContentsView uses `contextIsolation: true`. Patching timers on the
+ * preload `window` does **not** affect page scripts. Freeze must run in the
+ * **page main world**.
+ *
+ * Control channel (no page-callable Design Mode API):
+ * - Preload injects a one-shot install script via `<script>` text (main world)
+ * - Preload toggles `data-angel-design-freeze` on `document.documentElement`
+ * - Install script watches that attribute with MutationObserver
+ *
+ * Page scripts never get `window.angel*` / `exposeInMainWorld` freeze hooks.
  */
 
 export type TimerHandler = (...args: unknown[]) => void;
+
+/** DOM attribute toggled by preload; observed in the page main world. */
+export const PAGE_FREEZE_ATTR = "data-angel-design-freeze";
+/** Set once the main-world installer has run (idempotent guard). */
+export const PAGE_FREEZE_READY_ATTR = "data-angel-design-freeze-ready";
 
 export interface FreezeWindow {
   setTimeout: (
@@ -27,6 +45,12 @@ export interface FreezeWindow {
   requestAnimationFrame: (callback: FrameRequestCallback) => number;
   cancelAnimationFrame: (id: number) => void;
   document?: {
+    documentElement?: {
+      getAttribute: (name: string) => string | null;
+      hasAttribute: (name: string) => boolean;
+      setAttribute: (name: string, value: string) => void;
+      removeAttribute: (name: string) => void;
+    };
     getAnimations?: () => AnimationLike[];
   };
 }
@@ -67,6 +91,9 @@ export interface PageFreezer {
 /**
  * Create a freeze controller bound to a window-like object.
  * Safe to call freeze/unfreeze multiple times (idempotent).
+ *
+ * Prefer main-world install via `buildMainWorldFreezeInstallScript` for the
+ * guest page; this factory is the shared implementation + unit-test surface.
  */
 export function createPageFreezer(win: FreezeWindow): PageFreezer {
   const originals = {
@@ -88,6 +115,10 @@ export function createPageFreezer(win: FreezeWindow): PageFreezer {
       return;
     }
     frozen = true;
+
+    // Drop timers already scheduled before freeze so annotation targets stay still.
+    // Those handles are cancelled (not replayed). Documented product trade-off.
+    cancelOutstandingNativeTimers(originals);
 
     win.setTimeout = ((
       handler: TimerHandler | string,
@@ -223,9 +254,273 @@ export function createPageFreezer(win: FreezeWindow): PageFreezer {
   };
 }
 
+/**
+ * Toggle freeze via the shared DOM attribute (works across isolated/main worlds).
+ * Call from preload after ensuring the main-world installer has run.
+ */
+export function setPageFreezeAttribute(
+  documentElement: {
+    setAttribute: (name: string, value: string) => void;
+    removeAttribute: (name: string) => void;
+  },
+  frozen: boolean,
+): void {
+  if (frozen) {
+    documentElement.setAttribute(PAGE_FREEZE_ATTR, "1");
+  } else {
+    documentElement.setAttribute(PAGE_FREEZE_ATTR, "0");
+  }
+}
+
+/**
+ * One-shot main-world install script for guest pages.
+ *
+ * Inject as `<script textContent=...>` from preload (runs in page main world).
+ * Idempotent via `data-angel-design-freeze-ready`. Does not expose freeze APIs
+ * on `window` — only watches the freeze attribute.
+ */
+export function buildMainWorldFreezeInstallScript(): string {
+  // Keep this body dependency-free: it is stringified into the guest page.
+  return `(() => {
+  const ATTR = ${JSON.stringify(PAGE_FREEZE_ATTR)};
+  const READY = ${JSON.stringify(PAGE_FREEZE_READY_ATTR)};
+  const root = document.documentElement;
+  if (!root || root.hasAttribute(READY)) {
+    return;
+  }
+
+  const originals = {
+    setTimeout: window.setTimeout.bind(window),
+    clearTimeout: window.clearTimeout.bind(window),
+    setInterval: window.setInterval.bind(window),
+    clearInterval: window.clearInterval.bind(window),
+    requestAnimationFrame: window.requestAnimationFrame.bind(window),
+    cancelAnimationFrame: window.cancelAnimationFrame.bind(window),
+  };
+
+  let frozen = false;
+  let nextId = 1;
+  const pending = new Map();
+  const pausedAnimations = [];
+
+  function normalizeDelay(delay) {
+    if (typeof delay !== "number" || !Number.isFinite(delay) || delay < 0) {
+      return 0;
+    }
+    return delay;
+  }
+
+  function cancelOutstandingNativeTimers() {
+    try {
+      const probe = originals.setTimeout(function () {}, 0);
+      originals.clearTimeout(probe);
+      const raw = typeof probe === "number" ? probe : Number(probe);
+      if (!Number.isFinite(raw) || raw < 1) {
+        return;
+      }
+      const max = Math.min(Math.floor(raw), 10000);
+      for (let id = 1; id <= max; id++) {
+        try { originals.clearTimeout(id); } catch (_) {}
+        try { originals.clearInterval(id); } catch (_) {}
+        try { originals.cancelAnimationFrame(id); } catch (_) {}
+      }
+    } catch (_) {}
+  }
+
+  function pauseRunningAnimations() {
+    pausedAnimations.length = 0;
+    if (typeof document.getAnimations !== "function") {
+      return;
+    }
+    try {
+      const list = document.getAnimations();
+      for (let i = 0; i < list.length; i++) {
+        const animation = list[i];
+        if (animation.playState === "running") {
+          try {
+            animation.pause();
+            pausedAnimations.push(animation);
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
+  }
+
+  function resumePausedAnimations() {
+    for (let i = 0; i < pausedAnimations.length; i++) {
+      const animation = pausedAnimations[i];
+      try {
+        if (animation.playState === "paused") {
+          animation.play();
+        }
+      } catch (_) {}
+    }
+    pausedAnimations.length = 0;
+  }
+
+  function freeze() {
+    if (frozen) {
+      return;
+    }
+    frozen = true;
+    cancelOutstandingNativeTimers();
+
+    window.setTimeout = function (handler, delay) {
+      const args = Array.prototype.slice.call(arguments, 2);
+      const id = nextId++;
+      pending.set(id, {
+        kind: "timeout",
+        handler: handler,
+        delay: normalizeDelay(delay),
+        args: args,
+      });
+      return id;
+    };
+
+    window.clearTimeout = function (id) {
+      if (typeof id === "number") {
+        pending.delete(id);
+      }
+    };
+
+    window.setInterval = function (handler, delay) {
+      const args = Array.prototype.slice.call(arguments, 2);
+      const id = nextId++;
+      pending.set(id, {
+        kind: "interval",
+        handler: handler,
+        delay: normalizeDelay(delay),
+        args: args,
+      });
+      return id;
+    };
+
+    window.clearInterval = function (id) {
+      if (typeof id === "number") {
+        pending.delete(id);
+      }
+    };
+
+    window.requestAnimationFrame = function (callback) {
+      const id = nextId++;
+      pending.set(id, { kind: "raf", callback: callback });
+      return id;
+    };
+
+    window.cancelAnimationFrame = function (id) {
+      pending.delete(id);
+    };
+
+    pauseRunningAnimations();
+  }
+
+  function unfreeze() {
+    if (!frozen) {
+      return;
+    }
+    frozen = false;
+
+    window.setTimeout = originals.setTimeout;
+    window.clearTimeout = originals.clearTimeout;
+    window.setInterval = originals.setInterval;
+    window.clearInterval = originals.clearInterval;
+    window.requestAnimationFrame = originals.requestAnimationFrame;
+    window.cancelAnimationFrame = originals.cancelAnimationFrame;
+
+    const entries = Array.from(pending.entries());
+    pending.clear();
+
+    for (let i = 0; i < entries.length; i++) {
+      const entry = entries[i][1];
+      if (entry.kind === "timeout") {
+        originals.setTimeout.apply(
+          null,
+          [entry.handler, entry.delay].concat(entry.args),
+        );
+      } else if (entry.kind === "interval") {
+        originals.setInterval.apply(
+          null,
+          [entry.handler, entry.delay].concat(entry.args),
+        );
+      } else if (entry.kind === "raf") {
+        originals.requestAnimationFrame(entry.callback);
+      }
+    }
+
+    resumePausedAnimations();
+  }
+
+  function syncFromAttribute() {
+    const value = root.getAttribute(ATTR);
+    if (value === "1") {
+      freeze();
+    } else {
+      unfreeze();
+    }
+  }
+
+  const observer = new MutationObserver(function () {
+    syncFromAttribute();
+  });
+  observer.observe(root, {
+    attributes: true,
+    attributeFilter: [ATTR],
+  });
+
+  root.setAttribute(READY, "1");
+  syncFromAttribute();
+})();`;
+}
+
 function normalizeDelay(delay: number | undefined): number {
   if (typeof delay !== "number" || !Number.isFinite(delay) || delay < 0) {
     return 0;
   }
   return delay;
+}
+
+/**
+ * Cancel native timer handles already scheduled before freeze.
+ * Probe the next id, then clearTimeout/clearInterval/cancelAnimationFrame
+ * for `1..probe`. Pre-freeze callbacks are dropped (not queued).
+ */
+function cancelOutstandingNativeTimers(originals: {
+  cancelAnimationFrame: (id: number) => void;
+  clearInterval: (id: number | undefined) => void;
+  clearTimeout: (id: number | undefined) => void;
+  setTimeout: (
+    handler: TimerHandler | string,
+    delay?: number,
+    ...args: unknown[]
+  ) => number;
+}): void {
+  try {
+    const probe = originals.setTimeout(() => {}, 0) as number;
+    originals.clearTimeout(probe);
+    const raw = typeof probe === "number" ? probe : Number(probe);
+    if (!Number.isFinite(raw) || raw < 1) {
+      return;
+    }
+    // Cap sweep so hostile / test timer id spaces cannot hang the freeze path.
+    const max = Math.min(Math.floor(raw), 10_000);
+    for (let id = 1; id <= max; id++) {
+      try {
+        originals.clearTimeout(id);
+      } catch {
+        // ignore
+      }
+      try {
+        originals.clearInterval(id);
+      } catch {
+        // ignore
+      }
+      try {
+        originals.cancelAnimationFrame(id);
+      } catch {
+        // ignore
+      }
+    }
+  } catch {
+    // Timer probe can fail in constrained test doubles.
+  }
 }

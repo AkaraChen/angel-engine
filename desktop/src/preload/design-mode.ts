@@ -6,6 +6,8 @@
  * - Runtime is dormant until main sends `start`; `stop` fully tears down.
  * - Sensitive form values never enter selection payloads (see design-mode-capture).
  * - Draft CSS is attribute-selector + !important only; values are re-sanitized here.
+ * - Page freeze runs in the **page main world** (script injection + DOM attr),
+ *   not the isolated preload window — see design-mode-freeze.ts.
  * - Stage 2 anchors: `element` (click) + `region` (drag). No text/point yet.
  */
 import { ipcRenderer } from "electron";
@@ -24,8 +26,9 @@ import {
   sanitizeDesignChanges,
 } from "../shared/design-mode-css";
 import {
-  createPageFreezer,
-  type PageFreezer,
+  PAGE_FREEZE_READY_ATTR,
+  buildMainWorldFreezeInstallScript,
+  setPageFreezeAttribute,
 } from "../shared/design-mode-freeze";
 import type {
   DesignChange,
@@ -49,7 +52,6 @@ const DRAG_THRESHOLD_PX = 6;
 let active = false;
 let cleanup: (() => void) | undefined;
 let outputDetail: DesignOutputDetail = "standard";
-let pageFreezer: PageFreezer | undefined;
 let draftChanges: DesignChange[] = [];
 let targetElement: Element | null = null;
 
@@ -82,12 +84,7 @@ ipcRenderer.on(
       if (!active) {
         return;
       }
-      ensureFreezer();
-      if (command.frozen) {
-        pageFreezer?.freeze();
-      } else {
-        pageFreezer?.unfreeze();
-      }
+      setMainWorldFrozen(command.frozen);
       return;
     }
     stopDesignModeRuntime();
@@ -101,8 +98,8 @@ function startDesignModeRuntime() {
   active = true;
   draftChanges = [];
   targetElement = null;
-  ensureFreezer();
-  pageFreezer?.freeze();
+  // Freeze page timers/rAF in the **main world** (not this isolated window).
+  setMainWorldFrozen(true);
   cleanup = mountInteractiveOverlay();
   emitGuestEvent({ type: "started" });
 }
@@ -119,18 +116,30 @@ function stopDesignModeRuntime() {
   clearTargetAttribute();
   draftChanges = [];
   targetElement = null;
-  pageFreezer?.unfreeze();
-  pageFreezer = undefined;
+  setMainWorldFrozen(false);
   removeOverlayNodes();
   emitGuestEvent({ type: "stopped" });
 }
 
-function ensureFreezer() {
-  if (!pageFreezer) {
-    pageFreezer = createPageFreezer(
-      window as unknown as Parameters<typeof createPageFreezer>[0],
-    );
+/**
+ * Install main-world freezer once (script tag → page world), then toggle via
+ * a shared DOM attribute. No `window.*` Design Mode API is exposed to page JS.
+ */
+function setMainWorldFrozen(frozen: boolean) {
+  ensureMainWorldFreezeInstalled();
+  setPageFreezeAttribute(document.documentElement, frozen);
+}
+
+function ensureMainWorldFreezeInstalled() {
+  if (document.documentElement.hasAttribute(PAGE_FREEZE_READY_ATTR)) {
+    return;
   }
+  const script = document.createElement("script");
+  script.textContent = buildMainWorldFreezeInstallScript();
+  // Inline classic script runs in the page main world under contextIsolation.
+  const parent = document.documentElement;
+  parent.appendChild(script);
+  script.remove();
 }
 
 function applyDraftChanges(changes: DesignChange[]) {
