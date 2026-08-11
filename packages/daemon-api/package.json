@@ -76,6 +76,7 @@
     "whatwg-mimetype": "^5.0.0"
   },
   "devDependencies": {
+    "@types/node": "^24.10.1",
     "@types/mime-db": "^1.43.6",
     "@types/whatwg-mimetype": "^5.0.0",
     "tsup": "^8.5.1",

@@ -1,0 +1,80 @@
+export const legacyGitHubCheckFixture = {
+  checkRunId: "501",
+  attempt: 2,
+  name: "test",
+  status: "COMPLETED",
+  conclusion: "FAILURE",
+  isRequired: true,
+  isPending: false,
+  detailsUrl: "https://github.com/acme/widget/actions/runs/90/attempts/2",
+  workflowName: "CI",
+  workflowRunId: "90",
+} as const;
+
+export const gitLabJobFixtures = [
+  {
+    id: 91,
+    pipelineId: 7,
+    stage: "deploy",
+    name: "deploy preview",
+    status: "failed",
+    allowFailure: true,
+    manual: false,
+    retried: false,
+    retryOf: null,
+  },
+  {
+    id: 102,
+    pipelineId: 7,
+    stage: "deploy",
+    name: "deploy preview",
+    status: "manual",
+    allowFailure: true,
+    manual: true,
+    retried: true,
+    retryOf: 91,
+  },
+] as const;
+
+export const azurePolicyFixtures = [
+  {
+    evaluationId: "build-11",
+    configurationId: 11,
+    type: "Build",
+    displayName: "CI build",
+    status: "approved",
+    isBlocking: true,
+  },
+  {
+    evaluationId: "reviewers-12",
+    configurationId: 12,
+    type: "Minimum number of reviewers",
+    displayName: "Two reviewers",
+    status: "rejected",
+    isBlocking: true,
+  },
+  {
+    evaluationId: "comments-13",
+    configurationId: 13,
+    type: "Comment requirements",
+    displayName: "Resolve comments",
+    status: "running",
+    isBlocking: true,
+  },
+  {
+    evaluationId: "work-items-14",
+    configurationId: 14,
+    type: "Work item linking",
+    displayName: "Linked work items",
+    status: "notApplicable",
+    isBlocking: false,
+  },
+  {
+    evaluationId: "strategy-15",
+    configurationId: 15,
+    type: "Required merge strategy",
+    displayName: "Squash merge",
+    status: "queued",
+    isBlocking: true,
+  },
+] as const;
