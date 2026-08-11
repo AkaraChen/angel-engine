@@ -6,6 +6,8 @@ Scope: `desktop/`. Follow root `AGENTS.md` for engine and cross-layer invariants
 
 Electron app with explicit main/preload/renderer/shared boundaries, consuming normalized state from `@angel-engine/client-napi`.
 
+Design Mode (preview element pick → context to the current agent session) is a **desktop host** capability only: `angel-engine`, `angel-provider`, and `angel-engine-client-napi` do not know about it. Limits and non-goals: [`docs/design-mode.md`](./docs/design-mode.md).
+
 ## Where To Look
 
 | Task                      | Location       | Notes                                       |
