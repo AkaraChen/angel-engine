@@ -313,6 +313,15 @@ export const ja = {
       worktreeSetupDirtyWarning:
         "このリポジトリには未コミットの変更もあります。worktree は現在の HEAD から作成されます。",
       worktreeSetupTitle: "worktree のセットアップコマンドを実行しますか？",
+      worktreeSetupConfigure: "設定を手伝ってもらう",
+      worktreeSetupDismiss: "今後表示しない",
+      worktreeSetupLegacyDescription:
+        "init_script は廃止され、自動実行されません。setup_script に移行し、worktree 作成前に確認してください。",
+      worktreeSetupMigrate: "init_script を移行",
+      worktreeSetupMigrationDone: "確認用に init_script を移行しました",
+      worktreeSetupMissingDescription:
+        "setup_script がない場合、依存関係の再インストールが必要になることがあります。",
+      worktreeSetupMissingTitle: "Worktree セットアップスクリプトがありません",
     },
     fleet: {
       allProjects: "すべてのプロジェクト",
@@ -1043,6 +1052,10 @@ export const ja = {
     projects: {
       chooseFolder: "プロジェクトフォルダーを選択",
       openInFinder: "Finder で開く",
+      scriptShell: "ライフサイクルスクリプトのシェル",
+      scriptShellAuto: "自動（Bash 互換）",
+      scriptShellBash: "Bash 互換シェルのみ",
+      scriptShellSystem: "システムシェル（互換モード）",
       settings: "設定",
       settingsLoadFailed: "プロジェクト設定を読み込めませんでした",
       settingsSaveFailed: "プロジェクト設定を保存できませんでした",

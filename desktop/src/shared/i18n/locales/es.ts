@@ -312,6 +312,15 @@ export const es = {
       worktreeSetupDirtyWarning:
         "Este repositorio también tiene cambios sin confirmar. El worktree seguirá partiendo del HEAD actual.",
       worktreeSetupTitle: "¿Ejecutar los comandos de configuración?",
+      worktreeSetupConfigure: "Ayúdame a configurar",
+      worktreeSetupDismiss: "No volver a mostrar",
+      worktreeSetupLegacyDescription:
+        "init_script está retirado y no se ejecutará automáticamente. Migra a setup_script y revísalo antes de crear el worktree.",
+      worktreeSetupMigrate: "Migrar init_script",
+      worktreeSetupMigrationDone: "init_script migrado para revisión",
+      worktreeSetupMissingDescription:
+        "Sin setup_script, quizá debas reinstalar las dependencias.",
+      worktreeSetupMissingTitle: "No hay script de configuración",
     },
     fleet: {
       allProjects: "Todos los proyectos",
@@ -1041,6 +1050,10 @@ export const es = {
     projects: {
       chooseFolder: "Elegir carpeta del proyecto",
       openInFinder: "Abrir en Finder",
+      scriptShell: "Shell de scripts de ciclo de vida",
+      scriptShellAuto: "Automático (compatible con Bash)",
+      scriptShellBash: "Solo compatible con Bash",
+      scriptShellSystem: "Shell del sistema (compatibilidad)",
       settings: "Ajustes",
       settingsLoadFailed: "No se pudieron cargar los ajustes del proyecto",
       settingsSaveFailed: "No se pudieron guardar los ajustes del proyecto",

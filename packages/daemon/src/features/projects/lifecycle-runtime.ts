@@ -32,9 +32,12 @@ import {
 
 export interface ProjectLifecycleExecutionOptions {
   approvedDigest: string;
+  baseRef?: string;
+  branch?: string;
   killGraceMs?: number;
   onState?: (snapshot: ProjectLifecycleSnapshot) => void;
   port?: number;
+  projectId?: string;
   projectRoot: string;
   signal?: AbortSignal;
   timeoutMs?: number;
@@ -120,6 +123,7 @@ export class ProjectLifecycleRuntime {
         try {
           const session = await this.#processAdapter.start({
             cwd: options.worktreePath,
+            environment: lifecycleContractEnvironment(kind, options),
             killGraceMs: options.killGraceMs ?? TERMINATION_GRACE_MS,
             onOutput: async (chunk) => {
               logTail = tail(logTail + chunk, LOG_TAIL_LENGTH);
@@ -127,6 +131,7 @@ export class ProjectLifecycleRuntime {
               await this.#storage.appendLog(record, kind, chunk);
             },
             script: command,
+            shell: config.scriptShell,
             signal: options.signal,
             timeoutMs:
               options.timeoutMs ??
@@ -259,6 +264,7 @@ export class ProjectLifecycleRuntime {
       const session = await this.#runProcessAdapter.start({
         cwd: options.worktreePath,
         environment: {
+          ...lifecycleContractEnvironment("run", options),
           ANGEL_WORKSPACE_PORT: String(port),
           PORT: String(port),
         },
@@ -269,6 +275,7 @@ export class ProjectLifecycleRuntime {
           await this.#storage.appendLog(record!, "run", chunk);
         },
         script: config.runScript,
+        shell: config.scriptShell,
         signal: operation.controller.signal,
         timeoutMs: options.timeoutMs,
       });
@@ -350,6 +357,22 @@ export class ProjectLifecycleRuntime {
       if (active.size === 0) this.#activeTracks.delete(key);
     };
   }
+}
+
+function lifecycleContractEnvironment(
+  kind: ProjectLifecycleKind,
+  options: ProjectLifecycleExecutionOptions,
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries({
+      ANGEL_LIFECYCLE_KIND: kind,
+      ANGEL_PROJECT_ID: options.projectId,
+      ANGEL_SOURCE_WORKTREE_PATH: options.projectRoot,
+      ANGEL_WORKTREE_BASE_REF: options.baseRef,
+      ANGEL_WORKTREE_BRANCH: options.branch,
+      ANGEL_WORKTREE_PATH: options.worktreePath,
+    }).filter((entry): entry is [string, string] => entry[1] !== undefined),
+  );
 }
 
 async function approvedConfig(options: ProjectLifecycleExecutionOptions) {

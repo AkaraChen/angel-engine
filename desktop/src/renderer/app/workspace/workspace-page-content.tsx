@@ -42,7 +42,7 @@ export function WorkspacePageContent({
     model,
     navigation,
   });
-  const draftGuard = useWorktreeDraftGuard(model);
+  const draftGuard = useWorktreeDraftGuard(model, navigation);
   const powerTabs = usePowerWorktreeTabs(model, navigation);
 
   if (model.selectedChat) {

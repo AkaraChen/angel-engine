@@ -311,6 +311,15 @@ export const en = {
       worktreeSetupDirtyWarning:
         "This repository also has uncommitted changes. The worktree will still start from the current HEAD.",
       worktreeSetupTitle: "Run worktree setup commands?",
+      worktreeSetupConfigure: "Help me configure",
+      worktreeSetupDismiss: "Don't show again",
+      worktreeSetupLegacyDescription:
+        "init_script is retired and will not run automatically. Migrate it to setup_script and review it before creating a worktree.",
+      worktreeSetupMigrate: "Migrate init_script",
+      worktreeSetupMigrationDone: "Migrated init_script for review",
+      worktreeSetupMissingDescription:
+        "Without setup_script, this worktree may need dependencies installed again.",
+      worktreeSetupMissingTitle: "No worktree setup script",
     },
     fleet: {
       allProjects: "All projects",
@@ -1032,6 +1041,10 @@ export const en = {
     projects: {
       chooseFolder: "Choose project folder",
       openInFinder: "Open in Finder",
+      scriptShell: "Lifecycle script shell",
+      scriptShellAuto: "Automatic (bash-compatible)",
+      scriptShellBash: "Bash-compatible only",
+      scriptShellSystem: "System shell (compatibility)",
       settings: "Settings",
       settingsLoadFailed: "Could not load project settings",
       settingsSaveFailed: "Could not save project settings",

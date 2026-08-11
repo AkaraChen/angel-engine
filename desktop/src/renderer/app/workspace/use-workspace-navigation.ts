@@ -53,6 +53,7 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
     routeDraftProjectId,
     selectedChatRuntimeConfig,
     setDraftAgentConfigs,
+    setDraftInitialPrompts,
     setDraftRuntimes,
     setDraftSessionIds,
     setWorkspaceMode,
@@ -119,7 +120,10 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
   );
 
   const startNewDraftSession = useCallback(
-    (projectId?: string, options?: { replace?: boolean }) => {
+    (
+      projectId?: string,
+      options?: { initialPrompt?: string; replace?: boolean },
+    ) => {
       const nextDraftRuntimeKey = draftRuntimeKeyFromProjectId(projectId);
       const nextSessionId = ++draftSessionCounterRef.current;
       const nextRuntimePageKey = workspaceRuntimePageKey({
@@ -154,6 +158,12 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
         ...current,
         [nextDraftRuntimeKey]: nextSessionId,
       }));
+      if (is.nonEmptyString(options?.initialPrompt)) {
+        setDraftInitialPrompts((current) => ({
+          ...current,
+          [nextRuntimePageKey]: options.initialPrompt,
+        }));
+      }
       if (inheritedConfig) {
         setDraftAgentConfigs((current) => ({
           ...current,
@@ -161,7 +171,12 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
             inheritedConfig,
         }));
       }
-      navigateToDraft(projectId, options);
+      navigateToDraft(
+        projectId,
+        options?.replace === undefined
+          ? undefined
+          : { replace: options.replace },
+      );
     },
     [
       activeRuntime,
@@ -173,6 +188,7 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
       reasoningEffortOverride,
       selectedChatRuntimeConfig,
       setDraftAgentConfigs,
+      setDraftInitialPrompts,
       setDraftRuntimes,
       setDraftSessionIds,
     ],

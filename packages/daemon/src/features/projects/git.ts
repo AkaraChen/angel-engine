@@ -73,6 +73,10 @@ export function projectGitStatus(
 
     return {
       ...gitStatus,
+      legacyInitScript:
+        setupConfig && setupConfig.legacyInitScript.length > 0
+          ? setupConfig.legacyInitScript
+          : undefined,
       worktreeSetup:
         setupConfig && setupConfig.setupScript.length > 0
           ? {
@@ -281,6 +285,9 @@ export function createProjectWorktree(
           yield* Effect.sync(() =>
             projectSetupLifecycle.start({
               approvedDigest: setup.digest,
+              baseRef: startPoint,
+              branch: created.branch,
+              projectId: input.projectId,
               projectRoot: root,
               worktreePath: created.cwd,
             }),

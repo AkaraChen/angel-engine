@@ -309,6 +309,15 @@ export const ko = {
       worktreeSetupDirtyWarning:
         "이 저장소에는 커밋되지 않은 변경 사항도 있습니다. worktree는 현재 HEAD에서 생성됩니다.",
       worktreeSetupTitle: "worktree 설정 명령을 실행할까요?",
+      worktreeSetupConfigure: "설정 도와주기",
+      worktreeSetupDismiss: "다시 표시하지 않기",
+      worktreeSetupLegacyDescription:
+        "init_script는 폐기되어 자동 실행되지 않습니다. setup_script로 이전하고 worktree 생성 전에 검토하세요.",
+      worktreeSetupMigrate: "init_script 이전",
+      worktreeSetupMigrationDone: "검토를 위해 init_script를 이전했습니다",
+      worktreeSetupMissingDescription:
+        "setup_script가 없으면 종속성을 다시 설치해야 할 수 있습니다.",
+      worktreeSetupMissingTitle: "Worktree 설정 스크립트 없음",
     },
     fleet: {
       allProjects: "모든 프로젝트",
@@ -1024,6 +1033,10 @@ export const ko = {
     projects: {
       chooseFolder: "프로젝트 폴더 선택",
       openInFinder: "Finder에서 열기",
+      scriptShell: "수명 주기 스크립트 셸",
+      scriptShellAuto: "자동(Bash 호환)",
+      scriptShellBash: "Bash 호환 셸만",
+      scriptShellSystem: "시스템 셸(호환 모드)",
       settings: "설정",
       settingsLoadFailed: "프로젝트 설정을 불러오지 못했습니다",
       settingsSaveFailed: "프로젝트 설정을 저장하지 못했습니다",

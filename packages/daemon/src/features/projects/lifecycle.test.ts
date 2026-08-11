@@ -78,6 +78,35 @@ describe("project lifecycle runtime", () => {
     ).rejects.toThrow("approval is required again");
   });
 
+  it("injects the worktree lifecycle environment contract", async () => {
+    const worktreePath = path.join(root, "generated-worktree");
+    await fs.mkdir(worktreePath);
+    const digest = await writeConfig({
+      setup_script: [
+        `node -e "require('node:fs').writeFileSync('lifecycle-env.json', JSON.stringify(Object.fromEntries(Object.entries(process.env).filter(([key]) => key.startsWith('ANGEL_')))) )"`,
+      ],
+    });
+
+    await runtime.execute("setup", {
+      ...lifecycleOptions(digest),
+      baseRef: "origin/main",
+      branch: "angel/feature",
+      projectId: "project-1",
+      worktreePath,
+    });
+
+    await expect(
+      readJson(path.join(worktreePath, "lifecycle-env.json")),
+    ).resolves.toEqual({
+      ANGEL_LIFECYCLE_KIND: "setup",
+      ANGEL_PROJECT_ID: "project-1",
+      ANGEL_SOURCE_WORKTREE_PATH: root,
+      ANGEL_WORKTREE_BASE_REF: "origin/main",
+      ANGEL_WORKTREE_BRANCH: "angel/feature",
+      ANGEL_WORKTREE_PATH: worktreePath,
+    });
+  });
+
   it("serializes cross-track state updates without losing either track", async () => {
     await writeDelayScript();
     const digest = await writeConfig({

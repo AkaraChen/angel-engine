@@ -159,6 +159,10 @@ function hostCliBinDir() {
   return path.join(workspaceRoot, "packages", "host-cli", "dist", "bin");
 }
 
+function brushBinDir() {
+  return path.join(projectRoot, ".runtime", "brush", "bin");
+}
+
 /** Host skill package for Skill-first injection (KIT-832). */
 function hostSkillDir() {
   return path.join(workspaceRoot, "packages", "host-skill", "angel-host");
@@ -193,6 +197,14 @@ function copyHostSkillIntoResources(buildPath: string) {
     force: true,
     recursive: true,
   });
+}
+
+function copyBrushIntoResources(buildPath: string) {
+  const binary = path.join(brushBinDir(), "brush.exe");
+  if (!fs.existsSync(binary)) return;
+  const target = path.join(buildPath, "..", "bin", "brush.exe");
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.copyFileSync(binary, target);
 }
 
 function resolveRuntimeModulePackageJson(moduleName: string): string {
@@ -331,6 +343,7 @@ const config: ForgeConfig = {
       assertHostCliBundled();
       assertHostSkillBundled();
       copyHostSkillIntoResources(buildPath);
+      copyBrushIntoResources(buildPath);
       copyRuntimePath(buildPath, "drizzle");
       copyMobileBundle(buildPath);
       copyNativeRuntimeDependencies(buildPath);

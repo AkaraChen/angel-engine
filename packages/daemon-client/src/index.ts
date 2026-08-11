@@ -763,6 +763,7 @@ export function createDaemonClient(options: DaemonClientOptions) {
           `/api/projects/${encodeURIComponent(input.projectId)}/config`,
           json("PUT", {
             runScript: input.runScript,
+            scriptShell: input.scriptShell,
             setupScript: input.setupScript,
             teardownScript: input.teardownScript,
           }),

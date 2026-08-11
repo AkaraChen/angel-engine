@@ -1,6 +1,7 @@
 import type {
   Project,
   ProjectConfigResult,
+  ProjectScriptShell,
 } from "@angel-engine/daemon-api/projects";
 import type { FormEventHandler, ReactElement } from "react";
 
@@ -22,6 +23,10 @@ import {
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  NativeSelect,
+  NativeSelectOption,
+} from "@/components/ui/native-select";
 import { useToast } from "@/components/ui/toast";
 import {
   projectConfigQueryOptions,
@@ -107,11 +112,12 @@ function ProjectSettingsForm({
       config={configQuery.data}
       isSaving={saveMutation.isPending}
       onClose={onClose}
-      onSave={async (setupScript) => {
+      onSave={async ({ scriptShell, setupScript }) => {
         try {
           await saveMutation.mutateAsync({
             projectId: project.id,
             runScript: configQuery.data.runScript,
+            scriptShell,
             setupScript,
             teardownScript: configQuery.data.teardownScript,
           });
@@ -138,21 +144,46 @@ function ProjectSettingsEditor({
   config: ProjectConfigResult;
   isSaving: boolean;
   onClose: () => void;
-  onSave: (setupScript: string[]) => Promise<void>;
+  onSave: (input: {
+    scriptShell: ProjectScriptShell;
+    setupScript: string[];
+  }) => Promise<void>;
 }) {
   const { t } = useTranslation();
   const [setupScriptText, setSetupScriptText] = useState(() =>
     config.setupScript.join("\n"),
   );
+  const [scriptShell, setScriptShell] = useState(config.scriptShell);
 
   const handleSubmit: FormEventHandler<HTMLFormElement> = (event) => {
     event.preventDefault();
     if (isSaving) return;
-    void onSave(toSetupScript(setupScriptText));
+    void onSave({ scriptShell, setupScript: toSetupScript(setupScriptText) });
   };
 
   return (
     <form className="grid gap-5" onSubmit={handleSubmit}>
+      <div className="grid gap-2">
+        <span className="text-sm font-medium">{t("projects.scriptShell")}</span>
+        <NativeSelect
+          aria-label={t("projects.scriptShell")}
+          disabled={isSaving}
+          onChange={(event) =>
+            setScriptShell(event.currentTarget.value as ProjectScriptShell)
+          }
+          value={scriptShell}
+        >
+          <NativeSelectOption value="auto">
+            {t("projects.scriptShellAuto")}
+          </NativeSelectOption>
+          <NativeSelectOption value="bash">
+            {t("projects.scriptShellBash")}
+          </NativeSelectOption>
+          <NativeSelectOption value="system">
+            {t("projects.scriptShellSystem")}
+          </NativeSelectOption>
+        </NativeSelect>
+      </div>
       <div className="grid gap-2">
         <span className="text-sm font-medium">{t("projects.setupScript")}</span>
         <Textarea

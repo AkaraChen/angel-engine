@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { SpawnLifecycleProcessAdapter } from "./lifecycle";
+import { scriptCommand, SpawnLifecycleProcessAdapter } from "./lifecycle";
 
 describe("lifecycle process adapter", () => {
   let cwd: string;
@@ -67,5 +67,50 @@ describe("lifecycle process adapter", () => {
     await expect(session.completion).rejects.toMatchObject({
       failure: { reason: "cancelled" },
     });
+  });
+
+  it("prefers bundled brush on Windows", async () => {
+    const brush = path.join(cwd, "brush.exe");
+    await fs.writeFile(brush, "fixture");
+
+    await expect(
+      scriptCommand("echo ready", "auto", "win32", {
+        ANGEL_BRUSH_PATH: brush,
+      }),
+    ).resolves.toEqual([brush, ["-c", "echo ready"]]);
+  });
+
+  it("uses PowerShell only for explicit system compatibility", async () => {
+    await expect(
+      scriptCommand("Write-Output ready", "system", "win32", {}),
+    ).resolves.toEqual([
+      "powershell.exe",
+      [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "Write-Output ready",
+      ],
+    ]);
+  });
+
+  it("falls back to Git Bash when bundled brush is unavailable", async () => {
+    const programFiles = path.join(cwd, "Program Files");
+    const gitBash = path.join(programFiles, "Git", "bin", "bash.exe");
+    await fs.mkdir(path.dirname(gitBash), { recursive: true });
+    await fs.writeFile(gitBash, "fixture");
+
+    await expect(
+      scriptCommand("echo ready", "bash", "win32", {
+        ProgramFiles: programFiles,
+      }),
+    ).resolves.toEqual([gitBash, ["-c", "echo ready"]]);
+  });
+
+  it("fails instead of silently executing bash syntax with PowerShell", async () => {
+    await expect(
+      scriptCommand("echo ready", "auto", "win32", {}),
+    ).rejects.toThrow("No bash-compatible lifecycle shell");
   });
 });

@@ -388,6 +388,13 @@ export interface LocaleResourceTranslationWorkspace {
   worktreeSetupDescription: string;
   worktreeSetupDirtyWarning: string;
   worktreeSetupTitle: string;
+  worktreeSetupConfigure: string;
+  worktreeSetupDismiss: string;
+  worktreeSetupLegacyDescription: string;
+  worktreeSetupMigrate: string;
+  worktreeSetupMigrationDone: string;
+  worktreeSetupMissingDescription: string;
+  worktreeSetupMissingTitle: string;
 }
 
 export interface LocaleResourceTranslationSidebarDateGroups {
@@ -1232,6 +1239,10 @@ export interface LocaleResourceTranslationProjectImport {
 export interface LocaleResourceTranslationProjects {
   chooseFolder: string;
   openInFinder: string;
+  scriptShell: string;
+  scriptShellAuto: string;
+  scriptShellBash: string;
+  scriptShellSystem: string;
   settings: string;
   settingsLoadFailed: string;
   settingsSaveFailed: string;

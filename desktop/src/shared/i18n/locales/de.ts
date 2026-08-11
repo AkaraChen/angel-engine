@@ -314,6 +314,15 @@ export const de = {
       worktreeSetupDirtyWarning:
         "Dieses Repository hat außerdem nicht übernommene Änderungen. Der Worktree beginnt trotzdem beim aktuellen HEAD.",
       worktreeSetupTitle: "Worktree-Setup-Befehle ausführen?",
+      worktreeSetupConfigure: "Konfigurieren lassen",
+      worktreeSetupDismiss: "Nicht mehr anzeigen",
+      worktreeSetupLegacyDescription:
+        "init_script ist veraltet und wird nicht automatisch ausgeführt. Migrieren Sie es zu setup_script und prüfen Sie es vor dem Erstellen.",
+      worktreeSetupMigrate: "init_script migrieren",
+      worktreeSetupMigrationDone: "init_script zur Prüfung migriert",
+      worktreeSetupMissingDescription:
+        "Ohne setup_script müssen Abhängigkeiten möglicherweise neu installiert werden.",
+      worktreeSetupMissingTitle: "Kein Worktree-Setup-Skript",
     },
     fleet: {
       allProjects: "Alle Projekte",
@@ -1052,6 +1061,10 @@ export const de = {
     projects: {
       chooseFolder: "Projektordner auswählen",
       openInFinder: "Im Finder öffnen",
+      scriptShell: "Shell für Lebenszyklus-Skripte",
+      scriptShellAuto: "Automatisch (Bash-kompatibel)",
+      scriptShellBash: "Nur Bash-kompatibel",
+      scriptShellSystem: "System-Shell (Kompatibilität)",
       settings: "Einstellungen",
       settingsLoadFailed: "Projekteinstellungen konnten nicht geladen werden",
       settingsSaveFailed:

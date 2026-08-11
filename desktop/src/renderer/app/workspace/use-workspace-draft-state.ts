@@ -8,11 +8,16 @@ import { useCallback, useReducer } from "react";
 interface WorkspaceDraftState {
   agentConfigs: Partial<Record<string, DraftAgentConfig>>;
   creationLocations: Partial<Record<string, ChatCreationLocation>>;
+  initialPrompts: Partial<Record<string, string>>;
   runtimes: Partial<Record<string, AgentRuntime>>;
   sessionIds: Partial<Record<string, number>>;
 }
 
 type WorkspaceDraftStateAction =
+  | {
+      action: SetStateAction<WorkspaceDraftState["initialPrompts"]>;
+      type: "initialPrompts";
+    }
   | {
       action: SetStateAction<WorkspaceDraftState["agentConfigs"]>;
       type: "agentConfigs";
@@ -33,6 +38,7 @@ type WorkspaceDraftStateAction =
 const emptyWorkspaceDraftState: WorkspaceDraftState = {
   agentConfigs: {},
   creationLocations: {},
+  initialPrompts: {},
   runtimes: {},
   sessionIds: {},
 };
@@ -64,6 +70,14 @@ function workspaceDraftStateReducer(
         ...state,
         creationLocations: applyWorkspaceDraftSetState(
           state.creationLocations,
+          action.action,
+        ),
+      };
+    case "initialPrompts":
+      return {
+        ...state,
+        initialPrompts: applyWorkspaceDraftSetState(
+          state.initialPrompts,
           action.action,
         ),
       };
@@ -103,6 +117,11 @@ export function useWorkspaceDraftState() {
       dispatchDraftState({ action, type: "runtimes" }),
     [],
   );
+  const setDraftInitialPrompts = useCallback(
+    (action: SetStateAction<WorkspaceDraftState["initialPrompts"]>) =>
+      dispatchDraftState({ action, type: "initialPrompts" }),
+    [],
+  );
   const setDraftSessionIds = useCallback(
     (action: SetStateAction<WorkspaceDraftState["sessionIds"]>) =>
       dispatchDraftState({ action, type: "sessionIds" }),
@@ -112,10 +131,12 @@ export function useWorkspaceDraftState() {
   return {
     draftAgentConfigs: draftState.agentConfigs,
     draftCreationLocations: draftState.creationLocations,
+    draftInitialPrompts: draftState.initialPrompts,
     draftRuntimes: draftState.runtimes,
     draftSessionIds: draftState.sessionIds,
     setDraftAgentConfigs,
     setDraftCreationLocations,
+    setDraftInitialPrompts,
     setDraftRuntimes,
     setDraftSessionIds,
   };

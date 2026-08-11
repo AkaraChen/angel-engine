@@ -9,10 +9,13 @@ import {
 
 interface SetupRegistration {
   approvedDigest: string;
+  baseRef?: string;
+  branch?: string;
   controller?: AbortController;
   continued: boolean;
   discarded: boolean;
   projectRoot: string;
+  projectId?: string;
   revision: number;
   running?: Promise<void>;
   waiters: Set<() => void>;
@@ -23,6 +26,9 @@ export class ProjectSetupLifecycleCoordinator {
 
   start(input: {
     approvedDigest: string;
+    baseRef: string;
+    branch: string;
+    projectId: string;
     projectRoot: string;
     worktreePath: string;
   }): void {
@@ -31,14 +37,20 @@ export class ProjectSetupLifecycleCoordinator {
       this.#registrations.get(key) ??
       ({
         approvedDigest: input.approvedDigest,
+        baseRef: input.baseRef,
+        branch: input.branch,
         continued: false,
         discarded: false,
         projectRoot: input.projectRoot,
+        projectId: input.projectId,
         revision: 0,
         waiters: new Set(),
       } satisfies SetupRegistration);
     registration.approvedDigest = input.approvedDigest;
+    registration.baseRef = input.baseRef;
+    registration.branch = input.branch;
     registration.projectRoot = input.projectRoot;
+    registration.projectId = input.projectId;
     registration.continued = false;
     registration.discarded = false;
     this.#registrations.set(key, registration);
@@ -152,6 +164,9 @@ export class ProjectSetupLifecycleCoordinator {
     registration.controller = controller;
     const running = executeProjectLifecycle("setup", {
       approvedDigest: registration.approvedDigest,
+      baseRef: registration.baseRef,
+      branch: registration.branch,
+      projectId: registration.projectId,
       projectRoot: registration.projectRoot,
       signal: controller.signal,
       worktreePath: key,

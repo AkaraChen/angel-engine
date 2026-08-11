@@ -1,5 +1,9 @@
 import { spawn, type ChildProcess } from "node:child_process";
+import fs from "node:fs";
 import net from "node:net";
+import path from "node:path";
+import type { ProjectScriptShell } from "@angel-engine/daemon-api/projects";
+import which from "which";
 
 import {
   ERROR_TAIL_LENGTH,
@@ -37,6 +41,7 @@ export interface LifecycleProcessStartOptions {
   killGraceMs: number;
   onOutput: (chunk: string) => Promise<void>;
   script: string;
+  shell?: ProjectScriptShell;
   signal?: AbortSignal;
   timeoutMs?: number;
 }
@@ -56,7 +61,10 @@ export class SpawnLifecycleProcessAdapter implements LifecycleProcessAdapter {
   async start(
     options: LifecycleProcessStartOptions,
   ): Promise<LifecycleProcessSession> {
-    const [command, args] = scriptCommand(options.script);
+    const [command, args] = await scriptCommand(
+      options.script,
+      options.shell ?? "auto",
+    );
     const child = spawn(command, args, {
       cwd: options.cwd,
       detached: process.platform !== "win32",
@@ -247,13 +255,64 @@ function killProcessGroup(pid: number, signal: NodeJS.Signals) {
   }
 }
 
-function scriptCommand(script: string): [string, string[]] {
-  return process.platform === "win32"
-    ? [
-        "powershell.exe",
-        ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script],
-      ]
-    : ["sh", ["-c", script]];
+export async function scriptCommand(
+  script: string,
+  shell: ProjectScriptShell,
+  platform: NodeJS.Platform = process.platform,
+  environment: NodeJS.ProcessEnv = process.env,
+): Promise<[string, string[]]> {
+  if (platform !== "win32") {
+    if (shell === "system") return ["sh", ["-c", script]];
+    return [(await which("bash", { nothrow: true })) ?? "sh", ["-c", script]];
+  }
+
+  if (shell === "system") {
+    return [
+      "powershell.exe",
+      ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script],
+    ];
+  }
+
+  const brush = firstExecutable([
+    environment.ANGEL_BRUSH_PATH,
+    environment.ANGEL_RESOURCES_PATH
+      ? path.join(environment.ANGEL_RESOURCES_PATH, "bin", "brush.exe")
+      : undefined,
+    await which("brush", { nothrow: true }),
+  ]);
+  if (brush !== undefined) return [brush, ["-c", script]];
+
+  const gitBash = firstExecutable([
+    environment.ProgramFiles
+      ? path.join(environment.ProgramFiles, "Git", "bin", "bash.exe")
+      : undefined,
+    environment["ProgramFiles(x86)"]
+      ? path.join(environment["ProgramFiles(x86)"], "Git", "bin", "bash.exe")
+      : undefined,
+    environment.LOCALAPPDATA
+      ? path.join(
+          environment.LOCALAPPDATA,
+          "Programs",
+          "Git",
+          "bin",
+          "bash.exe",
+        )
+      : undefined,
+  ]);
+  if (gitBash !== undefined) return [gitBash, ["-c", script]];
+
+  throw new Error(
+    "No bash-compatible lifecycle shell is available. Reinstall Angel Engine to restore bundled brush, install Git Bash, or set script_shell to system for PowerShell compatibility.",
+  );
+}
+
+function firstExecutable(candidates: Array<string | null | undefined>) {
+  return candidates.find(
+    (candidate): candidate is string =>
+      typeof candidate === "string" &&
+      candidate.length > 0 &&
+      fs.existsSync(candidate),
+  );
 }
 
 function errorCode(cause: unknown) {

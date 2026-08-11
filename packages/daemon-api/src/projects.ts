@@ -19,6 +19,8 @@ export interface ProjectGitStatusResult {
   path: string;
   projectId: string;
   root?: string;
+  /** Legacy commands are migration-only and are never executed directly. */
+  legacyInitScript?: string[];
   worktreeSetup?: ProjectWorktreeSetup;
 }
 
@@ -58,6 +60,7 @@ export interface ProjectWorktreeCreateResult {
 }
 
 export type ProjectLifecycleKind = "run" | "setup" | "teardown";
+export type ProjectScriptShell = "auto" | "bash" | "system";
 
 export type ProjectLifecycleFailureReason =
   | "cancelled"
@@ -133,6 +136,8 @@ export interface ProjectSetupRetryInput {
 export interface ProjectConfig {
   /** Long-running command used to start the workspace development server. */
   runScript: string;
+  /** Shell selection for lifecycle commands. `auto` prefers bash semantics. */
+  scriptShell: ProjectScriptShell;
   /** Commands run in a freshly created worktree, in order. */
   setupScript: string[];
   /** Commands run before an app-managed worktree is removed, in order. */
@@ -144,6 +149,8 @@ export interface ProjectConfigResult extends ProjectConfig {
   configPath: string;
   /** `false` when no `2code.json` exists yet, so saving will create it. */
   exists: boolean;
+  /** Commands from the retired `init_script` key, offered only for migration. */
+  legacyInitScript: string[];
   projectId: string;
 }
 
@@ -151,8 +158,10 @@ export interface ProjectConfigInput {
   projectId: string;
 }
 
-export interface UpdateProjectConfigInput extends ProjectConfig {
+export interface UpdateProjectConfigInput
+  extends Omit<ProjectConfig, "scriptShell"> {
   projectId: string;
+  scriptShell?: ProjectScriptShell;
 }
 
 /** One app-managed git worktree under `~/.angel-engine/worktrees`. */
@@ -304,6 +313,7 @@ export const updateProjectConfigInputSchema = arkType({
   "+": "ignore",
   projectId: "string > 0",
   runScript: "string",
+  "scriptShell?": "'auto' | 'bash' | 'system'",
   setupScript: "string[]",
   teardownScript: "string[]",
 });

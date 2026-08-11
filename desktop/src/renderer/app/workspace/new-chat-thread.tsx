@@ -34,8 +34,10 @@ interface NewChatThreadProps {
   creationLocation?: ChatCreationLocation;
   creationLocationAccessory?: ReactNode;
   cwd?: string;
+  initialMarkdown?: string;
   model?: string;
   mode?: string;
+  notice?: ReactNode;
   onChatCreated: ChatUpdateHandler;
   onChatMessagesUpdated: ChatMessagesUpdateHandler;
   onChatUpdated: ChatUpdateHandler;
@@ -64,8 +66,10 @@ export function NewChatThread({
   creationLocation,
   creationLocationAccessory,
   cwd,
+  initialMarkdown,
   model,
   mode,
+  notice,
   onChatCreated,
   onChatMessagesUpdated,
   onChatUpdated,
@@ -138,8 +142,10 @@ export function NewChatThread({
             creationLocation={creationLocation}
             creationLocationAccessory={creationLocationAccessory}
             cwd={cwd}
+            initialMarkdown={initialMarkdown}
             model={model}
             mode={mode}
+            notice={notice}
             onBeforeSubmit={onBeforeSubmit}
             onChatCreated={handleChatCreated}
             onChatMessagesUpdated={onChatMessagesUpdated}

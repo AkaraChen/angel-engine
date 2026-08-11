@@ -81,6 +81,9 @@ describe("project setup lifecycle coordinator", () => {
     if (config === undefined) throw new Error("Expected lifecycle config.");
     coordinator.start({
       approvedDigest: config.digest,
+      baseRef: "HEAD",
+      branch: "angel/test",
+      projectId: "project-1",
       projectRoot,
       worktreePath,
     });
