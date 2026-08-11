@@ -2,6 +2,7 @@ import type { RouteComponentProps } from "wouter";
 import { Redirect, Route, Router, Switch } from "wouter";
 import { useHashLocation } from "wouter/use-hash-location";
 
+import { DevPrPanelFixturePage } from "@/app/dev-pr-panel-fixture";
 import {
   WorkspaceChatPage,
   WorkspaceDraftPage,
@@ -14,6 +15,11 @@ export function AppRouter() {
   return (
     <Router hook={useHashLocation}>
       <Switch>
+        {import.meta.env.DEV ? (
+          <Route path="/dev/pr-panel-fixture/:mode?">
+            <DevPrPanelFixturePage />
+          </Route>
+        ) : null}
         <Route path="/">
           <WorkspaceDraftPage />
         </Route>
