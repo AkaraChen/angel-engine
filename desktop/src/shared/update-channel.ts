@@ -5,12 +5,36 @@
  */
 export type DesktopUpdateChannel = "beta" | "stable";
 
+/**
+ * Lifecycle of a desktop update.
+ *
+ * - `checking` — feed request in flight
+ * - `idle` — no update (or not checked yet; see `lastCheckedAt`)
+ * - `downloading` — bytes arriving; may include `progress`
+ * - `installing` — download finished, signature/package verification running
+ * - `downloaded` — staged and waiting for restart
+ * - `error` — last attempt failed; `errorMessage` explains why
+ */
 export type DesktopUpdateState =
   | "checking"
   | "downloaded"
   | "downloading"
   | "error"
-  | "idle";
+  | "idle"
+  | "installing";
+
+/**
+ * Download byte progress. `total` / `percent` are omitted when the server does
+ * not report a length so the UI can render an indeterminate bar instead of
+ * inventing 0% or NaN%.
+ */
+export interface DesktopUpdateDownloadProgress {
+  bytesPerSecond: number;
+  /** Present only when `total` is known. Always finite, clamped 0–100. */
+  percent?: number;
+  total?: number;
+  transferred: number;
+}
 
 export interface DesktopUpdateStatus {
   /** Version offered by the feed, once a check has found one. */
@@ -20,6 +44,8 @@ export interface DesktopUpdateStatus {
   errorMessage?: string;
   /** Epoch milliseconds of the last completed check. */
   lastCheckedAt?: number;
+  /** Present while `state === "downloading"` (and briefly during install). */
+  progress?: DesktopUpdateDownloadProgress;
   state: DesktopUpdateState;
   /** False when the running platform has no auto-update support. */
   supported: boolean;

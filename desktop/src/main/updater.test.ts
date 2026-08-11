@@ -6,6 +6,7 @@ import {
   DESKTOP_UPDATE_CHANNEL_SET_CHANNEL,
   DESKTOP_UPDATE_CHECK_CHANNEL,
   DESKTOP_UPDATE_STATUS_CHANGED_CHANNEL,
+  DESKTOP_UPDATE_STATUS_GET_CHANNEL,
 } from "../shared/desktop-window";
 
 interface Deferred<T> {
@@ -86,7 +87,14 @@ vi.mock("electron", () => ({
   },
   BrowserWindow: {
     getAllWindows: () => [
-      { isDestroyed: () => false, webContents: { send: mocks.send } },
+      {
+        isDestroyed: () => false,
+        webContents: {
+          isLoading: () => false,
+          once: vi.fn(),
+          send: mocks.send,
+        },
+      },
     ],
     getFocusedWindow: () => null,
   },
@@ -233,5 +241,120 @@ describe("configureAutoUpdates", () => {
     await vi.waitFor(() => {
       expect(mocks.autoUpdater.checkForUpdates).toHaveBeenCalledTimes(2);
     });
+  });
+
+  it("broadcasts download progress and never lets percent go backwards", async () => {
+    const download = deferred<string[]>();
+    mocks.autoUpdater.checkForUpdates.mockResolvedValue({
+      isUpdateAvailable: true,
+      updateInfo: { version: "1.1.0-beta.1" },
+    });
+    mocks.autoUpdater.downloadUpdate.mockReturnValue(download.promise);
+
+    configureAutoUpdates();
+    triggerCheck();
+
+    await vi.waitFor(() => {
+      expect(mocks.autoUpdater.downloadUpdate).toHaveBeenCalled();
+    });
+
+    mocks.send.mockClear();
+    mocks.autoUpdater.emit("download-progress", {
+      bytesPerSecond: 1_000,
+      delta: 100,
+      percent: 10,
+      total: 1_000,
+      transferred: 100,
+    });
+    expect(broadcastStatuses().at(-1)?.progress).toEqual({
+      bytesPerSecond: 1_000,
+      percent: 10,
+      total: 1_000,
+      transferred: 100,
+    });
+
+    // Second sample is still inside the throttle window: not broadcast, but
+    // merged so a later sample never reports a lower percent.
+    mocks.send.mockClear();
+    mocks.autoUpdater.emit("download-progress", {
+      bytesPerSecond: 2_000,
+      delta: 50,
+      percent: 8,
+      total: 1_000,
+      transferred: 80,
+    });
+    expect(broadcastStatuses()).toEqual([]);
+
+    download.resolve([]);
+    mocks.autoUpdater.emit("update-downloaded", { version: "1.1.0-beta.1" });
+    await vi.waitFor(() => {
+      expect(
+        broadcastStatuses().some((status) => status.state === "downloaded"),
+      ).toBe(true);
+    });
+  });
+
+  it("surfaces install verification after the download reaches 100%", async () => {
+    const download = deferred<string[]>();
+    // A prior test may have left `downloaded`, which refuses another check.
+    // Switching channel clears staged work and starts a fresh download.
+    mocks.autoUpdater.checkForUpdates.mockResolvedValue({
+      isUpdateAvailable: true,
+      updateInfo: { version: "1.2.0" },
+    });
+    mocks.autoUpdater.downloadUpdate.mockReturnValue(download.promise);
+
+    configureAutoUpdates();
+    setChannel("stable");
+
+    await vi.waitFor(() => {
+      expect(mocks.autoUpdater.downloadUpdate).toHaveBeenCalled();
+    });
+
+    mocks.autoUpdater.emit("download-progress", {
+      bytesPerSecond: 100,
+      delta: 1_000,
+      percent: 100,
+      total: 1_000,
+      transferred: 1_000,
+    });
+
+    expect(broadcastStatuses().at(-1)).toMatchObject({
+      progress: undefined,
+      state: "installing",
+    });
+
+    // Release the checkInFlight chain (it awaits downloadUpdate) so later
+    // cases can start a new check without queuing behind this one.
+    download.resolve([]);
+    mocks.autoUpdater.emit("update-downloaded", { version: "1.2.0" });
+    await vi.waitFor(() => {
+      expect(
+        broadcastStatuses().some((status) => status.state === "downloaded"),
+      ).toBe(true);
+    });
+  });
+
+  it("keeps the error state with a retryable message", async () => {
+    mocks.autoUpdater.downloadUpdate.mockResolvedValue([]);
+    mocks.autoUpdater.checkForUpdates.mockRejectedValue(
+      new Error("network down"),
+    );
+    configureAutoUpdates();
+    mocks.send.mockClear();
+    // Same-channel set is a no-op; flip whatever the suite left us on so a
+    // real check starts against the rejected mock.
+    const current = invokeIpc(DESKTOP_UPDATE_STATUS_GET_CHANNEL);
+    setChannel(current.channel === "beta" ? "stable" : "beta");
+
+    await vi.waitFor(() => {
+      expect(
+        broadcastStatuses().some((status) => status.state === "error"),
+      ).toBe(true);
+    });
+    const errorStatus = broadcastStatuses().find(
+      (status) => status.state === "error",
+    );
+    expect(errorStatus?.errorMessage).toBe("network down");
   });
 });

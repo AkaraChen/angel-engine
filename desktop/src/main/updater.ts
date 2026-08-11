@@ -1,4 +1,8 @@
-import type { UpdateCheckResult, UpdateInfo } from "electron-updater";
+import type {
+  ProgressInfo,
+  UpdateCheckResult,
+  UpdateInfo,
+} from "electron-updater";
 import type {
   DesktopUpdateDownloadedEvent,
   DesktopUpdateMessageAction,
@@ -6,6 +10,7 @@ import type {
 } from "../shared/desktop-window";
 import type {
   DesktopUpdateChannel,
+  DesktopUpdateDownloadProgress,
   DesktopUpdateState,
   DesktopUpdateStatus,
 } from "../shared/update-channel";
@@ -26,6 +31,11 @@ import {
   feedChannelForUpdateChannel,
   parseUpdateChannel,
 } from "../shared/update-channel";
+import {
+  mergeUpdateProgress,
+  normalizeUpdateProgress,
+  shouldBroadcastUpdateProgress,
+} from "../shared/update-progress";
 import { translate } from "./platform/i18n";
 import {
   readUpdateChannelPreference,
@@ -45,6 +55,8 @@ let availableVersion: string | undefined;
 let errorMessage: string | undefined;
 let lastCheckedAt: number | undefined;
 let lastCheckStartedAt: number | undefined;
+let progress: DesktopUpdateDownloadProgress | undefined;
+let lastProgressBroadcastAt: number | undefined;
 let userInitiatedCheck = false;
 let didRegisterIpc = false;
 /**
@@ -75,6 +87,9 @@ export function configureAutoUpdates() {
   // events, so every result stays bound to the generation that started it.
   // `error` is not listened to for the same reason: electron-updater emits it
   // *and* rejects, which would report the same failure twice.
+  autoUpdater.on("download-progress", (info) => {
+    handleDownloadProgress(info);
+  });
   autoUpdater.on("update-downloaded", (info) => {
     if (downloadGeneration !== generation) {
       log.info(
@@ -138,7 +153,11 @@ export function checkForUpdatesFromMenu() {
     return;
   }
 
-  if (state === "checking" || state === "downloading") {
+  if (
+    state === "checking" ||
+    state === "downloading" ||
+    state === "installing"
+  ) {
     showUpdateMessage({
       detail: translate("updates.checkingDetail"),
       message: translate("updates.checking"),
@@ -162,6 +181,7 @@ function getUpdateStatus(): DesktopUpdateStatus {
     currentVersion: app.getVersion(),
     errorMessage,
     lastCheckedAt,
+    progress,
     state,
     supported: supportsAutoUpdates,
   };
@@ -184,6 +204,7 @@ function setUpdateChannel(next: DesktopUpdateChannel) {
   // back the first check on the new one.
   availableVersion = undefined;
   lastCheckStartedAt = undefined;
+  clearProgress();
   setState("idle");
 
   if (supportsAutoUpdates && app.isPackaged) {
@@ -211,6 +232,7 @@ function startCheck() {
 
   const checkGeneration = generation;
   lastCheckStartedAt = Date.now();
+  clearProgress();
   setState("checking");
 
   checkInFlight = autoUpdater
@@ -244,12 +266,14 @@ async function handleCheckResult(
   const version = result?.updateInfo.version;
   if (result === null || version === undefined || !result.isUpdateAvailable) {
     availableVersion = undefined;
+    clearProgress();
     setState("idle");
     showUpToDateMessage();
     return;
   }
 
   availableVersion = version;
+  clearProgress();
   setState("downloading");
 
   const cancellation = new CancellationToken();
@@ -258,6 +282,17 @@ async function handleCheckResult(
 
   try {
     await autoUpdater.downloadUpdate(cancellation);
+    // `update-downloaded` usually fires before this promise resolves. If the
+    // package is still verifying, surface that as an explicit installing state
+    // instead of looking stuck mid-download with a frozen percent.
+    if (
+      checkGeneration === generation &&
+      downloadGeneration === generation &&
+      state === "downloading"
+    ) {
+      clearProgress();
+      setState("installing");
+    }
   } catch (error: unknown) {
     handleUpdateError(error, checkGeneration);
   } finally {
@@ -265,6 +300,42 @@ async function handleCheckResult(
       downloadCancellation = undefined;
     }
   }
+}
+
+function handleDownloadProgress(info: ProgressInfo) {
+  if (downloadGeneration !== generation) return;
+  if (state !== "downloading" && state !== "installing") return;
+
+  const next = mergeUpdateProgress(progress, normalizeUpdateProgress(info));
+  progress = next;
+
+  // Once every byte is in, the remaining work is verification — not download.
+  if (
+    next.percent !== undefined &&
+    next.percent >= 100 &&
+    state === "downloading"
+  ) {
+    setState("installing");
+    return;
+  }
+
+  const now = Date.now();
+  if (
+    !shouldBroadcastUpdateProgress({
+      lastBroadcastAt: lastProgressBroadcastAt,
+      now,
+    })
+  ) {
+    return;
+  }
+
+  lastProgressBroadcastAt = now;
+  broadcastStatus();
+}
+
+function clearProgress() {
+  progress = undefined;
+  lastProgressBroadcastAt = undefined;
 }
 
 function registerUpdaterIpc() {
@@ -312,8 +383,11 @@ function handleUpdateError(error: unknown, checkGeneration: number) {
       ? error.message
       : translate("updates.checkFailedDetail");
 
-  setState("error");
+  // Set the message before broadcasting so the first error frame is complete
+  // (retryable) rather than a blank danger state the UI has to fill in later.
   errorMessage = detail;
+  clearProgress();
+  state = "error";
   broadcastStatus();
   log.warn("Could not check for updates.", error);
 
@@ -331,6 +405,11 @@ function setState(next: DesktopUpdateState) {
   state = next;
   if (next !== "error") {
     errorMessage = undefined;
+  }
+  // Only the downloading phase owns byte progress. Checking / installing /
+  // ready / error use copy + spinners, never a frozen percent bar.
+  if (next !== "downloading") {
+    clearProgress();
   }
 
   broadcastStatus();
@@ -350,6 +429,7 @@ function notifyUpdateDownloaded(
 ) {
   availableVersion = info.version;
   userInitiatedCheck = false;
+  clearProgress();
   setState("downloaded");
 
   const event: DesktopUpdateDownloadedEvent = {

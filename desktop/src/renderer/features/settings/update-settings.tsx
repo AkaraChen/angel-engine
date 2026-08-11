@@ -18,6 +18,11 @@ import {
   SettingsRow,
 } from "@/features/settings/settings-controls";
 import { useUpdateStatus } from "@/features/settings/use-update-status";
+import { UpdateProgressBar } from "@/features/updates/update-progress-bar";
+import {
+  updateStateDetail,
+  updateStateTitle,
+} from "@/features/updates/update-status-copy";
 import { formatDateTime } from "@/platform/format-time";
 import { cn } from "@/platform/utils";
 
@@ -68,9 +73,16 @@ export function UpdateSettings() {
 
   if (!status) return null;
 
-  const busy = status.state === "checking" || status.state === "downloading";
+  const busy =
+    status.state === "checking" ||
+    status.state === "downloading" ||
+    status.state === "installing";
   const tone = updateTone(status);
   const ToneIcon = updateToneIcon[tone];
+  const title = updateStateTitle(status, t);
+  const detail = updateStateDetail(status, t, (epochMs) =>
+    formatDateTime(new Date(epochMs).toISOString()),
+  );
 
   return (
     <SettingsGroup description={t("settings.updates.description")}>
@@ -118,21 +130,29 @@ export function UpdateSettings() {
           <span
             className={cn(
               `
-                flex min-w-56 flex-1 items-start gap-2 rounded-lg border
+                flex min-w-56 flex-1 flex-col gap-2 rounded-lg border
                 px-2.5 py-1.5 text-xs leading-[1.55]
               `,
               updateToneClassName[tone],
             )}
           >
-            <ToneIcon
-              className={cn(
-                "mt-px size-3.5 shrink-0",
-                busy && "animate-spin motion-reduce:animate-none",
-              )}
-            />
-            <span className="min-w-0 wrap-break-word">
-              {updateStateDescription(status, t)}
+            <span className="flex items-start gap-2">
+              <ToneIcon
+                className={cn(
+                  "mt-px size-3.5 shrink-0",
+                  busy && "animate-spin motion-reduce:animate-none",
+                )}
+              />
+              <span className="min-w-0 flex-1 wrap-break-word">
+                <span className="block">{title}</span>
+                {detail ? (
+                  <span className="mt-0.5 block opacity-90">{detail}</span>
+                ) : null}
+              </span>
             </span>
+            {status.state === "downloading" ? (
+              <UpdateProgressBar progress={status.progress} />
+            ) : null}
           </span>
           {status.state === "downloaded" ? (
             <Button
@@ -148,7 +168,9 @@ export function UpdateSettings() {
               type="button"
               variant="outline"
             >
-              {t("settings.updates.checkButton")}
+              {status.state === "error"
+                ? t("common.retry")
+                : t("settings.updates.checkButton")}
             </Button>
           )}
         </span>
@@ -163,6 +185,7 @@ function updateTone(status: DesktopUpdateStatus): UpdateTone {
   switch (status.state) {
     case "checking":
     case "downloading":
+    case "installing":
       return "info";
     case "downloaded":
       return "primary";
@@ -170,35 +193,5 @@ function updateTone(status: DesktopUpdateStatus): UpdateTone {
       return "danger";
     case "idle":
       return status.lastCheckedAt === undefined ? "neutral" : "success";
-  }
-}
-
-function updateStateDescription(
-  status: DesktopUpdateStatus,
-  t: (key: string, options?: Record<string, string>) => string,
-) {
-  if (!status.supported) return t("settings.updates.unsupported");
-
-  switch (status.state) {
-    case "checking":
-      return t("settings.updates.stateChecking");
-    case "downloading":
-      return t("settings.updates.stateDownloading", {
-        version: status.availableVersion ?? "",
-      });
-    case "downloaded":
-      return t("settings.updates.stateDownloaded", {
-        version: status.availableVersion ?? "",
-      });
-    case "error":
-      return t("settings.updates.stateError", {
-        detail: status.errorMessage ?? "",
-      });
-    case "idle":
-      return status.lastCheckedAt === undefined
-        ? t("settings.updates.stateUnchecked")
-        : t("settings.updates.stateIdle", {
-            time: formatDateTime(new Date(status.lastCheckedAt).toISOString()),
-          });
   }
 }

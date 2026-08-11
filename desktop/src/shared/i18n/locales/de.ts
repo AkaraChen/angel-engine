@@ -636,14 +636,22 @@ export const de = {
         currentVersionTitle: "Aktuelle Version",
         description:
           "Angel Engine lädt Updates im Hintergrund von GitHub Releases.",
+        downloadIndeterminate: "{{transferred}} heruntergeladen",
+        downloadIndeterminateWithSpeed:
+          "{{transferred}} heruntergeladen · {{speed}}",
+        downloadProgress: "{{percent}} % · {{transferred}} / {{total}}",
+        downloadProgressWithSpeed:
+          "{{percent}} % · {{transferred}} / {{total}} · {{speed}}",
+        downloadStarting: "Download wird gestartet …",
         installButton: "Neu starten und installieren",
         stateChecking: "Suche nach Updates …",
         stateDownloaded: "Version {{version}} kann installiert werden.",
         stateDownloading: "Version {{version}} wird geladen …",
-        stateError: "Letzte Prüfung fehlgeschlagen: {{detail}}",
-        stateIdle:
-          "Sie haben die neueste Version dieses Kanals. Zuletzt geprüft: {{time}}.",
+        stateError: "Update fehlgeschlagen: {{detail}}",
+        stateIdleDetail: "Zuletzt geprüft: {{time}}.",
+        stateInstalling: "Version {{version}} wird geprüft …",
         stateUnchecked: "Es wurde noch nicht nach Updates gesucht.",
+        stateUpToDate: "Sie haben die neueste Version dieses Kanals.",
         unsupported: "Automatische Updates gibt es derzeit nur unter macOS.",
       },
       workspace: {

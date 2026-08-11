@@ -623,13 +623,21 @@ export const ko = {
         currentVersionTitle: "현재 버전",
         description:
           "Angel Engine은 GitHub Releases에서 백그라운드로 업데이트를 내려받습니다.",
+        downloadIndeterminate: "{{transferred}} 내려받음",
+        downloadIndeterminateWithSpeed: "{{transferred}} 내려받음 · {{speed}}",
+        downloadProgress: "{{percent}}% · {{transferred}} / {{total}}",
+        downloadProgressWithSpeed:
+          "{{percent}}% · {{transferred}} / {{total}} · {{speed}}",
+        downloadStarting: "다운로드 시작 중…",
         installButton: "다시 시작하고 설치",
         stateChecking: "업데이트를 확인하는 중…",
         stateDownloaded: "버전 {{version}}을(를) 설치할 준비가 되었습니다.",
         stateDownloading: "버전 {{version}}을(를) 내려받는 중…",
-        stateError: "마지막 확인에 실패했습니다: {{detail}}",
-        stateIdle: "이 채널에서 최신 버전입니다. 마지막 확인: {{time}}.",
+        stateError: "업데이트 실패: {{detail}}",
+        stateIdleDetail: "마지막 확인: {{time}}.",
+        stateInstalling: "버전 {{version}} 검증 중…",
         stateUnchecked: "아직 업데이트를 확인하지 않았습니다.",
+        stateUpToDate: "이 채널에서 최신 버전입니다.",
         unsupported: "자동 업데이트는 현재 macOS에서만 지원됩니다.",
       },
       workspace: {

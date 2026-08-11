@@ -718,13 +718,20 @@ export interface LocaleResourceTranslationSettingsUpdates {
   checkTitle: string;
   currentVersionTitle: string;
   description: string;
+  downloadIndeterminate: string;
+  downloadIndeterminateWithSpeed: string;
+  downloadProgress: string;
+  downloadProgressWithSpeed: string;
+  downloadStarting: string;
   installButton: string;
   stateChecking: string;
   stateDownloaded: string;
   stateDownloading: string;
   stateError: string;
-  stateIdle: string;
+  stateIdleDetail: string;
+  stateInstalling: string;
   stateUnchecked: string;
+  stateUpToDate: string;
   unsupported: string;
 }
 

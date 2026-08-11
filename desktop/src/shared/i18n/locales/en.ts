@@ -626,14 +626,22 @@ export const en = {
         currentVersionTitle: "Current version",
         description:
           "Angel Engine downloads updates from GitHub Releases in the background.",
+        downloadIndeterminate: "{{transferred}} downloaded",
+        downloadIndeterminateWithSpeed:
+          "{{transferred}} downloaded · {{speed}}",
+        downloadProgress: "{{percent}}% · {{transferred}} / {{total}}",
+        downloadProgressWithSpeed:
+          "{{percent}}% · {{transferred}} / {{total}} · {{speed}}",
+        downloadStarting: "Starting download…",
         installButton: "Restart and install",
         stateChecking: "Checking for updates…",
         stateDownloaded: "Version {{version}} is ready to install.",
         stateDownloading: "Downloading version {{version}}…",
-        stateError: "Last check failed: {{detail}}",
-        stateIdle:
-          "You are on the latest version for this channel. Last checked: {{time}}.",
+        stateError: "Update failed: {{detail}}",
+        stateIdleDetail: "Last checked: {{time}}.",
+        stateInstalling: "Verifying version {{version}}…",
         stateUnchecked: "Updates have not been checked yet.",
+        stateUpToDate: "You are on the latest version for this channel.",
         unsupported: "Automatic updates are only available on macOS.",
       },
       workspace: {
