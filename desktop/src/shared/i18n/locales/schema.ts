@@ -1128,6 +1128,7 @@ export interface LocaleResourceTranslationDialogImportSession {
   importing: string;
   noMatches: string;
   retryAction: string;
+  searchPlaceholder: string;
   titleForProject: string;
 }
 

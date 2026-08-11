@@ -917,6 +917,7 @@ export const en = {
         importFailed: "Could not import session",
         importing: "Importing…",
         noMatches: "No sessions match your search.",
+        searchPlaceholder: "Search sessions to import…",
         retryAction: "Retry {{selected}} failed",
         titleForProject: "Import sessions into {{projectName}}",
       },

@@ -877,6 +877,7 @@ export const zhTW = {
         importFailed: "無法匯入對話",
         importing: "正在匯入…",
         noMatches: "沒有符合的對話。",
+        searchPlaceholder: "搜尋要匯入的對話…",
         retryAction: "重試 {{selected}} 筆失敗",
         titleForProject: "匯入對話到 {{projectName}}",
       },

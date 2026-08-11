@@ -924,6 +924,7 @@ export const ja = {
         importFailed: "セッションを取り込めませんでした",
         importing: "取り込み中…",
         noMatches: "一致するセッションがありません。",
+        searchPlaceholder: "取り込むセッションを検索…",
         retryAction: "失敗した {{selected}} 件を再試行",
         titleForProject: "{{projectName}} にセッションを取り込む",
       },

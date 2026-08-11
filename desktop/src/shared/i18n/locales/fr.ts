@@ -933,6 +933,7 @@ export const fr = {
         importFailed: "Impossible d’importer la session",
         importing: "Importation…",
         noMatches: "Aucune session ne correspond à la recherche.",
+        searchPlaceholder: "Rechercher des sessions à importer…",
         retryAction: "Réessayer {{selected}} en échec",
         titleForProject: "Importer des sessions dans {{projectName}}",
       },

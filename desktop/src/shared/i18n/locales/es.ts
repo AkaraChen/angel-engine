@@ -924,6 +924,7 @@ export const es = {
         importFailed: "No se pudo importar la sesión",
         importing: "Importando…",
         noMatches: "Ninguna sesión coincide con la búsqueda.",
+        searchPlaceholder: "Buscar sesiones para importar…",
         retryAction: "Reintentar {{selected}} fallidas",
         titleForProject: "Importar sesiones a {{projectName}}",
       },

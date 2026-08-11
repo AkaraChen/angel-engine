@@ -264,23 +264,27 @@ export function ImportSessionDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="relative">
-          <MagnifyingGlass
-            aria-hidden="true"
-            className="
+        {/* With nothing to search and nothing to submit, the box and the
+            button are dead chrome -- the empty line already says everything. */}
+        {loading || rows.length > 0 ? (
+          <div className="relative">
+            <MagnifyingGlass
+              aria-hidden="true"
+              className="
               pointer-events-none absolute top-1/2 left-3 size-4
               -translate-y-1/2 text-muted-foreground
             "
-          />
-          <Input
-            aria-label={t("dialog.importSession.searchPlaceholder")}
-            autoFocus
-            className="pl-9"
-            onChange={(event) => setQuery(event.currentTarget.value)}
-            placeholder={t("dialog.importSession.searchPlaceholder")}
-            value={query}
-          />
-        </div>
+            />
+            <Input
+              aria-label={t("dialog.importSession.searchPlaceholder")}
+              autoFocus
+              className="pl-9"
+              onChange={(event) => setQuery(event.currentTarget.value)}
+              placeholder={t("dialog.importSession.searchPlaceholder")}
+              value={query}
+            />
+          </div>
+        ) : null}
 
         {filterChips.length > 1 ? (
           <div className="flex flex-wrap items-center gap-1.5">
@@ -329,7 +333,7 @@ export function ImportSessionDialog({
                   aria-pressed={isSelected}
                   className={cn(
                     `
-                      flex w-full items-center gap-3 rounded-xl px-3 py-2
+                      group flex w-full items-center gap-3 rounded-xl px-3 py-2
                       text-left transition-colors
                       hover:bg-overlay-hover
                       focus-visible:bg-overlay-hover focus-visible:outline-none
@@ -343,15 +347,21 @@ export function ImportSessionDialog({
                   onClick={(event) => handleRowClick(row.key, event.shiftKey)}
                   type="button"
                 >
+                  {/* The box keeps its slot so nothing shifts, but only shows
+                      up once the row is in play -- a resting list should read
+                      as things you can pick, not as a filled-in form. */}
                   <span
                     aria-hidden="true"
                     className={cn(
                       `
                         flex size-4 shrink-0 items-center justify-center
-                        rounded-[5px] border border-border-subtle
+                        rounded-[5px] border border-border-subtle opacity-0
+                        transition-opacity
+                        group-hover:opacity-100
+                        group-focus-visible:opacity-100
                       `,
                       isSelected &&
-                        "border-transparent bg-primary-strong text-primary-foreground",
+                        "border-transparent bg-primary-strong text-primary-foreground opacity-100",
                     )}
                   >
                     {isSelected ? (
@@ -384,41 +394,43 @@ export function ImportSessionDialog({
           <p className="text-xs text-muted-foreground">{failureNote}</p>
         ) : null}
 
-        <div className="flex items-center justify-between gap-3">
-          {selectedCount > 0 ? (
-            <button
-              className="
+        {loading || rows.length > 0 ? (
+          <div className="flex items-center justify-between gap-3">
+            {selectedCount > 0 ? (
+              <button
+                className="
                 text-xs text-muted-foreground underline underline-offset-3
                 hover:text-foreground
               "
-              disabled={importing}
-              onClick={() => setSelectedKeys([])}
+                disabled={importing}
+                onClick={() => setSelectedKeys([])}
+                type="button"
+              >
+                {t("dialog.importSession.clearSelection", {
+                  selected: selectedCount,
+                })}
+              </button>
+            ) : (
+              <span />
+            )}
+            <Button
+              disabled={selectedCount === 0 || importing}
+              onClick={() => void runImport(selectedKeys)}
               type="button"
             >
-              {t("dialog.importSession.clearSelection", {
-                selected: selectedCount,
-              })}
-            </button>
-          ) : (
-            <span />
-          )}
-          <Button
-            disabled={selectedCount === 0 || importing}
-            onClick={() => void runImport(selectedKeys)}
-            type="button"
-          >
-            {importing
-              ? t("dialog.importSession.importing")
-              : hasFailures
-                ? t("dialog.importSession.retryAction", {
-                    selected: selectedCount,
-                  })
-                : t("dialog.importSession.importAction", {
-                    projectName: target?.projectName ?? "",
-                    selected: selectedCount,
-                  })}
-          </Button>
-        </div>
+              {importing
+                ? t("dialog.importSession.importing")
+                : hasFailures
+                  ? t("dialog.importSession.retryAction", {
+                      selected: selectedCount,
+                    })
+                  : t("dialog.importSession.importAction", {
+                      projectName: target?.projectName ?? "",
+                      selected: selectedCount,
+                    })}
+            </Button>
+          </div>
+        ) : null}
       </DialogContent>
     </Dialog>
   );

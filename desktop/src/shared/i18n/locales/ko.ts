@@ -909,6 +909,7 @@ export const ko = {
         importFailed: "세션을 가져올 수 없습니다",
         importing: "가져오는 중…",
         noMatches: "검색과 일치하는 세션이 없습니다.",
+        searchPlaceholder: "가져올 세션 검색…",
         retryAction: "실패한 {{selected}}개 다시 시도",
         titleForProject: "{{projectName}}(으)로 세션 가져오기",
       },

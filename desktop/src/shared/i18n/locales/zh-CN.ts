@@ -876,6 +876,7 @@ export const zhCN = {
         importFailed: "无法导入会话",
         importing: "正在导入…",
         noMatches: "没有匹配的会话。",
+        searchPlaceholder: "搜索要导入的会话…",
         retryAction: "重试 {{selected}} 条失败",
         titleForProject: "导入会话到 {{projectName}}",
       },

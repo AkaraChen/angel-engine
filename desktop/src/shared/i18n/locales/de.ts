@@ -931,6 +931,7 @@ export const de = {
         importFailed: "Sitzung konnte nicht importiert werden",
         importing: "Wird importiert…",
         noMatches: "Keine Sitzung passt zur Suche.",
+        searchPlaceholder: "Sitzungen zum Importieren suchen…",
         retryAction: "{{selected}} fehlgeschlagene wiederholen",
         titleForProject: "Sitzungen in {{projectName}} importieren",
       },
