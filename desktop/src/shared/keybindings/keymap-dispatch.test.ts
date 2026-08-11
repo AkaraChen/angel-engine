@@ -375,6 +375,81 @@ describe("dispatchKeyEvent sync preventDefault + user rebind", () => {
     expect(prevented.value).toBe(true);
     expect(interrupted).toBe(true);
   });
+
+  it("closes settings with mod+w when view.id is settings (KIT-853)", () => {
+    const defaults = createDefaultKeybindingRules();
+    const { rules } = mergeKeybindingLayers({
+      defaultRules: defaults,
+      userEntries: [],
+      platform: "mac",
+    });
+    const keymap = loadKeymap({ rules, platform: "mac" });
+
+    let closed = false;
+    disposables.push(
+      commandRegistry.register(COMMAND_IDS.settingsClose, () => {
+        closed = true;
+        return true;
+      }),
+    );
+
+    const { event, prevented } = makeKeyEvent({
+      key: "w",
+      code: "KeyW",
+      metaKey: true,
+    });
+
+    const result = dispatchKeyEvent({
+      event,
+      keymap,
+      context: { "view.id": "settings" },
+      state: { chordPending: null, recording: false },
+      focus: emptyFocus(),
+    });
+
+    expect(result).toEqual({
+      kind: "claimed",
+      command: COMMAND_IDS.settingsClose,
+    });
+    expect(prevented.value).toBe(true);
+    expect(closed).toBe(true);
+  });
+
+  it("does not claim mod+w for settings.close outside the settings window", () => {
+    const defaults = createDefaultKeybindingRules();
+    const { rules } = mergeKeybindingLayers({
+      defaultRules: defaults,
+      userEntries: [],
+      platform: "mac",
+    });
+    const keymap = loadKeymap({ rules, platform: "mac" });
+
+    let closed = false;
+    disposables.push(
+      commandRegistry.register(COMMAND_IDS.settingsClose, () => {
+        closed = true;
+        return true;
+      }),
+    );
+
+    const { event, prevented } = makeKeyEvent({
+      key: "w",
+      code: "KeyW",
+      metaKey: true,
+    });
+
+    const result = dispatchKeyEvent({
+      event,
+      keymap,
+      context: { "view.id": "workspace" },
+      state: { chordPending: null, recording: false },
+      focus: emptyFocus(),
+    });
+
+    expect(result.kind).toBe("ignored");
+    expect(prevented.value).toBe(false);
+    expect(closed).toBe(false);
+  });
 });
 
 describe("resolveActiveKeymapFocus", () => {

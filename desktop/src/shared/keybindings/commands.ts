@@ -16,6 +16,7 @@ export const COMMAND_IDS = {
   workspacePreviousTab: "workspace.previousTab",
   filesSave: "files.save",
   settingsOpen: "settings.open",
+  settingsClose: "settings.close",
 } as const satisfies Record<string, CommandId>;
 
 export const COMMAND_DESCRIPTORS: readonly CommandDescriptor[] = [
@@ -149,6 +150,15 @@ export const COMMAND_DESCRIPTORS: readonly CommandDescriptor[] = [
     bindable: true,
     handlerScope: "app",
     invocableFromMain: true,
+  },
+  {
+    id: COMMAND_IDS.settingsClose,
+    titleKey: "commands.settingsClose",
+    categoryKey: "commands.categories.app",
+    when: "view.id == 'settings'",
+    bindable: true,
+    handlerScope: "window",
+    invocableFromMain: false,
   },
 ];
 

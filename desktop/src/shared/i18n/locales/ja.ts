@@ -23,6 +23,7 @@ export const ja = {
       filesSave: "Save file",
       paletteClose: "Close command palette",
       paletteOpen: "Open command palette",
+      settingsClose: "Close settings",
       settingsOpen: "Open settings",
       workspaceCloseTab: "Close tab",
       workspaceNewTab: "New tab",

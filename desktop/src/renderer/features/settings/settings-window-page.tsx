@@ -1,5 +1,6 @@
 import type { Chat } from "@angel-engine/daemon-api/chat";
 import { rememberAgentOrder } from "@angel-engine/daemon-api/agents";
+import { COMMAND_IDS } from "@shared/keybindings";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { useCallback } from "react";
@@ -12,6 +13,7 @@ import { cancelAllChatRuns } from "@/features/chat/state/chat-run-store";
 import { SettingsPage } from "@/features/settings/settings-page";
 import { useSettingsStore } from "@/features/settings/settings-store";
 import { useAgentSettings } from "@/features/settings/use-agent-settings";
+import { useCommand, useContextKey } from "@/platform/keymap/provider";
 import { queryKeys } from "@/platform/query-keys";
 import { useApi } from "@/platform/use-api";
 
@@ -28,6 +30,14 @@ export function SettingsWindowPage() {
   const deleteAllChatsMutation = useMutation({
     ...deleteAllChatsMutationOptions({ api, queryClient }),
   });
+
+  // Cmd/Ctrl+W closes this utility window (KIT-853); gated by view.id so it
+  // does not steal the workspace power-mode close-tab binding.
+  useContextKey("view.id", "settings");
+  useCommand(COMMAND_IDS.settingsClose, () => {
+    window.desktopWindow.closeCurrent();
+    return true;
+  }, []);
 
   const deleteAllChats = useCallback(async () => {
     try {

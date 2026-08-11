@@ -23,6 +23,7 @@ export const zhCN = {
       filesSave: "保存文件",
       paletteClose: "关闭命令面板",
       paletteOpen: "打开命令面板",
+      settingsClose: "关闭设置",
       settingsOpen: "打开设置",
       workspaceCloseTab: "关闭标签",
       workspaceNewTab: "新标签",
