@@ -3,6 +3,7 @@ import type {
   ProviderHostMapping,
 } from "@angel-engine/daemon-api/source-control";
 
+import { createSourceControlRegistry } from "../providers";
 import { SourceControlRegistry } from "./registry";
 import { watchSourceControlProject } from "./watch";
 
@@ -10,8 +11,8 @@ export class SourceControlCoordinator {
   readonly registry: SourceControlRegistry;
   readonly #watchers = new Map<string, () => void>();
 
-  constructor(registry = new SourceControlRegistry()) {
-    this.registry = registry;
+  constructor(registry?: SourceControlRegistry) {
+    this.registry = registry ?? createSourceControlRegistry();
   }
 
   async activate(options: {

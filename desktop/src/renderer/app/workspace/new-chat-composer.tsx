@@ -31,7 +31,7 @@ import {
   ComposerModelMenu,
   PromptAttachmentButton,
 } from "@/features/chat/components/composer/composer-menus";
-import { PromptGitHubAttachButton } from "@/features/chat/components/composer/github-attach-button";
+import { PromptSourceControlAttachButton } from "@/features/chat/components/composer/source-control-attach-button";
 import { useComposerEditor } from "@/features/chat/components/composer/use-composer-editor";
 import { useTerminalSelectionInsert } from "@/features/chat/components/composer/use-terminal-selection-insert";
 import { SketchUnderline } from "@/features/chat/components/sketch-underline";
@@ -173,13 +173,11 @@ export function NewChatComposer({
 
   const editor = useComposerEditor({ initialMarkdown });
   useTerminalSelectionInsert(editor);
-  const sourceAttachment = editor.githubAttachments[0];
-  const isPullRequest =
-    sourceAttachment?.provider === "github" &&
-    sourceAttachment.kind === "pullRequest";
+  const sourceAttachment = editor.sourceControlAttachments[0];
+  const isChangeRequest = sourceAttachment?.kind === "changeRequest";
   const sendChatMessage = useSendChatMessage(slotKey, {
     chatId: undefined,
-    creationLocation: isPullRequest ? "worktree" : creationLocation,
+    creationLocation: isChangeRequest ? "worktree" : creationLocation,
     cwd,
     model,
     mode,
@@ -196,15 +194,15 @@ export function NewChatComposer({
         ? undefined
         : {
             kind: sourceAttachment.kind,
-            provider: sourceAttachment.provider,
+            provider: sourceAttachment.providerId,
             url: sourceAttachment.url,
           },
     worktreeRef:
-      isPullRequest && is.nonEmptyString(sourceAttachment.headRefName)
+      isChangeRequest && is.nonEmptyString(sourceAttachment.sourceBranch)
         ? {
-            remoteRef: `pull/${sourceAttachment.number}/head`,
+            remoteRef: `heads/${sourceAttachment.sourceBranch}`,
             type: "existingBranch",
-            value: sourceAttachment.headRefName,
+            value: sourceAttachment.sourceBranch,
           }
         : undefined,
   });
@@ -437,16 +435,16 @@ function NewChatComposerFooter({
   const isEmpty =
     editorIsEmpty &&
     attachments.files.length === 0 &&
-    editor.githubAttachments.length === 0;
+    editor.sourceControlAttachments.length === 0;
 
   return (
     <PromptInputFooter className={newChatFooterClassName}>
       <PromptInputTools className="flex-wrap gap-1.5">
         {projectSelect}
         <PromptAttachmentButton />
-        <PromptGitHubAttachButton
+        <PromptSourceControlAttachButton
           disabled={isRunning}
-          onAttached={editor.addGitHubAttachment}
+          onAttached={editor.addSourceControlAttachment}
         />
         <ComposerModelMenu disabled={isRunning} options={chatOptions} />
       </PromptInputTools>

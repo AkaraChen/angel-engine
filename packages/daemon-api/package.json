@@ -26,14 +26,6 @@
       "types": "./dist/chat/index.d.ts",
       "import": "./dist/chat/index.js"
     },
-    "./github": {
-      "types": "./dist/github.d.ts",
-      "import": "./dist/github.js"
-    },
-    "./links": {
-      "types": "./dist/links.d.ts",
-      "import": "./dist/links.js"
-    },
     "./mime": {
       "types": "./dist/mime.d.ts",
       "import": "./dist/mime.js"
