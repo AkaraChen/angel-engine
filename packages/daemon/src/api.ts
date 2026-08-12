@@ -41,21 +41,6 @@ import {
   normalizeChatAttachmentsInput,
 } from "@angel-engine/daemon-api/chat";
 import {
-  githubPrChecksFixPromptInputSchema,
-  githubPrContextInputSchema,
-  githubResolveUrlInputSchema,
-  githubAddPullRequestCommentInputSchema,
-  githubCreatePullRequestInputSchema,
-  githubCreateWorkspaceFromPullRequestInputSchema,
-  githubListPullRequestsInputSchema,
-  githubMergeInputSchema,
-  githubPullRequestTemplateInputSchema,
-  githubResolveThreadInputSchema,
-  githubViewPullRequestInputSchema,
-  pullRequestCreateInputSchema,
-} from "@angel-engine/daemon-api/github";
-import { taskLinkResolveInputSchema } from "@angel-engine/daemon-api/links";
-import {
   createProjectInputSchema,
   managedWorktreeDeleteInputSchema,
   projectCloneInputSchema,
@@ -77,36 +62,9 @@ import {
   shepherdStopInputSchema,
 } from "@angel-engine/daemon-api/shepherd";
 import {
-  buildGitHubPrChecksFixPrompt,
-  listGitHubPrChecks,
-} from "./features/github/checks";
-import { fetchGitHubChecks } from "./features/github/checks-snapshot";
-import { listGitHubItems } from "./features/github/list";
-import { discoverPullRequestTemplates } from "./features/github/pr-template";
-import {
-  addPullRequestComment,
-  createPullRequest,
-  listPullRequests,
-  viewPullRequest,
-} from "./features/github/pull-requests";
-import {
-  listGitHubRepositories,
-  listGitHubRepositoryOwners,
-} from "./features/github/repos";
-import { resolveGitHubUrl } from "./features/github/resolve";
-import { fetchGitHubReviewThreads } from "./features/github/review-threads";
-import { createWorkspaceFromPullRequest } from "./features/github/workspace-from-pr";
-import {
-  createPullRequest as createWorkspacePullRequest,
-  getStoredPullRequest,
-  pullRequestPreflight,
-} from "./features/github/pull-request-create";
-import {
-  getGitHubPullRequestStatus,
-  mergeGitHubPullRequest,
-  resolveGitHubReviewThread,
-} from "./features/github/pull-request";
-import { resolveTaskLink } from "./features/links/resolve";
+  providerHostMappingSchema,
+  sourceControlProjectConfigSchema,
+} from "@angel-engine/daemon-api/source-control";
 import { setLinearToken } from "./features/links/secrets";
 import { listAvailableAgents } from "./features/agents/availability";
 import {
@@ -158,6 +116,16 @@ import {
   removeManagedWorktree,
 } from "./features/source-control/local-git/projects";
 import { projectGitStatus } from "./features/source-control/local-git/projects";
+import {
+  deleteProviderHostMapping,
+  listProviderHostMappings,
+  readSourceControlProjectConfig,
+  setProviderHostMapping,
+  writeSourceControlProjectConfig,
+} from "./features/source-control/registry/config-store";
+import { SourceControlCoordinator } from "./features/source-control/registry/coordinator";
+import type { SourceControlRegistry } from "./features/source-control/registry/registry";
+import { registerSourceControlHttpApi } from "./features/source-control/http";
 import { projectSetupLifecycle } from "./features/projects/setup-lifecycle";
 import { readProjectLifecycleSnapshot } from "./features/projects/lifecycle";
 import {
@@ -201,6 +169,7 @@ export function registerApi(
   chatEvents: ChatEventsApi,
   options: {
     internalBridgeSecret?: string;
+    sourceControlRegistry?: SourceControlRegistry;
     startAutomationScheduler?: boolean;
   } = {},
 ) {
@@ -213,6 +182,9 @@ export function registerApi(
     ) => Effect.Effect<A, DaemonError, Db>,
   ) => Effect.flatMap(ChatEngine, use);
   let automationRuntime: AutomationRuntime | undefined;
+  const sourceControl = new SourceControlCoordinator(
+    options.sourceControlRegistry,
+  );
   // Late-bound so activity onChange can notify shepherd without a circular init.
   let shepherd: ShepherdService | undefined;
   const activity = new ChatActivityStore({
@@ -261,6 +233,7 @@ export function registerApi(
     chatRuns,
     chatEvents,
     run: (effect) => run(effect),
+    sourceControl,
   });
   void shepherd.start().catch(() => undefined);
   const queuedRunRecovery = run(
@@ -898,18 +871,6 @@ export function registerApi(
     ),
   );
 
-  app.post("/api/github/resolve", async (context) => {
-    const input = githubResolveUrlInputSchema(await context.req.json());
-    if (input instanceof arkType.errors)
-      throw DaemonError.invalidRequest("GitHub URL is required.");
-    return context.json(await run(resolveGitHubUrl(input)));
-  });
-  app.post("/api/links/resolve", async (context) => {
-    const input = taskLinkResolveInputSchema(await context.req.json());
-    if (input instanceof arkType.errors)
-      throw DaemonError.invalidRequest("Task link URL is required.");
-    return context.json(await run(resolveTaskLink(input)));
-  });
   app.put("/api/internal/secrets/linear", async (context) => {
     const expectedMainSecret = options.internalBridgeSecret;
     if (
@@ -927,183 +888,6 @@ export function registerApi(
     setLinearToken(input.token);
     return context.json({ hasToken: input.token !== undefined });
   });
-  app.get("/api/github/items", async (context) =>
-    context.json(
-      await run(
-        listGitHubItems({
-          cwd: requireQuery(context.req.query("cwd"), "cwd"),
-          limit: optionalNumber(context.req.query("limit")),
-          query: context.req.query("query"),
-        }),
-      ),
-    ),
-  );
-  app.get("/api/github/pr-checks", async (context) =>
-    context.json(
-      await run(
-        listGitHubPrChecks({
-          cwd: requireQuery(context.req.query("cwd"), "cwd"),
-        }),
-      ),
-    ),
-  );
-  app.get("/api/github/checks", async (context) => {
-    const prNumber = Number(context.req.query("prNumber"));
-    const input = githubPrContextInputSchema({
-      cwd: requireQuery(context.req.query("cwd"), "cwd"),
-      owner: requireQuery(context.req.query("owner"), "owner"),
-      prNumber,
-      repo: requireQuery(context.req.query("repo"), "repo"),
-    });
-    if (input instanceof arkType.errors)
-      throw DaemonError.invalidRequest("Invalid GitHub checks query.");
-    return context.json(await run(fetchGitHubChecks(input)));
-  });
-  app.get("/api/github/review-threads", async (context) => {
-    const prNumber = Number(context.req.query("prNumber"));
-    const input = githubPrContextInputSchema({
-      cwd: requireQuery(context.req.query("cwd"), "cwd"),
-      owner: requireQuery(context.req.query("owner"), "owner"),
-      prNumber,
-      repo: requireQuery(context.req.query("repo"), "repo"),
-    });
-    if (input instanceof arkType.errors)
-      throw DaemonError.invalidRequest("Invalid GitHub review-threads query.");
-    return context.json(await run(fetchGitHubReviewThreads(input)));
-  });
-  app.get("/api/github/pull-request-template", async (context) => {
-    const input = githubPullRequestTemplateInputSchema({
-      cwd: requireQuery(context.req.query("cwd"), "cwd"),
-    });
-    if (input instanceof arkType.errors)
-      throw DaemonError.invalidRequest("Repository path is required.");
-    return context.json(await run(discoverPullRequestTemplates(input)));
-  });
-  app.get("/api/github/pull-requests", async (context) => {
-    const stateRaw = context.req.query("state");
-    const state =
-      stateRaw === "open" ||
-      stateRaw === "closed" ||
-      stateRaw === "merged" ||
-      stateRaw === "all"
-        ? stateRaw
-        : undefined;
-    const input = githubListPullRequestsInputSchema({
-      cwd: requireQuery(context.req.query("cwd"), "cwd"),
-      limit: optionalNumber(context.req.query("limit")),
-      query: context.req.query("query"),
-      state,
-    });
-    if (input instanceof arkType.errors)
-      throw DaemonError.invalidRequest("Invalid pull request list query.");
-    return context.json(await run(listPullRequests(input)));
-  });
-  app.post("/api/github/pull-requests/workspace", async (context) => {
-    const input = githubCreateWorkspaceFromPullRequestInputSchema(
-      await context.req.json(),
-    );
-    if (input instanceof arkType.errors)
-      throw DaemonError.invalidRequest(
-        "Create workspace from pull request input is invalid.",
-      );
-    const result = await run(
-      createWorkspaceFromPullRequest(input, {}, context.req.raw.signal),
-    );
-    chatEvents.metadataChanged([result.chatId]);
-    return context.json(result);
-  });
-  app.post("/api/github/pull-requests", async (context) => {
-    const input = githubCreatePullRequestInputSchema(await context.req.json());
-    if (input instanceof arkType.errors)
-      throw DaemonError.invalidRequest("Pull request create input is invalid.");
-    return context.json(await run(createPullRequest(input)));
-  });
-  app.get("/api/github/pull-requests/:number", async (context) => {
-    const number = Number(context.req.param("number"));
-    const input = githubViewPullRequestInputSchema({
-      cwd: requireQuery(context.req.query("cwd"), "cwd"),
-      number,
-    });
-    if (input instanceof arkType.errors)
-      throw DaemonError.invalidRequest("Invalid pull request view query.");
-    return context.json(await run(viewPullRequest(input)));
-  });
-  app.post("/api/github/pull-requests/:number/comments", async (context) => {
-    const number = Number(context.req.param("number"));
-    const body = (await context.req.json()) as { body?: string; cwd?: string };
-    const input = githubAddPullRequestCommentInputSchema({
-      body: body.body,
-      cwd: body.cwd,
-      number,
-    });
-    if (input instanceof arkType.errors)
-      throw DaemonError.invalidRequest("Comment body is required.");
-    return context.json(await run(addPullRequestComment(input)));
-  });
-
-  app.get("/api/github/repo-owners", async (context) =>
-    context.json(await run(listGitHubRepositoryOwners())),
-  );
-  app.get("/api/github/repos", async (context) =>
-    context.json(
-      await run(
-        listGitHubRepositories({
-          limit: optionalNumber(context.req.query("limit")),
-          owner: requireQuery(context.req.query("owner"), "owner"),
-        }),
-      ),
-    ),
-  );
-  app.post("/api/github/pr-checks/fix-prompt", async (context) => {
-    const input = githubPrChecksFixPromptInputSchema(await context.req.json());
-    if (input instanceof arkType.errors) {
-      throw DaemonError.invalidRequest("GitHub checks fix input is invalid.");
-    }
-    return context.json(await run(buildGitHubPrChecksFixPrompt(input)));
-  });
-  app.get("/api/github/pull-request/preflight", async (context) =>
-    context.json(
-      await run(
-        pullRequestPreflight(
-          requireQuery(context.req.query("root"), "root"),
-          context.req.query("base"),
-        ),
-      ),
-    ),
-  );
-  app.get("/api/github/pull-request", async (context) => {
-    const root = context.req.query("root");
-    if (root !== undefined) {
-      return context.json(await run(getStoredPullRequest(root)));
-    }
-    return context.json(
-      await run(
-        getGitHubPullRequestStatus({
-          cwd: requireQuery(context.req.query("cwd"), "cwd"),
-          number: optionalNumber(context.req.query("number")),
-        }),
-      ),
-    );
-  });
-  app.post("/api/github/pull-request", async (context) => {
-    const input = pullRequestCreateInputSchema(await context.req.json());
-    if (input instanceof arkType.errors)
-      throw DaemonError.invalidRequest("Pull request input is invalid.");
-    return context.json(await run(createWorkspacePullRequest(input)));
-  });
-  app.post("/api/github/pull-request/merge", async (context) => {
-    const input = githubMergeInputSchema(await context.req.json());
-    if (input instanceof arkType.errors)
-      throw DaemonError.invalidRequest("Pull request merge input is invalid.");
-    return context.json(await run(mergeGitHubPullRequest(input)));
-  });
-  app.post("/api/github/pull-request/resolve-thread", async (context) => {
-    const input = githubResolveThreadInputSchema(await context.req.json());
-    if (input instanceof arkType.errors)
-      throw DaemonError.invalidRequest("Review thread input is invalid.");
-    return context.json(await run(resolveGitHubReviewThread(input)));
-  });
-
   app.post("/api/shepherd/start", async (context) => {
     const input = shepherdStartInputSchema(await context.req.json());
     if (input instanceof arkType.errors)
@@ -1138,6 +922,64 @@ export function registerApi(
   app.get("/api/projects", async (context) =>
     context.json(await run(listProjects())),
   );
+  registerSourceControlHttpApi(app, {
+    coordinator: sourceControl,
+    onWorkspaceCreated: (chatId) => chatEvents.metadataChanged([chatId]),
+    runDb: runEffect,
+  });
+  app.get("/api/source-control/activation", async (context) => {
+    const projectId = requireQuery(context.req.query("projectId"), "projectId");
+    const project = await run(getProject(projectId));
+    if (!project) throw DaemonError.projectNotFound();
+    const [config, hostMappings] = await Promise.all([
+      readSourceControlProjectConfig(project.path),
+      run(listProviderHostMappings()),
+    ]);
+    const result = await sourceControl.activate({
+      hostMappings,
+      projectPath: project.path,
+      providerConfig: config.provider,
+      signal: context.req.raw.signal,
+    });
+    return context.json({ ...result, projectPath: project.path });
+  });
+  app.get("/api/source-control/config", async (context) => {
+    const projectId = requireQuery(context.req.query("projectId"), "projectId");
+    const project = await run(getProject(projectId));
+    if (!project) throw DaemonError.projectNotFound();
+    return context.json(await readSourceControlProjectConfig(project.path));
+  });
+  app.put("/api/source-control/config", async (context) => {
+    const projectId = requireQuery(context.req.query("projectId"), "projectId");
+    const project = await run(getProject(projectId));
+    if (!project) throw DaemonError.projectNotFound();
+    const input = sourceControlProjectConfigSchema(await context.req.json());
+    if (input instanceof arkType.errors) {
+      throw DaemonError.invalidRequest(
+        "Source-control project configuration is invalid.",
+      );
+    }
+    const config = await writeSourceControlProjectConfig(project.path, input);
+    sourceControl.invalidate(project.path);
+    return context.json(config);
+  });
+  app.get("/api/source-control/host-mappings", async (context) =>
+    context.json(await run(listProviderHostMappings())),
+  );
+  app.put("/api/source-control/host-mappings", async (context) => {
+    const input = providerHostMappingSchema(await context.req.json());
+    if (input instanceof arkType.errors) {
+      throw DaemonError.invalidRequest("Provider host mapping is invalid.");
+    }
+    const mapping = await run(setProviderHostMapping(input));
+    sourceControl.invalidateAll();
+    return context.json(mapping);
+  });
+  app.delete("/api/source-control/host-mappings/:host", async (context) => {
+    await run(deleteProviderHostMapping(context.req.param("host")));
+    sourceControl.invalidateAll();
+    return context.json({ ok: true });
+  });
   app.post("/api/projects/clone", async (context) => {
     const input = projectCloneInputSchema(await context.req.json());
     if (input instanceof arkType.errors)
@@ -1157,7 +999,12 @@ export function registerApi(
 
       try {
         const result = await run(
-          cloneProject(input, emit, context.req.raw.signal),
+          cloneProject(
+            input,
+            emit,
+            context.req.raw.signal,
+            sourceControl.registry,
+          ),
         );
         emit({
           project: result.project,
@@ -1485,7 +1332,10 @@ export function registerApi(
     return context.json({ resolved: true });
   });
 
-  return () => automationRuntime?.stop();
+  return () => {
+    automationRuntime?.stop();
+    sourceControl.close();
+  };
 }
 
 function observeChatRun(

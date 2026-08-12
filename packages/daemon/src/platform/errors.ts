@@ -294,6 +294,22 @@ export class DaemonError extends Data.TaggedError(
     });
   }
 
+  static sourceControlCapabilityUnsupported(
+    message = "This source-control provider does not support the requested operation.",
+    providerId = "unknown",
+  ) {
+    return new DaemonError({
+      code: "source-control/capability-unsupported",
+      message,
+      sourceControl: {
+        operation: "capability",
+        providerId,
+        retryable: false,
+      },
+      status: 400,
+    });
+  }
+
   static sourceControlUnauthenticated(
     message = "GitHub CLI is not authenticated.",
   ) {

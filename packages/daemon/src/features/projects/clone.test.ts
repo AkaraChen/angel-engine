@@ -60,7 +60,7 @@ describe("cloneProject", () => {
     await fs.rm(sourceRepo, { force: true, recursive: true });
   });
 
-  it("clones into the managed root and registers the checkout", async () => {
+  it("clones a non-GitHub remote through generic git and registers it", async () => {
     const events: ProjectCloneProgressEvent[] = [];
     const result = await run(events);
 

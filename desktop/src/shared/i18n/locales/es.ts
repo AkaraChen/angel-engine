@@ -1,6 +1,6 @@
 import type { LocaleResource } from "./schema";
 import { scheduleEs } from "./schedule";
-import { pullRequestEs } from "./pull-request";
+import { changeRequestEs } from "./change-request";
 
 export const es = {
   translation: {
@@ -175,7 +175,7 @@ export const es = {
             "Turno de corrección iniciado con un resumen truncado del log.",
           fixing: "Iniciando corrección…",
           openCheck: "Abrir detalles del check",
-          openPullRequest: "Abrir pull request",
+          openPullRequest: "Abrir solicitud de cambio",
           refresh: "Actualizar checks",
           summaryFail: "{{count}} fallidos",
           summaryPass: "{{count}} correctos",
@@ -234,14 +234,15 @@ export const es = {
           ahead: "{{count}} commits por delante de {{base}}",
           base: "Rama base",
           bodyPlaceholder: "Describe el cambio",
-          create: "Crear pull request",
-          created: "Pull request #{{number}} creado",
-          creating: "Creando pull request…",
+          create: "Crear solicitud de cambio",
+          created: "Solicitud de cambio #{{number}} creado",
+          creating: "Creando solicitud de cambio…",
           description: "Revisa las ramas y la descripción antes de publicar.",
-          existing: "El pull request #{{number}} ya existe",
+          existing: "El solicitud de cambio #{{number}} ya existe",
           noCommits: "No hay commits entre las ramas base y principal.",
           openInBrowser: "Abrir en el navegador",
-          pushedRetry: "Rama enviada. Vuelve a intentar crear el pull request.",
+          pushedRetry:
+            "Rama enviada. Vuelve a intentar crear el solicitud de cambio.",
           pushing: "Enviando rama…",
           preview: {
             additions: "Adiciones",
@@ -251,19 +252,20 @@ export const es = {
             copyLink: "Copiar enlace",
             deletions: "Eliminaciones",
             description:
-              "Revisa el pull request antes de abrirlo en el navegador.",
+              "Revisa el solicitud de cambio antes de abrirlo en el navegador.",
             emptyBody: "No se proporcionó descripción.",
             filesChanged: "Archivos modificados",
-            loadFailed: "No se pudieron cargar los detalles del pull request.",
+            loadFailed:
+              "No se pudieron cargar los detalles del solicitud de cambio.",
             open: "Abierto",
-            title: "Pull request #{{number}}",
+            title: "Solicitud de cambio #{{number}}",
           },
           retry: "Reintentar",
-          short: "Crear PR",
-          title: "Crear pull request",
-          titlePlaceholder: "Título del pull request",
-          view: "Ver pull request #{{number}}",
-          viewShort: "PR #{{number}}",
+          short: "Crear solicitud de cambio",
+          title: "Crear solicitud de cambio",
+          titlePlaceholder: "Título del solicitud de cambio",
+          view: "Ver solicitud de cambio #{{number}}",
+          viewShort: "solicitud de cambio #{{number}}",
           willPushMany: "Se enviarán {{count}} commits a origin/{{head}}",
           willPushOne: "Se enviará 1 commit a origin/{{head}}",
         },
@@ -274,12 +276,12 @@ export const es = {
           fileUnavailable: "Archivo no disponible",
           gitUnavailable: "Git no disponible",
           noChanges: "Sin cambios",
-          noChecks: "No hay checks reportados para este pull request",
+          noChecks: "No hay checks reportados para este solicitud de cambio",
           noDiffForFile: "No hay diff para el archivo",
           noProcesses: "No hay subprocesos de agente en ejecución",
-          noPullRequest: "No hay pull request para esta rama",
+          noPullRequest: "No hay solicitud de cambio para esta rama",
           noPullRequestDetail:
-            "Abre o vincula un PR en la rama actual para cargar los checks de CI.",
+            "Abre o vincula un solicitud de cambio en la rama actual para cargar los checks de CI.",
           noWorkspace: "No hay espacio de trabajo para este chat",
           notGitRepository: "No es un repositorio Git",
           processesUnavailable: "Procesos no disponibles",
@@ -317,7 +319,7 @@ export const es = {
           },
           pushing: "Enviando",
         },
-        pullRequest: pullRequestEs,
+        pullRequest: changeRequestEs,
         listeningPorts: "Puertos en escucha",
         resizeFileTree: "Redimensionar el árbol de archivos",
         resizeGitList: "Redimensionar la lista de cambios",
@@ -328,7 +330,7 @@ export const es = {
           gitChanges: "Cambios de Git",
           newTab: "Nueva pestaña",
           processes: "Procesos",
-          pullRequest: "Pull request",
+          pullRequest: "Solicitud de cambio",
           tabs: "Pestañas",
           tools: "Herramientas",
           workspaceTabs: "Pestañas del espacio de trabajo",
@@ -801,13 +803,15 @@ export const es = {
       agentMode: "Modo Agent",
       agentSettings: "Configuración del Agent",
       attachFiles: "Adjuntar archivos",
-      attachGitHub: "Adjuntar issue o PR de GitHub",
-      attachGitHubConfirm: "Adjuntar",
-      attachGitHubEmpty: "No se encontraron issues ni PRs.",
-      attachGitHubLoading: "Obteniendo…",
-      attachGitHubPlaceholder: "Buscar issues y PRs…",
-      attachGitHubTitle: "Adjuntar desde GitHub",
-      attachGitHubUpdated: "actualizado {{time}}",
+      attachChangeRequest: "Adjuntar solicitud de cambio o elemento de trabajo",
+      attachChangeRequestConfirm: "Adjuntar",
+      attachChangeRequestEmpty:
+        "No se encontraron elementos de trabajo ni solicitudes de cambio.",
+      attachChangeRequestLoading: "Obteniendo…",
+      attachChangeRequestPlaceholder:
+        "Buscar elementos de trabajo y solicitudes de cambio…",
+      attachChangeRequestTitle: "Adjuntar desde el control de código fuente",
+      attachChangeRequestUpdated: "actualizado {{time}}",
       attachmentErrors: {
         accept: "Ningún archivo coincide con los tipos permitidos.",
         fileRead: "No se pudo leer el archivo seleccionado.",
@@ -834,19 +838,26 @@ export const es = {
       fileTypeBlocked: "Tipo de archivo bloqueado",
       fileTooLarge: "El archivo es demasiado grande",
       files: "Archivos",
+      configureSourceControl: "Configurar control de código fuente",
       fromLink: "Desde un enlace",
       fromLinkPlaceholder:
-        "Pega un enlace de issue de GitHub o Linear, o busca en GitHub",
+        "Pega un enlace del control de código fuente o de Linear, o busca en el control de código fuente",
+      sourceControlUnavailable:
+        "No hay ningún proveedor de control de código fuente activo para este proyecto.",
       sourceControlErrors: {
-        cliMissing: "GitHub CLI (gh) no está instalada o no está en el PATH.",
+        cliMissing:
+          "La CLI de control de código fuente no está instalada o no está en el PATH.",
         cliUnauthenticated:
-          "GitHub CLI no está autenticada. Ejecuta `gh auth login`.",
-        fetchFailed: "No se pudo obtener ese elemento de GitHub.",
-        notFound: "No se encontró el issue o PR de GitHub.",
-        urlUnsupported: "Solo se admiten URLs de issues o PR de github.com.",
+          "El proveedor de control de código fuente no está autenticado.",
+        fetchFailed:
+          "No se pudo obtener ese elemento del control de código fuente.",
+        notFound:
+          "No se encontró el elemento de trabajo o la solicitud de cambio.",
+        urlUnsupported:
+          "Ese enlace de control de código fuente no es compatible.",
       },
-      githubIssue: "Issue",
-      githubPullRequest: "Pull request",
+      workItem: "Elemento de trabajo",
+      changeRequest: "Solicitud de cambio",
       linearConnectAction: "Conectar Linear",
       linearConnectDescription: "Conecta Linear antes de resolver este issue.",
       linearIssue: "Issue de Linear",
@@ -885,16 +896,16 @@ export const es = {
         linearNotFound: "No se encontró el issue de Linear.",
         linearUnauthorized: "Linear rechazó el token de API configurado.",
         prForkUnsupported:
-          "Las pull requests de forks todavía no son compatibles.",
+          "Las solicitudes de cambio de forks todavía no son compatibles.",
         unsupported: "Ese enlace de tarea no es compatible.",
       },
       taskLinkHintComplete:
-        "Pega un enlace completo a un issue de GitHub, una pull request o un issue de Linear.",
-      taskLinkHintGitHubPath:
-        "Es un enlace de GitHub, pero no es un issue ni una pull request.",
+        "Pega un enlace completo a un elemento de trabajo, una solicitud de cambio o un elemento de Linear.",
+      taskLinkHintSourceControlPath:
+        "Es un enlace de control de código fuente, pero no es un elemento de trabajo ni una solicitud de cambio.",
       taskLinkHintLinearPath: "Es un enlace de Linear, pero no es un issue.",
       taskLinkHintSupported:
-        "Se admiten enlaces de issues de GitHub, pull requests de GitHub e issues de Linear.",
+        "Se admiten elementos de trabajo y solicitudes de cambio del control de código fuente, y elementos de Linear.",
       taskLinkStateClosed: "Cerrado",
       taskLinkStateMerged: "Fusionado",
       taskLinkStateOpen: "Abierto",
@@ -1057,17 +1068,21 @@ export const es = {
       archivedBadge: "Archivado",
       clone: "Clonar",
       cloneTo: "Clonando en {{path}}",
-      description: "Elige un repositorio de GitHub o pega una URL de git.",
+      description:
+        "Elige un repositorio de control de código fuente o pega una URL de git.",
+      discoveryUnavailable:
+        "Para explorar repositorios se necesita un proveedor de control de código fuente activo.",
       failedTitle: "Error al clonar",
       forkBadge: "Bifurcación",
       loadingOwners: "Cargando cuentas…",
       loadingRepositories: "Cargando repositorios…",
       noMatches: "Ningún repositorio coincide con «{{query}}»",
-      noOwners: "No hay cuentas de GitHub disponibles",
+      noOwners: "No hay cuentas de control de código fuente disponibles",
       noRepositories: "Sin repositorios",
       openProject: "Abrir proyecto",
       owners: "Cuentas",
-      ownersFailed: "No se pudieron cargar las cuentas de GitHub",
+      ownersFailed:
+        "No se pudieron cargar las cuentas de control de código fuente",
       readyTitle: "Repositorio listo",
       privateBadge: "Privado",
       progressTitle: "Clonando repositorio",
@@ -1079,12 +1094,12 @@ export const es = {
       stageCompleted: "Listo",
       stagePreparing: "Preparando destino",
       stageRegistering: "Registrando proyecto",
-      tabGitHub: "GitHub",
+      tabSourceControl: "control de código fuente",
       tabUrl: "URL de Git",
       title: "Clonar un repositorio",
       urlHint: "https, ssh o owner/repo",
       urlLabel: "URL del repositorio",
-      urlPlaceholder: "https://github.com/owner/repo",
+      urlPlaceholder: "https://example.com/owner/repo",
     },
     projects: {
       chooseFolder: "Elegir carpeta del proyecto",
@@ -1119,7 +1134,7 @@ export const es = {
       commandPalette: "Paleta de comandos",
       commandSessions: "Sesiones",
       commandImportSession: "Importar sesiones al proyecto",
-      commandShepherdPr: "Shepherd PR",
+      commandShepherdChangeRequest: "Shepherd solicitud de cambio",
     },
     promptInput: {
       addPhotosOrFiles: "Agregar fotos o archivos",

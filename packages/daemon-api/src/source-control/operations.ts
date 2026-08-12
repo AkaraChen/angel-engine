@@ -123,6 +123,7 @@ export interface AddChangeRequestCommentInput extends NumberedItemInput {
 }
 
 export interface MergeChangeRequestInput extends NumberedItemInput {
+  deleteSourceBranch?: boolean;
   method: MergeMethod;
 }
 
@@ -134,6 +135,37 @@ export interface ChangeRequestPreflightInput extends RepositoryOperationInput {
 export interface ChangeRequestPreflightResult {
   targetBranch: string;
   requirements: readonly MergeRequirement[];
+}
+
+/** Renderer-facing create preflight, composed from provider and local Git state. */
+export interface ChangeRequestCreatePreflightResult
+  extends ChangeRequestPreflightResult {
+  aheadCount: number;
+  availableTargetBranches: readonly string[];
+  existing: ChangeRequest | null;
+  needsPush: boolean;
+  sourceBranch: string;
+}
+
+export interface ChangeRequestTemplate {
+  body: string;
+  name: string;
+  path: string | null;
+  relativePath: string | null;
+}
+
+export interface ChangeRequestTemplateResult {
+  body: string;
+  templates: readonly ChangeRequestTemplate[];
+}
+
+export interface CreateChangeRequestWorkspaceResult {
+  branch: string;
+  chatId: string;
+  cwd: string;
+  number: number;
+  title: string;
+  url: string;
 }
 
 export interface ChangeRequestHeadResult {
@@ -165,6 +197,7 @@ export interface ResolveReviewThreadInput extends RepositoryOperationInput {
 }
 
 export interface PublishBranchInput extends RepositoryOperationInput {
+  projectPath: string;
   localBranch: string;
   remoteName: string;
   forceWithLease: boolean;
@@ -442,6 +475,7 @@ export const sourceControlOperationSchemas = {
     input: arkType({
       "+": "reject",
       repository: repositoryIdentitySchema,
+      projectPath: "string > 0",
       localBranch: "string > 0",
       remoteName: "string > 0",
       forceWithLease: "boolean",
