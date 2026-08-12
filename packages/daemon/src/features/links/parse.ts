@@ -1,17 +1,37 @@
 import type { ParsedTaskLink } from "@angel-engine/daemon-api/links";
-import { parseGitHubUrl } from "../github/resolve";
+import { createSourceControlRegistry } from "../source-control/providers";
+import type { SourceControlRegistry } from "../source-control/registry/registry";
 
-export function parseTaskLink(raw: string): ParsedTaskLink | null {
-  const github = parseGitHubUrl(raw);
-  if (github !== null) return { ...github, provider: "github" };
-
+export function parseTaskLink(
+  raw: string,
+  registry: SourceControlRegistry = createSourceControlRegistry(),
+): ParsedTaskLink | null {
   let parsed: URL;
   try {
     parsed = new URL(raw.trim());
   } catch {
     return null;
   }
-  if (parsed.hostname.toLowerCase() !== "linear.app") return null;
+  if (parsed.hostname.toLowerCase() !== "linear.app") {
+    const resolution = registry.parseLink(raw);
+    if (
+      resolution.status !== "resolved" ||
+      resolution.providerId !== "github"
+    ) {
+      return null;
+    }
+    const { descriptor } = resolution;
+    const number = Number(descriptor.id);
+    if (!Number.isInteger(number) || number <= 0) return null;
+    return {
+      kind: descriptor.kind === "change-request" ? "pullRequest" : "issue",
+      number,
+      owner: descriptor.repository.namespace.join("/"),
+      provider: "github",
+      repo: descriptor.repository.name,
+      url: descriptor.url,
+    };
+  }
 
   const segments = parsed.pathname.split("/").filter(Boolean);
   if (segments.length < 4 || segments[1] !== "issue") return null;

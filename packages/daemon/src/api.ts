@@ -1229,7 +1229,12 @@ export function registerApi(
 
       try {
         const result = await run(
-          cloneProject(input, emit, context.req.raw.signal),
+          cloneProject(
+            input,
+            emit,
+            context.req.raw.signal,
+            sourceControl.registry,
+          ),
         );
         emit({
           project: result.project,

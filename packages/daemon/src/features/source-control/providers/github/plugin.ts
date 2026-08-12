@@ -1,5 +1,7 @@
 import type {
   AuthStatusResult,
+  CloneRepositoryInput,
+  CloneRepositoryResult,
   ProbeContext,
   ProviderMatch,
   ProviderOperationContext,
@@ -7,6 +9,7 @@ import type {
   RemoteDescriptor,
   SourceControlProviderPlugin,
 } from "@angel-engine/daemon-api/source-control";
+import path from "node:path";
 import { executeGit, type LocalGitRunner } from "../../local-git/backend";
 
 import {
@@ -87,7 +90,9 @@ function matchSource(
   return { score: 100, source: "remote" };
 }
 
-function matchGitHub(context: ProbeContext): ProviderMatch | null {
+function matchGitHub(
+  context: ProbeContext,
+): ProviderMatch | readonly ProviderMatch[] | null {
   const candidates = context.remotes
     .filter((remote) => {
       const host = remoteHost(remote.url);
@@ -102,15 +107,15 @@ function matchGitHub(context: ProbeContext): ProviderMatch | null {
         right.score - left.score ||
         left.remote.name.localeCompare(right.remote.name),
     );
-  const selected = candidates[0];
-  if (!selected) return null;
-  return {
+  if (candidates.length === 0) return null;
+  const matches = candidates.map((candidate) => ({
     providerId: PROVIDER_ID,
-    remote: selected.remote,
+    remote: candidate.remote,
     repository: null,
-    score: selected.score,
-    source: selected.source,
-  };
+    score: candidate.score,
+    source: candidate.source,
+  }));
+  return matches.length === 1 ? matches[0] : matches;
 }
 
 function diagnostic(
@@ -177,6 +182,41 @@ async function authenticationStatus(
   }
 }
 
+async function cloneGitHubRepository(
+  input: CloneRepositoryInput,
+  context: ProviderOperationContext,
+  dependencies: Required<GitHubPluginDependencies>,
+): Promise<CloneRepositoryResult> {
+  if (
+    input.repository.providerId !== PROVIDER_ID ||
+    input.repository.namespace.length !== 1
+  ) {
+    throw new TypeError("A GitHub repository is required.");
+  }
+  const timeoutMs = Math.max(1, context.deadline - Date.now());
+  if (await dependencies.findGh()) {
+    await dependencies.runGh(
+      [
+        "repo",
+        "clone",
+        input.repository.displayPath,
+        input.targetPath,
+        "--",
+        "--progress",
+      ],
+      { timeoutMs },
+    );
+  } else {
+    const cloneUrl = `${input.repository.webUrl ?? input.repository.displayPath}.git`;
+    await dependencies.runGit(
+      path.dirname(input.targetPath),
+      ["clone", "--progress", cloneUrl, input.targetPath],
+      { signal: context.signal, timeout: timeoutMs },
+    );
+  }
+  return { projectPath: input.targetPath };
+}
+
 export function createGitHubPlugin(
   dependencies: GitHubPluginDependencies = {},
 ): SourceControlProviderPlugin {
@@ -214,6 +254,7 @@ export function createGitHubPlugin(
         "workItems.get",
         "workItems.getByUrl",
         "workItems.list",
+        "provider.clone",
       ],
     },
     discovery: {
@@ -245,6 +286,8 @@ export function createGitHubPlugin(
       },
       publishBranch: (input, context) =>
         publishGitHubBranch(input, context, resolvedDependencies),
+      clone: (input, context) =>
+        cloneGitHubRepository(input, context, resolvedDependencies),
     },
     repositories: {
       parseUrl: parseGitHubRepositoryUrl,
@@ -292,6 +335,20 @@ export function createGitHubPlugin(
         getGitHubWorkItemByUrl(input, context, resolvedDependencies),
       list: (input, context) =>
         listGitHubWorkItems(input, context, resolvedDependencies),
+    },
+    links: {
+      matchUrl: (url) => (parseGitHubUrl(url) === null ? null : 100),
+      parseUrl: (url) => {
+        const parsed = parseGitHubUrl(url);
+        const repository = parseGitHubRepositoryUrl(url);
+        if (parsed === null || repository === null) return null;
+        return {
+          id: String(parsed.number),
+          kind: parsed.kind === "pullRequest" ? "change-request" : "work-item",
+          repository,
+          url: parsed.url,
+        };
+      },
     },
   };
 }
