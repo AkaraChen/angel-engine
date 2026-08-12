@@ -264,17 +264,16 @@ export async function mergeGitHubChangeRequest(
   dependencies: GitHubChangeRequestDependencies = {},
 ): Promise<ChangeRequest> {
   const repository = requireGitHubRepository(input.repository);
-  await runGh(
-    [
-      "pr",
-      "merge",
-      input.id,
-      "--repo",
-      repository.displayPath,
-      `--${input.method}`,
-    ],
-    dependencies,
-  );
+  const args = [
+    "pr",
+    "merge",
+    input.id,
+    "--repo",
+    repository.displayPath,
+    `--${input.method}`,
+  ];
+  if (input.deleteSourceBranch) args.push("--delete-branch");
+  await runGh(args, dependencies);
   return getGitHubChangeRequest(input, context, dependencies);
 }
 

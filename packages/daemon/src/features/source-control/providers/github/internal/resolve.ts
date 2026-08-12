@@ -1,9 +1,4 @@
 import type {
-  GitHubItemKind,
-  GitHubResolveUrlInput,
-  GitHubResolvedItem,
-} from "@angel-engine/daemon-api/github";
-import type {
   NumberedItemInput,
   ProviderOperationContext,
   RepositoryIdentity,
@@ -22,6 +17,11 @@ import {
   normalizeText,
   runGhCli,
 } from "./gh-cli";
+import type {
+  GitHubItemKind,
+  GitHubResolveUrlInput,
+  GitHubResolvedItem,
+} from "./types";
 
 const BODY_MAX_CHARS = 12_000;
 const positiveInteger = arkType("number").narrow(

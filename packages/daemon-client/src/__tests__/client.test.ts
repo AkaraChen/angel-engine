@@ -50,6 +50,191 @@ describe("createDaemonClient", () => {
     );
   });
 
+  it("reads and updates project source-control configuration", async () => {
+    const fetchMock = vi.fn().mockImplementation(async () => jsonResponse({}));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createDaemonClient({ baseUrl: "", token: null });
+    await client.sourceControl.config("project 1");
+    await client.sourceControl.updateConfig("project 1", {
+      provider: { providerId: "forge-a", remote: "upstream" },
+    });
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "/api/source-control/config?projectId=project+1",
+    );
+    expect(fetchMock.mock.calls[1]).toEqual([
+      "/api/source-control/config?projectId=project+1",
+      expect.objectContaining({
+        body: JSON.stringify({
+          provider: { providerId: "forge-a", remote: "upstream" },
+        }),
+        method: "PUT",
+      }),
+    ]);
+  });
+
+  it("uses generic source-control attachment list routes", async () => {
+    const fetchMock = vi.fn().mockImplementation(async () => jsonResponse([]));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createDaemonClient({ baseUrl: "", token: null });
+    await client.sourceControl.listWorkItems("/repo with spaces", "bug", 30);
+    await client.sourceControl.listChangeRequests(
+      "/repo with spaces",
+      "feature",
+      30,
+    );
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "/api/source-control/work-items?limit=30&projectPath=%2Frepo+with+spaces&query=bug",
+    );
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(
+      "/api/source-control/change-requests?limit=30&projectPath=%2Frepo+with+spaces&query=feature",
+    );
+  });
+
+  it("resolves links through the activated source-control project", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ id: "42" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createDaemonClient({ baseUrl: "", token: null });
+    await client.sourceControl.resolveLink(
+      "/repo with spaces",
+      "https://gitlab.example.com/group/repo/-/merge_requests/42",
+    );
+
+    expect(fetchMock.mock.calls[0]).toEqual([
+      "/api/source-control/links/resolve",
+      expect.objectContaining({
+        body: JSON.stringify({
+          projectPath: "/repo with spaces",
+          url: "https://gitlab.example.com/group/repo/-/merge_requests/42",
+        }),
+        method: "POST",
+      }),
+    ]);
+  });
+
+  it("uses generic source-control repository discovery routes", async () => {
+    const fetchMock = vi.fn().mockImplementation(async () => jsonResponse([]));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createDaemonClient({ baseUrl: "", token: null });
+    await client.sourceControl.listNamespaces("/repo with spaces", "acme", 20);
+    await client.sourceControl.listRepositories(
+      "/repo with spaces",
+      ["group", "team"],
+      "widgets",
+      30,
+    );
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "/api/source-control/namespaces?limit=20&projectPath=%2Frepo+with+spaces&query=acme",
+    );
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(
+      "/api/source-control/repositories?limit=30&namespace=group%2Fteam&projectPath=%2Frepo+with+spaces&query=widgets",
+    );
+  });
+
+  it("uses generic source-control checks and review routes", async () => {
+    const fetchMock = vi.fn().mockImplementation(async () => jsonResponse({}));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createDaemonClient({ baseUrl: "", token: null });
+    await client.sourceControl.checksSummary("/repo with spaces", "42/part");
+    await client.sourceControl.checksFixPrompt("/repo with spaces", "42/part");
+    await client.sourceControl.reviewThreads("/repo with spaces", "42/part");
+    await client.sourceControl.resolveReviewThread(
+      "/repo with spaces",
+      "thread/1",
+    );
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "/api/source-control/checks/summary?id=42%2Fpart&projectPath=%2Frepo+with+spaces",
+    );
+    expect(fetchMock.mock.calls[1]).toEqual([
+      "/api/source-control/checks/fix-prompt",
+      expect.objectContaining({
+        body: JSON.stringify({
+          id: "42/part",
+          projectPath: "/repo with spaces",
+        }),
+        method: "POST",
+      }),
+    ]);
+    expect(fetchMock.mock.calls[2]?.[0]).toBe(
+      "/api/source-control/reviews/threads?id=42%2Fpart&projectPath=%2Frepo+with+spaces",
+    );
+    expect(fetchMock.mock.calls[3]).toEqual([
+      "/api/source-control/reviews/threads/thread%2F1/resolve",
+      expect.objectContaining({
+        body: JSON.stringify({ projectPath: "/repo with spaces" }),
+        method: "POST",
+      }),
+    ]);
+  });
+
+  it("uses generic source-control create, merge, template, preflight, and workspace routes", async () => {
+    const fetchMock = vi.fn().mockImplementation(async () => jsonResponse({}));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createDaemonClient({ baseUrl: "", token: null });
+    await client.sourceControl.changeRequestPreflight("/repo", "release/v1");
+    await client.sourceControl.changeRequestTemplate("/repo");
+    await client.sourceControl.publishBranch({
+      localBranch: "feature",
+      projectPath: "/repo",
+    });
+    await client.sourceControl.createChangeRequest({
+      body: "Body",
+      draft: true,
+      projectPath: "/repo",
+      publish: true,
+      sourceBranch: "feature",
+      targetBranch: "main",
+      title: "Feature",
+    });
+    await client.sourceControl.mergeChangeRequest("42/part", {
+      deleteSourceBranch: true,
+      method: "squash",
+      projectPath: "/repo",
+    });
+    await client.sourceControl.createChangeRequestWorkspace("42/part", {
+      projectPath: "/repo",
+      runtime: "codex",
+    });
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "/api/source-control/change-requests/preflight?projectPath=%2Frepo&targetBranch=release%2Fv1",
+    );
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(
+      "/api/source-control/change-requests/template?projectPath=%2Frepo",
+    );
+    expect(fetchMock.mock.calls[2]).toEqual([
+      "/api/source-control/branches/publish",
+      expect.objectContaining({
+        body: JSON.stringify({
+          localBranch: "feature",
+          projectPath: "/repo",
+        }),
+        method: "POST",
+      }),
+    ]);
+    expect(fetchMock.mock.calls[3]).toEqual([
+      "/api/source-control/change-requests",
+      expect.objectContaining({ method: "POST" }),
+    ]);
+    expect(fetchMock.mock.calls[4]).toEqual([
+      "/api/source-control/change-requests/42%2Fpart/merge",
+      expect.objectContaining({ method: "POST" }),
+    ]);
+    expect(fetchMock.mock.calls[5]).toEqual([
+      "/api/source-control/change-requests/42%2Fpart/workspace",
+      expect.objectContaining({ method: "POST" }),
+    ]);
+  });
+
   it("injects a bearer token when one is configured", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ version: "1" }));
     vi.stubGlobal("fetch", fetchMock);
