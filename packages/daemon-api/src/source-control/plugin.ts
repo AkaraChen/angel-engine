@@ -9,7 +9,7 @@ import type { ProviderManifest, RepositoryIdentity } from "./types";
 
 export interface ProjectDiscoveryCapability {
   /** Pure matching only. The registry owns all local and network I/O. */
-  match(context: ProbeContext): ProviderMatch | null;
+  match(context: ProbeContext): ProviderMatch | readonly ProviderMatch[] | null;
   /** Read-only readiness I/O. The registry wraps this call with timeout and cancellation. */
   checkReadiness(
     match: ProviderMatch,
@@ -68,8 +68,15 @@ export interface ChecksCapability {
 
 export type AutomationCapability = Record<never, never>;
 export type ReleaseCapability = Record<never, never>;
+export interface ProviderLinkDescriptor {
+  id: string;
+  kind: "change-request" | "work-item";
+  repository: RepositoryIdentity;
+  url: string;
+}
 export interface LinkResolutionCapability {
   matchUrl(url: string): number | null;
+  parseUrl(url: string): ProviderLinkDescriptor | null;
 }
 
 export interface SourceControlProviderPlugin {

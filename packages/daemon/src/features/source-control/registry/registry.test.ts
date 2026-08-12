@@ -1,6 +1,7 @@
 import type {
   ProviderActivation,
   ProviderAuthenticationState,
+  ProviderMatch,
   SourceControlProviderPlugin,
 } from "@angel-engine/daemon-api/source-control";
 import { mkdtemp, rm } from "node:fs/promises";
@@ -13,6 +14,15 @@ import { executeGit } from "../local-git/backend";
 import { ProviderInvocationError, SourceControlRegistry } from "./registry";
 
 const roots: string[] = [];
+
+function requireSingleMatch(
+  match: ProviderMatch | readonly ProviderMatch[] | null,
+): ProviderMatch {
+  if (match === null || Array.isArray(match)) {
+    throw new Error("Expected one provider match.");
+  }
+  return match as ProviderMatch;
+}
 
 async function repository(remoteUrl = "https://github.com/acme/app.git") {
   const root = await mkdtemp(
@@ -105,6 +115,100 @@ function activation(
 }
 
 describe("SourceControlRegistry", () => {
+  it("dispatches link parsing by provider score", () => {
+    const provider = fakePlugin({ host: "code.example", id: "forge" });
+    const identity = {
+      displayPath: "acme/app",
+      host: "code.example",
+      name: "app",
+      namespace: ["acme"],
+      providerId: "forge",
+      remoteId: null,
+      webUrl: "https://code.example/acme/app",
+    };
+    provider.links = {
+      matchUrl: (url) => (url.includes("code.example") ? 200 : null),
+      parseUrl: (url) => ({
+        id: "42",
+        kind: "work-item",
+        repository: identity,
+        url,
+      }),
+    };
+    const registry = new SourceControlRegistry();
+    registry.register(provider);
+
+    expect(
+      registry.parseLink("https://code.example/acme/app/issues/42"),
+    ).toEqual({
+      descriptor: {
+        id: "42",
+        kind: "work-item",
+        repository: identity,
+        url: "https://code.example/acme/app/issues/42",
+      },
+      providerId: "forge",
+      status: "resolved",
+    });
+  });
+
+  it("does not guess when multiple providers match the same repository URL", () => {
+    const registry = new SourceControlRegistry();
+    for (const id of ["forge-a", "forge-b"]) {
+      const provider = fakePlugin({ host: "code.example", id });
+      provider.repositories = {
+        parseUrl: () => ({
+          displayPath: "acme/app",
+          host: "code.example",
+          name: "app",
+          namespace: ["acme"],
+          providerId: id,
+          remoteId: null,
+          webUrl: "https://code.example/acme/app",
+        }),
+      };
+      registry.register(provider);
+    }
+
+    expect(
+      registry.parseRepositoryUrl("https://code.example/acme/app.git"),
+    ).toEqual({
+      providerIds: ["forge-a", "forge-b"],
+      status: "ambiguous",
+    });
+  });
+
+  it("reports multiple matching remotes as ambiguous", async () => {
+    const root = await repository();
+    await executeGit(root, [
+      "remote",
+      "add",
+      "mirror",
+      "https://github.com/acme/app.git",
+    ]);
+    const provider = fakePlugin({ host: "github.com", id: "fake-github" });
+    provider.discovery.match = (probe) =>
+      probe.remotes.map((candidate) => ({
+        providerId: provider.manifest.id,
+        remote: candidate,
+        repository: null,
+        score: 100,
+        source: "remote",
+      }));
+    const registry = new SourceControlRegistry();
+    registry.register(provider);
+
+    await expect(
+      registry.activate({ projectPath: root }),
+    ).resolves.toMatchObject({
+      candidates: [
+        { remote: { name: "mirror" } },
+        { remote: { name: "origin" } },
+      ],
+      status: "ambiguous",
+    });
+  });
+
   it("zero-config activates a single matching provider", async () => {
     const root = await repository();
     const registry = new SourceControlRegistry();
@@ -248,8 +352,7 @@ describe("SourceControlRegistry", () => {
     const plugin = fakePlugin({ host: "github.com", id: "fake-github" });
     const match = plugin.discovery.match.bind(plugin.discovery);
     plugin.discovery.match = (context) => {
-      const candidate = match(context);
-      if (candidate === null) return null;
+      const candidate = requireSingleMatch(match(context));
       return {
         ...candidate,
         repository: {

@@ -80,6 +80,26 @@ describe("chat create input", () => {
     });
   });
 
+  it("carries provider-neutral change request source metadata", () => {
+    const input = chatCreateInputSchema({
+      sourceLink: {
+        kind: "changeRequest",
+        provider: "gitlab",
+        url: "https://gitlab.example/acme/widgets/-/merge_requests/42",
+      },
+      worktreeRef: {
+        type: "existingBranch",
+        value: "fix/widgets",
+      },
+    });
+
+    expect(input).not.toBeInstanceOf(arkType.errors);
+    expect(input).toMatchObject({
+      sourceLink: { kind: "changeRequest", provider: "gitlab" },
+      worktreeRef: { type: "existingBranch", value: "fix/widgets" },
+    });
+  });
+
   it("rejects an empty remoteThreadId instead of silently dropping it", () => {
     expect(chatCreateInputSchema({ remoteThreadId: "" })).toBeInstanceOf(
       arkType.errors,

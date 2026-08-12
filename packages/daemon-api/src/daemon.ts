@@ -68,6 +68,7 @@ export type DaemonErrorCode =
   | "git-push-not-fast-forward"
   | "git-remote-missing"
   | "source-control/cli-missing"
+  | "source-control/capability-unsupported"
   | "source-control/unauthenticated"
   | "source-control/fetch-failed"
   | "source-control/item-not-found"

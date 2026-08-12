@@ -10,15 +10,28 @@ describe("buildShepherdPrompt", () => {
       failedRequired: [
         {
           attempt: 1,
-          checkRunId: "1",
-          conclusion: "FAILURE",
+          id: "1",
+          group: {
+            id: "group-1",
+            kind: "workflow-run",
+            name: "ubuntu",
+            stage: null,
+            parentGroupId: null,
+            attempt: 1,
+            detailsUrl: null,
+          },
+          conclusion: "failure",
           detailsUrl: "https://example.test/run",
-          isPending: false,
-          isRequired: true,
+          requiredness: "required",
+          blocking: true,
+          retryOf: null,
+          allowFailure: false,
+          manual: false,
+          startedAt: null,
+          completedAt: null,
+          logRef: { kind: "workflow-run", runId: "9", jobId: null },
           name: "build",
-          status: "COMPLETED",
-          workflowName: "ubuntu",
-          workflowRunId: "9",
+          status: "completed",
         },
       ],
       newComments: [
@@ -32,7 +45,7 @@ describe("buildShepherdPrompt", () => {
       failureLogs: [
         {
           checkName: "build",
-          log: { lines: ["error: boom", "  at main"], truncated: true },
+          log: { text: "error: boom\n  at main", truncated: true },
         },
       ],
     });

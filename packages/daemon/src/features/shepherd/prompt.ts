@@ -1,35 +1,27 @@
 import type {
-  GitHubCheckItem,
-  GitHubFailureLogResult,
-  GitHubReviewThread,
-} from "@angel-engine/daemon-api/github";
+  CheckRun,
+  FailureLogResult,
+  ReviewThread,
+} from "@angel-engine/daemon-api/source-control";
 
 export interface ShepherdPromptParts {
   round: number;
   maxRounds: number;
-  failedRequired: readonly GitHubCheckItem[];
+  failedRequired: readonly CheckRun[];
   newComments: readonly {
     author: string | null;
     body: string;
     path: string | null;
     line: number | null;
   }[];
-  /** Failure log tails keyed by check name. */
-  failureLogs: readonly {
-    checkName: string;
-    log: GitHubFailureLogResult;
-  }[];
+  failureLogs: readonly { checkName: string; log: FailureLogResult }[];
 }
 
-/**
- * Build the auto-turn prompt with a collapsible source card header.
- * The card is the audit trail for this shepherd round.
- */
 export function buildShepherdPrompt(parts: ShepherdPromptParts): string {
   const triggers: string[] = [];
   for (const check of parts.failedRequired) {
-    const label = check.workflowName
-      ? `${check.name} (${check.workflowName})`
+    const label = check.group?.name
+      ? `${check.name} (${check.group.name})`
       : check.name;
     triggers.push(`\`${label}\` failed`);
   }
@@ -60,15 +52,11 @@ export function buildShepherdPrompt(parts: ShepherdPromptParts): string {
 
   for (const entry of parts.failureLogs) {
     lines.push(`## Failure log: ${entry.checkName}`);
-    if (entry.log.truncated) {
-      lines.push("_(truncated to last 40 lines)_");
-    }
-    if (entry.log.lines.length === 0) {
+    if (entry.log.truncated) lines.push("_(truncated to last 40 lines)_");
+    if (entry.log.text.length === 0) {
       lines.push("_(no log output)_");
     } else {
-      lines.push("```");
-      lines.push(...entry.log.lines);
-      lines.push("```");
+      lines.push("```", ...entry.log.text.split("\n"), "```");
     }
     lines.push("");
   }
@@ -80,10 +68,8 @@ export function buildShepherdPrompt(parts: ShepherdPromptParts): string {
         comment.path !== null
           ? ` @ ${comment.path}${comment.line !== null ? `:${comment.line}` : ""}`
           : "";
-      const author = comment.author ?? "unknown";
-      lines.push(`### ${author}${location}`);
-      lines.push(comment.body.trim() || "_(empty comment)_");
-      lines.push("");
+      lines.push(`### ${comment.author ?? "unknown"}${location}`);
+      lines.push(comment.body.trim() || "_(empty comment)_", "");
     }
   }
 
@@ -91,7 +77,7 @@ export function buildShepherdPrompt(parts: ShepherdPromptParts): string {
 }
 
 export function collectNewComments(
-  unresolved: readonly GitHubReviewThread[],
+  unresolved: readonly ReviewThread[],
   unhandledCommentIds: ReadonlySet<string>,
 ): Array<{
   author: string | null;
@@ -99,20 +85,16 @@ export function collectNewComments(
   path: string | null;
   line: number | null;
 }> {
-  const comments: Array<{
-    author: string | null;
-    body: string;
-    path: string | null;
-    line: number | null;
-  }> = [];
+  const comments = [];
   for (const thread of unresolved) {
+    if (thread.state !== "unresolved") continue;
     for (const comment of thread.comments) {
       if (!unhandledCommentIds.has(comment.id)) continue;
       comments.push({
-        author: comment.author,
+        author: comment.author?.login ?? null,
         body: comment.body,
-        path: comment.path ?? thread.path,
-        line: comment.line ?? thread.line,
+        path: thread.location?.path ?? null,
+        line: thread.location?.endLine ?? null,
       });
     }
   }

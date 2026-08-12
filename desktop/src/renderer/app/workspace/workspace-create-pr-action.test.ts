@@ -19,12 +19,12 @@ describe("openExistingPullRequest", () => {
     openExistingPullRequest({
       close,
       openExternal,
-      url: "https://github.com/acme/widgets/pull/42",
+      url: "https://forge.com/acme/widgets/pull/42",
     });
 
     expect(calls).toEqual(["close", "open"]);
     expect(openExternal).toHaveBeenCalledWith(
-      "https://github.com/acme/widgets/pull/42",
+      "https://forge.com/acme/widgets/pull/42",
     );
     expect(openBrowserTab).not.toHaveBeenCalled();
   });
@@ -32,10 +32,10 @@ describe("openExistingPullRequest", () => {
   it("routes pull request URLs through the main-window external-open boundary", () => {
     const open = vi.spyOn(window, "open").mockImplementation(() => null);
 
-    openPullRequestInSystemBrowser("https://github.com/acme/widgets/pull/42");
+    openPullRequestInSystemBrowser("https://forge.com/acme/widgets/pull/42");
 
     expect(open).toHaveBeenCalledWith(
-      "https://github.com/acme/widgets/pull/42",
+      "https://forge.com/acme/widgets/pull/42",
       "_blank",
       "noopener,noreferrer",
     );
@@ -48,7 +48,7 @@ describe("executeCreatePullRequestAction", () => {
     const openPreview = vi.fn();
     const existing = {
       number: 42,
-      url: "https://github.com/acme/widgets/pull/42",
+      url: "https://forge.com/acme/widgets/pull/42",
     };
 
     expect(
