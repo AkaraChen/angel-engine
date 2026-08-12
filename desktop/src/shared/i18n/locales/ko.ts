@@ -496,10 +496,10 @@ export const ko = {
           confirmDeleteDetail:
             "보관된 세션 {{chatCount}}개를 영구 삭제하고 worktree 디렉터리 {{managedWorktreeCount}}개를 제거합니다. 이 작업은 되돌릴 수 없습니다.",
           confirmDeleteTitle: "삭제 가능한 worktree를 삭제할까요?",
-          deleteFailed: "worktree를 삭제하지 못했습니다",
+          deleteFailed: "삭제 실패: {{message}}",
+          deletingToast: "worktree 삭제 중…",
           deleteWorktree: "{{projectName}}의 worktree {{identifier}} 영구 삭제",
-          deletedToast:
-            "worktree {{worktreeCount}}개 · 보관된 세션 {{chatCount}}개를 삭제했습니다",
+          deletedToast: "worktree를 삭제했습니다",
           empty: "삭제할 수 있는 worktree가 없습니다",
           missingOnDisk: "디스크에 없음",
           noSessions: "분리된 worktree · 보관된 세션 없음",

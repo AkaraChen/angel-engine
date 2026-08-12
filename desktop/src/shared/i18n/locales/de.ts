@@ -501,11 +501,11 @@ export const de = {
           confirmDeleteDetail:
             "Dadurch werden {{chatCount}} archivierte Sitzung(en) dauerhaft gelöscht und {{managedWorktreeCount}} Worktree-Verzeichnis(se) entfernt. Dies kann nicht rückgängig gemacht werden.",
           confirmDeleteTitle: "Entfernbare Worktrees löschen?",
-          deleteFailed: "Worktree konnte nicht entfernt werden",
+          deleteFailed: "Löschen fehlgeschlagen: {{message}}",
+          deletingToast: "Worktree wird gelöscht…",
           deleteWorktree:
             "Worktree {{identifier}} von {{projectName}} dauerhaft löschen",
-          deletedToast:
-            "{{worktreeCount}} Worktree(s) · {{chatCount}} archivierte Sitzung(en) gelöscht",
+          deletedToast: "Worktree gelöscht",
           empty: "Keine entfernbaren Worktrees",
           missingOnDisk: "Nicht auf der Festplatte",
           noSessions: "Verwaister Worktree · keine archivierten Sitzungen",

@@ -2,6 +2,7 @@ import type { IconProps } from "@phosphor-icons/react";
 import {
   CheckCircle as CheckCircleIcon,
   Info as InfoIcon,
+  SpinnerGap as SpinnerIcon,
   Warning as WarningIcon,
   WarningCircle as WarningCircleIcon,
   X as XIcon,
@@ -13,7 +14,12 @@ import { useTranslation } from "react-i18next";
 import { cn } from "@/platform/utils";
 import { Button } from "./button";
 
-type ToastVariant = "default" | "success" | "attention" | "destructive";
+type ToastVariant =
+  | "default"
+  | "success"
+  | "attention"
+  | "destructive"
+  | "loading";
 
 /**
  * Every toast keeps the same neutral card. Status is carried by the icon
@@ -24,6 +30,7 @@ const toastIconClasses: Record<ToastVariant, string> = {
   attention: "text-status-attention",
   default: "text-primary",
   destructive: "text-status-danger",
+  loading: "text-primary",
   success: "text-status-success",
 };
 
@@ -31,6 +38,7 @@ const toastIcons: Record<ToastVariant, React.ComponentType<IconProps>> = {
   attention: WarningIcon,
   default: InfoIcon,
   destructive: WarningCircleIcon,
+  loading: SpinnerIcon,
   success: CheckCircleIcon,
 };
 
@@ -38,6 +46,7 @@ interface ToastMessage {
   action?: ToastAction;
   duration?: number;
   id: string;
+  revision: number;
   title: string;
   description?: string;
   variant?: ToastVariant;
@@ -48,10 +57,14 @@ interface ToastAction {
   onClick: () => void;
 }
 
-type ToastInput = Omit<ToastMessage, "id">;
+type ToastInput = Omit<ToastMessage, "id" | "revision">;
 
-/** Returns a dismiss function for the created toast. */
-type ToastFn = (toast: ToastInput) => () => void;
+type ToastHandle = (() => void) & {
+  update: (toast: ToastInput) => void;
+};
+
+/** Returns a callable dismiss handle that can update the created toast. */
+type ToastFn = (toast: ToastInput) => ToastHandle;
 
 const DEFAULT_TOAST_DURATION_MS = 4500;
 
@@ -65,6 +78,16 @@ function ToastProvider({ children }: { children: React.ReactNode }) {
     setToasts((current) => current.filter((toast) => toast.id !== id));
   }, []);
 
+  const update = React.useCallback((id: string, input: ToastInput) => {
+    setToasts((current) =>
+      current.map((toast) =>
+        toast.id === id
+          ? { ...input, id, revision: toast.revision + 1 }
+          : toast,
+      ),
+    );
+  }, []);
+
   const toast = React.useCallback(
     (input: ToastInput) => {
       const id = crypto.randomUUID();
@@ -73,11 +96,14 @@ function ToastProvider({ children }: { children: React.ReactNode }) {
         {
           ...input,
           id,
+          revision: 0,
         },
       ]);
-      return () => dismiss(id);
+      const handle = (() => dismiss(id)) as ToastHandle;
+      handle.update = (nextInput) => update(id, nextInput);
+      return handle;
     },
-    [dismiss],
+    [dismiss, update],
   );
 
   React.useEffect(() => {
@@ -121,7 +147,7 @@ function ToastProvider({ children }: { children: React.ReactNode }) {
                 motion-reduce:animate-none
               "
               duration={toast.duration ?? DEFAULT_TOAST_DURATION_MS}
-              key={toast.id}
+              key={`${toast.id}:${toast.revision}`}
               onOpenChange={(open) => {
                 if (!open) dismiss(toast.id);
               }}
@@ -132,6 +158,8 @@ function ToastProvider({ children }: { children: React.ReactNode }) {
                   className={cn(
                     "mt-0.5 size-4 shrink-0",
                     toastIconClasses[variant],
+                    variant === "loading" &&
+                      "animate-spin motion-reduce:animate-none",
                   )}
                   weight="regular"
                 />

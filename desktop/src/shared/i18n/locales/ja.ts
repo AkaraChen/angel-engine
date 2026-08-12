@@ -501,11 +501,11 @@ export const ja = {
           confirmDeleteDetail:
             "アーカイブ済みセッション {{chatCount}} 件を完全に削除し、worktree ディレクトリ {{managedWorktreeCount}} 件を削除します。この操作は元に戻せません。",
           confirmDeleteTitle: "削除可能な worktree を削除しますか？",
-          deleteFailed: "worktree を削除できませんでした",
+          deleteFailed: "削除に失敗しました：{{message}}",
+          deletingToast: "worktree を削除しています…",
           deleteWorktree:
             "{{projectName}} の worktree {{identifier}} を完全に削除",
-          deletedToast:
-            "worktree {{worktreeCount}} 件 · アーカイブ済みセッション {{chatCount}} 件を削除しました",
+          deletedToast: "worktree を削除しました",
           empty: "削除可能な worktree はありません",
           missingOnDisk: "ディスク上に存在しません",
           noSessions: "孤立した worktree · アーカイブ済みセッションなし",
