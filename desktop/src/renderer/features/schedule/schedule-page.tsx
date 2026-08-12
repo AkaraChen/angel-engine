@@ -156,10 +156,7 @@ export const SchedulePage: FC<SchedulePageProps> = ({ projects }) => {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-background">
-      <div className="flex items-center justify-between gap-4 px-6 py-4">
-        <h1 className="font-display text-lg font-semibold tracking-tight">
-          {t("schedule.title")}
-        </h1>
+      <div className="flex items-center justify-end gap-4 px-6 py-4">
         <Button size="sm" onClick={() => setCreateOpen(true)}>
           <Plus weight="bold" />
           {t("schedule.newAutomation")}
@@ -167,7 +164,14 @@ export const SchedulePage: FC<SchedulePageProps> = ({ projects }) => {
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto" ref={listRef}>
-        <div className="mx-auto w-full max-w-2xl px-6 pb-6">
+        <div
+          className={cn(
+            "mx-auto w-full",
+            listQuery.isError
+              ? "flex min-h-full max-w-none"
+              : "max-w-2xl px-6 pb-6",
+          )}
+        >
           {listQuery.isPending ? (
             <ScheduleSkeleton />
           ) : listQuery.isError ? (
@@ -709,8 +713,8 @@ function ScheduleSkeleton() {
 
 function ScheduleNotice({ text }: { text: string }) {
   return (
-    <div className="m-3 flex items-start gap-2 rounded-lg border border-border-subtle bg-surface-1 p-3 text-sm text-muted-foreground">
-      <WarningCircle className="mt-0.5 shrink-0" />
+    <div className="flex flex-1 items-center justify-center gap-2 text-sm text-muted-foreground">
+      <WarningCircle className="size-4 shrink-0" />
       <span>{text}</span>
     </div>
   );
