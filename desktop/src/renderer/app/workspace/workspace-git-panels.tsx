@@ -8,7 +8,6 @@ import type { WorkspaceToolPanelLayout } from "@/app/workspace/workspace-files-p
 import type { WorkspaceToolPatchFile } from "@/app/workspace/workspace-tool-patch-model";
 
 import {
-  ArrowDown,
   ArrowUp,
   CaretDown,
   Check,
@@ -97,7 +96,6 @@ export function WorkspaceGitPanel({
     commitSummary,
     gitQuery,
     handleFileSelectedChange,
-    pullMutation,
     publishCapabilities,
     publishProviderActive,
     refetchActivation,
@@ -274,13 +272,12 @@ export function WorkspaceGitPanel({
     );
   }
 
-  // Window mode: GitHub Desktop-like toolbar + Changes/History.
+  // Window mode: Forge Desktop-like toolbar + Changes/History.
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
       <WorkspaceGitWindowToolbar
         branchStatus={data.branchStatus}
         checkoutMutation={checkoutMutation}
-        pullMutation={pullMutation}
         pushMutation={pushMutation}
         publishCapabilities={publishCapabilities}
         publishProviderActive={publishProviderActive}
@@ -395,7 +392,6 @@ function WorkspaceGitViewTab({
 function WorkspaceGitWindowToolbar({
   branchStatus,
   checkoutMutation,
-  pullMutation,
   pushMutation,
   publishCapabilities,
   publishProviderActive,
@@ -404,7 +400,6 @@ function WorkspaceGitWindowToolbar({
 }: {
   branchStatus: WorkspaceGitBranchStatus;
   checkoutMutation: UseMutationResult<unknown, Error, string, unknown>;
-  pullMutation: UseMutationResult<unknown, Error, void, unknown>;
   pushMutation: UseMutationResult<unknown, Error, string, unknown>;
   publishCapabilities: import("@angel-engine/daemon-api/source-control").CapabilityMatrix;
   publishProviderActive: boolean;
@@ -419,17 +414,13 @@ function WorkspaceGitWindowToolbar({
     staleTime: 5_000,
   });
 
-  const { ahead, behind, branch, detached, unborn, upstream } = branchStatus;
+  const { ahead, branch, detached, unborn, upstream } = branchStatus;
   const hasBranch = is.nonEmptyString(branch);
   const hasUpstream = is.nonEmptyString(upstream);
   const remote = workspaceGitRemoteFromUpstream(upstream);
   const canPush =
     hasBranch && !detached && !unborn && (!hasUpstream || ahead > 0);
-  const canPull = hasUpstream && behind > 0 && !detached && !unborn;
-  const busy =
-    checkoutMutation.isPending ||
-    pullMutation.isPending ||
-    pushMutation.isPending;
+  const busy = checkoutMutation.isPending || pushMutation.isPending;
   const branchLabel = unborn
     ? t("workspace.tools.git.noCommits")
     : detached
@@ -441,8 +432,7 @@ function WorkspaceGitWindowToolbar({
     () => (branchesQuery.data?.branches ?? []).filter((item) => !item.isRemote),
     [branchesQuery.data?.branches],
   );
-  const actionError =
-    checkoutMutation.error ?? pullMutation.error ?? pushMutation.error;
+  const actionError = checkoutMutation.error ?? pushMutation.error;
 
   return (
     <div className="shrink-0 border-b border-border-subtle">
@@ -495,23 +485,6 @@ function WorkspaceGitWindowToolbar({
         </DropdownMenu>
 
         <div className="ml-auto flex items-center gap-1.5">
-          <Button
-            disabled={busy || !canPull}
-            size="xs"
-            type="button"
-            variant="outline"
-            onClick={() => pullMutation.mutate()}
-          >
-            <ArrowDown className="size-3.5" />
-            {pullMutation.isPending
-              ? t("workspace.tools.git.pulling")
-              : behind > 0
-                ? t("workspace.tools.git.pullCount", {
-                    count: behind,
-                    remote,
-                  })
-                : t("workspace.tools.git.pull", { remote })}
-          </Button>
           <CapabilityGate
             capabilities={publishCapabilities}
             capability="branches.publish"

@@ -66,12 +66,12 @@ import { ShepherdSection } from "./shepherd-section";
 
 const repository = {
   displayPath: "acme/widgets",
-  host: "github.com",
+  host: "forge.com",
   name: "widgets",
   namespace: ["acme"],
-  providerId: "github",
+  providerId: "forge",
   remoteId: "1",
-  webUrl: "https://github.com/acme/widgets",
+  webUrl: "https://forge.com/acme/widgets",
 } as const;
 const changeRequest = {
   additions: null,
@@ -96,7 +96,7 @@ const changeRequest = {
   title: "Feature",
   updatedAt: null,
   viewerCanMerge: true,
-  webUrl: "https://github.com/acme/widgets/pull/42",
+  webUrl: "https://forge.com/acme/widgets/pull/42",
 } satisfies ChangeRequest;
 
 function session(overrides: Partial<ShepherdSession> = {}): ShepherdSession {

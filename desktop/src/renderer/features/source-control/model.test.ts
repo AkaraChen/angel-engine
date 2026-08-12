@@ -15,22 +15,22 @@ function activation(
     projectPath: "/work/angel",
     provider: {
       capabilities: [],
-      displayName: "GitHub",
-      hosts: ["github.com"],
-      id: "github",
+      displayName: "Forge",
+      hosts: ["forge.com"],
+      id: "forge",
     },
     remote: {
       name: "origin",
-      url: "https://github.com/angel/engine",
+      url: "https://forge.com/angel/engine",
     },
     repository: {
       displayPath: "angel/engine",
-      host: "github.com",
+      host: "forge.com",
       name: "engine",
       namespace: ["angel"],
-      providerId: "github",
+      providerId: "forge",
       remoteId: null,
-      webUrl: "https://github.com/angel/engine",
+      webUrl: "https://forge.com/angel/engine",
     },
     unavailableReason: null,
     ...overrides,
@@ -46,24 +46,24 @@ describe("source-control renderer foundation", () => {
   });
 
   it("changes resource keys with provider, repository, and generation identity", () => {
-    const github = activation();
+    const forge = activation();
     const nextGeneration = activation({ generation: 2 });
     const otherRepository = activation({
       repository: {
-        ...github.repository!,
+        ...forge.repository!,
         displayPath: "angel/desktop",
         name: "desktop",
-        webUrl: "https://github.com/angel/desktop",
+        webUrl: "https://forge.com/angel/desktop",
       },
     });
     const gitlab = activation({
-      provider: { ...github.provider, displayName: "GitLab", id: "gitlab" },
+      provider: { ...forge.provider, displayName: "GitLab", id: "gitlab" },
       repository: {
-        ...github.repository!,
+        ...forge.repository!,
         providerId: "gitlab",
       },
     });
-    const identities = [github, nextGeneration, otherRepository, gitlab].map(
+    const identities = [forge, nextGeneration, otherRepository, gitlab].map(
       sourceControlProviderIdentity,
     );
     const keys = identities.map((identity) =>
@@ -72,6 +72,6 @@ describe("source-control renderer foundation", () => {
 
     expect(new Set(identities).size).toBe(4);
     expect(new Set(keys.map((key) => JSON.stringify(key))).size).toBe(4);
-    expect(identities[0]).toBe("github:github.com/angel/engine:1");
+    expect(identities[0]).toBe("forge:forge.com/angel/engine:1");
   });
 });
