@@ -1,219 +1,100 @@
 import type {
   GitHubReviewThread,
-  GitHubReviewThreadComment,
   GitHubReviewThreadsInput,
   GitHubReviewThreadsResult,
 } from "@angel-engine/daemon-api/github";
-import is from "@sindresorhus/is";
-import { type as arkType } from "arktype";
+import type {
+  RepositoryIdentity,
+  ReviewThread,
+} from "@angel-engine/daemon-api/source-control";
 import { Effect } from "effect";
 
 import { DaemonError } from "../../platform/errors";
-import { findGhPath, type GhRunner, mapGhFailure, runGhCli } from "./gh-cli";
-
-const authorSchema = arkType({
-  "+": "ignore",
-  login: "string > 0",
-}).or("null");
-
-const commentNodeSchema = arkType({
-  "+": "ignore",
-  author: authorSchema,
-  body: "string | null",
-  createdAt: "string > 0",
-  id: "string > 0",
-  "line?": "number | null",
-  "path?": "string | null",
-});
-
-const threadNodeSchema = arkType({
-  "+": "ignore",
-  comments: {
-    "+": "ignore",
-    nodes: commentNodeSchema.array(),
-  },
-  id: "string > 0",
-  isResolved: "boolean",
-  "line?": "number | null",
-  "path?": "string | null",
-});
-
-const reviewThreadsPayloadSchema = arkType({
-  "+": "ignore",
-  data: {
-    "+": "ignore",
-    repository: arkType({
-      "+": "ignore",
-      pullRequest: arkType({
-        "+": "ignore",
-        reviewThreads: {
-          "+": "ignore",
-          nodes: threadNodeSchema.array(),
-        },
-      }).or("null"),
-    }).or("null"),
-  },
-});
-
-const REVIEW_THREADS_QUERY = `
-query($owner: String!, $name: String!, $number: Int!) {
-  repository(owner: $owner, name: $name) {
-    pullRequest(number: $number) {
-      reviewThreads(first: 100) {
-        nodes {
-          id
-          isResolved
-          path
-          line
-          comments(first: 50) {
-            nodes {
-              id
-              body
-              createdAt
-              path
-              line
-              author { login }
-            }
-          }
-        }
-      }
-    }
-  }
-}
-`.trim();
+import {
+  buildGitHubReviewThreads,
+  listGitHubReviewThreads,
+} from "../source-control/providers/github/internal/reviews";
+import type { GhRunner } from "./gh-cli";
 
 export function fetchGitHubReviewThreads(
   input: GitHubReviewThreadsInput,
-  deps: {
-    runGh?: GhRunner;
-    whichGh?: () => Promise<string | null>;
-  } = {},
+  deps: { runGh?: GhRunner; whichGh?: () => Promise<string | null> } = {},
 ): Effect.Effect<GitHubReviewThreadsResult, DaemonError> {
-  return Effect.gen(function* () {
-    const runGh = yield* requireGh(deps);
-    if (!isValidPrContext(input)) {
-      return yield* Effect.fail(
-        DaemonError.invalidRequest("owner, repo, and prNumber are required."),
-      );
-    }
-
-    const args = [
-      "api",
-      "graphql",
-      "-f",
-      `query=${REVIEW_THREADS_QUERY}`,
-      "-f",
-      `owner=${input.owner}`,
-      "-f",
-      `name=${input.repo}`,
-      "-F",
-      `number=${input.prNumber}`,
-    ];
-    const output = yield* Effect.tryPromise({
-      catch: (cause) => mapGhFailure(cause),
-      try: () => runGh(args, { cwd: input.cwd }),
-    });
-
-    let json: unknown;
-    try {
-      json = JSON.parse(output.stdout);
-    } catch (cause) {
-      return yield* Effect.fail(
-        DaemonError.sourceControlFetchFailed(
-          cause,
-          "GitHub CLI returned invalid JSON.",
+  return Effect.tryPromise({
+    catch: asDaemonError,
+    try: async () =>
+      toLegacyResult(
+        await listGitHubReviewThreads(
+          { id: String(input.prNumber), repository: repository(input) },
+          operationContext(),
+          { findGh: deps.whichGh, runGh: deps.runGh },
         ),
-      );
-    }
-
-    return yield* Effect.try({
-      catch: (cause) =>
-        cause instanceof DaemonError
-          ? cause
-          : DaemonError.sourceControlFetchFailed(cause),
-      try: () => buildReviewThreadsResult(json),
-    });
+      ),
   });
 }
 
-/** Pure mapper for fixture-driven tests. */
 export function buildReviewThreadsResultFromGraphql(
   json: unknown,
 ): GitHubReviewThreadsResult {
-  return buildReviewThreadsResult(json);
+  return toLegacyResult(buildGitHubReviewThreads(json));
 }
 
-function buildReviewThreadsResult(json: unknown): GitHubReviewThreadsResult {
-  const payload = reviewThreadsPayloadSchema(json);
-  if (payload instanceof arkType.errors) {
-    throw DaemonError.sourceControlFetchFailed(
-      new TypeError(`Unexpected GitHub GraphQL payload: ${payload.summary}`),
-    );
-  }
-  const pr = payload.data.repository?.pullRequest;
-  if (!pr) {
-    throw DaemonError.sourceControlItemNotFound();
-  }
-
-  const threads: GitHubReviewThread[] = pr.reviewThreads.nodes.map(
-    (thread) => ({
-      comments: thread.comments.nodes.map(mapComment),
-      id: thread.id,
-      isResolved: thread.isResolved,
-      line: thread.line ?? null,
-      path: thread.path ?? null,
-    }),
-  );
-  const unresolved = threads.filter((thread) => !thread.isResolved);
-  const resolvedCount = threads.length - unresolved.length;
+function toLegacyResult(
+  threads: readonly ReviewThread[],
+): GitHubReviewThreadsResult {
+  const mapped = threads.map(toLegacyThread);
+  const unresolved = mapped.filter((thread) => !thread.isResolved);
   return {
-    resolvedCount,
-    threads,
+    resolvedCount: mapped.length - unresolved.length,
+    threads: mapped,
     unresolved,
     unresolvedCount: unresolved.length,
   };
 }
 
-function mapComment(comment: {
-  author: { login: string } | null;
-  body: string | null;
-  createdAt: string;
-  id: string;
-  line?: number | null;
-  path?: string | null;
-}): GitHubReviewThreadComment {
+function toLegacyThread(thread: ReviewThread): GitHubReviewThread {
   return {
-    author: comment.author?.login ?? null,
-    body: comment.body ?? "",
-    createdAt: comment.createdAt,
-    id: comment.id,
-    line: comment.line ?? null,
-    path: comment.path ?? null,
+    comments: thread.comments.map((comment) => {
+      const extension = comment.extensions?.github as
+        | { line?: number | null; path?: string | null }
+        | undefined;
+      return {
+        author: comment.author?.login ?? null,
+        body: comment.body,
+        createdAt: comment.createdAt,
+        id: comment.id,
+        line: extension?.line ?? thread.location?.endLine ?? null,
+        path: extension?.path ?? thread.location?.path ?? null,
+      };
+    }),
+    id: thread.id,
+    isResolved: thread.state === "resolved",
+    line: thread.location?.endLine ?? null,
+    path: thread.location?.path ?? null,
   };
 }
 
-function requireGh(deps: {
-  runGh?: GhRunner;
-  whichGh?: () => Promise<string | null>;
-}): Effect.Effect<GhRunner, DaemonError> {
-  return Effect.gen(function* () {
-    const whichGh = deps.whichGh ?? findGhPath;
-    const ghPath = yield* Effect.tryPromise({
-      catch: (cause) => DaemonError.sourceControlFetchFailed(cause),
-      try: whichGh,
-    });
-    if (!is.nonEmptyString(ghPath)) {
-      return yield* Effect.fail(DaemonError.sourceControlCliMissing());
-    }
-    return deps.runGh ?? runGhCli;
-  });
+function repository(input: GitHubReviewThreadsInput): RepositoryIdentity {
+  return {
+    providerId: "github",
+    host: "github.com",
+    namespace: [input.owner],
+    name: input.repo,
+    remoteId: null,
+    displayPath: `${input.owner}/${input.repo}`,
+    webUrl: `https://github.com/${input.owner}/${input.repo}`,
+  };
 }
 
-function isValidPrContext(input: GitHubReviewThreadsInput): boolean {
-  return (
-    is.nonEmptyString(input.owner) &&
-    is.nonEmptyString(input.repo) &&
-    Number.isInteger(input.prNumber) &&
-    input.prNumber > 0
-  );
+function operationContext() {
+  return {
+    deadline: Date.now() + 30_000,
+    signal: new AbortController().signal,
+  };
+}
+
+function asDaemonError(cause: unknown) {
+  return cause instanceof DaemonError
+    ? cause
+    : DaemonError.sourceControlFetchFailed(cause);
 }

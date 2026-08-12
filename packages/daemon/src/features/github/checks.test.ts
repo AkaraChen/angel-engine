@@ -24,9 +24,29 @@ async function expectDaemonFailure(
 }
 
 const prPayload = {
+  additions: 1,
+  author: { login: "alice" },
+  baseRefName: "main",
+  body: "Body",
+  changedFiles: 1,
+  commits: [{ oid: "abc" }],
+  createdAt: "2026-08-09T09:00:00Z",
+  deletions: 0,
   headRefName: "feature/spinner",
+  headRefOid: "abc",
+  headRepository: {
+    nameWithOwner: "acme/widgets",
+    url: "https://github.com/acme/widgets",
+  },
+  isDraft: false,
+  mergeable: "MERGEABLE",
+  mergeStateStatus: "CLEAN",
+  mergedAt: null,
   number: 42,
+  reviewDecision: "APPROVED",
+  state: "OPEN",
   title: "Add spinner",
+  updatedAt: "2026-08-09T10:00:00Z",
   url: "https://github.com/acme/widgets/pull/42",
 };
 
@@ -72,6 +92,7 @@ function capturingRunner(stdout: string, exitCode = 0) {
 }
 
 function prAndChecksRunner(options?: {
+  checks?: typeof checksPayload;
   checksExitCode?: number;
   logBody?: string;
   noPr?: boolean;
@@ -87,6 +108,55 @@ function prAndChecksRunner(options?: {
     }
     if (args[0] === "pr" && args[1] === "view") {
       return { stderr: "", stdout: JSON.stringify(prPayload) };
+    }
+    if (args[0] === "api" && args[1] === "graphql") {
+      const query = args.find((arg) => arg.startsWith("query=")) ?? "";
+      if (query.includes("pullRequest(number: $number) { id }")) {
+        return {
+          stderr: "",
+          stdout: JSON.stringify({
+            data: { repository: { pullRequest: { id: "PR_42" } } },
+          }),
+        };
+      }
+      const nodes = (options?.checks ?? checksPayload).map((check, index) => ({
+        __typename: "CheckRun",
+        checkSuite: {
+          workflowRun: {
+            databaseId: 100 + index,
+            workflow: { name: check.workflow },
+          },
+        },
+        completedAt: check.completedAt,
+        conclusion: check.bucket === "pending" ? null : check.state,
+        databaseId: 200 + index,
+        detailsUrl: check.link,
+        isRequired: true,
+        name: check.name,
+        startedAt: check.startedAt,
+        status: check.bucket === "pending" ? "IN_PROGRESS" : "COMPLETED",
+      }));
+      return {
+        stderr: "",
+        stdout: JSON.stringify({
+          data: {
+            repository: {
+              pullRequest: {
+                commits: {
+                  nodes: [
+                    {
+                      commit: {
+                        oid: "abc",
+                        statusCheckRollup: { contexts: { nodes } },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        }),
+      };
     }
     if (args[0] === "run" && args[1] === "view") {
       return {
@@ -189,7 +259,7 @@ describe("buildGitHubPrChecksFixPrompt", () => {
       buildGitHubPrChecksFixPrompt(
         { cwd: "/repos/widgets" },
         {
-          runGh: prAndChecksRunner(),
+          runGh: prAndChecksRunner({ checks: onlyPassing }),
           runGhCapturing: capturingRunner(JSON.stringify(onlyPassing)),
           whichGh: async () => "/usr/bin/gh",
         },

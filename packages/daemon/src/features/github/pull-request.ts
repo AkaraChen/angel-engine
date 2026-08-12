@@ -15,6 +15,7 @@ import { Cause, Effect, Exit } from "effect";
 
 import { DaemonError } from "../../platform/errors";
 import { executeGit } from "../source-control/local-git/backend";
+import { createGitHubPlugin } from "../source-control/providers/github/plugin";
 import { findGhPath, type GhRunner, mapGhFailure, runGhCli } from "./gh-cli";
 
 const MERGE_TIMEOUT_MS = 60_000;
@@ -126,19 +127,6 @@ const reviewThreadsPayloadSchema = arkType({
     },
   },
 });
-const resolvedThreadPayloadSchema = arkType({
-  "+": "ignore",
-  data: {
-    "+": "ignore",
-    resolveReviewThread: {
-      "+": "ignore",
-      thread: {
-        "+": "ignore",
-        isResolved: "boolean",
-      },
-    },
-  },
-});
 
 const REVIEW_THREADS_QUERY = `
   query PullRequestReviewThreads($owner: String!, $repo: String!, $number: Int!) {
@@ -155,13 +143,6 @@ const REVIEW_THREADS_QUERY = `
           }
         }
       }
-    }
-  }
-`;
-const RESOLVE_THREAD_MUTATION = `
-  mutation ResolveReviewThread($threadId: ID!) {
-    resolveReviewThread(input: { threadId: $threadId }) {
-      thread { isResolved }
     }
   }
 `;
@@ -304,25 +285,32 @@ export function resolveGitHubReviewThread(
   dependencies: PullRequestDependencies = {},
 ): Effect.Effect<GitHubResolveThreadResult, DaemonError> {
   return Effect.gen(function* () {
-    const runGh = yield* requireGh(dependencies);
-    const output = yield* gh(
-      runGh,
-      [
-        "api",
-        "graphql",
-        "-f",
-        `query=${RESOLVE_THREAD_MUTATION}`,
-        "-F",
-        `threadId=${input.threadId}`,
-      ],
-      input.cwd,
-    );
-    const payload = parsePayload(
-      resolvedThreadPayloadSchema,
-      output.stdout,
-      "resolved review thread",
-    );
-    return { resolved: payload.data.resolveReviewThread.thread.isResolved };
+    const plugin = createGitHubPlugin({
+      findGh: dependencies.whichGh,
+      runGh: dependencies.runGh,
+    });
+    const repository = plugin.git.parseUrl("https://github.com/legacy/adapter");
+    const resolveThread = plugin.reviews?.resolveThread;
+    if (repository === null || resolveThread === undefined) {
+      return yield* Effect.fail(DaemonError.sourceControlUrlUnsupported());
+    }
+    const thread = yield* Effect.tryPromise({
+      catch: (cause) =>
+        cause instanceof DaemonError
+          ? cause
+          : DaemonError.sourceControlFetchFailed(cause),
+      try: () =>
+        resolveThread(
+          { repository, threadId: input.threadId },
+          {
+            deadline: Date.now() + 30_000,
+            signal: new AbortController().signal,
+          },
+        ),
+    });
+    return {
+      resolved: thread.state === "resolved",
+    };
   });
 }
 

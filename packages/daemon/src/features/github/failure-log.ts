@@ -2,87 +2,78 @@ import type {
   GitHubFailureLogInput,
   GitHubFailureLogResult,
 } from "@angel-engine/daemon-api/github";
-import is from "@sindresorhus/is";
 import { Effect } from "effect";
 
 import { DaemonError } from "../../platform/errors";
 import {
-  findGhPath,
-  type GhRunner,
-  mapGhFailure,
-  normalizeText,
-  runGhCli,
-} from "./gh-cli";
+  fetchGitHubCheckFailureLog,
+  tailFailureLog as genericTailFailureLog,
+} from "../source-control/providers/github/internal/checks";
+import { type GhRunner, runGhCli } from "./gh-cli";
 
-/** Trailing lines kept for shepherd prompt context. */
 export const FAILURE_LOG_TAIL_LINES = 40;
 
-/**
- * Fetch failed-job logs for a workflow run.
- * Not on the poll path — only call when composing a shepherd prompt.
- */
 export function fetchGitHubFailureLog(
   input: GitHubFailureLogInput,
-  deps: {
-    runGh?: GhRunner;
-    whichGh?: () => Promise<string | null>;
-  } = {},
+  deps: { runGh?: GhRunner; whichGh?: () => Promise<string | null> } = {},
 ): Effect.Effect<GitHubFailureLogResult, DaemonError> {
-  return Effect.gen(function* () {
-    const runGh = yield* requireGh(deps);
-    const runId = String(input.runId).trim();
-    if (runId.length === 0) {
-      return yield* Effect.fail(
-        DaemonError.invalidRequest("Workflow run id is required."),
+  const displayPath = input.repo?.trim() || "unknown/unknown";
+  const [owner = "unknown", name = "unknown"] = displayPath.split("/");
+  return Effect.tryPromise({
+    catch: (cause) =>
+      cause instanceof DaemonError
+        ? cause
+        : DaemonError.sourceControlFetchFailed(cause),
+    try: async () => {
+      const result = await fetchGitHubCheckFailureLog(
+        {
+          logRef: {
+            kind: "workflow-run",
+            runId: String(input.runId),
+            jobId: null,
+          },
+          repository: {
+            providerId: "github",
+            host: "github.com",
+            namespace: [owner],
+            name,
+            remoteId: null,
+            displayPath,
+            webUrl: `https://github.com/${displayPath}`,
+          },
+          tailLines: FAILURE_LOG_TAIL_LINES,
+        },
+        {
+          deadline: Date.now() + 30_000,
+          signal: new AbortController().signal,
+        },
+        {
+          findGh: deps.whichGh,
+          runGh: (args) => {
+            const repoIndex = args.indexOf("--repo");
+            const forwarded =
+              input.repo === undefined && repoIndex >= 0
+                ? [...args.slice(0, repoIndex), ...args.slice(repoIndex + 2)]
+                : args;
+            return (deps.runGh ?? runGhCli)(forwarded, { cwd: input.cwd });
+          },
+        },
       );
-    }
-
-    const args = ["run", "view", runId, "--log-failed"];
-    if (is.nonEmptyString(input.repo)) {
-      args.push("--repo", input.repo);
-    }
-
-    const output = yield* Effect.tryPromise({
-      catch: (cause) => mapGhFailure(cause),
-      try: () => runGh(args, { cwd: input.cwd }),
-    });
-
-    return tailFailureLog(output.stdout);
+      return {
+        lines: result.text.length === 0 ? [] : result.text.split("\n"),
+        truncated: result.truncated,
+      };
+    },
   });
 }
 
-/** Pure: take the last N non-empty-preserving lines from a failed log dump. */
 export function tailFailureLog(
   raw: string,
   maxLines = FAILURE_LOG_TAIL_LINES,
 ): GitHubFailureLogResult {
-  const normalized = normalizeText(raw);
-  if (normalized.length === 0) {
-    return { lines: [], truncated: false };
-  }
-  const allLines = normalized.split("\n");
-  if (allLines.length <= maxLines) {
-    return { lines: allLines, truncated: false };
-  }
+  const result = genericTailFailureLog(raw, maxLines);
   return {
-    lines: allLines.slice(-maxLines),
-    truncated: true,
+    lines: result.text.length === 0 ? [] : result.text.split("\n"),
+    truncated: result.truncated,
   };
-}
-
-function requireGh(deps: {
-  runGh?: GhRunner;
-  whichGh?: () => Promise<string | null>;
-}): Effect.Effect<GhRunner, DaemonError> {
-  return Effect.gen(function* () {
-    const whichGh = deps.whichGh ?? findGhPath;
-    const ghPath = yield* Effect.tryPromise({
-      catch: (cause) => DaemonError.sourceControlFetchFailed(cause),
-      try: whichGh,
-    });
-    if (!is.nonEmptyString(ghPath)) {
-      return yield* Effect.fail(DaemonError.sourceControlCliMissing());
-    }
-    return deps.runGh ?? runGhCli;
-  });
 }
