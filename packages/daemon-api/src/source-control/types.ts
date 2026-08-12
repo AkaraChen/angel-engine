@@ -274,6 +274,7 @@ export interface ProviderDiagnostic {
 }
 
 export interface ProviderActivation {
+  generation: number;
   provider: ProviderManifest;
   projectPath: string;
   remote: {
