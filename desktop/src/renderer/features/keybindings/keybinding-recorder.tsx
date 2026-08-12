@@ -67,13 +67,14 @@ export function KeybindingRecorder({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (
-        candidate &&
-        !awaitingChord &&
-        event.key !== "Escape" &&
-        event.target instanceof HTMLElement &&
-        event.target.closest("[data-recorder-action]")
-      ) {
+      const recorderAction =
+        event.target instanceof HTMLElement
+          ? event.target.closest<HTMLElement>("[data-recorder-action]")
+          : null;
+      if (recorderAction && (event.key === "Enter" || event.key === " ")) {
+        event.preventDefault();
+        event.stopPropagation();
+        recorderAction.click();
         return;
       }
 

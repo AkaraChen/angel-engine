@@ -26,6 +26,8 @@ import { Kbd } from "@/components/ui/kbd";
 import { KeybindingHint } from "@/features/keybindings/components/keybinding-hint";
 import { KeybindingMenu } from "@/features/keybindings/components/keybinding-menu";
 import { KeybindingRecorder } from "@/features/keybindings/keybinding-recorder";
+import { findConflictForBinding } from "@/features/keybindings/keybinding-editor-utils";
+import { useKeybindingCommandJump } from "@/features/keybindings/use-keybinding-command-jump";
 import {
   SettingsGroup,
   SettingsRow,
@@ -160,10 +162,13 @@ export function KeyboardSettings() {
       trigger?.focus();
     }, 50);
   };
-  const finishRecording = (target: RecordingTarget | null) => {
+  const finishRecording = (
+    target: RecordingTarget | null,
+    { restore = true }: { restore?: boolean } = {},
+  ) => {
     setRecordingTarget(null);
     setRecording(false);
-    restoreFocus(target);
+    if (restore) restoreFocus(target);
   };
   const startRecording = (
     target:
@@ -199,13 +204,12 @@ export function KeyboardSettings() {
     }
     finishRecording(target);
   };
-  const jumpToCommand = (commandId: CommandId) => {
-    const target = document.getElementById(`keybinding-${commandId}`);
-    target?.scrollIntoView({ behavior: "smooth", block: "center" });
-    requestAnimationFrame(() =>
-      target?.querySelector<HTMLButtonElement>("button")?.focus(),
-    );
-  };
+  const jumpToCommand = useKeybindingCommandJump({
+    filter,
+    query,
+    setFilter,
+    setQuery,
+  });
 
   return (
     <div className="space-y-6">
@@ -349,12 +353,10 @@ export function KeyboardSettings() {
                       {(effective.length > 0 ? effective : [null]).map(
                         (binding, index) => {
                           const conflict = binding
-                            ? conflicts.find(
-                                (item) =>
-                                  item.key === binding.key &&
-                                  item.rules.some(
-                                    (rule) => rule.command === descriptor.id,
-                                  ),
+                            ? findConflictForBinding(
+                                conflicts,
+                                descriptor.id,
+                                binding,
                               )
                             : undefined;
                           const otherRule = conflict?.rules.find(
@@ -475,7 +477,7 @@ export function KeyboardSettings() {
                     commandId={descriptor.id}
                     onCancel={() => finishRecording(activeRecorder)}
                     onJumpToConflict={(commandId) => {
-                      finishRecording(activeRecorder);
+                      finishRecording(activeRecorder, { restore: false });
                       jumpToCommand(commandId);
                     }}
                     onRecorded={(key) => void handleRecorded(key)}

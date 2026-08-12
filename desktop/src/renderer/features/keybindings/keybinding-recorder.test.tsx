@@ -22,6 +22,58 @@ vi.mock("react-i18next", () => ({
 afterEach(cleanup);
 
 describe("KeybindingRecorder", () => {
+  it.each([
+    "Enter",
+    " ",
+  ])("lets the empty recorder cancel button handle %j", (key) => {
+    const onCancel = vi.fn();
+    render(
+      <KeybindingRecorder
+        commandId="chat.new"
+        onCancel={onCancel}
+        onJumpToConflict={vi.fn()}
+        onRecorded={vi.fn()}
+        platform="mac"
+        rules={createDefaultKeybindingRules()}
+      />,
+    );
+
+    const cancel = screen.getByRole("button", { name: "common.cancel" });
+    cancel.focus();
+    fireEvent.keyDown(cancel, { key });
+
+    expect(onCancel).toHaveBeenCalledOnce();
+    expect(
+      screen.queryByRole("button", {
+        name: "settings.keyboard.saveShortcut",
+      }),
+    ).toBeNull();
+  });
+
+  it.each([
+    "Enter",
+    " ",
+  ])("lets the empty recorder bind Escape button handle %j", (key) => {
+    render(
+      <KeybindingRecorder
+        commandId="chat.new"
+        onCancel={vi.fn()}
+        onJumpToConflict={vi.fn()}
+        onRecorded={vi.fn()}
+        platform="mac"
+        rules={createDefaultKeybindingRules()}
+      />,
+    );
+
+    const bindEscape = screen.getByRole("button", {
+      name: "settings.keyboard.bindEscape",
+    });
+    bindEscape.focus();
+    fireEvent.keyDown(bindEscape, { key });
+
+    expect(screen.getByRole("button", { name: "Save anyway" })).toBeTruthy();
+  });
+
   it("previews a conflicting candidate before saving and focuses confirmation", () => {
     const onRecorded = vi.fn();
     render(
