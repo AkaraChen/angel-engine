@@ -11,6 +11,7 @@ import { registerDesktopWindowIpc } from "../windows/notifications";
 import { registerWorkspaceToolWindowIpc } from "../windows/workspace-tool-window";
 import { createAppRouter } from "./router";
 import { registerWorkspaceDiffPreferencesIpc } from "../workspace-diff-preferences";
+import { MainIpcError, mainIpcErrorEnvelope } from "../platform/errors";
 
 interface RegisterAllIpcOptions {
   openSettingsWindow: () => void;
@@ -18,7 +19,7 @@ interface RegisterAllIpcOptions {
 
 export function registerAllIpc({ openSettingsWindow }: RegisterAllIpcOptions) {
   registerDaemonIpc();
-  registerIpcMain(createAppRouter());
+  registerIpcMain(withMainIpcErrorEnvelopes(createAppRouter()));
   registerDesktopWindowAppearanceIpc();
   registerDesktopWindowContentReadyIpc();
   registerDesktopWindowIpc();
@@ -29,4 +30,24 @@ export function registerAllIpc({ openSettingsWindow }: RegisterAllIpcOptions) {
   void prewarmPathLauncher().catch((error: unknown) => {
     console.warn("Could not prewarm path launcher.", error);
   });
+}
+
+function withMainIpcErrorEnvelopes(router: ReturnType<typeof createAppRouter>) {
+  return Object.fromEntries(
+    Object.entries(router).map(([name, route]) => [
+      name,
+      {
+        action: async (args: never) => {
+          try {
+            return await route.action(args);
+          } catch (error) {
+            if (error instanceof MainIpcError) {
+              return mainIpcErrorEnvelope(error);
+            }
+            throw error;
+          }
+        },
+      },
+    ]),
+  ) as unknown as ReturnType<typeof createAppRouter>;
 }

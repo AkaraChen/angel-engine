@@ -41,6 +41,7 @@ export const fr = {
       answered: "Répondu",
       attachment: "Pièce jointe",
       backendUnavailable: "Backend indisponible",
+      desktopOperationFailed: "Échec de l’opération sur le bureau",
       build: "Exécuter",
       bypassPermission: "Contourner l’autorisation",
       cancel: "Annuler",
@@ -94,6 +95,31 @@ export const fr = {
       open: "Ouvrir {{name}}",
     },
     workspace: {
+      browser: { back: "Précédent", forward: "Suivant", urlLabel: "URL" },
+      files: {
+        fileUnavailable: "Fichier indisponible",
+        openFiles: "Fichiers ouverts",
+        selectFile: "Sélectionner un fichier",
+      },
+      processes: {
+        actions: "Actions",
+        address: "Adresse",
+        command: "Commande",
+        emptyDetail: "Les processus lancés par l’agent apparaîtront ici.",
+        kill: "Arrêter",
+        name: "Nom",
+        port: "Port",
+        process: "Processus",
+        service: "Service",
+      },
+      rightSidebar: {
+        focus: "Activer les outils de l’espace de travail",
+        hide: "Masquer les outils de l’espace de travail",
+        resize: "Redimensionner le panneau des outils",
+        show: "Afficher les outils de l’espace de travail",
+        toggle: "Afficher ou masquer les outils de l’espace de travail",
+      },
+      title: "Espace de travail",
       ambiguousSend: {
         description:
           "Angel Engine a redémarré pendant l’envoi. Pour éviter un doublon, ce message n’a pas été renvoyé automatiquement.",
@@ -138,6 +164,11 @@ export const fr = {
       statsLastActive: "Dernière activité",
 
       tools: {
+        browser: "Navigateur",
+        diffUnavailable: "Différence indisponible",
+        openInWindow: "Ouvrir dans une fenêtre",
+        terminal: "Terminal",
+        unavailable: "Indisponible",
         checks: {
           fixFailures: "Corriger les échecs",
           fixNeedsChat: "Ouvrez un chat pour envoyer un tour de correction.",

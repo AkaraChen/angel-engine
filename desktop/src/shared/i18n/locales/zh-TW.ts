@@ -41,6 +41,7 @@ export const zhTW = {
       answered: "已回答",
       attachment: "附件",
       backendUnavailable: "後端無法使用",
+      desktopOperationFailed: "桌面操作失敗",
       build: "執行",
       bypassPermission: "略過權限",
       cancel: "取消",
@@ -94,6 +95,31 @@ export const zhTW = {
       open: "開啟 {{name}}",
     },
     workspace: {
+      browser: { back: "上一頁", forward: "下一頁", urlLabel: "網址" },
+      files: {
+        fileUnavailable: "檔案無法使用",
+        openFiles: "已開啟的檔案",
+        selectFile: "選擇檔案",
+      },
+      processes: {
+        actions: "操作",
+        address: "位址",
+        command: "命令",
+        emptyDetail: "代理程式啟動的程序會顯示在這裡。",
+        kill: "終止",
+        name: "名稱",
+        port: "連接埠",
+        process: "程序",
+        service: "服務",
+      },
+      rightSidebar: {
+        focus: "聚焦工作區工具",
+        hide: "隱藏工作區工具",
+        resize: "調整工具側邊欄大小",
+        show: "顯示工作區工具",
+        toggle: "切換工作區工具",
+      },
+      title: "工作區",
       ambiguousSend: {
         description:
           "Angel Engine 在傳送時重新啟動。為避免重複，此訊息未自動重新傳送。",
@@ -134,6 +160,11 @@ export const zhTW = {
       statsLastActive: "最近活動",
 
       tools: {
+        browser: "瀏覽器",
+        diffUnavailable: "差異無法使用",
+        openInWindow: "在視窗中開啟",
+        terminal: "終端機",
+        unavailable: "無法使用",
         checks: {
           fixFailures: "修復失敗",
           fixNeedsChat: "開啟聊天以傳送修復回合。",

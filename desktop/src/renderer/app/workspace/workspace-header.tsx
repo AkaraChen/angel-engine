@@ -34,11 +34,13 @@ export function WorkspaceHeader({
   onPathLauncherAction,
   onToggleRightSidebar,
   rightSidebarOpen = false,
-  rightSidebarToggleLabel = "Toggle workspace tools",
+  rightSidebarToggleLabel,
   running = false,
   title,
 }: WorkspaceHeaderProps) {
   const { t } = useTranslation();
+  const resolvedRightSidebarToggleLabel =
+    rightSidebarToggleLabel ?? t("workspace.rightSidebar.toggle");
   const { isMobile, state } = useSidebar();
   const showAttention = Boolean(attention?.needsInput || attention?.completed);
   const isMacOS = window.desktopEnvironment.platform === "darwin";
@@ -142,7 +144,7 @@ export function WorkspaceHeader({
               <SidebarUnfold className="scale-x-[-1]" weight="duotone" />
             )
           }
-          label={rightSidebarToggleLabel}
+          label={resolvedRightSidebarToggleLabel}
           onClick={onToggleRightSidebar}
         />
       ) : null}

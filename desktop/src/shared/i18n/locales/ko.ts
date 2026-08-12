@@ -41,6 +41,7 @@ export const ko = {
       answered: "응답됨",
       attachment: "첨부 파일",
       backendUnavailable: "백엔드를 사용할 수 없음",
+      desktopOperationFailed: "데스크톱 작업 실패",
       build: "실행",
       bypassPermission: "권한 건너뛰기",
       cancel: "취소",
@@ -94,6 +95,31 @@ export const ko = {
       open: "{{name}} 열기",
     },
     workspace: {
+      browser: { back: "뒤로", forward: "앞으로", urlLabel: "URL" },
+      files: {
+        fileUnavailable: "파일을 사용할 수 없음",
+        openFiles: "열린 파일",
+        selectFile: "파일 선택",
+      },
+      processes: {
+        actions: "작업",
+        address: "주소",
+        command: "명령",
+        emptyDetail: "에이전트가 시작한 프로세스가 여기에 표시됩니다.",
+        kill: "종료",
+        name: "이름",
+        port: "포트",
+        process: "프로세스",
+        service: "서비스",
+      },
+      rightSidebar: {
+        focus: "작업 공간 도구로 포커스 이동",
+        hide: "작업 공간 도구 숨기기",
+        resize: "도구 사이드바 크기 조절",
+        show: "작업 공간 도구 표시",
+        toggle: "작업 공간 도구 전환",
+      },
+      title: "작업 공간",
       ambiguousSend: {
         description:
           "전송 중 Angel Engine이 다시 시작되었습니다. 중복 전송을 피하기 위해 이 메시지는 자동으로 다시 보내지 않았습니다.",
@@ -136,6 +162,11 @@ export const ko = {
       statsLastActive: "마지막 활동",
 
       tools: {
+        browser: "브라우저",
+        diffUnavailable: "차이를 사용할 수 없음",
+        openInWindow: "창에서 열기",
+        terminal: "터미널",
+        unavailable: "사용할 수 없음",
         checks: {
           fixFailures: "실패 수정",
           fixNeedsChat: "수정 턴을 보내려면 채팅을 여세요.",

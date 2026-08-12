@@ -41,6 +41,7 @@ export const ja = {
       answered: "回答済み",
       attachment: "添付ファイル",
       backendUnavailable: "バックエンドを利用できません",
+      desktopOperationFailed: "デスクトップ操作に失敗しました",
       build: "実行",
       bypassPermission: "権限をバイパス",
       cancel: "キャンセル",
@@ -94,6 +95,31 @@ export const ja = {
       open: "{{name}} を開く",
     },
     workspace: {
+      browser: { back: "戻る", forward: "進む", urlLabel: "URL" },
+      files: {
+        fileUnavailable: "ファイルを利用できません",
+        openFiles: "開いているファイル",
+        selectFile: "ファイルを選択",
+      },
+      processes: {
+        actions: "操作",
+        address: "アドレス",
+        command: "コマンド",
+        emptyDetail: "エージェントが開始したプロセスがここに表示されます。",
+        kill: "終了",
+        name: "名前",
+        port: "ポート",
+        process: "プロセス",
+        service: "サービス",
+      },
+      rightSidebar: {
+        focus: "ワークスペースツールにフォーカス",
+        hide: "ワークスペースツールを非表示",
+        resize: "ツールサイドバーのサイズを変更",
+        show: "ワークスペースツールを表示",
+        toggle: "ワークスペースツールを切り替え",
+      },
+      title: "ワークスペース",
       ambiguousSend: {
         description:
           "送信中に Angel Engine が再起動しました。重複を避けるため、このメッセージは自動再送されていません。",
@@ -137,6 +163,11 @@ export const ja = {
       statsLastActive: "最終アクティブ",
 
       tools: {
+        browser: "ブラウザ",
+        diffUnavailable: "差分を利用できません",
+        openInWindow: "ウインドウで開く",
+        terminal: "ターミナル",
+        unavailable: "利用できません",
         checks: {
           fixFailures: "失敗を修正",
           fixNeedsChat: "修正ターンを送るにはチャットを開いてください。",

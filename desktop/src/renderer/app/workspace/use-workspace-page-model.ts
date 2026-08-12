@@ -278,10 +278,10 @@ export function useWorkspacePageModel({
   }, [focusWorkspaceToolSurface, toggleRightSidebar, workspaceToolHost]);
   const workspaceToolsToggleLabel =
     workspaceToolHost !== "sidebar"
-      ? "Focus workspace tools"
+      ? t("workspace.rightSidebar.focus")
       : rightSidebarOpen
-        ? "Hide workspace tools"
-        : "Show workspace tools";
+        ? t("workspace.rightSidebar.hide")
+        : t("workspace.rightSidebar.show");
   const workspaceTitle = getWorkspaceTitle({
     selectedChat,
     selectedProjectName,

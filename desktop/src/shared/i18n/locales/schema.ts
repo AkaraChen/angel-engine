@@ -13,6 +13,7 @@ export interface LocaleResourceTranslationCommon {
   answered: string;
   attachment: string;
   backendUnavailable: string;
+  desktopOperationFailed: string;
   build: string;
   bypassPermission: string;
   cancel: string;
@@ -327,6 +328,7 @@ export interface LocaleResourceTranslationWorkspaceToolsPullRequest {
 
 export interface LocaleResourceTranslationWorkspaceTools {
   addToChat: string;
+  browser: string;
   checks: LocaleResourceTranslationWorkspaceToolsChecks;
   comments: LocaleResourceTranslationWorkspaceToolsComments;
   commit: LocaleResourceTranslationWorkspaceToolsCommit;
@@ -340,7 +342,43 @@ export interface LocaleResourceTranslationWorkspaceTools {
   resizeFileTree: string;
   resizeGitList: string;
   subprocesses: string;
+  terminal: string;
+  unavailable: string;
+  diffUnavailable: string;
+  openInWindow: string;
   tabs: LocaleResourceTranslationWorkspaceToolsTabs;
+}
+
+export interface LocaleResourceTranslationWorkspaceBrowser {
+  back: string;
+  forward: string;
+  urlLabel: string;
+}
+
+export interface LocaleResourceTranslationWorkspaceFiles {
+  fileUnavailable: string;
+  openFiles: string;
+  selectFile: string;
+}
+
+export interface LocaleResourceTranslationWorkspaceProcesses {
+  actions: string;
+  address: string;
+  command: string;
+  emptyDetail: string;
+  kill: string;
+  name: string;
+  port: string;
+  process: string;
+  service: string;
+}
+
+export interface LocaleResourceTranslationWorkspaceRightSidebar {
+  focus: string;
+  hide: string;
+  resize: string;
+  show: string;
+  toggle: string;
 }
 
 export interface LocaleResourceTranslationWorkspaceSetup {
@@ -368,6 +406,8 @@ export interface LocaleResourceTranslationWorkspaceAmbiguousSend {
 
 export interface LocaleResourceTranslationWorkspace {
   ambiguousSend: LocaleResourceTranslationWorkspaceAmbiguousSend;
+  browser: LocaleResourceTranslationWorkspaceBrowser;
+  files: LocaleResourceTranslationWorkspaceFiles;
   backgroundChatCompleted: string;
   backgroundChatNeedsInput: string;
   backgroundChatStatus: string;
@@ -379,12 +419,15 @@ export interface LocaleResourceTranslationWorkspace {
   newChatInProject: string;
   noProject: string;
   projectSelect: string;
+  processes: LocaleResourceTranslationWorkspaceProcesses;
+  rightSidebar: LocaleResourceTranslationWorkspaceRightSidebar;
   settings: string;
   setup: LocaleResourceTranslationWorkspaceSetup;
   statsBranch: string;
   statsChanges: string;
   statsLastActive: string;
   tools: LocaleResourceTranslationWorkspaceTools;
+  title: string;
   worktreeDirtyContinue: string;
   worktreeDirtyDescription: string;
   worktreeDirtyRemember: string;

@@ -41,6 +41,7 @@ export const es = {
       answered: "Respondido",
       attachment: "Adjunto",
       backendUnavailable: "Backend no disponible",
+      desktopOperationFailed: "Error en la operación de escritorio",
       build: "Ejecutar",
       bypassPermission: "Omitir permiso",
       cancel: "Cancelar",
@@ -94,6 +95,31 @@ export const es = {
       open: "Abrir {{name}}",
     },
     workspace: {
+      browser: { back: "Atrás", forward: "Adelante", urlLabel: "URL" },
+      files: {
+        fileUnavailable: "Archivo no disponible",
+        openFiles: "Archivos abiertos",
+        selectFile: "Seleccionar un archivo",
+      },
+      processes: {
+        actions: "Acciones",
+        address: "Dirección",
+        command: "Comando",
+        emptyDetail: "Los procesos que inicie el agente aparecerán aquí.",
+        kill: "Finalizar",
+        name: "Nombre",
+        port: "Puerto",
+        process: "Proceso",
+        service: "Servicio",
+      },
+      rightSidebar: {
+        focus: "Enfocar herramientas del espacio de trabajo",
+        hide: "Ocultar herramientas del espacio de trabajo",
+        resize: "Cambiar el tamaño del panel de herramientas",
+        show: "Mostrar herramientas del espacio de trabajo",
+        toggle: "Mostrar u ocultar herramientas del espacio de trabajo",
+      },
+      title: "Espacio de trabajo",
       ambiguousSend: {
         description:
           "Angel Engine se reinició durante el envío. Para evitar un duplicado, este mensaje no se volvió a enviar automáticamente.",
@@ -137,6 +163,11 @@ export const es = {
       statsLastActive: "Última actividad",
 
       tools: {
+        browser: "Navegador",
+        diffUnavailable: "Diferencia no disponible",
+        openInWindow: "Abrir en una ventana",
+        terminal: "Terminal",
+        unavailable: "No disponible",
         checks: {
           fixFailures: "Corregir fallos",
           fixNeedsChat: "Abre un chat para enviar un turno de corrección.",

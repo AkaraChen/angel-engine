@@ -11,6 +11,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
 
 import { formatUnsupportedFileReason } from "@/app/workspace/workspace-file-display";
 import {
@@ -109,6 +110,7 @@ export function WorkspaceWindowFileEditor({
   onContentChange: (content: string) => void;
   onSelect: (path: string) => void;
 }) {
+  const { t } = useTranslation();
   const [editorTheme, setEditorTheme] = useState(getWorkspaceMonacoTheme);
   useEffect(() => {
     const updateTheme = () => {
@@ -127,7 +129,7 @@ export function WorkspaceWindowFileEditor({
   }, []);
 
   if (openFilePaths.length === 0 || !is.nonEmptyString(activePath)) {
-    return <WorkspaceToolEmpty title="Select a file" />;
+    return <WorkspaceToolEmpty title={t("workspace.files.selectFile")} />;
   }
 
   const activeState = fileStates[activePath] ?? { status: "loading" };
@@ -146,7 +148,7 @@ export function WorkspaceWindowFileEditor({
       ) : activeState.status === "error" ? (
         <WorkspaceToolEmpty
           detail={activeState.message}
-          title="File unavailable"
+          title={t("workspace.files.fileUnavailable")}
         />
       ) : activeState.status === "unsupported" ? (
         <WorkspaceToolEmpty
@@ -183,6 +185,7 @@ function WorkspaceWindowFileTabBar({
   onClose: (path: string) => void;
   onSelect: (path: string) => void;
 }) {
+  const { t } = useTranslation();
   const tabs = useMemo(
     () => openFilePaths.map((path) => ({ id: path })),
     [openFilePaths],
@@ -216,7 +219,7 @@ function WorkspaceWindowFileTabBar({
     >
       <WorkspaceFileTreeIconSprite />
       <div
-        aria-label="Open files"
+        aria-label={t("workspace.files.openFiles")}
         className="
           flex min-w-0 flex-1 overflow-x-auto
           [&::-webkit-scrollbar]:hidden

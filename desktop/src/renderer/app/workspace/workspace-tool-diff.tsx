@@ -338,7 +338,7 @@ function WorkspaceToolFileDiff({
     return (
       <WorkspaceToolEmpty
         detail={getErrorMessage(preloadQuery.error)}
-        title="Diff unavailable"
+        title={t("workspace.tools.diffUnavailable")}
       />
     );
   }

@@ -14,6 +14,7 @@ import {
   WarningCircle,
 } from "@phosphor-icons/react";
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import {
   browserTitleFromUrl,
@@ -49,6 +50,7 @@ export function WorkspaceBrowserTabContent({
   ) => void;
   tab: Extract<WorkspaceToolSurfaceDynamicTab, { kind: "browser" }>;
 }) {
+  const { t } = useTranslation();
   const [browserState, setBrowserState] = useState<WorkspaceBrowserState>({
     canGoBack: false,
     canGoForward: false,
@@ -190,24 +192,24 @@ export function WorkspaceBrowserTabContent({
         onSubmit={handleSubmit}
       >
         <Button
-          aria-label="Back"
+          aria-label={t("workspace.browser.back")}
           className="active:bg-overlay-active"
           disabled={!browserState.canGoBack}
           onClick={goBack}
           size="icon-xs"
-          title="Back"
+          title={t("workspace.browser.back")}
           type="button"
           variant="ghost"
         >
           <ArrowLeft />
         </Button>
         <Button
-          aria-label="Forward"
+          aria-label={t("workspace.browser.forward")}
           className="active:bg-overlay-active"
           disabled={!browserState.canGoForward}
           onClick={goForward}
           size="icon-xs"
-          title="Forward"
+          title={t("workspace.browser.forward")}
           type="button"
           variant="ghost"
         >
@@ -233,7 +235,7 @@ export function WorkspaceBrowserTabContent({
             weight="regular"
           />
           <Input
-            aria-label="URL"
+            aria-label={t("workspace.browser.urlLabel")}
             className="
               h-7 rounded-full border-transparent bg-transparent px-2 font-mono
               text-xs select-text
@@ -251,7 +253,7 @@ export function WorkspaceBrowserTabContent({
             value={tab.draftUrl}
           />
           <Button
-            aria-label="Reload"
+            aria-label={t("common.reload")}
             className="
               mr-0.5 shrink-0 rounded-full
               active:bg-overlay-active
@@ -259,7 +261,7 @@ export function WorkspaceBrowserTabContent({
             disabled={!browserState.ready}
             onClick={reload}
             size="icon-xs"
-            title="Reload"
+            title={t("common.reload")}
             type="button"
             variant="ghost"
           >

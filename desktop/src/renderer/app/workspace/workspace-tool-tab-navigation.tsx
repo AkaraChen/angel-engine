@@ -309,11 +309,11 @@ function WorkspaceToolNewTabMenu({
       <DropdownMenuContent align="start" variant="native">
         <DropdownMenuItem onSelect={addTerminalTab}>
           <TerminalIcon className="size-3.5" weight="regular" />
-          <span>Terminal</span>
+          <span>{t("workspace.tools.terminal")}</span>
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={addBrowserTab}>
           <Browser className="size-3.5" weight="regular" />
-          <span>Browser</span>
+          <span>{t("workspace.tools.browser")}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

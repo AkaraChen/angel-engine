@@ -7,6 +7,7 @@ import type { ApiClient } from "@/platform/api-client";
 
 import { SidebarSimple as SidebarFold } from "@phosphor-icons/react";
 import { useCallback, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { WorkspaceToolSurface } from "@/app/workspace/workspace-tool-host";
 import {
@@ -49,6 +50,7 @@ export function WorkspaceRightSidebar({
   onRequestHost,
   onWidthChange,
 }: WorkspaceRightSidebarProps) {
+  const { t } = useTranslation();
   const resizeStateRef = useRef<{ startWidth: number; startX: number } | null>(
     null,
   );
@@ -152,7 +154,7 @@ export function WorkspaceRightSidebar({
           trailingActions={
             <WorkspaceToolHeaderButton
               icon={<SidebarFold className="scale-x-[-1]" weight="duotone" />}
-              label="Hide workspace tools"
+              label={t("workspace.rightSidebar.hide")}
               onClick={onClose}
             />
           }
@@ -167,7 +169,7 @@ export function WorkspaceRightSidebar({
           "
         >
           <div
-            aria-label="Resize tool sidebar"
+            aria-label={t("workspace.rightSidebar.resize")}
             aria-orientation="vertical"
             aria-valuemax={maxWorkspaceRightSidebarWidth}
             aria-valuemin={minWorkspaceRightSidebarWidth}

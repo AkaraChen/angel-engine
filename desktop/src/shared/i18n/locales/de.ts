@@ -41,6 +41,7 @@ export const de = {
       answered: "Beantwortet",
       attachment: "Anhang",
       backendUnavailable: "Backend nicht verfügbar",
+      desktopOperationFailed: "Desktop-Vorgang fehlgeschlagen",
       build: "Ausführen",
       bypassPermission: "Berechtigung umgehen",
       cancel: "Abbrechen",
@@ -94,6 +95,31 @@ export const de = {
       open: "{{name}} öffnen",
     },
     workspace: {
+      browser: { back: "Zurück", forward: "Vorwärts", urlLabel: "URL" },
+      files: {
+        fileUnavailable: "Datei nicht verfügbar",
+        openFiles: "Geöffnete Dateien",
+        selectFile: "Datei auswählen",
+      },
+      processes: {
+        actions: "Aktionen",
+        address: "Adresse",
+        command: "Befehl",
+        emptyDetail: "Vom Agenten gestartete Prozesse werden hier angezeigt.",
+        kill: "Beenden",
+        name: "Name",
+        port: "Port",
+        process: "Prozess",
+        service: "Dienst",
+      },
+      rightSidebar: {
+        focus: "Arbeitsbereich-Werkzeuge fokussieren",
+        hide: "Arbeitsbereich-Werkzeuge ausblenden",
+        resize: "Werkzeug-Seitenleiste skalieren",
+        show: "Arbeitsbereich-Werkzeuge anzeigen",
+        toggle: "Arbeitsbereich-Werkzeuge ein-/ausblenden",
+      },
+      title: "Arbeitsbereich",
       ambiguousSend: {
         description:
           "Angel Engine wurde beim Senden neu gestartet. Um ein Duplikat zu vermeiden, wurde diese Nachricht nicht automatisch erneut gesendet.",
@@ -137,6 +163,11 @@ export const de = {
       statsLastActive: "Zuletzt aktiv",
 
       tools: {
+        browser: "Browser",
+        diffUnavailable: "Diff nicht verfügbar",
+        openInWindow: "In Fenster öffnen",
+        terminal: "Terminal",
+        unavailable: "Nicht verfügbar",
         checks: {
           fixFailures: "Fehler beheben",
           fixNeedsChat: "Öffne einen Chat, um einen Fix-Turn zu senden.",

@@ -120,8 +120,14 @@ function WorkspaceFileReadResultView({
 }: {
   result?: WorkspaceFileReadResult;
 }) {
+  const { t } = useTranslation();
   if (!result) {
-    return <WorkspaceToolEmpty icon={FileText} title="File unavailable" />;
+    return (
+      <WorkspaceToolEmpty
+        icon={FileText}
+        title={t("workspace.files.fileUnavailable")}
+      />
+    );
   }
 
   if (result.type === "unsupported") {

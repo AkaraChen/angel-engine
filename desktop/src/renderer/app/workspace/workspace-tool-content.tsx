@@ -5,6 +5,7 @@ import { WorkspaceProcessesView } from "@/app/workspace/workspace-processes-view
 import { PullRequestPanel } from "@/features/pull-request/pull-request-panel";
 import { WorkspaceTerminalView } from "@/app/workspace/workspace-terminal-view";
 import { WorkspaceToolEmpty } from "@/app/workspace/workspace-tool-layout";
+import { useTranslation } from "react-i18next";
 import {
   WorkspaceFilePreview,
   WorkspaceGitDiffTool,
@@ -18,6 +19,7 @@ import {
 import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
 
 export function WorkspaceToolContent({ root }: { root: string }) {
+  const { t } = useTranslation();
   const {
     active,
     activeDynamicTab,
@@ -47,7 +49,7 @@ export function WorkspaceToolContent({ root }: { root: string }) {
     );
   }
   if (!activeDynamicTab) {
-    return <WorkspaceToolEmpty title="Unavailable" />;
+    return <WorkspaceToolEmpty title={t("workspace.tools.unavailable")} />;
   }
 
   switch (activeDynamicTab.kind) {

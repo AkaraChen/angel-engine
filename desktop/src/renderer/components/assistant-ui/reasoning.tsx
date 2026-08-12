@@ -101,9 +101,7 @@ function ReasoningTrigger({
   active?: boolean;
 }) {
   const { t } = useTranslation();
-  const label = t("components.reasoning", {
-    defaultValue: "Reasoning",
-  });
+  const label = t("components.reasoning");
 
   return (
     <CollapsibleTrigger

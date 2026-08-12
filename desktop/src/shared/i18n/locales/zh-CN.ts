@@ -41,6 +41,7 @@ export const zhCN = {
       answered: "已回答",
       attachment: "附件",
       backendUnavailable: "后端不可用",
+      desktopOperationFailed: "桌面操作失败",
       build: "执行",
       bypassPermission: "绕过权限",
       cancel: "取消",
@@ -94,6 +95,31 @@ export const zhCN = {
       open: "打开 {{name}}",
     },
     workspace: {
+      browser: { back: "后退", forward: "前进", urlLabel: "网址" },
+      files: {
+        fileUnavailable: "文件不可用",
+        openFiles: "打开的文件",
+        selectFile: "选择文件",
+      },
+      processes: {
+        actions: "操作",
+        address: "地址",
+        command: "命令",
+        emptyDetail: "智能体启动的进程会显示在这里。",
+        kill: "终止",
+        name: "名称",
+        port: "端口",
+        process: "进程",
+        service: "服务",
+      },
+      rightSidebar: {
+        focus: "聚焦工作区工具",
+        hide: "隐藏工作区工具",
+        resize: "调整工具侧边栏大小",
+        show: "显示工作区工具",
+        toggle: "切换工作区工具",
+      },
+      title: "工作区",
       ambiguousSend: {
         description:
           "Angel Engine 在发送时重启。为避免重复，此消息未自动重新发送。",
@@ -134,6 +160,11 @@ export const zhCN = {
       statsLastActive: "最近活动",
 
       tools: {
+        browser: "浏览器",
+        diffUnavailable: "差异不可用",
+        openInWindow: "在窗口中打开",
+        terminal: "终端",
+        unavailable: "不可用",
         checks: {
           fixFailures: "修复失败",
           fixNeedsChat: "打开一个聊天以发送修复回合。",
