@@ -7,6 +7,10 @@ export const zhTW = {
     app: {
       name: "Angel Engine",
     },
+    menu: {
+      view: "檢視",
+      window: "視窗",
+    },
     commands: {
       categories: {
         app: "應用",

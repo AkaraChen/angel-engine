@@ -1,5 +1,6 @@
 import { BrowserWindow, screen } from "electron";
 
+import { translate } from "../platform/i18n";
 import { isDesktopWindowContentReady } from "./content-ready";
 import { createDesktopWindow } from "./factory";
 
@@ -36,7 +37,7 @@ export function openSettingsWindow() {
     options: {
       minHeight: settingsWindowMinimumBounds.height,
       minWidth: settingsWindowMinimumBounds.width,
-      title: "Settings",
+      title: translate("workspace.settings"),
     },
     stateFileName: settingsWindowStateFileName,
   });
@@ -44,6 +45,11 @@ export function openSettingsWindow() {
   settingsWindow.on("closed", () => {
     settingsWindow = null;
   });
+}
+
+export function refreshSettingsWindowTitle() {
+  if (!settingsWindow || settingsWindow.isDestroyed()) return;
+  settingsWindow.setTitle(translate("workspace.settings"));
 }
 
 function defaultSettingsWindowBounds() {

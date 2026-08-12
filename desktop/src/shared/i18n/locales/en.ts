@@ -7,6 +7,10 @@ export const en = {
     app: {
       name: "Angel Engine",
     },
+    menu: {
+      view: "View",
+      window: "Window",
+    },
     commands: {
       categories: {
         app: "App",

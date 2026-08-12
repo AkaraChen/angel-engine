@@ -7,6 +7,10 @@ export const zhCN = {
     app: {
       name: "Angel Engine",
     },
+    menu: {
+      view: "视图",
+      window: "窗口",
+    },
     commands: {
       categories: {
         app: "应用",

@@ -7,6 +7,10 @@ export const es = {
     app: {
       name: "Angel Engine",
     },
+    menu: {
+      view: "Ver",
+      window: "Ventana",
+    },
     commands: {
       categories: {
         app: "App",

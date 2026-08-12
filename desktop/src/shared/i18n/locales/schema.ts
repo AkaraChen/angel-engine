@@ -2,6 +2,11 @@ export interface LocaleResourceTranslationApp {
   name: string;
 }
 
+export interface LocaleResourceTranslationMenu {
+  view: string;
+  window: string;
+}
+
 export interface LocaleResourceTranslationCommon {
   allow: string;
   allowSession: string;
@@ -1336,6 +1341,7 @@ export interface LocaleResourceTranslationRuntimeValues {
 export interface LocaleResourceTranslation {
   commands: LocaleResourceTranslationCommands;
   app: LocaleResourceTranslationApp;
+  menu: LocaleResourceTranslationMenu;
   common: LocaleResourceTranslationCommon;
   attachment: LocaleResourceTranslationAttachment;
   workspace: LocaleResourceTranslationWorkspace;

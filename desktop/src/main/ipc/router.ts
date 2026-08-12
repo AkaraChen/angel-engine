@@ -16,7 +16,9 @@ import { projectPlatformIpcRouter } from "../features/projects/ipc";
 import { usagePlatformIpcRouter } from "../features/usage/ipc";
 import { trayPlatformIpcRouter } from "../features/tray/ipc";
 import { MainIpcError } from "../platform/errors";
+import { rebuildApplicationMenu } from "../platform/application-menu";
 import { setMainLanguage } from "../platform/i18n";
+import { refreshSettingsWindowTitle } from "../windows/settings-window";
 import { scheduleTrayRefresh } from "../features/tray/service";
 import { readClipboardSourceUrl } from "./clipboard-source";
 import { fetchUrlPreview } from "./url-preview";
@@ -106,6 +108,8 @@ const appIpcRouter = {
           catch: (cause) => MainIpcError.operationFailed(cause),
           try: () => {
             const language = setMainLanguage(value);
+            rebuildApplicationMenu();
+            refreshSettingsWindowTitle();
             scheduleTrayRefresh();
             return language;
           },
