@@ -33,9 +33,12 @@ import {
   InputGroupInput,
 } from "@/components/ui/input-group";
 import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   agentRuntimeIconSvg,
@@ -325,20 +328,21 @@ export function FleetPage({
             </InputGroup>
 
             {projectOptions.length > 1 ? (
-              <NativeSelect
-                aria-label={t("fleet.filterProject")}
-                onChange={(event) =>
-                  setRequestedProjectFilter(event.currentTarget.value)
-                }
-                size="sm"
+              <Select
+                onValueChange={setRequestedProjectFilter}
                 value={projectFilter}
               >
-                {projectOptions.map((option) => (
-                  <NativeSelectOption key={option.value} value={option.value}>
-                    {option.label}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
+                <SelectTrigger aria-label={t("fleet.filterProject")} size="sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {projectOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             ) : null}
 
             <div

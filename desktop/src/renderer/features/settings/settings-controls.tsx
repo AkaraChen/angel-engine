@@ -11,9 +11,12 @@ import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
 import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/platform/utils";
 
@@ -178,19 +181,18 @@ function SettingsSelect({
   value: string;
 }) {
   return (
-    <NativeSelect
-      aria-label={label}
-      className="w-44"
-      onChange={(event) => onValueChange(event.currentTarget.value)}
-      size="sm"
-      value={value}
-    >
-      {options.map((option) => (
-        <NativeSelectOption key={option.value} value={option.value}>
-          {option.label}
-        </NativeSelectOption>
-      ))}
-    </NativeSelect>
+    <Select onValueChange={onValueChange} value={value}>
+      <SelectTrigger aria-label={label} className="w-44" size="sm">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 

@@ -31,9 +31,12 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
@@ -53,6 +56,8 @@ import {
 } from "@/features/schedule/schedule-model";
 import { formatDateTime, formatRelativeTime } from "@/platform/format-time";
 import { cn } from "@/platform/utils";
+
+const NO_PROJECT_SELECT_VALUE = "__no_project__";
 
 /** Older runs stop informing the decision to keep or fix an automation. */
 const RUN_HISTORY_LIMIT = 5;
@@ -505,32 +510,35 @@ function CreateAutomationDialog({
             />
           </Field>
           <Field label={t("schedule.schedule")}>
-            <NativeSelect
-              className="w-full"
-              selectClassName="w-full"
+            <Select
               value={state.preset}
-              onChange={(event) =>
+              onValueChange={(value) =>
                 dispatch({
-                  preset: event.currentTarget.value as SchedulePreset,
+                  preset: value as SchedulePreset,
                   type: "preset",
                 })
               }
             >
-              {(
-                [
-                  "every-30-minutes",
-                  "hourly",
-                  "daily",
-                  "weekdays",
-                  "weekly",
-                  "custom",
-                ] as const
-              ).map((preset) => (
-                <NativeSelectOption key={preset} value={preset}>
-                  {presetLabel(t, preset)}
-                </NativeSelectOption>
-              ))}
-            </NativeSelect>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(
+                  [
+                    "every-30-minutes",
+                    "hourly",
+                    "daily",
+                    "weekdays",
+                    "weekly",
+                    "custom",
+                  ] as const
+                ).map((preset) => (
+                  <SelectItem key={preset} value={preset}>
+                    {presetLabel(t, preset)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </Field>
           {state.preset === "custom" ? (
             <Field label={t("schedule.customCron")}>
@@ -585,39 +593,42 @@ function CreateAutomationDialog({
             />
           </Field>
           <Field label={t("schedule.agent")}>
-            <NativeSelect
-              className="w-full"
-              disabled
-              selectClassName="w-full"
-              value="current"
-            >
-              <NativeSelectOption value="current">
-                {t("schedule.currentAgent")}
-              </NativeSelectOption>
-            </NativeSelect>
+            <Select disabled value="current">
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="current">
+                  {t("schedule.currentAgent")}
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </Field>
           <Field label={t("schedule.project")}>
-            <NativeSelect
-              className="w-full"
-              selectClassName="w-full"
-              value={state.projectId}
-              onChange={(event) =>
+            <Select
+              value={state.projectId || NO_PROJECT_SELECT_VALUE}
+              onValueChange={(value) =>
                 dispatch({
                   field: "projectId",
                   type: "field",
-                  value: event.currentTarget.value,
+                  value: value === NO_PROJECT_SELECT_VALUE ? "" : value,
                 })
               }
             >
-              <NativeSelectOption value="">
-                {t("schedule.noProject")}
-              </NativeSelectOption>
-              {projects.map((item) => (
-                <NativeSelectOption key={item.id} value={item.id}>
-                  {getProjectDisplayName(item.path)}
-                </NativeSelectOption>
-              ))}
-            </NativeSelect>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_PROJECT_SELECT_VALUE}>
+                  {t("schedule.noProject")}
+                </SelectItem>
+                {projects.map((item) => (
+                  <SelectItem key={item.id} value={item.id}>
+                    {getProjectDisplayName(item.path)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </Field>
           <label className="flex items-center justify-between gap-4 rounded-md border border-border-subtle px-3 py-2.5 text-sm">
             <span>{t("schedule.notifyOnFailure")}</span>

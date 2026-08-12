@@ -5,9 +5,12 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { MobileUrlQrDialog } from "@/features/settings/mobile-url-qr-dialog";
 import { ResetMobilePasswordDialog } from "@/features/settings/reset-mobile-password-dialog";
@@ -127,32 +130,34 @@ export function MobileViewSettings() {
       />
       <SettingsRow
         after={
-          <NativeSelect
-            aria-label={t("settings.mobile.hostTitle")}
-            className="w-56"
+          <Select
             disabled={isSaving || listenAddresses.length === 0}
-            onChange={(event) => void setHost(event.currentTarget.value)}
-            size="sm"
+            onValueChange={(value) => void setHost(value)}
             value={state.host}
           >
-            {!listenAddresses.some(
-              (candidate) => candidate.address === state.host,
-            ) && (
-              <NativeSelectOption value={state.host}>
-                {state.host}
-              </NativeSelectOption>
-            )}
-            {listenAddresses.map((candidate) => (
-              <NativeSelectOption
-                key={`${candidate.interfaceName}:${candidate.address}`}
-                value={candidate.address}
-              >
-                {candidate.interfaceName === "*"
-                  ? candidate.address
-                  : `${candidate.interfaceName} — ${candidate.address}`}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
+            <SelectTrigger
+              aria-label={t("settings.mobile.hostTitle")}
+              className="w-56"
+              size="sm"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {!listenAddresses.some(
+                (candidate) => candidate.address === state.host,
+              ) && <SelectItem value={state.host}>{state.host}</SelectItem>}
+              {listenAddresses.map((candidate) => (
+                <SelectItem
+                  key={`${candidate.interfaceName}:${candidate.address}`}
+                  value={candidate.address}
+                >
+                  {candidate.interfaceName === "*"
+                    ? candidate.address
+                    : `${candidate.interfaceName} — ${candidate.address}`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         }
         description={t("settings.mobile.hostDescription")}
         title={t("settings.mobile.hostTitle")}

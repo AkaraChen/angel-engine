@@ -2,8 +2,16 @@
 
 import type { Project } from "@angel-engine/daemon-api/projects";
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { DraftProjectSelect } from "@/app/workspace/draft-project-select";
 
 vi.mock("react-i18next", () => ({
@@ -18,10 +26,24 @@ const projects = [
   } as Project,
 ];
 
+const originalScrollIntoView = Element.prototype.scrollIntoView;
+
+beforeAll(() => {
+  Element.prototype.scrollIntoView = vi.fn();
+});
+
+afterAll(() => {
+  if (originalScrollIntoView) {
+    Element.prototype.scrollIntoView = originalScrollIntoView;
+  } else {
+    Reflect.deleteProperty(Element.prototype, "scrollIntoView");
+  }
+});
+
 afterEach(cleanup);
 
 describe("DraftProjectSelect", () => {
-  it("hides the no-project option when the caller requires a project", () => {
+  it("hides the no-project option when the caller requires a project", async () => {
     render(
       <DraftProjectSelect
         allowNoProject={false}
@@ -32,16 +54,21 @@ describe("DraftProjectSelect", () => {
       />,
     );
 
+    fireEvent.keyDown(
+      screen.getByRole("combobox", { name: "workspace.projectSelect" }),
+      { key: "ArrowDown" },
+    );
+
     expect(
       screen.queryByRole("option", { name: "workspace.noProject" }),
     ).toBeNull();
     expect(
-      screen.getByRole("option", { name: "sidebar.addProject" }),
+      await screen.findByRole("option", { name: "sidebar.addProject" }),
     ).toBeTruthy();
     expect(screen.getByRole("option", { name: "angel-engine" })).toBeTruthy();
   });
 
-  it("shows the no-project option only when explicitly allowed", () => {
+  it("shows the no-project option only when explicitly allowed", async () => {
     render(
       <DraftProjectSelect
         allowNoProject
@@ -51,8 +78,13 @@ describe("DraftProjectSelect", () => {
       />,
     );
 
+    fireEvent.keyDown(
+      screen.getByRole("combobox", { name: "workspace.projectSelect" }),
+      { key: "ArrowDown" },
+    );
+
     expect(
-      screen.getByRole("option", { name: "workspace.noProject" }),
+      await screen.findByRole("option", { name: "workspace.noProject" }),
     ).toBeTruthy();
   });
 });

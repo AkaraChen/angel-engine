@@ -37,6 +37,18 @@ if (typeof Element.prototype.scrollIntoView !== "function") {
   Element.prototype.scrollIntoView = () => {};
 }
 
+if (typeof Element.prototype.hasPointerCapture !== "function") {
+  Element.prototype.hasPointerCapture = () => false;
+}
+
+if (typeof Element.prototype.setPointerCapture !== "function") {
+  Element.prototype.setPointerCapture = () => {};
+}
+
+if (typeof Element.prototype.releasePointerCapture !== "function") {
+  Element.prototype.releasePointerCapture = () => {};
+}
+
 // jsdom does not always expose a working localStorage (depends on the document
 // origin); provide an in-memory implementation so storage-backed code can run.
 function hasWorkingLocalStorage(): boolean {

@@ -24,9 +24,12 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import {
   projectConfigQueryOptions,
@@ -165,24 +168,26 @@ function ProjectSettingsEditor({
     <form className="grid gap-5" onSubmit={handleSubmit}>
       <div className="grid gap-2">
         <span className="text-sm font-medium">{t("projects.scriptShell")}</span>
-        <NativeSelect
-          aria-label={t("projects.scriptShell")}
+        <Select
           disabled={isSaving}
-          onChange={(event) =>
-            setScriptShell(event.currentTarget.value as ProjectScriptShell)
-          }
+          onValueChange={(value) => setScriptShell(value as ProjectScriptShell)}
           value={scriptShell}
         >
-          <NativeSelectOption value="auto">
-            {t("projects.scriptShellAuto")}
-          </NativeSelectOption>
-          <NativeSelectOption value="bash">
-            {t("projects.scriptShellBash")}
-          </NativeSelectOption>
-          <NativeSelectOption value="system">
-            {t("projects.scriptShellSystem")}
-          </NativeSelectOption>
-        </NativeSelect>
+          <SelectTrigger aria-label={t("projects.scriptShell")}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="auto">
+              {t("projects.scriptShellAuto")}
+            </SelectItem>
+            <SelectItem value="bash">
+              {t("projects.scriptShellBash")}
+            </SelectItem>
+            <SelectItem value="system">
+              {t("projects.scriptShellSystem")}
+            </SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       <div className="grid gap-2">
         <span className="text-sm font-medium">{t("projects.setupScript")}</span>
