@@ -5,6 +5,10 @@ export interface DesktopOpenChatFromNotificationEvent {
 
 export type DesktopThemeMode = "light" | "dark" | "system";
 
+export type DesktopWindowRole = "main" | "settings" | "workspace-tool";
+
+export const DESKTOP_WINDOW_ROLE_ARGUMENT_PREFIX = "--desktop-window-role=";
+
 export type DesktopWindowCommand =
   | "new-chat"
   | "open-settings"

@@ -27,6 +27,7 @@ import {
   writeNotificationPreferences,
 } from "../notification-preferences";
 import { translate } from "../platform/i18n";
+import { ensureMainWindow } from "./main-window";
 
 interface WindowNotificationState {
   activeChatId: string | null;
@@ -234,16 +235,12 @@ function showBackgroundChatNotification(input: {
   retainedNotifications.add(notification);
   notification.once("click", () => {
     retainedNotifications.delete(notification);
-    openChatFromNotification(window, input.chat);
+    openChatInMainWindow(input.chat);
   });
   notification.once("close", () => {
     retainedNotifications.delete(notification);
   });
   notification.show();
-}
-
-function openChatFromNotification(window: BrowserWindow, chat: Chat) {
-  openChatInMainWindow(chat, window);
 }
 
 /**
@@ -252,9 +249,9 @@ function openChatFromNotification(window: BrowserWindow, chat: Chat) {
  */
 export function openChatInMainWindow(
   chat: Pick<Chat, "id" | "projectId">,
-  window: BrowserWindow | null = notificationWindow(),
+  window: BrowserWindow = ensureMainWindow(),
 ) {
-  if (!window || window.isDestroyed()) return;
+  if (window.isDestroyed()) return;
 
   if (window.isMinimized()) {
     window.restore();
@@ -270,13 +267,6 @@ export function openChatInMainWindow(
     projectId: chat.projectId,
   };
   window.webContents.send(DESKTOP_OPEN_CHAT_FROM_NOTIFICATION_CHANNEL, payload);
-}
-
-function notificationWindow() {
-  return (
-    BrowserWindow.getAllWindows().find((window) => !window.isDestroyed()) ??
-    null
-  );
 }
 
 function markWindowBackgrounded(window: BrowserWindow) {

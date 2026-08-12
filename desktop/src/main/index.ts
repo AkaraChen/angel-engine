@@ -1,11 +1,11 @@
-import { app, BrowserWindow } from "electron";
+import { app } from "electron";
 import started from "electron-squirrel-startup";
 import fixPath from "fix-path";
 
 import { beforeQuit, bootstrap } from "./bootstrap";
 import { developmentUserDataPath } from "./platform/user-data";
 import { checkForUpdatesInBackground } from "./updater";
-import { createMainWindow } from "./windows/main-window";
+import { ensureMainWindow } from "./windows/main-window";
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -45,8 +45,6 @@ app.on("window-all-closed", () => {
 });
 
 app.on("activate", () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createMainWindow();
-  }
+  ensureMainWindow();
   checkForUpdatesInBackground();
 });

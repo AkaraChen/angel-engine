@@ -4,12 +4,12 @@ import type { MenuItemConstructorOptions } from "electron";
 import fs from "node:fs";
 import path from "node:path";
 import is from "@sindresorhus/is";
-import { app, BrowserWindow, Menu, nativeImage, Tray } from "electron";
+import { app, Menu, nativeImage, Tray } from "electron";
 import log from "electron-log/main";
 import type { DesktopTrayPreferences } from "../../../shared/tray";
 import { daemonClient } from "../../daemon/client";
 import { translate } from "../../platform/i18n";
-import { createMainWindow } from "../../windows/main-window";
+import { ensureMainWindow } from "../../windows/main-window";
 import { openChatInMainWindow } from "../../windows/notifications";
 import {
   countNeedsYou,
@@ -248,14 +248,6 @@ function showMainWindow() {
 function focusChatFromTray(chat: { id: string; projectId: string | null }) {
   const window = showMainWindow();
   openChatInMainWindow(chat, window);
-}
-
-function ensureMainWindow() {
-  const existing = BrowserWindow.getAllWindows().find(
-    (window) => !window.isDestroyed(),
-  );
-  if (existing) return existing;
-  return createMainWindow();
 }
 
 function loadTrayIcon() {

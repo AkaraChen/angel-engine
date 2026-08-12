@@ -1,24 +1,34 @@
 import type { Chat } from "@angel-engine/daemon-api/chat";
+import type { BrowserWindow } from "electron";
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({
-  clearHistory: vi.fn(() => ({ items: [] })),
-  listHistory: vi.fn(() => ({ items: [] })),
-  markRead: vi.fn(() => ({ items: [] })),
-  notificationCtor: vi.fn(),
-  readPreferences: vi.fn(() => ({ osEnabled: true })),
-  recordHistory: vi.fn((input: unknown) => ({ items: [input] })),
-  writePreferences: vi.fn(),
-}));
+const mocks = vi.hoisted(() => {
+  const notificationHandlers: Array<Map<string, () => void>> = [];
+
+  return {
+    clearHistory: vi.fn(() => ({ items: [] })),
+    ensureMainWindow: vi.fn(),
+    listHistory: vi.fn(() => ({ items: [] })),
+    markRead: vi.fn(() => ({ items: [] })),
+    notificationCtor: vi.fn(),
+    notificationHandlers,
+    readPreferences: vi.fn(() => ({ osEnabled: true })),
+    recordHistory: vi.fn((input: unknown) => ({ items: [input] })),
+    writePreferences: vi.fn(),
+  };
+});
 
 vi.mock("electron", () => {
   class Notification {
     static isSupported = () => true;
     constructor(input: unknown) {
       mocks.notificationCtor(input);
+      mocks.notificationHandlers.push(new Map());
     }
-    once() {}
+    once(event: string, handler: () => void) {
+      mocks.notificationHandlers.at(-1)?.set(event, handler);
+    }
     show() {}
   }
 
@@ -40,6 +50,10 @@ vi.mock("../notification-history", () => ({
   listNotificationHistory: mocks.listHistory,
   markNotificationHistoryRead: mocks.markRead,
   recordNotificationHistoryItem: mocks.recordHistory,
+}));
+
+vi.mock("./main-window", () => ({
+  ensureMainWindow: mocks.ensureMainWindow,
 }));
 
 vi.mock("../notification-preferences", () => ({
@@ -82,19 +96,34 @@ const chat = {
   title: "Demo chat",
 } as Chat;
 
-function backgroundWindow() {
+function backgroundWindow(isDestroyed = () => false, send = vi.fn()) {
   return {
-    isDestroyed: () => false,
+    isDestroyed,
     isMinimized: () => true,
     isVisible: () => false,
     on: () => undefined,
-    webContents: { send: vi.fn() },
-  } as never;
+    webContents: { send },
+  } as unknown as BrowserWindow;
+}
+
+function mainWindow(send = vi.fn()) {
+  return {
+    focus: vi.fn(),
+    isDestroyed: () => false,
+    isMinimized: () => false,
+    isVisible: () => true,
+    restore: vi.fn(),
+    show: vi.fn(),
+    webContents: { send },
+  };
 }
 
 describe("desktop notifications", () => {
   beforeEach(() => {
+    mocks.ensureMainWindow.mockReset();
+    mocks.ensureMainWindow.mockReturnValue(mainWindow());
     mocks.notificationCtor.mockClear();
+    mocks.notificationHandlers.length = 0;
     mocks.recordHistory.mockClear();
     mocks.writePreferences.mockClear();
     mocks.readPreferences.mockReturnValue({ osEnabled: true });
@@ -153,5 +182,50 @@ describe("desktop notifications", () => {
     expect(mocks.notificationCtor).not.toHaveBeenCalled();
     expect(getNotificationPreferences()).toEqual({ osEnabled: false });
     expect(mocks.writePreferences).toHaveBeenCalledWith({ osEnabled: false });
+  });
+
+  it("opens a new main window instead of navigating the auxiliary host", () => {
+    const auxiliarySend = vi.fn();
+    const mainSend = vi.fn();
+    const auxiliary = backgroundWindow(() => false, auxiliarySend);
+    const main = mainWindow(mainSend);
+    mocks.ensureMainWindow.mockReturnValue(main);
+
+    notifyChatTurnCompleted({
+      attentionId: "run-5:done",
+      body: "All good",
+      chat,
+      window: auxiliary,
+    });
+    mocks.notificationHandlers.at(-1)?.get("click")?.();
+
+    expect(mocks.ensureMainWindow).toHaveBeenCalledOnce();
+    expect(auxiliarySend).not.toHaveBeenCalled();
+    expect(mainSend).toHaveBeenCalledWith(
+      "desktop-window:notification:open-chat",
+      { chatId: "chat-1", projectId: "project-1" },
+    );
+  });
+
+  it("resolves the main window again when the notification is clicked", () => {
+    let destroyed = false;
+    const originalSend = vi.fn();
+    const replacementSend = vi.fn();
+    const originalMain = backgroundWindow(() => destroyed, originalSend);
+    const replacementMain = mainWindow(replacementSend);
+
+    notifyChatTurnCompleted({
+      attentionId: "run-6:done",
+      body: "All good",
+      chat,
+      window: originalMain,
+    });
+    destroyed = true;
+    mocks.ensureMainWindow.mockReturnValue(replacementMain);
+    mocks.notificationHandlers.at(-1)?.get("click")?.();
+
+    expect(mocks.ensureMainWindow).toHaveBeenCalledOnce();
+    expect(originalSend).not.toHaveBeenCalled();
+    expect(replacementSend).toHaveBeenCalledOnce();
   });
 });

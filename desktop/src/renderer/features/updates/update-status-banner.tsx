@@ -36,10 +36,6 @@ export function UpdateStatusBanner() {
   const bannerKey = statusKey(status);
   if (dismissedKey === bannerKey) return null;
 
-  const busy =
-    status.state === "checking" ||
-    status.state === "downloading" ||
-    status.state === "installing";
   const title = updateStateTitle(status, t);
   const detail = updateStateDetail(status, t, (epochMs) =>
     formatDateTime(new Date(epochMs).toISOString()),
@@ -65,7 +61,7 @@ export function UpdateStatusBanner() {
         )}
       >
         <div className="flex items-start gap-2.5">
-          <BannerIcon busy={busy} state={status.state} />
+          <BannerIcon state={status.state} />
           <div className="min-w-0 flex-1">
             <p className="text-sm leading-snug font-medium">{title}</p>
             {detail ? (
@@ -129,16 +125,9 @@ export function UpdateStatusBanner() {
   );
 }
 
-function BannerIcon({
-  busy,
-  state,
-}: {
-  busy: boolean;
-  state: DesktopUpdateStatus["state"];
-}) {
+function BannerIcon({ state }: { state: DesktopUpdateStatus["state"] }) {
   const className = cn(
     "mt-0.5 size-4 shrink-0",
-    busy && "animate-spin motion-reduce:animate-none",
     state === "error" && "text-status-danger",
     state === "downloaded" && "text-primary",
   );

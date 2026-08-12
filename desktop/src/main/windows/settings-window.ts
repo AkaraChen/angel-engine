@@ -39,6 +39,7 @@ export function openSettingsWindow() {
       minWidth: settingsWindowMinimumBounds.width,
       title: translate("workspace.settings"),
     },
+    role: "settings",
     stateFileName: settingsWindowStateFileName,
   });
 

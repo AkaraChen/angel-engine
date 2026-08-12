@@ -5,6 +5,7 @@ import type {
   DesktopUpdateDownloadedEvent,
   DesktopUpdateMessageEvent,
   DesktopWindowCommand,
+  DesktopWindowRole,
 } from "../../shared/desktop-window";
 import type {
   WorkspaceToolContextSetInput,
@@ -53,6 +54,7 @@ import {
   DESKTOP_UPDATE_MESSAGE_CHANNEL,
   DESKTOP_UPDATE_STATUS_CHANGED_CHANNEL,
   DESKTOP_UPDATE_STATUS_GET_CHANNEL,
+  DESKTOP_WINDOW_ROLE_ARGUMENT_PREFIX,
   DESKTOP_WINDOW_CLOSE_CURRENT_CHANNEL,
   DESKTOP_WINDOW_CONTENT_READY_CHANNEL,
   DESKTOP_WORKSPACE_TOOL_CONTEXT_SET_CHANNEL,
@@ -77,6 +79,7 @@ import {
 
 export function exposeDesktopWindowBridge() {
   contextBridge.exposeInMainWorld("desktopWindow", {
+    role: desktopWindowRole(process.argv),
     closeCurrent() {
       ipcRenderer.send(DESKTOP_WINDOW_CLOSE_CURRENT_CHANNEL);
     },
@@ -354,6 +357,20 @@ export function exposeDesktopWindowBridge() {
       return ipcRenderer.invoke(DESKTOP_WORKSPACE_DIFF_BASE_SET_CHANNEL, input);
     },
   });
+}
+
+function desktopWindowRole(argv: string[]): DesktopWindowRole {
+  const value = argv
+    .find((argument) =>
+      argument.startsWith(DESKTOP_WINDOW_ROLE_ARGUMENT_PREFIX),
+    )
+    ?.slice(DESKTOP_WINDOW_ROLE_ARGUMENT_PREFIX.length);
+
+  if (value === "main" || value === "settings" || value === "workspace-tool") {
+    return value;
+  }
+
+  throw new Error(`Invalid desktop window role: ${String(value)}`);
 }
 
 function isDesktopWindowCommandEvent(
