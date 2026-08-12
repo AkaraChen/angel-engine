@@ -1,7 +1,7 @@
 import { Cause, Effect, Exit } from "effect";
 import { describe, expect, it } from "vitest";
 
-import { DaemonError } from "../../platform/errors";
+import { DaemonError } from "../../../../../platform/errors";
 import { listGitHubRepositories, listGitHubRepositoryOwners } from "./repos";
 
 const viewer = { login: "octocat" };

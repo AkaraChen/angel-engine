@@ -14,6 +14,16 @@ import {
   type GhRunner,
   runGhCli,
 } from "./internal/gh-cli";
+import { listGitHubWorkItems } from "./internal/list";
+import {
+  listGitHubNamespaces,
+  listGitHubRepositoryIdentities,
+} from "./internal/repos";
+import {
+  getGitHubWorkItem,
+  getGitHubWorkItemByUrl,
+  parseGitHubRepositoryUrl,
+} from "./internal/resolve";
 
 const PROVIDER_ID = "github";
 const PUBLIC_HOSTS = new Set(["github.com", "www.github.com"]);
@@ -154,7 +164,15 @@ export function createGitHubPlugin(
       id: PROVIDER_ID,
       displayName: "GitHub",
       hosts: ["github.com"],
-      capabilities: ["provider.auth"],
+      capabilities: [
+        "provider.auth",
+        "discovery.listNamespaces",
+        "discovery.listRepositories",
+        "repositoryIdentity",
+        "workItems.get",
+        "workItems.getByUrl",
+        "workItems.list",
+      ],
     },
     discovery: {
       match: matchGitHub,
@@ -164,14 +182,29 @@ export function createGitHubPlugin(
           context,
           resolvedDependencies,
         ),
+      listNamespaces: (input, context) =>
+        listGitHubNamespaces(input, context, resolvedDependencies),
+      listRepositories: (input, context) =>
+        listGitHubRepositoryIdentities(input, context, resolvedDependencies),
     },
     auth: {
       status: (input, context) =>
         authenticationStatus(input, context, resolvedDependencies),
     },
     git: {
-      parseUrl: () => null,
+      parseUrl: parseGitHubRepositoryUrl,
       parseChangeRequestUrl: () => null,
+    },
+    repositories: {
+      parseUrl: parseGitHubRepositoryUrl,
+    },
+    workItems: {
+      get: (input, context) =>
+        getGitHubWorkItem(input, context, resolvedDependencies),
+      getByUrl: (input, context) =>
+        getGitHubWorkItemByUrl(input, context, resolvedDependencies),
+      list: (input, context) =>
+        listGitHubWorkItems(input, context, resolvedDependencies),
     },
   };
 }
