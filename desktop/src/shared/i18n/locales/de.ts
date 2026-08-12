@@ -1,6 +1,6 @@
 import type { LocaleResource } from "./schema";
 import { scheduleDe } from "./schedule";
-import { pullRequestDe } from "./pull-request";
+import { changeRequestDe } from "./change-request";
 
 export const de = {
   translation: {
@@ -175,7 +175,7 @@ export const de = {
             "Fix-Turn mit gekürzter Fehlerlog-Zusammenfassung gestartet.",
           fixing: "Fix wird gestartet…",
           openCheck: "Check-Details öffnen",
-          openPullRequest: "Pull Request öffnen",
+          openPullRequest: "Änderungsanfrage öffnen",
           refresh: "Checks aktualisieren",
           summaryFail: "{{count}} fehlgeschlagen",
           summaryPass: "{{count}} bestanden",
@@ -234,16 +234,16 @@ export const de = {
           ahead: "{{count}} Commits vor {{base}}",
           base: "Basis-Branch",
           bodyPlaceholder: "Änderung beschreiben",
-          create: "Pull Request erstellen",
-          created: "Pull Request #{{number}} erstellt",
-          creating: "Pull Request wird erstellt…",
+          create: "Änderungsanfrage erstellen",
+          created: "Änderungsanfrage #{{number}} erstellt",
+          creating: "Änderungsanfrage wird erstellt…",
           description:
             "Prüfe Branches und Beschreibung vor der Veröffentlichung.",
-          existing: "Pull Request #{{number}} existiert bereits",
+          existing: "Änderungsanfrage #{{number}} existiert bereits",
           noCommits: "Zwischen Basis- und Head-Branch gibt es keine Commits.",
           openInBrowser: "Im Browser öffnen",
           pushedRetry:
-            "Branch gepusht. Erstellung des Pull Requests erneut versuchen.",
+            "Branch gepusht. Erstellung des Änderungsanfragen erneut versuchen.",
           pushing: "Branch wird gepusht…",
           preview: {
             additions: "Hinzugefügt",
@@ -252,19 +252,19 @@ export const de = {
             copied: "Kopiert",
             copyLink: "Link kopieren",
             deletions: "Gelöscht",
-            description: "Pull Request vor dem Öffnen im Browser prüfen.",
+            description: "Änderungsanfrage vor dem Öffnen im Browser prüfen.",
             emptyBody: "Keine Beschreibung vorhanden.",
             filesChanged: "Geänderte Dateien",
             loadFailed: "Pull-Request-Details konnten nicht geladen werden.",
             open: "Offen",
-            title: "Pull Request #{{number}}",
+            title: "Änderungsanfrage #{{number}}",
           },
           retry: "Erneut versuchen",
-          short: "PR erstellen",
-          title: "Pull Request erstellen",
+          short: "Änderungsanfrage erstellen",
+          title: "Änderungsanfrage erstellen",
           titlePlaceholder: "Pull-Request-Titel",
-          view: "Pull Request #{{number}} anzeigen",
-          viewShort: "PR #{{number}}",
+          view: "Änderungsanfrage #{{number}} anzeigen",
+          viewShort: "Änderungsanfrage #{{number}}",
           willPushMany: "{{count}} Commits werden nach origin/{{head}} gepusht",
           willPushOne: "1 Commit wird nach origin/{{head}} gepusht",
         },
@@ -275,12 +275,12 @@ export const de = {
           fileUnavailable: "Datei nicht verfügbar",
           gitUnavailable: "Git nicht verfügbar",
           noChanges: "Keine Änderungen",
-          noChecks: "Keine Checks für diesen Pull Request",
+          noChecks: "Keine Checks für diesen Änderungsanfrage",
           noDiffForFile: "Kein Diff für Datei",
           noProcesses: "Keine Agent-Unterprozesse aktiv",
-          noPullRequest: "Kein Pull Request für diesen Branch",
+          noPullRequest: "Kein Änderungsanfrage für diesen Branch",
           noPullRequestDetail:
-            "Öffne oder binde einen PR auf dem aktuellen Branch, um CI-Checks zu laden.",
+            "Öffne oder binde einen Änderungsanfrage auf dem aktuellen Branch, um CI-Checks zu laden.",
           noWorkspace: "Kein Workspace für diesen Chat",
           notGitRepository: "Kein Git-Repository",
           processesUnavailable: "Prozesse nicht verfügbar",
@@ -319,7 +319,7 @@ export const de = {
           },
           pushing: "Wird gepusht",
         },
-        pullRequest: pullRequestDe,
+        pullRequest: changeRequestDe,
         listeningPorts: "Lauschende Ports",
         resizeFileTree: "Dateibaumbreite anpassen",
         resizeGitList: "Breite der Änderungsliste anpassen",
@@ -330,7 +330,7 @@ export const de = {
           gitChanges: "Git-Änderungen",
           newTab: "Neuer Tab",
           processes: "Prozesse",
-          pullRequest: "Pull Request",
+          pullRequest: "Änderungsanfrage",
           tabs: "Tabs",
           tools: "Werkzeuge",
           workspaceTabs: "Workspace-Tabs",
@@ -806,13 +806,15 @@ export const de = {
       agentMode: "Agent-Modus",
       agentSettings: "Agent-Einstellungen",
       attachFiles: "Dateien anhängen",
-      attachGitHub: "GitHub-Issue oder PR anhängen",
-      attachGitHubConfirm: "Anhängen",
-      attachGitHubEmpty: "Keine Issues oder PRs gefunden.",
-      attachGitHubLoading: "Wird geladen…",
-      attachGitHubPlaceholder: "Issues und PRs durchsuchen…",
-      attachGitHubTitle: "Von GitHub anhängen",
-      attachGitHubUpdated: "aktualisiert {{time}}",
+      attachChangeRequest: "Änderungsanfrage oder Arbeitselement anhängen",
+      attachChangeRequestConfirm: "Anhängen",
+      attachChangeRequestEmpty:
+        "Keine Arbeitselemente oder Änderungsanfragen gefunden.",
+      attachChangeRequestLoading: "Wird geladen…",
+      attachChangeRequestPlaceholder:
+        "Arbeitselemente und Änderungsanfragen durchsuchen…",
+      attachChangeRequestTitle: "Aus der Quellcodeverwaltung anhängen",
+      attachChangeRequestUpdated: "aktualisiert {{time}}",
       attachmentErrors: {
         accept: "Keine Dateien entsprechen den erlaubten Typen.",
         fileRead: "Die ausgewählte Datei konnte nicht gelesen werden.",
@@ -839,20 +841,26 @@ export const de = {
       fileTypeBlocked: "Dateityp blockiert",
       fileTooLarge: "Datei ist zu groß",
       files: "Dateien",
+      configureSourceControl: "Quellcodeverwaltung konfigurieren",
       fromLink: "Aus Link",
       fromLinkPlaceholder:
-        "GitHub- oder Linear-Issue-Link einfügen oder GitHub durchsuchen",
-      githubErrors: {
-        cliMissing: "GitHub CLI (gh) ist nicht installiert oder nicht im PATH.",
+        "Link aus der Quellcodeverwaltung oder von Linear einfügen oder die Quellcodeverwaltung durchsuchen",
+      sourceControlUnavailable:
+        "Für dieses Projekt ist kein Quellcodeverwaltungsanbieter aktiv.",
+      sourceControlErrors: {
+        cliMissing:
+          "Die CLI der Quellcodeverwaltung ist nicht installiert oder nicht im PATH.",
         cliUnauthenticated:
-          "GitHub CLI ist nicht authentifiziert. Führe `gh auth login` aus.",
-        fetchFailed: "GitHub-Element konnte nicht geladen werden.",
-        notFound: "GitHub-Issue oder PR wurde nicht gefunden.",
+          "Der Anbieter der Quellcodeverwaltung ist nicht authentifiziert.",
+        fetchFailed:
+          "Das Element der Quellcodeverwaltung konnte nicht geladen werden.",
+        notFound:
+          "Das Arbeitselement oder die Änderungsanfrage wurde nicht gefunden.",
         urlUnsupported:
-          "Nur github.com Issue- oder PR-URLs werden unterstützt.",
+          "Diese URL der Quellcodeverwaltung wird nicht unterstützt.",
       },
-      githubIssue: "Issue",
-      githubPullRequest: "Pull request",
+      workItem: "Arbeitselement",
+      changeRequest: "Änderungsanfrage",
       linearConnectAction: "Linear verbinden",
       linearConnectDescription:
         "Verbinde Linear, bevor dieses Issue aufgelöst wird.",
@@ -892,16 +900,16 @@ export const de = {
         linearNotFound: "Linear-Issue wurde nicht gefunden.",
         linearUnauthorized: "Linear hat das konfigurierte API-Token abgelehnt.",
         prForkUnsupported:
-          "Pull Requests aus Forks werden noch nicht unterstützt.",
+          "Änderungsanfragen aus Forks werden noch nicht unterstützt.",
         unsupported: "Dieser Aufgabenlink wird nicht unterstützt.",
       },
       taskLinkHintComplete:
-        "Füge einen vollständigen Link zu einem GitHub-Issue, Pull Request oder Linear-Issue ein.",
-      taskLinkHintGitHubPath:
-        "Dies ist ein GitHub-Link, aber kein Issue oder Pull Request.",
+        "Füge einen vollständigen Link zu einem Arbeitselement, einer Änderungsanfrage oder einem Linear-Arbeitselement ein.",
+      taskLinkHintSourceControlPath:
+        "Dies ist ein Link der Quellcodeverwaltung, aber kein Arbeitselement oder keine Änderungsanfrage.",
       taskLinkHintLinearPath: "Dies ist ein Linear-Link, aber kein Issue.",
       taskLinkHintSupported:
-        "Unterstützt werden GitHub-Issues, GitHub-Pull-Requests und Linear-Issues.",
+        "Unterstützt werden Arbeitselemente und Änderungsanfragen der Quellcodeverwaltung sowie Linear-Arbeitselemente.",
       taskLinkStateClosed: "Geschlossen",
       taskLinkStateMerged: "Zusammengeführt",
       taskLinkStateOpen: "Offen",
@@ -1066,17 +1074,19 @@ export const de = {
       clone: "Klonen",
       cloneTo: "Klonen nach {{path}}",
       description:
-        "Wähle ein Repository auf GitHub oder füge eine Git-URL ein.",
+        "Wähle ein Repository auf Quellcodeverwaltung oder füge eine Git-URL ein.",
+      discoveryUnavailable:
+        "Zum Durchsuchen von Repositories ist ein aktiver Quellcodeverwaltungsanbieter erforderlich.",
       failedTitle: "Klonen fehlgeschlagen",
       forkBadge: "Fork",
       loadingOwners: "Konten werden geladen…",
       loadingRepositories: "Repositories werden geladen…",
       noMatches: "Keine Repositories passen zu „{{query}}“",
-      noOwners: "Keine GitHub-Konten verfügbar",
+      noOwners: "Keine Quellcodeverwaltung-Konten verfügbar",
       noRepositories: "Keine Repositories",
       openProject: "Projekt öffnen",
       owners: "Konten",
-      ownersFailed: "GitHub-Konten konnten nicht geladen werden",
+      ownersFailed: "Quellcodeverwaltung-Konten konnten nicht geladen werden",
       readyTitle: "Repository bereit",
       privateBadge: "Privat",
       progressTitle: "Repository wird geklont",
@@ -1089,12 +1099,12 @@ export const de = {
       stageCompleted: "Fertig",
       stagePreparing: "Ziel vorbereiten",
       stageRegistering: "Projekt registrieren",
-      tabGitHub: "GitHub",
+      tabSourceControl: "Quellcodeverwaltung",
       tabUrl: "Git-URL",
       title: "Repository klonen",
       urlHint: "https, ssh oder owner/repo",
       urlLabel: "Repository-URL",
-      urlPlaceholder: "https://github.com/owner/repo",
+      urlPlaceholder: "https://example.com/owner/repo",
     },
     projects: {
       chooseFolder: "Projektordner auswählen",
@@ -1130,7 +1140,7 @@ export const de = {
       commandPalette: "Befehlspalette",
       commandSessions: "Sitzungen",
       commandImportSession: "Sitzungen ins Projekt importieren",
-      commandShepherdPr: "Shepherd PR",
+      commandShepherdChangeRequest: "Shepherd Änderungsanfrage",
     },
     promptInput: {
       addPhotosOrFiles: "Fotos oder Dateien hinzufügen",

@@ -1,7 +1,8 @@
 import type {
-  PullRequestCreateResult,
-  PullRequestPreflight,
-} from "@angel-engine/daemon-api/github";
+  CapabilityMatrix,
+  ChangeRequest,
+  ChangeRequestCreatePreflightResult,
+} from "@angel-engine/daemon-api/source-control";
 import type { ApiClient } from "@/platform/api-client";
 
 import { GitPullRequest } from "@phosphor-icons/react";
@@ -32,6 +33,9 @@ import { WorkspaceToolBanner } from "@/app/workspace/workspace-tool-layout";
 import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
 import { chatMetadataQueryOptions } from "@/features/chat/api/queries";
 import { Button } from "@/components/ui/button";
+import { useSourceControlActivation } from "@/features/source-control/api/use-activation";
+import { CapabilityGate } from "@/features/source-control/components/capability-gate";
+import { capabilityState } from "@/features/source-control/model";
 import {
   Dialog,
   DialogContent,
@@ -67,22 +71,35 @@ interface PullRequestDraft {
   title: string;
 }
 
+interface WorkspaceChangeRequestPreflight
+  extends ChangeRequestCreatePreflightResult {
+  availableBaseBranches: readonly string[];
+  base: string;
+  body: string;
+  canCreate: boolean;
+  head: string;
+  reason?: "pull-request-no-commits";
+  title: string;
+}
+
 const pullRequestDrafts = new Map<string, PullRequestDraft>();
 
 export function WorkspaceCreatePullRequestController({
   api,
   contextKey,
+  projectId,
   root,
 }: {
   api: ApiClient;
   contextKey: string | null;
+  projectId: string | null;
   root: string;
 }) {
   const { selectTab } = useWorkspaceToolSurface();
   const [open, setOpen] = useState(false);
   const [previewTarget, setPreviewTarget] =
     useState<ExistingPullRequestTarget | null>(null);
-  const preflightQuery = useWorkspaceGitPullRequestPreflight(api, root);
+  const preflightQuery = useWorkspaceGitPullRequestPreflight(api, projectId);
   const preflight = preflightQuery.data;
   const refetchPreflight = preflightQuery.refetch;
   const openDialog = useCallback(() => {
@@ -93,7 +110,7 @@ export function WorkspaceCreatePullRequestController({
     void (async () => {
       const resolvedPreflight = preflight ?? (await refetchPreflight()).data;
       executeCreatePullRequestAction({
-        existing: resolvedPreflight?.existing,
+        existing: toExistingTarget(resolvedPreflight?.existing ?? null),
         openDialog,
         openPreview: (target) => {
           setOpen(false);
@@ -116,6 +133,7 @@ export function WorkspaceCreatePullRequestController({
         api={api}
         contextKey={contextKey}
         open={open}
+        projectId={projectId}
         root={root}
         onOpenExternal={openPullRequestInSystemBrowser}
         onOpenChange={setOpen}
@@ -123,7 +141,7 @@ export function WorkspaceCreatePullRequestController({
       <WorkspacePullRequestPreviewDialog
         api={api}
         open={previewTarget !== null}
-        root={root}
+        projectId={projectId}
         target={previewTarget}
         onOpenExternal={openPullRequestInSystemBrowser}
         onOpenChange={(next) => {
@@ -136,57 +154,159 @@ export function WorkspaceCreatePullRequestController({
 
 export function useWorkspaceGitPullRequestPreflight(
   api: ApiClient,
-  root: string,
+  projectId: string | null,
+  targetBranch?: string,
+  enabled = true,
 ) {
-  return useQuery({
-    queryFn: () => api.github.workspacePullRequestPreflight(root),
-    queryKey: queryKeys.github.pullRequestPreflight(root),
+  const sourceControl = useSourceControlActivation(projectId);
+  const supportsPreflight = capabilityState(
+    sourceControl.capabilities,
+    "changeRequests.preflight",
+  ).supported;
+  const supportsList = capabilityState(
+    sourceControl.capabilities,
+    "changeRequests.list",
+  ).supported;
+  const supportsTemplate = capabilityState(
+    sourceControl.capabilities,
+    "repositoryIdentity",
+  ).supported;
+  const ready =
+    enabled &&
+    sourceControl.status === "active" &&
+    sourceControl.projectPath !== null &&
+    sourceControl.providerIdentity !== null;
+  const preflightQuery = useQuery({
+    enabled: ready && supportsPreflight && supportsList,
+    queryFn: () =>
+      api.sourceControl.changeRequestPreflight(
+        sourceControl.projectPath ?? "",
+        targetBranch,
+      ),
+    queryKey: queryKeys.sourceControl.changeRequestPreflight(
+      sourceControl.providerIdentity,
+      null,
+      targetBranch ?? null,
+    ),
+    placeholderData: keepPreviousData,
     retry: false,
     staleTime: 5_000,
   });
+  const templateQuery = useQuery({
+    enabled: ready && supportsTemplate,
+    queryFn: () =>
+      api.sourceControl.changeRequestTemplate(sourceControl.projectPath ?? ""),
+    queryKey: queryKeys.sourceControl.changeRequestTemplate(
+      sourceControl.providerIdentity,
+    ),
+    staleTime: 30_000,
+  });
+  const data = useMemo<WorkspaceChangeRequestPreflight | undefined>(() => {
+    const preflight = preflightQuery.data;
+    if (!preflight) return undefined;
+    return {
+      ...preflight,
+      availableBaseBranches: preflight.availableTargetBranches,
+      base: preflight.targetBranch,
+      body: templateQuery.data?.body ?? "",
+      canCreate: preflight.aheadCount > 0 || preflight.existing !== null,
+      head: preflight.sourceBranch,
+      reason:
+        preflight.aheadCount === 0 && preflight.existing === null
+          ? "pull-request-no-commits"
+          : undefined,
+      title: titleFromBranch(preflight.sourceBranch),
+    };
+  }, [preflightQuery.data, templateQuery.data?.body]);
+  return {
+    ...preflightQuery,
+    capabilities: sourceControl.capabilities,
+    data,
+    projectPath: sourceControl.projectPath,
+    providerActive: sourceControl.status === "active",
+    refetch: async () => {
+      if (!ready || !supportsPreflight || !supportsList) {
+        return { data: undefined };
+      }
+      const [preflight] = await Promise.all([
+        preflightQuery.refetch(),
+        supportsTemplate ? templateQuery.refetch() : Promise.resolve(),
+      ]);
+      return preflight;
+    },
+    refetchActivation: () => sourceControl.refetch(),
+  };
 }
 
 export function WorkspaceGitPullRequestAction({
+  capabilities,
   preflight,
+  providerActive,
+  onRemediate,
 }: {
-  preflight?: PullRequestPreflight;
+  capabilities: CapabilityMatrix;
+  preflight?: WorkspaceChangeRequestPreflight;
+  providerActive: boolean;
+  onRemediate: () => void;
 }) {
   const { t } = useTranslation();
-  if (!preflight?.existing && !preflight?.canCreate) {
+  const createCapability = capabilityState(
+    capabilities,
+    "changeRequests.create",
+  );
+  if (
+    !providerActive ||
+    (!preflight?.existing &&
+      !preflight?.canCreate &&
+      createCapability.supported)
+  ) {
     return null;
   }
 
-  const existing = preflight.existing;
+  const existing = preflight?.existing ?? null;
   const label = existing
     ? t("workspace.tools.createPullRequest.viewShort", {
-        number: existing.number,
+        number: existing.number ?? Number(existing.id),
       })
     : t("workspace.tools.createPullRequest.short");
   const tooltip = existing
     ? `${t("workspace.tools.createPullRequest.view", {
-        number: existing.number,
-      })} · ${existing.isDraft ? t("common.draft").toLocaleLowerCase() : existing.state}`
+        number: existing.number ?? Number(existing.id),
+      })} · ${existing.draft ? t("common.draft").toLocaleLowerCase() : existing.state}`
     : t("workspace.tools.createPullRequest.create");
 
+  const button = (
+    <Button
+      aria-label={label}
+      className={cn(
+        "w-6 px-0 @[250px]:w-auto @[250px]:px-2",
+        existing?.draft && "text-muted-foreground",
+      )}
+      size="xs"
+      title={tooltip}
+      type="button"
+      variant={existing ? "ghost" : "outline"}
+      onClick={() => createPullRequestAction.execute()}
+    >
+      <GitPullRequest />
+      <span className="hidden @[250px]:inline">{label}</span>
+    </Button>
+  );
+  if (!existing && !createCapability.supported) {
+    return (
+      <CapabilityGate
+        capabilities={capabilities}
+        capability="changeRequests.create"
+        remediationLabel={t("common.retry")}
+        onRemediate={onRemediate}
+      >
+        {button}
+      </CapabilityGate>
+    );
+  }
   return (
     <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          aria-label={label}
-          className={cn(
-            "w-6 px-0 @[250px]:w-auto @[250px]:px-2",
-            existing?.isDraft && "text-muted-foreground",
-          )}
-          size="xs"
-          title={tooltip}
-          type="button"
-          variant={existing ? "ghost" : "outline"}
-          onClick={() => createPullRequestAction.execute()}
-        >
-          <GitPullRequest />
-          <span className="hidden @[250px]:inline">{label}</span>
-        </Button>
-      </TooltipTrigger>
+      <TooltipTrigger asChild>{button}</TooltipTrigger>
       <TooltipContent>{tooltip}</TooltipContent>
     </Tooltip>
   );
@@ -196,6 +316,7 @@ function WorkspaceCreatePullRequestDialog({
   api,
   contextKey,
   open,
+  projectId,
   root,
   onOpenExternal,
   onOpenChange,
@@ -203,6 +324,7 @@ function WorkspaceCreatePullRequestDialog({
   api: ApiClient;
   contextKey: string | null;
   open: boolean;
+  projectId: string | null;
   root: string;
   onOpenExternal: (url: string) => void;
   onOpenChange: (open: boolean) => void;
@@ -215,7 +337,7 @@ function WorkspaceCreatePullRequestDialog({
   const [draft, setDraft] = useState(false);
   const [title, setTitle] = useState("");
   const [failure, setFailure] = useState<
-    Extract<PullRequestCreateResult, { status: "failed" }> | undefined
+    { error: Error; pushed: boolean } | undefined
   >();
   const [skipPush, setSkipPush] = useState(false);
   const titleDirty = useRef(false);
@@ -231,15 +353,12 @@ function WorkspaceCreatePullRequestDialog({
       enabled: open && chatId !== null,
     }),
   });
-  const preflightQuery = useQuery({
-    enabled: open,
-    queryFn: () =>
-      api.github.workspacePullRequestPreflight(root, base || undefined),
-    queryKey: queryKeys.github.pullRequestPreflight(root, base || undefined),
-    placeholderData: keepPreviousData,
-    retry: false,
-    staleTime: 5_000,
-  });
+  const preflightQuery = useWorkspaceGitPullRequestPreflight(
+    api,
+    projectId,
+    base || undefined,
+    open,
+  );
   const preflight = preflightQuery.data;
   const draftKey = preflight ? `${root}\0${preflight.head}` : null;
   const preferredTitle =
@@ -289,12 +408,13 @@ function WorkspaceCreatePullRequestDialog({
 
   const createMutation = useMutation({
     mutationFn: () =>
-      api.github.createWorkspacePullRequest({
-        base,
+      api.sourceControl.createChangeRequest({
         body,
         draft,
-        root,
-        skipPush,
+        projectPath: preflightQuery.projectPath ?? "",
+        publish: preflight?.needsPush === true && !skipPush,
+        sourceBranch: preflight?.sourceBranch ?? "",
+        targetBranch: base,
         title,
       }),
   });
@@ -304,27 +424,30 @@ function WorkspaceCreatePullRequestDialog({
   }, [base, body, draft, draftKey, onOpenChange, title]);
   const submit = useCallback(async () => {
     if (createMutation.isPending || title.trim().length === 0) return;
-    const result = await createMutation.mutateAsync();
-    if (result.status === "failed") {
-      setFailure(result);
-      if (result.pushed) setSkipPush(true);
+    let result: ChangeRequest;
+    try {
+      result = await createMutation.mutateAsync();
+    } catch (error) {
+      const pushed = preflight?.needsPush === true && !skipPush;
+      setFailure({
+        error: error instanceof Error ? error : new Error(String(error)),
+        pushed,
+      });
+      if (pushed) setSkipPush(true);
       return;
     }
     if (draftKey) pullRequestDrafts.delete(draftKey);
     await queryClient.invalidateQueries({
-      queryKey: queryKeys.github.pullRequestPreflight(root),
+      queryKey: queryKeys.sourceControl.all(),
     });
     toast({
       action: {
         label: t("workspace.tools.createPullRequest.openInBrowser"),
-        onClick: () => onOpenExternal(result.record.url),
+        onClick: () => onOpenExternal(result.webUrl),
       },
-      title: t(
-        result.status === "existing"
-          ? "workspace.tools.createPullRequest.existing"
-          : "workspace.tools.createPullRequest.created",
-        { number: result.record.number },
-      ),
+      title: t("workspace.tools.createPullRequest.created", {
+        number: result.number ?? Number(result.id),
+      }),
       variant: "success",
     });
     onOpenChange(false);
@@ -334,7 +457,8 @@ function WorkspaceCreatePullRequestDialog({
     onOpenExternal,
     onOpenChange,
     queryClient,
-    root,
+    preflight,
+    skipPush,
     t,
     title,
     toast,
@@ -344,10 +468,10 @@ function WorkspaceCreatePullRequestDialog({
     if (failure?.pushed)
       return t("workspace.tools.createPullRequest.pushedRetry");
     if (createMutation.isPending)
-      return skipPush
+      return skipPush || !preflight?.needsPush
         ? t("workspace.tools.createPullRequest.creating")
         : t("workspace.tools.createPullRequest.pushing");
-    if (!preflight) return "";
+    if (!preflight || !preflight.needsPush) return "";
     return t(
       preflight.aheadCount === 1
         ? "workspace.tools.createPullRequest.willPushOne"
@@ -366,7 +490,8 @@ function WorkspaceCreatePullRequestDialog({
           <DialogTitle>
             {preflight?.existing
               ? t("workspace.tools.createPullRequest.view", {
-                  number: preflight.existing.number,
+                  number:
+                    preflight.existing.number ?? Number(preflight.existing.id),
                 })
               : t("workspace.tools.createPullRequest.title")}
           </DialogTitle>
@@ -386,7 +511,8 @@ function WorkspaceCreatePullRequestDialog({
           <div className="grid gap-4">
             <WorkspaceToolBanner tone="attention">
               {t("workspace.tools.createPullRequest.existing", {
-                number: preflight.existing.number,
+                number:
+                  preflight.existing.number ?? Number(preflight.existing.id),
               })}
             </WorkspaceToolBanner>
             <DialogFooter>
@@ -399,7 +525,7 @@ function WorkspaceCreatePullRequestDialog({
                   openExistingPullRequest({
                     close: () => onOpenChange(false),
                     openExternal: onOpenExternal,
-                    url: preflight.existing?.url ?? "",
+                    url: preflight.existing?.webUrl ?? "",
                   });
                 }}
               >
@@ -497,23 +623,57 @@ function WorkspaceCreatePullRequestDialog({
               >
                 {t("common.cancel")}
               </Button>
-              <Button
-                disabled={
-                  createMutation.isPending ||
-                  !preflight.canCreate ||
-                  title.trim().length === 0
+              <CapabilityGate
+                capabilities={preflightQuery.capabilities}
+                capability={
+                  capabilityState(
+                    preflightQuery.capabilities,
+                    "changeRequests.create",
+                  ).supported && preflight.needsPush
+                    ? "branches.publish"
+                    : "changeRequests.create"
                 }
-                type="submit"
+                remediationLabel={t("common.retry")}
+                onRemediate={() => void preflightQuery.refetchActivation()}
               >
-                {createMutation.isPending ? <Spinner /> : null}
-                {failure
-                  ? t("workspace.tools.createPullRequest.retry")
-                  : t("workspace.tools.createPullRequest.create")}
-              </Button>
+                <Button
+                  disabled={
+                    createMutation.isPending ||
+                    !preflight.canCreate ||
+                    title.trim().length === 0
+                  }
+                  type="submit"
+                >
+                  {createMutation.isPending ? <Spinner /> : null}
+                  {failure
+                    ? t("workspace.tools.createPullRequest.retry")
+                    : t("workspace.tools.createPullRequest.create")}
+                </Button>
+              </CapabilityGate>
             </DialogFooter>
           </form>
         ) : null}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function toExistingTarget(
+  changeRequest: ChangeRequest | null,
+): ExistingPullRequestTarget | null {
+  if (!changeRequest) return null;
+  return {
+    number: changeRequest.number ?? Number(changeRequest.id),
+    url: changeRequest.webUrl,
+  };
+}
+
+function titleFromBranch(branch: string) {
+  return (
+    branch
+      .replace(/^angel\//, "")
+      .replace(/^agent\//, "")
+      .replace(/[-_/]+/g, " ")
+      .trim() || branch
   );
 }

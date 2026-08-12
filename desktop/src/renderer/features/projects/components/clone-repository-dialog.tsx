@@ -1,10 +1,13 @@
-import type { GitHubRepository } from "@angel-engine/daemon-api/github";
+import type {
+  RepositoryIdentity,
+  RepositoryNamespace,
+} from "@angel-engine/daemon-api/source-control";
 import type { FormEventHandler, ReactElement } from "react";
 
-import { GitFork, Lock, MagnifyingGlass } from "@phosphor-icons/react";
+import { MagnifyingGlass } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import is from "@sindresorhus/is";
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getErrorMessage } from "@/app/workspace/workspace-display";
 import { Button } from "@/components/ui/button";
@@ -18,32 +21,62 @@ import {
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import {
-  gitHubRepositoriesQueryOptions,
-  gitHubRepositoryOwnersQueryOptions,
+  sourceControlNamespacesQueryOptions,
+  sourceControlRepositoriesQueryOptions,
 } from "@/features/projects/api/queries";
+import { useSourceControlActivation } from "@/features/source-control/api/use-activation";
+import { capabilityState } from "@/features/source-control/model";
 import { useApi } from "@/platform/use-api";
 import { cn } from "@/platform/utils";
 
-type CloneTab = "github" | "url";
+type CloneTab = "provider" | "url";
 
 interface CloneRepositoryDialogProps {
   onClone: (url: string) => void;
   onOpenChange: (open: boolean) => void;
   open: boolean;
+  projectId: string | null;
 }
 
-/**
- * Repository picker for the "clone from git" flow. The GitHub tab browses what
- * the signed-in `gh` account can already reach; the URL tab is the escape hatch
- * for anything else (other hosts, unlisted remotes, deep links).
- */
+/** Repository picker backed by the active source-control provider. */
 export function CloneRepositoryDialog({
   onClone,
   onOpenChange,
   open,
+  projectId,
 }: CloneRepositoryDialogProps): ReactElement {
   const { t } = useTranslation();
-  const [tab, setTab] = useState<CloneTab>("github");
+  const [tab, setTab] = useState<CloneTab>("provider");
+  const sourceControl = useSourceControlActivation(projectId);
+  const namespacesCapability = capabilityState(
+    sourceControl.capabilities,
+    "discovery.listNamespaces",
+  );
+  const repositoriesCapability = capabilityState(
+    sourceControl.capabilities,
+    "discovery.listRepositories",
+  );
+  const cloneCapability = capabilityState(
+    sourceControl.capabilities,
+    "provider.clone",
+  );
+  const sourceControlReady =
+    sourceControl.status === "active" &&
+    is.nonEmptyString(sourceControl.projectPath) &&
+    is.nonEmptyString(sourceControl.providerIdentity);
+  const canBrowse =
+    sourceControlReady &&
+    namespacesCapability.supported &&
+    repositoriesCapability.supported &&
+    cloneCapability.supported;
+  const activeTab = canBrowse ? tab : "url";
+  const unavailableReason = discoveryUnavailableReason({
+    cloneCapability,
+    fallback: t("projectImport.discoveryUnavailable"),
+    namespacesCapability,
+    repositoriesCapability,
+    sourceControlReady,
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -60,35 +93,82 @@ export function CloneRepositoryDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div
-          className="
-            flex w-fit items-center gap-1 rounded-lg bg-surface-1 p-1
-          "
-          role="tablist"
-        >
-          <CloneTabButton
-            active={tab === "github"}
-            label={t("projectImport.tabGitHub")}
-            onSelect={() => setTab("github")}
-          />
-          <CloneTabButton
-            active={tab === "url"}
-            label={t("projectImport.tabUrl")}
-            onSelect={() => setTab("url")}
-          />
-        </div>
+        {canBrowse ? (
+          <div
+            className="
+              flex w-fit items-center gap-1 rounded-lg bg-surface-1 p-1
+            "
+            role="tablist"
+          >
+            <CloneTabButton
+              active={activeTab === "provider"}
+              label={
+                sourceControl.providerDisplayName ??
+                t("projectImport.tabSourceControl")
+              }
+              onSelect={() => setTab("provider")}
+            />
+            <CloneTabButton
+              active={activeTab === "url"}
+              label={t("projectImport.tabUrl")}
+              onSelect={() => setTab("url")}
+            />
+          </div>
+        ) : null}
 
-        {tab === "github" ? (
-          <GitHubRepositoryBrowser
-            onSelect={(repository) => onClone(repository.url)}
+        {activeTab === "provider" && canBrowse ? (
+          <ProviderRepositoryBrowser
+            key={sourceControl.providerIdentity}
+            onSelect={(repository) => {
+              if (is.nonEmptyString(repository.webUrl)) {
+                onClone(repository.webUrl);
+              }
+            }}
             open={open}
+            projectPath={sourceControl.projectPath ?? ""}
+            providerIdentity={sourceControl.providerIdentity ?? ""}
           />
         ) : (
-          <CloneUrlForm onSubmit={onClone} />
+          <div className="flex flex-col gap-3">
+            {is.nonEmptyString(unavailableReason) ? (
+              <p
+                className="
+                  rounded-lg border border-border-subtle bg-surface-1 px-3 py-2
+                  text-sm text-muted-foreground
+                "
+                role="status"
+              >
+                {unavailableReason}
+              </p>
+            ) : null}
+            <CloneUrlForm onSubmit={onClone} />
+          </div>
         )}
       </DialogContent>
     </Dialog>
   );
+}
+
+function discoveryUnavailableReason({
+  cloneCapability,
+  fallback,
+  namespacesCapability,
+  repositoriesCapability,
+  sourceControlReady,
+}: {
+  cloneCapability: ReturnType<typeof capabilityState>;
+  fallback: string;
+  namespacesCapability: ReturnType<typeof capabilityState>;
+  repositoriesCapability: ReturnType<typeof capabilityState>;
+  sourceControlReady: boolean;
+}): string | null {
+  if (!sourceControlReady) return fallback;
+  if (!namespacesCapability.supported)
+    return namespacesCapability.reason.message;
+  if (!repositoriesCapability.supported)
+    return repositoriesCapability.reason.message;
+  if (!cloneCapability.supported) return cloneCapability.reason.message;
+  return null;
 }
 
 function CloneTabButton({
@@ -124,55 +204,63 @@ function CloneTabButton({
   );
 }
 
-function GitHubRepositoryBrowser({
+function ProviderRepositoryBrowser({
   onSelect,
   open,
+  projectPath,
+  providerIdentity,
 }: {
-  onSelect: (repository: GitHubRepository) => void;
+  onSelect: (repository: RepositoryIdentity) => void;
   open: boolean;
+  projectPath: string;
+  providerIdentity: string;
 }) {
   const api = useApi();
   const { t } = useTranslation();
-  const [selectedOwner, setSelectedOwner] = useState<string | null>(null);
+  const [selectedNamespaceId, setSelectedNamespaceId] = useState<string | null>(
+    null,
+  );
   const [search, setSearch] = useState("");
 
-  const ownersQuery = useQuery(
-    gitHubRepositoryOwnersQueryOptions({ api, enabled: open }),
+  const namespacesQuery = useQuery(
+    sourceControlNamespacesQueryOptions({
+      api,
+      enabled: open,
+      projectPath,
+      providerIdentity,
+      supported: true,
+    }),
   );
-  const owners = ownersQuery.data?.owners;
-  const activeOwner = selectedOwner ?? owners?.[0]?.login ?? null;
-
-  useEffect(() => {
-    setSearch("");
-  }, [activeOwner]);
-
+  const namespaces = namespacesQuery.data ?? [];
+  const activeNamespace =
+    namespaces.find((namespace) => namespace.id === selectedNamespaceId) ??
+    namespaces[0] ??
+    null;
   const repositoriesQuery = useQuery(
-    gitHubRepositoriesQueryOptions({ api, owner: activeOwner }),
+    sourceControlRepositoriesQueryOptions({
+      api,
+      enabled: open,
+      namespace: activeNamespace?.path ?? null,
+      projectPath,
+      providerIdentity,
+      supported: true,
+    }),
   );
-  const repositories = useMemo(() => {
-    const all = repositoriesQuery.data?.repositories ?? [];
-    const needle = search.trim().toLowerCase();
-    if (needle.length === 0) return all;
-    return all.filter(
-      (repository) =>
-        repository.name.toLowerCase().includes(needle) ||
-        (repository.description ?? "").toLowerCase().includes(needle),
-    );
-  }, [repositoriesQuery.data, search]);
+  const repositories = filterRepositories(repositoriesQuery.data ?? [], search);
 
-  if (ownersQuery.isPending) {
+  if (namespacesQuery.isPending) {
     return <BrowserPlaceholder label={t("projectImport.loadingOwners")} busy />;
   }
-  if (ownersQuery.isError) {
+  if (namespacesQuery.isError) {
     return (
       <BrowserPlaceholder
-        detail={getErrorMessage(ownersQuery.error)}
+        detail={getErrorMessage(namespacesQuery.error)}
         label={t("projectImport.ownersFailed")}
-        onRetry={() => void ownersQuery.refetch()}
+        onRetry={() => void namespacesQuery.refetch()}
       />
     );
   }
-  if (!is.nonEmptyArray(ownersQuery.data.owners)) {
+  if (!is.nonEmptyArray(namespaces)) {
     return <BrowserPlaceholder label={t("projectImport.noOwners")} />;
   }
 
@@ -189,26 +277,29 @@ function GitHubRepositoryBrowser({
           bg-surface-1 p-1
         "
       >
-        {ownersQuery.data.owners.map((owner) => (
+        {namespaces.map((namespace) => (
           <button
             className={cn(
               `
                 flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left
                 text-sm transition-colors duration-150 ease-standard
               `,
-              owner.login === activeOwner
+              namespace.id === activeNamespace.id
                 ? "bg-overlay-active text-foreground"
                 : `
                   text-muted-foreground
                   hover:bg-overlay-hover hover:text-foreground
                 `,
             )}
-            key={owner.login}
-            onClick={() => setSelectedOwner(owner.login)}
+            key={namespace.id}
+            onClick={() => {
+              setSelectedNamespaceId(namespace.id);
+              setSearch("");
+            }}
             type="button"
           >
-            <OwnerAvatar login={owner.login} />
-            <span className="min-w-0 truncate">{owner.login}</span>
+            <NamespaceAvatar namespace={namespace} />
+            <span className="min-w-0 truncate">{namespace.name}</span>
           </button>
         ))}
       </nav>
@@ -249,6 +340,19 @@ function GitHubRepositoryBrowser({
   );
 }
 
+function filterRepositories(
+  repositories: readonly RepositoryIdentity[],
+  search: string,
+): readonly RepositoryIdentity[] {
+  const needle = search.trim().toLowerCase();
+  if (needle.length === 0) return repositories;
+  return repositories.filter(
+    (repository) =>
+      repository.name.toLowerCase().includes(needle) ||
+      repository.displayPath.toLowerCase().includes(needle),
+  );
+}
+
 function RepositoryList({
   error,
   isError,
@@ -262,8 +366,8 @@ function RepositoryList({
   isError: boolean;
   isPending: boolean;
   onRetry: () => void;
-  onSelect: (repository: GitHubRepository) => void;
-  repositories: GitHubRepository[];
+  onSelect: (repository: RepositoryIdentity) => void;
+  repositories: readonly RepositoryIdentity[];
   search: string;
 }) {
   const { t } = useTranslation();
@@ -297,46 +401,22 @@ function RepositoryList({
   return (
     <ul>
       {repositories.map((repository) => (
-        <li key={repository.nameWithOwner}>
+        <li key={`${repository.providerId}:${repository.displayPath}`}>
           <button
             className="
               flex w-full flex-col gap-0.5 rounded-md px-2 py-1.5 text-left
               transition-colors duration-150 ease-standard
               hover:bg-overlay-hover
+              disabled:cursor-not-allowed disabled:opacity-50
             "
+            disabled={!is.nonEmptyString(repository.webUrl)}
             onClick={() => onSelect(repository)}
             type="button"
           >
-            <span className="flex min-w-0 items-center gap-1.5">
-              <span className="truncate text-sm">{repository.name}</span>
-              {repository.isPrivate ? (
-                <Lock
-                  aria-label={t("projectImport.privateBadge")}
-                  className="size-3 shrink-0 text-muted-foreground"
-                />
-              ) : null}
-              {repository.isFork ? (
-                <GitFork
-                  aria-label={t("projectImport.forkBadge")}
-                  className="size-3 shrink-0 text-muted-foreground"
-                />
-              ) : null}
-              {repository.isArchived ? (
-                <span
-                  className="
-                    shrink-0 rounded-sm bg-surface-1 px-1 text-[10px]
-                    text-muted-foreground
-                  "
-                >
-                  {t("projectImport.archivedBadge")}
-                </span>
-              ) : null}
+            <span className="truncate text-sm">{repository.name}</span>
+            <span className="truncate text-xs text-muted-foreground">
+              {repository.displayPath}
             </span>
-            {is.nonEmptyString(repository.description) ? (
-              <span className="truncate text-xs text-muted-foreground">
-                {repository.description}
-              </span>
-            ) : null}
           </button>
         </li>
       ))}
@@ -344,7 +424,7 @@ function RepositoryList({
   );
 }
 
-function OwnerAvatar({ login }: { login: string }) {
+function NamespaceAvatar({ namespace }: { namespace: RepositoryNamespace }) {
   const [imageFailed, setImageFailed] = useState(false);
 
   return (
@@ -355,8 +435,8 @@ function OwnerAvatar({ login }: { login: string }) {
         bg-surface-2 text-[10px] uppercase
       "
     >
-      {imageFailed ? (
-        login.slice(0, 1)
+      {imageFailed || !is.nonEmptyString(namespace.avatarUrl) ? (
+        namespace.name.slice(0, 1)
       ) : (
         <img
           alt=""
@@ -364,7 +444,7 @@ function OwnerAvatar({ login }: { login: string }) {
           draggable={false}
           onError={() => setImageFailed(true)}
           referrerPolicy="no-referrer"
-          src={`https://github.com/${login}.png?size=40`}
+          src={namespace.avatarUrl}
         />
       )}
     </span>

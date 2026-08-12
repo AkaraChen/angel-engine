@@ -5,7 +5,7 @@ import type {
   ChatPrewarmResult,
   ChatRuntimeConfig,
 } from "@angel-engine/daemon-api/chat";
-import type { ResolvedTaskLink } from "@angel-engine/daemon-api/links";
+import type { ResolvedSourceControlLink } from "@angel-engine/daemon-api/source-control";
 
 import type { QueryClient } from "@tanstack/react-query";
 import type { ApiClient } from "@/platform/api-client";
@@ -68,23 +68,24 @@ interface AgentSkillsQueryParams {
   staleTime?: number;
 }
 
-interface GitHubItemsQueryParams {
+interface SourceControlItemsQueryParams {
   api: ApiClient;
-  cwd?: string;
   enabled?: boolean;
   limit?: number;
+  projectPath: string | null;
+  providerIdentity: string | null;
   query: string;
   staleTime?: number;
 }
 
-interface GitHubResolveQueryParams {
+interface SourceControlLinkResolveQueryParams {
   api: ApiClient;
   enabled?: boolean;
+  projectPath: string | null;
+  providerIdentity: string | null;
   staleTime?: number;
   url: string | null;
 }
-
-interface TaskLinkResolveQueryParams extends GitHubResolveQueryParams {}
 
 interface ChatPrewarmQueryParams {
   api: ApiClient;
@@ -305,55 +306,81 @@ export function agentSkillsQueryOptions({
   });
 }
 
-export function githubItemsQueryOptions({
+export function sourceControlWorkItemsQueryOptions({
   api,
-  cwd,
   enabled = true,
   limit,
+  projectPath,
+  providerIdentity,
   query,
   staleTime = 15_000,
-}: GitHubItemsQueryParams) {
+}: SourceControlItemsQueryParams) {
   return queryOptions({
-    enabled: enabled && is.nonEmptyString(cwd),
+    enabled:
+      enabled &&
+      is.nonEmptyString(projectPath) &&
+      is.nonEmptyString(providerIdentity),
     placeholderData: (previous) => previous,
     queryFn: async () =>
-      api.github.listItems({
-        cwd: cwd ?? "",
+      api.sourceControl.listWorkItems(
+        projectPath ?? "",
+        is.nonEmptyString(query) ? query : undefined,
         limit,
-        query: is.nonEmptyString(query) ? query : undefined,
-      }),
-    queryKey: queryKeys.github.items(cwd ?? null, query),
+      ),
+    queryKey: queryKeys.sourceControl.workItems(providerIdentity, query, limit),
     retry: false,
     staleTime,
   });
 }
 
-export function githubResolveQueryOptions({
+export function sourceControlChangeRequestsQueryOptions({
   api,
   enabled = true,
-  staleTime = 60_000,
-  url,
-}: GitHubResolveQueryParams) {
+  limit,
+  projectPath,
+  providerIdentity,
+  query,
+  staleTime = 15_000,
+}: SourceControlItemsQueryParams) {
   return queryOptions({
-    enabled: enabled && is.nonEmptyString(url),
-    queryFn: async () => api.github.resolveUrl({ url: url ?? "" }),
-    queryKey: queryKeys.github.resolve(url),
+    enabled:
+      enabled &&
+      is.nonEmptyString(projectPath) &&
+      is.nonEmptyString(providerIdentity),
+    placeholderData: (previous) => previous,
+    queryFn: async () =>
+      api.sourceControl.listChangeRequests(
+        projectPath ?? "",
+        is.nonEmptyString(query) ? query : undefined,
+        limit,
+      ),
+    queryKey: queryKeys.sourceControl.changeRequests(
+      providerIdentity,
+      query,
+      limit,
+    ),
     retry: false,
     staleTime,
   });
 }
 
-export function taskLinkResolveQueryOptions({
+export function sourceControlLinkResolveQueryOptions({
   api,
   enabled = true,
+  projectPath,
+  providerIdentity,
   staleTime = 30_000,
   url,
-}: TaskLinkResolveQueryParams) {
+}: SourceControlLinkResolveQueryParams) {
   return queryOptions({
-    enabled: enabled && is.nonEmptyString(url),
-    queryFn: async (): Promise<ResolvedTaskLink> =>
-      api.links.resolve({ url: url ?? "" }),
-    queryKey: ["task-link", "resolve", url],
+    enabled:
+      enabled &&
+      is.nonEmptyString(projectPath) &&
+      is.nonEmptyString(providerIdentity) &&
+      is.nonEmptyString(url),
+    queryFn: async (): Promise<ResolvedSourceControlLink> =>
+      api.sourceControl.resolveLink(projectPath ?? "", url ?? ""),
+    queryKey: queryKeys.sourceControl.links(providerIdentity, url),
     retry: false,
     staleTime,
   });

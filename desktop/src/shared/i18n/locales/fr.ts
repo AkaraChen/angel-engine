@@ -1,6 +1,6 @@
 import type { LocaleResource } from "./schema";
 import { scheduleFr } from "./schedule";
-import { pullRequestFr } from "./pull-request";
+import { changeRequestFr } from "./change-request";
 
 export const fr = {
   translation: {
@@ -176,7 +176,7 @@ export const fr = {
             "Tour de correction démarré avec un résumé de logs tronqué.",
           fixing: "Démarrage de la correction…",
           openCheck: "Ouvrir les détails du check",
-          openPullRequest: "Ouvrir la pull request",
+          openPullRequest: "Ouvrir la demande de changement",
           refresh: "Actualiser les checks",
           summaryFail: "{{count}} en échec",
           summaryPass: "{{count}} réussis",
@@ -235,15 +235,16 @@ export const fr = {
           ahead: "{{count}} commits devant {{base}}",
           base: "Branche de base",
           bodyPlaceholder: "Décrivez la modification",
-          create: "Créer la pull request",
-          created: "Pull request #{{number}} créée",
-          creating: "Création de la pull request…",
+          create: "Créer la demande de changement",
+          created: "Demande de changement #{{number}} créée",
+          creating: "Création de la demande de changement…",
           description:
             "Vérifiez les branches et la description avant publication.",
-          existing: "La pull request #{{number}} existe déjà",
+          existing: "La demande de changement #{{number}} existe déjà",
           noCommits: "Aucun commit entre les branches de base et de tête.",
           openInBrowser: "Ouvrir dans le navigateur",
-          pushedRetry: "Branche poussée. Réessayez de créer la pull request.",
+          pushedRetry:
+            "Branche poussée. Réessayez de créer la demande de changement.",
           pushing: "Envoi de la branche…",
           preview: {
             additions: "Ajouts",
@@ -253,19 +254,20 @@ export const fr = {
             copyLink: "Copier le lien",
             deletions: "Suppressions",
             description:
-              "Vérifiez la pull request avant de l’ouvrir dans le navigateur.",
+              "Vérifiez la demande de changement avant de l’ouvrir dans le navigateur.",
             emptyBody: "Aucune description fournie.",
             filesChanged: "Fichiers modifiés",
-            loadFailed: "Impossible de charger les détails de la pull request.",
+            loadFailed:
+              "Impossible de charger les détails de la demande de changement.",
             open: "Ouverte",
-            title: "Pull request #{{number}}",
+            title: "Demande de changement #{{number}}",
           },
           retry: "Réessayer",
-          short: "Créer la PR",
-          title: "Créer une pull request",
-          titlePlaceholder: "Titre de la pull request",
-          view: "Voir la pull request #{{number}}",
-          viewShort: "PR #{{number}}",
+          short: "Créer la demande de changement",
+          title: "Créer une demande de changement",
+          titlePlaceholder: "Titre de la demande de changement",
+          view: "Voir la demande de changement #{{number}}",
+          viewShort: "demande de changement #{{number}}",
           willPushMany: "{{count}} commits seront envoyés vers origin/{{head}}",
           willPushOne: "1 commit sera envoyé vers origin/{{head}}",
         },
@@ -276,12 +278,12 @@ export const fr = {
           fileUnavailable: "Fichier indisponible",
           gitUnavailable: "Git indisponible",
           noChanges: "Aucune modification",
-          noChecks: "Aucun check signalé pour cette pull request",
+          noChecks: "Aucun check signalé pour cette demande de changement",
           noDiffForFile: "Aucun diff pour ce fichier",
           noProcesses: "Aucun sous-processus d’agent en cours",
-          noPullRequest: "Aucune pull request pour cette branche",
+          noPullRequest: "Aucune demande de changement pour cette branche",
           noPullRequestDetail:
-            "Ouvrez ou liez une PR sur la branche actuelle pour charger les checks CI.",
+            "Ouvrez ou liez une demande de changement sur la branche actuelle pour charger les checks CI.",
           noWorkspace: "Aucun espace de travail pour cette conversation",
           notGitRepository: "Pas un dépôt Git",
           processesUnavailable: "Processus indisponibles",
@@ -319,7 +321,7 @@ export const fr = {
           },
           pushing: "Envoi en cours",
         },
-        pullRequest: pullRequestFr,
+        pullRequest: changeRequestFr,
         listeningPorts: "Ports en écoute",
         resizeFileTree: "Redimensionner l’arborescence",
         resizeGitList: "Redimensionner la liste des changements",
@@ -330,7 +332,7 @@ export const fr = {
           gitChanges: "Changements Git",
           newTab: "Nouvel onglet",
           processes: "Processus",
-          pullRequest: "Pull request",
+          pullRequest: "Demande de changement",
           tabs: "Onglets",
           tools: "Outils",
           workspaceTabs: "Onglets de l’espace de travail",
@@ -808,13 +810,16 @@ export const fr = {
       agentMode: "Mode agent",
       agentSettings: "Paramètres de l’agent",
       attachFiles: "Joindre des fichiers",
-      attachGitHub: "Joindre une issue ou PR GitHub",
-      attachGitHubConfirm: "Joindre",
-      attachGitHubEmpty: "Aucune issue ni PR trouvée.",
-      attachGitHubLoading: "Récupération…",
-      attachGitHubPlaceholder: "Rechercher des issues et PR…",
-      attachGitHubTitle: "Joindre depuis GitHub",
-      attachGitHubUpdated: "mis à jour {{time}}",
+      attachChangeRequest:
+        "Joindre une demande de changement ou un élément de travail",
+      attachChangeRequestConfirm: "Joindre",
+      attachChangeRequestEmpty:
+        "Aucun élément de travail ni demande de changement trouvé.",
+      attachChangeRequestLoading: "Récupération…",
+      attachChangeRequestPlaceholder:
+        "Rechercher des éléments de travail et des demandes de changement…",
+      attachChangeRequestTitle: "Joindre depuis le contrôle de code source",
+      attachChangeRequestUpdated: "mis à jour {{time}}",
       attachmentErrors: {
         accept: "Aucun fichier ne correspond aux types autorisés.",
         fileRead: "Le fichier sélectionné n’a pas pu être lu.",
@@ -841,20 +846,25 @@ export const fr = {
       fileTypeBlocked: "Type de fichier bloqué",
       fileTooLarge: "Le fichier est trop volumineux",
       files: "Fichiers",
+      configureSourceControl: "Configurer la gestion de code source",
       fromLink: "Depuis un lien",
       fromLinkPlaceholder:
-        "Collez un lien d’issue GitHub ou Linear, ou recherchez sur GitHub",
-      githubErrors: {
-        cliMissing: "GitHub CLI (gh) n'est pas installée ou absente du PATH.",
+        "Collez un lien du contrôle de code source ou de Linear, ou recherchez dans le contrôle de code source",
+      sourceControlUnavailable:
+        "Aucun fournisseur de gestion de code source n’est actif pour ce projet.",
+      sourceControlErrors: {
+        cliMissing:
+          "La CLI du contrôle de code source n'est pas installée ou absente du PATH.",
         cliUnauthenticated:
-          "GitHub CLI n'est pas authentifiée. Exécutez `gh auth login`.",
-        fetchFailed: "Impossible de récupérer cet élément GitHub.",
-        notFound: "Issue ou PR GitHub introuvable.",
+          "Le fournisseur de contrôle de code source n'est pas authentifié.",
+        fetchFailed:
+          "Impossible de récupérer cet élément du contrôle de code source.",
+        notFound: "Élément de travail ou demande de changement introuvable.",
         urlUnsupported:
-          "Seules les URLs d'issues ou de PR github.com sont prises en charge.",
+          "Cette URL de contrôle de code source n'est pas prise en charge.",
       },
-      githubIssue: "Issue",
-      githubPullRequest: "Pull request",
+      workItem: "Élément de travail",
+      changeRequest: "Demande de changement",
       linearConnectAction: "Connecter Linear",
       linearConnectDescription:
         "Connectez Linear avant de résoudre cette issue.",
@@ -894,16 +904,16 @@ export const fr = {
         linearNotFound: "Issue Linear introuvable.",
         linearUnauthorized: "Linear a refusé le jeton API configuré.",
         prForkUnsupported:
-          "Les pull requests provenant de forks ne sont pas encore prises en charge.",
+          "Les demandes de changement provenant de forks ne sont pas encore prises en charge.",
         unsupported: "Ce lien de tâche n’est pas pris en charge.",
       },
       taskLinkHintComplete:
-        "Collez un lien complet vers une issue GitHub, une pull request ou une issue Linear.",
-      taskLinkHintGitHubPath:
-        "Ce lien GitHub ne pointe ni vers une issue ni vers une pull request.",
+        "Collez un lien complet vers un élément de travail, une demande de changement ou un élément Linear.",
+      taskLinkHintSourceControlPath:
+        "Ce lien de contrôle de code source ne pointe ni vers un élément de travail ni vers une demande de changement.",
       taskLinkHintLinearPath: "Ce lien Linear ne pointe pas vers une issue.",
       taskLinkHintSupported:
-        "Liens pris en charge : issues GitHub, pull requests GitHub et issues Linear.",
+        "Liens pris en charge : éléments de travail et demandes de changement du contrôle de code source, et éléments Linear.",
       taskLinkStateClosed: "Fermée",
       taskLinkStateMerged: "Fusionnée",
       taskLinkStateOpen: "Ouverte",
@@ -1067,17 +1077,20 @@ export const fr = {
       archivedBadge: "Archivé",
       clone: "Cloner",
       cloneTo: "Clonage vers {{path}}",
-      description: "Choisissez un dépôt GitHub ou collez une URL git.",
+      description:
+        "Choisissez un dépôt contrôle de code source ou collez une URL git.",
+      discoveryUnavailable:
+        "La navigation des dépôts nécessite un fournisseur de gestion de code source actif.",
       failedTitle: "Échec du clonage",
       forkBadge: "Fork",
       loadingOwners: "Chargement des comptes…",
       loadingRepositories: "Chargement des dépôts…",
       noMatches: "Aucun dépôt ne correspond à « {{query}} »",
-      noOwners: "Aucun compte GitHub disponible",
+      noOwners: "Aucun compte contrôle de code source disponible",
       noRepositories: "Aucun dépôt",
       openProject: "Ouvrir le projet",
       owners: "Comptes",
-      ownersFailed: "Impossible de charger les comptes GitHub",
+      ownersFailed: "Impossible de charger les comptes contrôle de code source",
       readyTitle: "Dépôt prêt",
       privateBadge: "Privé",
       progressTitle: "Clonage du dépôt",
@@ -1089,12 +1102,12 @@ export const fr = {
       stageCompleted: "Terminé",
       stagePreparing: "Préparation de la destination",
       stageRegistering: "Enregistrement du projet",
-      tabGitHub: "GitHub",
+      tabSourceControl: "contrôle de code source",
       tabUrl: "URL Git",
       title: "Cloner un dépôt",
       urlHint: "https, ssh ou owner/repo",
       urlLabel: "URL du dépôt",
-      urlPlaceholder: "https://github.com/owner/repo",
+      urlPlaceholder: "https://example.com/owner/repo",
     },
     projects: {
       chooseFolder: "Choisir le dossier du projet",
@@ -1130,7 +1143,7 @@ export const fr = {
       commandPalette: "Palette de commandes",
       commandSessions: "Sessions",
       commandImportSession: "Importer des sessions dans le projet",
-      commandShepherdPr: "Shepherd PR",
+      commandShepherdChangeRequest: "Shepherd demande de changement",
     },
     promptInput: {
       addPhotosOrFiles: "Ajouter des photos ou fichiers",

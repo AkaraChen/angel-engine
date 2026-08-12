@@ -10,7 +10,7 @@ import is from "@sindresorhus/is";
 import os from "node:os";
 import { Effect } from "effect";
 import { DaemonError } from "../../platform/errors";
-import { createProjectWorktree } from "../projects/git";
+import { createProjectWorktree } from "../source-control/local-git/projects";
 import { getProject } from "../projects/repository";
 
 export function cwdForChat(

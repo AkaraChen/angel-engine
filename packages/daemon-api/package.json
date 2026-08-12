@@ -26,14 +26,6 @@
       "types": "./dist/chat/index.d.ts",
       "import": "./dist/chat/index.js"
     },
-    "./github": {
-      "types": "./dist/github.d.ts",
-      "import": "./dist/github.js"
-    },
-    "./links": {
-      "types": "./dist/links.d.ts",
-      "import": "./dist/links.js"
-    },
     "./mime": {
       "types": "./dist/mime.d.ts",
       "import": "./dist/mime.js"
@@ -41,6 +33,10 @@
     "./projects": {
       "types": "./dist/projects.d.ts",
       "import": "./dist/projects.js"
+    },
+    "./source-control": {
+      "types": "./dist/source-control/index.d.ts",
+      "import": "./dist/source-control/index.js"
     },
     "./shepherd": {
       "types": "./dist/shepherd.d.ts",
@@ -72,6 +68,7 @@
     "whatwg-mimetype": "^5.0.0"
   },
   "devDependencies": {
+    "@types/node": "^24.10.1",
     "@types/mime-db": "^1.43.6",
     "@types/whatwg-mimetype": "^5.0.0",
     "tsup": "^8.5.1",

@@ -59,7 +59,7 @@ import {
   createProjectWorktree,
   managedWorktreePath,
   removeCreatedProjectWorktree,
-} from "../projects/git";
+} from "../source-control/local-git/projects";
 import { readProjectLifecycleSnapshot } from "../projects/lifecycle";
 import { getProject } from "../projects/repository";
 import { projectSetupLifecycle } from "../projects/setup-lifecycle";

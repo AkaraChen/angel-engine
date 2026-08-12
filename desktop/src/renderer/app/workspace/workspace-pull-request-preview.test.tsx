@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import type { GitHubPullRequestDetail } from "@angel-engine/daemon-api/github";
+import type { ChangeRequest } from "@angel-engine/daemon-api/source-control";
 import type { ReactNode } from "react";
 import type { ApiClient } from "@/platform/api-client";
 
@@ -30,24 +30,57 @@ vi.mock("@/app/workspace/workspace-tool-layout", () => ({
   ),
 }));
 
-const detail: GitHubPullRequestDetail = {
+vi.mock("@/features/source-control/api/use-activation", () => ({
+  useSourceControlActivation: () => ({
+    capabilities: {
+      entries: { "changeRequests.get": { supported: true } },
+    },
+    projectPath: "/repos/widgets",
+    providerIdentity: "forge:code.example/acme/widgets:1",
+    status: "active",
+  }),
+}));
+
+const repository = {
+  displayPath: "acme/widgets",
+  host: "code.example",
+  name: "widgets",
+  namespace: ["acme"],
+  providerId: "forge",
+  remoteId: null,
+  webUrl: "https://code.example/acme/widgets",
+} as const;
+
+const detail: ChangeRequest = {
   additions: 120,
-  author: "alice",
-  baseRefName: "main",
+  allowedMergeMethods: [],
+  author: {
+    avatarUrl: null,
+    displayName: null,
+    id: null,
+    login: "alice",
+    webUrl: null,
+  },
   body: "",
   changedFiles: 8,
-  comments: [],
   commitCount: 2,
+  createdAt: null,
+  defaultMergeMethod: null,
   deletions: 35,
-  headRefName: "feature/preview",
-  isDraft: true,
+  draft: true,
+  id: "42",
+  mergeRequirements: [],
+  mergedAt: null,
   number: 42,
-  owner: "acme",
-  repo: "widgets",
-  state: "OPEN",
+  repository,
+  reviewDecision: "none",
+  source: { name: "feature/preview", oid: null, repository },
+  state: "open",
+  target: { name: "main", oid: null, repository },
   title: "Preview pull requests",
   updatedAt: "2026-08-10T00:00:00Z",
-  url: "https://github.com/acme/widgets/pull/42",
+  viewerCanMerge: null,
+  webUrl: "https://code.example/acme/widgets/changes/42",
 };
 
 afterEach(() => {
@@ -57,7 +90,7 @@ afterEach(() => {
 
 describe("WorkspacePullRequestPreviewDialog", () => {
   it("keeps loading visible, then renders draft and empty-body details", async () => {
-    const request = deferred<GitHubPullRequestDetail>();
+    const request = deferred<ChangeRequest>();
     const viewPullRequest = vi.fn(() => request.promise);
     const onOpenExternal = vi.fn();
     const openBrowserTab = vi.fn();
@@ -79,17 +112,14 @@ describe("WorkspacePullRequestPreviewDialog", () => {
       screen.getByText("workspace.tools.createPullRequest.preview.emptyBody"),
     ).toBeDefined();
     expect(screen.getByText("main ← feature/preview")).toBeDefined();
-    expect(viewPullRequest).toHaveBeenCalledWith({
-      cwd: "/repos/widgets",
-      number: 42,
-    });
+    expect(viewPullRequest).toHaveBeenCalledWith("/repos/widgets", "42");
 
     fireEvent.click(
       screen.getByRole("button", {
         name: "workspace.tools.createPullRequest.preview.copyLink",
       }),
     );
-    await waitFor(() => expect(writeText).toHaveBeenCalledWith(detail.url));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(detail.webUrl));
     expect(
       screen.getByText("workspace.tools.createPullRequest.preview.copied"),
     ).toBeDefined();
@@ -100,14 +130,14 @@ describe("WorkspacePullRequestPreviewDialog", () => {
       }),
     );
     expect(onOpenChange).toHaveBeenCalledWith(false);
-    expect(onOpenExternal).toHaveBeenCalledWith(detail.url);
+    expect(onOpenExternal).toHaveBeenCalledWith(detail.webUrl);
     expect(openBrowserTab).not.toHaveBeenCalled();
   }, 10_000);
 
   it("retains the dialog on failure and retries the detail query", async () => {
     const viewPullRequest = vi
-      .fn<() => Promise<GitHubPullRequestDetail>>()
-      .mockRejectedValueOnce(new Error("GitHub unavailable"))
+      .fn<() => Promise<ChangeRequest>>()
+      .mockRejectedValueOnce(new Error("Provider unavailable"))
       .mockResolvedValueOnce({ ...detail, body: "## Summary" });
 
     renderPreview({ viewPullRequest });
@@ -117,7 +147,7 @@ describe("WorkspacePullRequestPreviewDialog", () => {
         "workspace.tools.createPullRequest.preview.loadFailed",
       ),
     ).toBeDefined();
-    expect(screen.getByText("GitHub unavailable")).toBeDefined();
+    expect(screen.getByText("Provider unavailable")).toBeDefined();
 
     fireEvent.click(
       screen.getByRole("button", {
@@ -137,13 +167,15 @@ function renderPreview({
 }: {
   onOpenExternal?: (url: string) => void;
   onOpenChange?: (open: boolean) => void;
-  viewPullRequest: () => Promise<GitHubPullRequestDetail>;
+  viewPullRequest: (projectPath: string, id: string) => Promise<ChangeRequest>;
 }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   const api = {
-    github: { viewPullRequest },
+    sourceControl: {
+      getChangeRequest: viewPullRequest,
+    },
   } as unknown as ApiClient;
 
   return render(
@@ -151,8 +183,8 @@ function renderPreview({
       <WorkspacePullRequestPreviewDialog
         api={api}
         open
-        root="/repos/widgets"
-        target={{ number: 42, url: detail.url }}
+        projectId="project-1"
+        target={{ number: 42, url: detail.webUrl }}
         onOpenExternal={onOpenExternal}
         onOpenChange={onOpenChange}
       />
