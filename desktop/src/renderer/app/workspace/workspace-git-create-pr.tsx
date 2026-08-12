@@ -68,10 +68,12 @@ const pullRequestDrafts = new Map<string, PullRequestDraft>();
 export function WorkspaceCreatePullRequestController({
   api,
   contextKey,
+  projectId,
   root,
 }: {
   api: ApiClient;
   contextKey: string | null;
+  projectId: string | null;
   root: string;
 }) {
   const { selectTab } = useWorkspaceToolSurface();
@@ -119,7 +121,7 @@ export function WorkspaceCreatePullRequestController({
       <WorkspacePullRequestPreviewDialog
         api={api}
         open={previewTarget !== null}
-        root={root}
+        projectId={projectId}
         target={previewTarget}
         onOpenExternal={openPullRequestInSystemBrowser}
         onOpenChange={(next) => {

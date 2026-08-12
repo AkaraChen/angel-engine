@@ -130,7 +130,11 @@ import type {
   UpdateProjectConfigInput,
   UpdateProjectInput,
 } from "@angel-engine/daemon-api/projects";
-import type { SourceControlActivationResult } from "@angel-engine/daemon-api/source-control";
+import type {
+  ChangeRequest,
+  ChangeRequestStatusResult,
+  SourceControlActivationResult,
+} from "@angel-engine/daemon-api/source-control";
 import { isProjectCloneEvent } from "@angel-engine/daemon-api/projects";
 import type {
   WorkspaceFileReadResult,
@@ -707,6 +711,14 @@ export function createDaemonClient(options: DaemonClientOptions) {
       activation: (projectId: string) =>
         request<SourceControlActivationResult>(
           `/api/source-control/activation?${query({ projectId })}`,
+        ),
+      currentChangeRequest: (projectPath: string) =>
+        request<ChangeRequestStatusResult | null>(
+          `/api/source-control/change-requests/current?${query({ projectPath })}`,
+        ),
+      getChangeRequest: (projectPath: string, id: string) =>
+        request<ChangeRequest>(
+          `/api/source-control/change-requests/${encodeURIComponent(id)}?${query({ projectPath })}`,
         ),
     },
     links: {

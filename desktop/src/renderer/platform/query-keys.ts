@@ -27,8 +27,6 @@ export const queryKeys = {
     items: (cwd: string | null, query: string) =>
       ["github", "items", cwd, query] as const,
     prChecks: (cwd: string | null) => ["github", "pr-checks", cwd] as const,
-    pullRequestDetail: (cwd: string | null, number: number | null) =>
-      ["github", "pull-request", cwd, number] as const,
     pullRequest: (cwd: string | null) =>
       ["github", "pull-request-status", cwd] as const,
     repositories: (owner: string | null) =>

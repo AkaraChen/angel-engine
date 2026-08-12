@@ -462,6 +462,9 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           <WorkspaceToolContextBridge
             chatId={selectedChatId ?? null}
             contextKey={workspaceToolContextKey ?? null}
+            projectId={
+              selectedChat?.projectId ?? selectedProjectId ?? draftProject.id
+            }
             root={workspaceToolRoot ?? null}
           />
 

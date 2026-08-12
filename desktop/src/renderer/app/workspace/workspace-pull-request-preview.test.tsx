@@ -30,6 +30,17 @@ vi.mock("@/app/workspace/workspace-tool-layout", () => ({
   ),
 }));
 
+vi.mock("@/features/source-control/api/use-activation", () => ({
+  useSourceControlActivation: () => ({
+    capabilities: {
+      entries: { "changeRequests.get": { supported: true } },
+    },
+    projectPath: "/repos/widgets",
+    providerIdentity: "github:github.com/acme/widgets:1",
+    status: "active",
+  }),
+}));
+
 const detail: GitHubPullRequestDetail = {
   additions: 120,
   author: "alice",
@@ -79,10 +90,7 @@ describe("WorkspacePullRequestPreviewDialog", () => {
       screen.getByText("workspace.tools.createPullRequest.preview.emptyBody"),
     ).toBeDefined();
     expect(screen.getByText("main ← feature/preview")).toBeDefined();
-    expect(viewPullRequest).toHaveBeenCalledWith({
-      cwd: "/repos/widgets",
-      number: 42,
-    });
+    expect(viewPullRequest).toHaveBeenCalledWith("/repos/widgets", "42");
 
     fireEvent.click(
       screen.getByRole("button", {
@@ -137,13 +145,19 @@ function renderPreview({
 }: {
   onOpenExternal?: (url: string) => void;
   onOpenChange?: (open: boolean) => void;
-  viewPullRequest: () => Promise<GitHubPullRequestDetail>;
+  viewPullRequest: (
+    projectPath: string,
+    id: string,
+  ) => Promise<GitHubPullRequestDetail>;
 }) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   const api = {
-    github: { viewPullRequest },
+    sourceControl: {
+      getChangeRequest: async (projectPath: string, id: string) =>
+        toChangeRequest(await viewPullRequest(projectPath, id)),
+    },
   } as unknown as ApiClient;
 
   return render(
@@ -151,13 +165,58 @@ function renderPreview({
       <WorkspacePullRequestPreviewDialog
         api={api}
         open
-        root="/repos/widgets"
+        projectId="project-1"
         target={{ number: 42, url: detail.url }}
         onOpenExternal={onOpenExternal}
         onOpenChange={onOpenChange}
       />
     </QueryClientProvider>,
   );
+}
+
+function toChangeRequest(detail: GitHubPullRequestDetail) {
+  const repository = {
+    displayPath: `${detail.owner}/${detail.repo}`,
+    host: "github.com",
+    name: detail.repo,
+    namespace: [detail.owner],
+    providerId: "github",
+    remoteId: null,
+    webUrl: `https://github.com/${detail.owner}/${detail.repo}`,
+  };
+  return {
+    additions: detail.additions,
+    allowedMergeMethods: [],
+    author: detail.author
+      ? {
+          avatarUrl: null,
+          displayName: null,
+          id: null,
+          login: detail.author,
+          webUrl: null,
+        }
+      : null,
+    body: detail.body,
+    changedFiles: detail.changedFiles,
+    commitCount: detail.commitCount,
+    createdAt: null,
+    defaultMergeMethod: null,
+    deletions: detail.deletions,
+    draft: detail.isDraft,
+    id: String(detail.number),
+    mergeRequirements: [],
+    mergedAt: null,
+    number: detail.number,
+    repository,
+    reviewDecision: "none",
+    source: { name: detail.headRefName, oid: null, repository },
+    state: detail.state.toLocaleLowerCase(),
+    target: { name: detail.baseRefName, oid: null, repository },
+    title: detail.title,
+    updatedAt: detail.updatedAt,
+    viewerCanMerge: null,
+    webUrl: detail.url,
+  };
 }
 
 function deferred<T>() {

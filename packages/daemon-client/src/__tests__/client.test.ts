@@ -32,6 +32,24 @@ describe("createDaemonClient", () => {
     expect(fetchMock.mock.calls[0][0]).toBe("/api/health");
   });
 
+  it("uses generic source-control change-request routes", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(async () => jsonResponse(null));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createDaemonClient({ baseUrl: "", token: null });
+    await client.sourceControl.currentChangeRequest("/repo with spaces");
+    await client.sourceControl.getChangeRequest("/repo with spaces", "42/part");
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "/api/source-control/change-requests/current?projectPath=%2Frepo+with+spaces",
+    );
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(
+      "/api/source-control/change-requests/42%2Fpart?projectPath=%2Frepo+with+spaces",
+    );
+  });
+
   it("injects a bearer token when one is configured", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ version: "1" }));
     vi.stubGlobal("fetch", fetchMock);

@@ -2,13 +2,7 @@
 
 import type { GitHubPullRequestStatus } from "@angel-engine/daemon-api/github";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import {
   afterAll,
   afterEach,
@@ -22,6 +16,9 @@ import {
 import { defaultCollapsedTextMaxHeight } from "@/components/ui/collapsible-text";
 
 const pullRequestStatus = vi.fn();
+const currentChangeRequest = vi.fn(async () =>
+  toChangeRequestStatus(await pullRequestStatus()),
+);
 const openBrowserTab = vi.fn();
 const updateSnapshot = vi.fn();
 let focusChecksSection = false;
@@ -46,6 +43,20 @@ vi.mock("@/features/shepherd/shepherd-section", () => ({
   ShepherdSection: () => <div data-testid="shepherd-section">shepherd</div>,
 }));
 
+vi.mock("@/features/source-control/api/use-activation", () => ({
+  useSourceControlActivation: () => ({
+    capabilities: {
+      entries: {
+        "changeRequests.list": { supported: true },
+        "changeRequests.status": { supported: true },
+      },
+    },
+    projectPath: "/repo",
+    providerIdentity: "github:github.com/acme/widgets:1",
+    status: "active",
+  }),
+}));
+
 vi.mock("@/app/workspace/workspace-tool-surface-model", () => ({
   useWorkspaceToolSurface: () => ({
     active: true,
@@ -53,6 +64,7 @@ vi.mock("@/app/workspace/workspace-tool-surface-model", () => ({
       github: {
         pullRequestStatus,
       },
+      sourceControl: { currentChangeRequest },
     },
     chatId: "chat-1",
     focusChecksSection,
@@ -127,6 +139,61 @@ const openStatus: GitHubPullRequestStatus = {
   worktreeDirty: false,
 };
 
+function toChangeRequestStatus(status: GitHubPullRequestStatus) {
+  const repository = {
+    displayPath: "acme/widgets",
+    host: "github.com",
+    name: "widgets",
+    namespace: ["acme"],
+    providerId: "github",
+    remoteId: null,
+    webUrl: "https://github.com/acme/widgets",
+  };
+  return {
+    changeRequest: {
+      additions: 1,
+      allowedMergeMethods: status.allowedMergeMethods,
+      author: status.author
+        ? {
+            avatarUrl: null,
+            displayName: null,
+            id: null,
+            login: status.author,
+            webUrl: null,
+          }
+        : null,
+      body: status.body,
+      changedFiles: 1,
+      commitCount: 1,
+      createdAt: null,
+      defaultMergeMethod: status.defaultMergeMethod,
+      deletions: 1,
+      draft: status.isDraft,
+      extensions: {
+        github: {
+          mergeable: status.mergeable,
+          mergeStateStatus: status.mergeStateStatus,
+        },
+      },
+      id: String(status.number),
+      mergeRequirements: [],
+      mergedAt: status.mergedAt,
+      number: status.number,
+      repository,
+      reviewDecision:
+        status.reviewDecision?.toLocaleLowerCase().replace("_", "-") ?? "none",
+      source: { name: status.headRefName, oid: null, repository },
+      state: status.state.toLocaleLowerCase(),
+      target: { name: status.baseRefName, oid: null, repository },
+      title: status.title,
+      updatedAt: null,
+      viewerCanMerge: status.viewerCanMerge,
+      webUrl: status.url,
+    },
+    checks: null,
+  };
+}
+
 function renderPanel() {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -136,7 +203,7 @@ function renderPanel() {
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <PullRequestPanel root="/repo" />
+      <PullRequestPanel projectId="project-1" root="/repo" />
     </QueryClientProvider>,
   );
 }
@@ -145,6 +212,7 @@ beforeEach(() => {
   scrollHeight = defaultCollapsedTextMaxHeight + 80;
   focusChecksSection = false;
   pullRequestStatus.mockReset();
+  currentChangeRequest.mockClear();
   openBrowserTab.mockReset();
   updateSnapshot.mockReset();
   window.localStorage.clear();
@@ -208,23 +276,17 @@ describe("PullRequestPanel", () => {
     });
   });
 
-  it("renders unresolved review thread bodies through CollapsibleText", async () => {
+  it("renders change-request data fetched with the activation project path", async () => {
     pullRequestStatus.mockResolvedValue(openStatus);
     renderPanel();
 
     await waitFor(() => {
-      expect(screen.getByText("src/example.ts:12 · @bob")).toBeDefined();
+      expect(screen.getByText("PR description body")).toBeDefined();
     });
-    expect(screen.getByText(/Review note line 1/)).toBeDefined();
-    expect(screen.getByText(/Review note line 30/)).toBeDefined();
-
-    const toggles = screen.getAllByTestId("collapsible-text-toggle");
-    expect(toggles.length).toBeGreaterThanOrEqual(1);
-    fireEvent.click(toggles[0]!);
-    expect(toggles[0]!.textContent).toContain("common.showLess");
+    expect(currentChangeRequest).toHaveBeenCalledWith("/repo");
   });
 
-  it("places Checks before review threads and Shepherd last", async () => {
+  it("places Checks before Shepherd", async () => {
     pullRequestStatus.mockResolvedValue(openStatus);
     renderPanel();
 
@@ -233,14 +295,9 @@ describe("PullRequestPanel", () => {
     });
 
     const checks = screen.getByTestId("workspace-checks-section");
-    const threads = screen.getByText("src/example.ts:12 · @bob");
     const shepherd = screen.getByTestId("shepherd-section");
     expect(
-      checks.compareDocumentPosition(threads) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-    expect(
-      threads.compareDocumentPosition(shepherd) &
+      checks.compareDocumentPosition(shepherd) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });

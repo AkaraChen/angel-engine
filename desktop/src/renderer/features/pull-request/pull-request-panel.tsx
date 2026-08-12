@@ -36,6 +36,8 @@ import {
 } from "@/components/ui/native-select";
 import { useToast } from "@/components/ui/toast";
 import { archiveWorkspaceMutationOptions } from "@/features/chat/api/queries";
+import { useSourceControlActivation } from "@/features/source-control/api/use-activation";
+import { capabilityState } from "@/features/source-control/model";
 import {
   mergePullRequestMutationOptions,
   pullRequestStatusQueryOptions,
@@ -51,7 +53,10 @@ import { cn } from "@/platform/utils";
 
 const mergeMethods: GitHubMergeMethod[] = ["squash", "merge", "rebase"];
 
-export const PullRequestPanel: FC<{ root: string }> = ({ root }) => {
+export const PullRequestPanel: FC<{
+  projectId: string | null;
+  root: string;
+}> = ({ projectId, root }) => {
   const {
     active,
     api,
@@ -61,16 +66,42 @@ export const PullRequestPanel: FC<{ root: string }> = ({ root }) => {
     updateSnapshot,
   } = useWorkspaceToolSurface();
   const queryClient = useQueryClient();
+  const sourceControl = useSourceControlActivation(projectId);
+  const supportsList = capabilityState(
+    sourceControl.capabilities,
+    "changeRequests.list",
+  ).supported;
+  const supportsStatus = capabilityState(
+    sourceControl.capabilities,
+    "changeRequests.status",
+  ).supported;
   const { t } = useTranslation();
   const toast = useToast();
   const statusQuery = useQuery(
-    pullRequestStatusQueryOptions({ active, api, root }),
+    pullRequestStatusQueryOptions({
+      active,
+      api,
+      projectPath: sourceControl.projectPath,
+      providerIdentity: sourceControl.providerIdentity,
+      supportsList,
+      supportsStatus,
+    }),
   );
   const mergeMutation = useMutation(
-    mergePullRequestMutationOptions({ api, queryClient, root }),
+    mergePullRequestMutationOptions({
+      api,
+      providerIdentity: sourceControl.providerIdentity,
+      queryClient,
+      root,
+    }),
   );
   const resolveMutation = useMutation(
-    resolveReviewThreadMutationOptions({ api, queryClient, root }),
+    resolveReviewThreadMutationOptions({
+      api,
+      providerIdentity: sourceControl.providerIdentity,
+      queryClient,
+      root,
+    }),
   );
   const archiveMutation = useMutation(
     archiveWorkspaceMutationOptions({ api, queryClient }),

@@ -1,7 +1,12 @@
 import type { GitHubPullRequestStatus } from "@angel-engine/daemon-api/github";
+import type { ApiClient } from "@/platform/api-client";
+import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 
-import { retryUnknownMergeability } from "./queries";
+import {
+  pullRequestStatusQueryOptions,
+  retryUnknownMergeability,
+} from "./queries";
 
 const status = (mergeable: GitHubPullRequestStatus["mergeable"]) =>
   ({ mergeable }) as GitHubPullRequestStatus;
@@ -40,5 +45,36 @@ describe("retryUnknownMergeability", () => {
     expect(pause).toHaveBeenCalledTimes(expectedPauses);
     if (expectedPauses > 0) expect(pause).toHaveBeenCalledWith(2_000);
     expect(result.mergeable).toBe(sequence[expectedCalls - 1]);
+  });
+});
+
+describe("pullRequestStatusQueryOptions", () => {
+  it.each([
+    { active: false, supportsList: true, supportsStatus: true },
+    { active: true, supportsList: false, supportsStatus: true },
+    { active: true, supportsList: true, supportsStatus: false },
+  ])("makes no business request when activation cannot serve the query", async (state) => {
+    const currentChangeRequest = vi.fn();
+    const api = {
+      sourceControl: { currentChangeRequest },
+    } as unknown as ApiClient;
+    const queryClient = new QueryClient();
+    const observer = new QueryObserver(
+      queryClient,
+      pullRequestStatusQueryOptions({
+        ...state,
+        api,
+        projectPath: state.active ? "/repo" : null,
+        providerIdentity: state.active
+          ? "github:github.com/acme/widgets:1"
+          : null,
+      }),
+    );
+    const unsubscribe = observer.subscribe(() => undefined);
+
+    await Promise.resolve();
+
+    expect(currentChangeRequest).not.toHaveBeenCalled();
+    unsubscribe();
   });
 });

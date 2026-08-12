@@ -28,31 +28,40 @@ import {
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { pullRequestDetailQueryOptions } from "@/features/pull-requests/api/queries";
+import { useSourceControlActivation } from "@/features/source-control/api/use-activation";
+import { capabilityState } from "@/features/source-control/model";
 
 export function WorkspacePullRequestPreviewDialog({
   api,
   open,
-  root,
+  projectId,
   target,
   onOpenExternal,
   onOpenChange,
 }: {
   api: ApiClient;
   open: boolean;
-  root: string;
+  projectId: string | null;
   target: ExistingPullRequestTarget | null;
   onOpenExternal: (url: string) => void;
   onOpenChange: (open: boolean) => void;
 }) {
   const { t } = useTranslation();
+  const sourceControl = useSourceControlActivation(projectId);
+  const supported = capabilityState(
+    sourceControl.capabilities,
+    "changeRequests.get",
+  ).supported;
   const [copied, setCopied] = useState(false);
   const detailQuery = useQuery(
     pullRequestDetailQueryOptions({
       api,
-      cwd: root,
       enabled: open && target !== null,
       number: target?.number ?? null,
+      projectPath: sourceControl.projectPath,
+      providerIdentity: sourceControl.providerIdentity,
       staleTime: 15_000,
+      supported,
     }),
   );
 

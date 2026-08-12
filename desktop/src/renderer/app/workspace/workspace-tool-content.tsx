@@ -26,6 +26,7 @@ export function WorkspaceToolContent({ root }: { root: string }) {
     activeTabId,
     host,
     openBrowserTab,
+    projectId,
     updateSnapshot,
   } = useWorkspaceToolSurface();
   const layout = host === "sidebar" ? "compact" : "split";
@@ -37,7 +38,7 @@ export function WorkspaceToolContent({ root }: { root: string }) {
     return <WorkspaceGitPanel layout={layout} root={root} />;
   }
   if (activeTabId === workspaceToolPullRequestTabId) {
-    return <PullRequestPanel root={root} />;
+    return <PullRequestPanel projectId={projectId} root={root} />;
   }
   if (activeTabId === workspaceToolProcessesTabId) {
     return (
