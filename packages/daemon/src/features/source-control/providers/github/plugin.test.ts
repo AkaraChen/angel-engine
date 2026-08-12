@@ -122,6 +122,28 @@ describe("GitHub source-control provider", () => {
     ).toMatchObject({ providerId: "github" });
   });
 
+  it("returns every matching remote so the registry can report ambiguity", () => {
+    const plugin = createGitHubPlugin();
+    const matches = plugin.discovery.match(
+      context(
+        [
+          remote("https://github.com/acme/widgets.git", "origin"),
+          remote("https://github.com/acme/widgets.git", "mirror"),
+        ],
+        { defaultRemote: null },
+      ),
+    );
+
+    expect(matches).toEqual([
+      expect.objectContaining({
+        remote: expect.objectContaining({ name: "mirror" }),
+      }),
+      expect.objectContaining({
+        remote: expect.objectContaining({ name: "origin" }),
+      }),
+    ]);
+  });
+
   it("reports authenticated readiness through gh auth status", async () => {
     const runGh = vi.fn(async () => ({ stderr: "", stdout: "" }));
     const plugin = createGitHubPlugin({
@@ -183,6 +205,34 @@ describe("GitHub source-control provider", () => {
     expect(
       plugin.repositories?.parseUrl("https://gitlab.com/acme/widgets"),
     ).toBeNull();
+    expect(plugin.repositories?.parseUrl("acme/widgets")).toEqual(repository);
+  });
+
+  it("matches task links and clones through provider capabilities", async () => {
+    const runGh = vi.fn(async () => ({ stderr: "", stdout: "" }));
+    const plugin = createGitHubPlugin({
+      findGh: async () => "/usr/bin/gh",
+      runGh,
+    });
+
+    expect(
+      plugin.links?.parseUrl("https://github.com/acme/widgets/issues/3"),
+    ).toEqual({
+      id: "3",
+      kind: "work-item",
+      repository,
+      url: "https://github.com/acme/widgets/issues/3",
+    });
+    await expect(
+      plugin.git.clone?.(
+        { repository, targetPath: "/tmp/widgets" },
+        operationContext(),
+      ),
+    ).resolves.toEqual({ projectPath: "/tmp/widgets" });
+    expect(runGh).toHaveBeenCalledWith(
+      ["repo", "clone", "acme/widgets", "/tmp/widgets", "--", "--progress"],
+      expect.objectContaining({ timeoutMs: expect.any(Number) }),
+    );
   });
 
   it("lists namespaces and repositories through discovery capabilities", async () => {

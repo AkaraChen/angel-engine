@@ -2,6 +2,7 @@ import type { WorkspaceToolPatchFile } from "@/app/workspace/workspace-tool-patc
 
 import { CaretRight } from "@phosphor-icons/react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   WorkspaceToolPatchFileDiffContent,
   WorkspaceToolPatchFileLineStats,
@@ -50,6 +51,7 @@ export function WorkspaceToolPatchFileList({
   rowMode?: "expand" | "select";
   selectedFileKeys?: Record<string, boolean>;
 }) {
+  const { t } = useTranslation();
   const selection =
     onFileSelectedChange !== undefined && selectedFileKeys !== undefined
       ? { onFileSelectedChange, selectedFileKeys }
@@ -81,7 +83,7 @@ export function WorkspaceToolPatchFileList({
             text-sm text-muted-foreground
           "
         >
-          No changes
+          {t("workspace.tools.empty.noChanges")}
         </div>
       ) : null}
     </section>

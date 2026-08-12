@@ -59,6 +59,7 @@ export interface WorkspaceToolSurfaceModel {
   host: WorkspaceToolSurfaceHost;
   openBrowserTab: (url: string) => void;
   openFileTab: (path: string) => void;
+  projectId: string | null;
   requestSurfaceHost: (host: WorkspaceToolSurfaceHost) => Promise<void>;
   root: string | null;
   selectTab: (tabId: WorkspaceToolTabId) => Promise<boolean>;
@@ -93,6 +94,7 @@ export function useWorkspaceToolSurfaceModel({
   );
   const contextKey = propContextKey ?? context.contextKey ?? null;
   const chatId = context.chatId ?? null;
+  const projectId = context.projectId ?? null;
   const root = propRoot ?? context.root ?? null;
   const snapshot = currentWorkspaceToolSnapshot(contextKey, snapshots);
   // Immediately redirect a legacy/persisted `"checks"` tab to `"pr"` while
@@ -316,6 +318,7 @@ export function useWorkspaceToolSurfaceModel({
       host,
       openBrowserTab,
       openFileTab,
+      projectId,
       requestSurfaceHost,
       root,
       selectTab,
@@ -336,6 +339,7 @@ export function useWorkspaceToolSurfaceModel({
       host,
       openBrowserTab,
       openFileTab,
+      projectId,
       requestSurfaceHost,
       root,
       selectTab,
