@@ -1,4 +1,5 @@
 import type { WorkspaceGitBranchStatus } from "@angel-engine/daemon-api/workspace-tools";
+import type { CapabilityMatrix } from "@angel-engine/daemon-api/source-control";
 import type { ReactNode } from "react";
 
 import { DaemonRequestError } from "@angel-engine/daemon-client";
@@ -10,11 +11,7 @@ import { getErrorMessage } from "@/app/workspace/workspace-file-display";
 import { splitWorkspaceGitBranchLabel } from "@/app/workspace/workspace-git-status";
 import { WorkspaceToolBanner } from "@/app/workspace/workspace-tool-layout";
 import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { CapabilityGate } from "@/features/source-control/components/capability-gate";
 
 /**
  * The source-control status line: where the branch sits relative to its
@@ -27,6 +24,9 @@ export function WorkspaceGitStatusBar({
   dirtyCount,
   pushError,
   pushPending,
+  publishCapabilities,
+  publishProviderActive,
+  onPublishRemediate,
   onPush,
   pullRequestAction,
   statusLabel,
@@ -36,6 +36,9 @@ export function WorkspaceGitStatusBar({
   dirtyCount: number;
   pushError?: unknown;
   pushPending: boolean;
+  publishCapabilities: CapabilityMatrix;
+  publishProviderActive: boolean;
+  onPublishRemediate: () => void;
   onPush: () => void;
   pullRequestAction?: ReactNode;
   statusLabel?: string;
@@ -107,24 +110,26 @@ export function WorkspaceGitStatusBar({
               ? t("workspace.tools.git.dirty", { value: dirtyCount })
               : t("workspace.tools.git.clean"))}
         </span>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              aria-label={pushLabel}
-              className="w-6 px-0 @[290px]:w-auto @[290px]:px-2"
-              disabled={!canPush || pushPending}
-              onClick={onPush}
-              size="xs"
-              title={pushLabel}
-              type="button"
-              variant="secondary"
-            >
-              <ArrowUp aria-hidden="true" />
-              <span className="hidden @[290px]:inline">{pushLabel}</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>{pushLabel}</TooltipContent>
-        </Tooltip>
+        <CapabilityGate
+          capabilities={publishCapabilities}
+          capability="branches.publish"
+          onRemediate={onPublishRemediate}
+          remediationLabel={t("common.retry")}
+        >
+          <Button
+            aria-label={pushLabel}
+            className="w-6 px-0 @[290px]:w-auto @[290px]:px-2"
+            disabled={!canPush || pushPending || !publishProviderActive}
+            onClick={onPush}
+            size="xs"
+            title={pushLabel}
+            type="button"
+            variant="secondary"
+          >
+            <ArrowUp aria-hidden="true" />
+            <span className="hidden @[290px]:inline">{pushLabel}</span>
+          </Button>
+        </CapabilityGate>
         {pullRequestAction}
       </div>
       {conflictedPaths.length > 0 ? (

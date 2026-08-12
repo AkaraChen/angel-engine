@@ -12,6 +12,8 @@ import { WorkspaceToolBanner } from "@/app/workspace/workspace-tool-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useSourceControlActivation } from "@/features/source-control/api/use-activation";
+import { capabilityState } from "@/features/source-control/model";
 import { queryKeys } from "@/platform/query-keys";
 import { cn } from "@/platform/utils";
 
@@ -22,6 +24,7 @@ export function useWorkspaceGitPanelState(
   root: string,
   chatId: string | null,
   baseKind: WorkspaceGitDiffBaseKind,
+  projectId: string | null,
 ) {
   const queryClient = useQueryClient();
   const [commitDescription, setCommitDescription] = useState("");
@@ -73,12 +76,25 @@ export function useWorkspaceGitPanelState(
       queryKey: queryKeys.workspaceTools.fileTree(root),
     });
   }, [queryClient, root]);
+  const activation = useSourceControlActivation(projectId);
+  const publishCapability = capabilityState(
+    activation.capabilities,
+    "branches.publish",
+  );
   const pushMutation = useMutation({
-    mutationFn: async () => api.workspaceTools.gitPush({ root }),
-    onSuccess: invalidateGit,
-  });
-  const pullMutation = useMutation({
-    mutationFn: async () => api.workspaceTools.gitPull({ root }),
+    mutationFn: async (localBranch: string) => {
+      if (
+        activation.status !== "active" ||
+        !is.nonEmptyString(activation.projectPath) ||
+        !publishCapability.supported
+      ) {
+        throw new Error("Branch publishing requires an active provider.");
+      }
+      return api.sourceControl.publishBranch({
+        localBranch,
+        projectPath: activation.projectPath,
+      });
+    },
     onSuccess: invalidateGit,
   });
   const checkoutMutation = useMutation({
@@ -121,7 +137,9 @@ export function useWorkspaceGitPanelState(
     commitSummary,
     gitQuery,
     handleFileSelectedChange,
-    pullMutation,
+    publishCapabilities: activation.capabilities,
+    publishProviderActive: activation.status === "active",
+    refetchActivation: activation.refetch,
     pushMutation,
     selectedFileKeys,
     setCommitDescription,

@@ -24,7 +24,7 @@ import {
   managedWorktreePath,
   managedWorktreeRoot,
   removeManagedWorktree,
-} from "./git";
+} from "../source-control/local-git/projects";
 
 /** A managed worktree selected for deletion together with its chats. */
 interface ManagedWorktreeDeletionTarget {

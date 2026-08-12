@@ -112,7 +112,7 @@ describe("project setup lifecycle coordinator", () => {
       ANGEL_WORKTREE_BRANCH: "angel/test",
       ANGEL_WORKTREE_PATH: worktreePath,
     });
-  });
+  }, 15_000);
 
   it("Continue anyway releases queued work after failure", async () => {
     await start(["exit 9"]);

@@ -1,9 +1,10 @@
 import type { Chat, ChatRunStartInput } from "@angel-engine/daemon-api/chat";
 import type {
-  GitHubChecksSnapshot,
-  GitHubFailureLogResult,
-  GitHubReviewThreadsResult,
-} from "@angel-engine/daemon-api/github";
+  CheckSummary,
+  FailureLogResult,
+  RepositoryIdentity,
+  ReviewThread,
+} from "@angel-engine/daemon-api/source-control";
 import type {
   ShepherdHoldReason,
   ShepherdSession,
@@ -20,19 +21,15 @@ import type { ChatEventsApi } from "../chat/chat-events";
 import type { ChatRunRegistry } from "../chat/run-registry";
 import type { Db } from "../../platform/db";
 import type { DaemonError } from "../../platform/errors";
-import type { GhRunner } from "../github/gh-cli";
 import type { CreateShepherdSessionInput } from "./store";
 import type { PersistedQueuedChatRun } from "../chat/repository";
+import { SourceControlCoordinator } from "../source-control/registry/coordinator";
 
 import { getChat, requireChat } from "../chat/repository";
 import {
   getAmbiguousQueuedChatRun,
   listQueuedChatRuns,
 } from "../chat/repository";
-import { fetchGitHubChecks } from "../github/checks-snapshot";
-import { fetchGitHubFailureLog } from "../github/failure-log";
-import { viewPullRequest } from "../github/pull-requests";
-import { fetchGitHubReviewThreads } from "../github/review-threads";
 import { DaemonError as DE } from "../../platform/errors";
 import { evaluateShepherdTick, progressAfterShepherdTurn } from "./evaluate";
 import { evaluateShepherdGate, isShepherdYieldOrigin } from "./gate";
@@ -51,8 +48,9 @@ export const ACTIVE_POLL_MS = 30_000;
 export const IDLE_POLL_MS = 120_000;
 
 export interface ShepherdSnapshot {
-  checks: GitHubChecksSnapshot;
-  threads: GitHubReviewThreadsResult;
+  checks: CheckSummary;
+  threads: readonly ReviewThread[];
+  repository: RepositoryIdentity;
   prState: string | null;
   cwd: string;
 }
@@ -86,9 +84,11 @@ export interface ShepherdPorts {
   }) => Promise<ShepherdSnapshot>;
   fetchFailureLog: (input: {
     cwd: string;
-    runId: string;
-    repo: string;
-  }) => Promise<GitHubFailureLogResult>;
+    logRef: NonNullable<
+      import("@angel-engine/daemon-api/source-control").CheckRun["logRef"]
+    >;
+    repository: RepositoryIdentity;
+  }) => Promise<FailureLogResult>;
 }
 
 export interface ShepherdServiceDeps {
@@ -96,9 +96,8 @@ export interface ShepherdServiceDeps {
   chatRuns: ChatRunRegistry;
   chatEvents: ChatEventsApi;
   run: <A>(effect: Effect.Effect<A, DaemonError, Db>) => Promise<A>;
+  sourceControl?: SourceControlCoordinator;
   ports?: Partial<ShepherdPorts>;
-  runGh?: GhRunner;
-  whichGh?: () => Promise<string | null>;
   setTimer?: (
     callback: () => void,
     delay: number,
@@ -204,7 +203,7 @@ export class ShepherdService {
         handledFingerprints: [],
         baselineSnapshot: {
           checks: snapshot.checks,
-          unresolvedCount: snapshot.threads.unresolvedCount,
+          unresolvedCount: unresolvedCount(snapshot.threads),
         },
         pendingPrompt: null,
         pendingFingerprints: [],
@@ -220,7 +219,7 @@ export class ShepherdService {
         headSha: snapshot.checks.headOid,
         baselineSnapshot: {
           checks: snapshot.checks,
-          unresolvedCount: snapshot.threads.unresolvedCount,
+          unresolvedCount: unresolvedCount(snapshot.threads),
         },
         handledFingerprints: [],
       });
@@ -422,6 +421,7 @@ export class ShepherdService {
       session,
       checks: snapshot.checks,
       threads: snapshot.threads,
+      repository: snapshot.repository,
       prState: snapshot.prState,
     });
 
@@ -442,7 +442,7 @@ export class ShepherdService {
           pendingPrompt: null,
           baselineSnapshot: {
             checks: snapshot.checks,
-            unresolvedCount: snapshot.threads.unresolvedCount,
+            unresolvedCount: unresolvedCount(snapshot.threads),
           },
           state: session.state === "queued" ? "watching" : session.state,
         });
@@ -474,20 +474,20 @@ export class ShepherdService {
   ): Promise<void> {
     const unhandledCommentIds = new Set(decision.newCommentIds);
     const newComments = collectNewComments(
-      snapshot.threads.unresolved,
+      snapshot.threads,
       unhandledCommentIds,
     );
 
     const failureLogs: {
       checkName: string;
-      log: GitHubFailureLogResult;
+      log: FailureLogResult;
     }[] = [];
     for (const check of decision.failedRequired) {
-      if (!is.nonEmptyString(check.workflowRunId)) continue;
+      if (check.logRef === null) continue;
       const log = await this.#ports.fetchFailureLog({
         cwd: snapshot.cwd,
-        runId: check.workflowRunId,
-        repo: `${session.owner}/${session.repo}`,
+        logRef: check.logRef,
+        repository: snapshot.repository,
       });
       failureLogs.push({ checkName: check.name, log });
     }
@@ -712,7 +712,7 @@ export class ShepherdService {
 
 function createDefaultPorts(deps: ShepherdServiceDeps): ShepherdPorts {
   const run = deps.run;
-  const gh = { runGh: deps.runGh, whichGh: deps.whichGh };
+  const sourceControl = deps.sourceControl ?? new SourceControlCoordinator();
   const defaults: ShepherdPorts = {
     listActiveSessions: () => run(listActiveShepherdSessions()),
     getSessionById: (id) => run(getShepherdSessionById(id)),
@@ -727,53 +727,106 @@ function createDefaultPorts(deps: ShepherdServiceDeps): ShepherdPorts {
     getAmbiguousQueuedChatRun: (chatId) =>
       run(getAmbiguousQueuedChatRun(chatId)),
     fetchSnapshot: async (input) => {
-      const checks = await run(
-        fetchGitHubChecks(
-          {
-            cwd: input.cwd,
-            owner: input.owner,
-            prNumber: input.prNumber,
-            repo: input.repo,
-          },
-          gh,
-        ),
+      const activation = await requireProviderActivation(
+        sourceControl,
+        input.cwd,
       );
-      const threads = await run(
-        fetchGitHubReviewThreads(
-          {
-            cwd: input.cwd,
-            owner: input.owner,
-            prNumber: input.prNumber,
-            repo: input.repo,
-          },
-          gh,
-        ),
-      );
-      let prState: string | null = null;
-      try {
-        const pr = await run(
-          viewPullRequest({ cwd: input.cwd, number: input.prNumber }, gh),
-        );
-        prState = pr.state;
-      } catch {
-        prState = null;
-      }
-      return { checks, threads, prState, cwd: input.cwd };
+      const repository = activation.repository;
+      const item = { repository, id: String(input.prNumber) };
+      const [checks, threads, changeRequest] = await Promise.all([
+        sourceControl.registry.invoke({
+          activation,
+          capability: "checks.snapshot",
+          operation: "checks.snapshot",
+          run: (plugin, context) =>
+            requireOperation(plugin.checks?.snapshot, "checks.snapshot")(
+              item,
+              context,
+            ),
+        }),
+        sourceControl.registry.invoke({
+          activation,
+          capability: "reviewThreads.list",
+          operation: "reviewThreads.list",
+          run: (plugin, context) =>
+            requireOperation(plugin.reviews?.listThreads, "reviewThreads.list")(
+              item,
+              context,
+            ),
+        }),
+        sourceControl.registry.invoke({
+          activation,
+          capability: "changeRequests.get",
+          operation: "changeRequests.get",
+          run: (plugin, context) =>
+            requireOperation(plugin.changeRequests?.get, "changeRequests.get")(
+              item,
+              context,
+            ),
+        }),
+      ]);
+      return {
+        checks,
+        threads,
+        prState: changeRequest.state,
+        repository,
+        cwd: input.cwd,
+      };
     },
     fetchFailureLog: async (input) => {
       try {
-        return await run(
-          fetchGitHubFailureLog(
-            { cwd: input.cwd, runId: input.runId, repo: input.repo },
-            gh,
-          ),
+        const activation = await requireProviderActivation(
+          sourceControl,
+          input.cwd,
         );
+        return await sourceControl.registry.invoke({
+          activation,
+          capability: "checks.failureLog",
+          operation: "checks.failureLog",
+          run: (plugin, context) =>
+            requireOperation(plugin.checks?.failureLog, "checks.failureLog")(
+              {
+                repository: input.repository,
+                logRef: input.logRef,
+                tailLines: 40,
+              },
+              context,
+            ),
+        });
       } catch {
-        return { lines: [], truncated: false };
+        return { text: "", truncated: false };
       }
     },
   };
   return { ...defaults, ...deps.ports };
+}
+
+async function requireProviderActivation(
+  sourceControl: SourceControlCoordinator,
+  projectPath: string,
+) {
+  const result = await sourceControl.activate({ projectPath });
+  if (result.status !== "active" || result.activation.repository === null) {
+    throw DE.sourceControlFetchFailed(
+      new Error("No source-control provider is active for this project."),
+    );
+  }
+  return {
+    ...result.activation,
+    repository: result.activation.repository,
+  };
+}
+
+function requireOperation<A extends (...args: never[]) => unknown>(
+  operation: A | undefined,
+  name: string,
+): A {
+  if (operation === undefined) {
+    throw DE.sourceControlFetchFailed(
+      new Error(`The active provider does not implement ${name}.`),
+    );
+  }
+  return operation;
 }
 
 function requireChatCwd(cwd: string | null | undefined): string {
@@ -787,4 +840,8 @@ function requireChatCwd(cwd: string | null | undefined): string {
 
 function uniqueStrings(values: readonly string[]): string[] {
   return [...new Set(values)];
+}
+
+function unresolvedCount(threads: readonly ReviewThread[]): number {
+  return threads.filter((thread) => thread.state === "unresolved").length;
 }
