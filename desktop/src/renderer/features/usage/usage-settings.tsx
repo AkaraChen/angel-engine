@@ -3,9 +3,12 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import {
   SettingsGroup,
@@ -153,20 +156,24 @@ export function UsageSettings() {
         {burnRateWarningEnabled ? (
           <SettingsRow
             after={
-              <NativeSelect
-                aria-label={t("usage.burnRateThreshold")}
-                onChange={(event) =>
-                  setBurnRateThreshold(Number(event.currentTarget.value))
-                }
-                size="sm"
+              <Select
+                onValueChange={(value) => setBurnRateThreshold(Number(value))}
                 value={String(burnRateThreshold)}
               >
-                {BURN_RATE_THRESHOLDS.map((threshold) => (
-                  <NativeSelectOption key={threshold} value={String(threshold)}>
-                    ${threshold}/h
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
+                <SelectTrigger
+                  aria-label={t("usage.burnRateThreshold")}
+                  size="sm"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {BURN_RATE_THRESHOLDS.map((threshold) => (
+                    <SelectItem key={threshold} value={String(threshold)}>
+                      ${threshold}/h
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             }
             title={t("usage.burnRateThreshold")}
           />

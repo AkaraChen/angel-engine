@@ -20,7 +20,7 @@ Design Mode (preview element pick → context to the current agent session) is a
 ## Conventions
 
 - If Drizzle schema changes, generate and commit migrations.
-- All select controls must use `@/components/ui/native-select` primitives (`NativeSelect`, `NativeSelectOption`, `NativeSelectOptGroup`).
+- All select controls must use the shadcn primitives exported by `@/components/ui/select`.
 - Keep main/preload/renderer separation; do not bypass restricted import boundaries.
 - Use `@sindresorhus/is` for desktop TypeScript value checks when it makes the
   condition clearer. Prefer helpers such as `is.nonEmptyString`, `is.string`,
@@ -33,6 +33,6 @@ Design Mode (preview element pick → context to the current agent session) is a
 
 ## Anti-Patterns
 
-- Importing `@/components/ui/select` or Radix `Select` into desktop code.
+- Building select controls from raw HTML primitives instead of `@/components/ui/select`.
 - Storing restored chat messages in desktop DB (metadata only).
 - Re-implementing provider/model/mode semantics in renderer when snapshot already carries them.

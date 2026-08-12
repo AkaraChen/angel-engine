@@ -3,9 +3,12 @@ import { useTheme } from "next-themes";
 import { useTranslation } from "react-i18next";
 
 import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   SettingsRow,
@@ -59,18 +62,24 @@ export function AppearanceSection() {
       />
       <SettingsRow
         control={
-          <NativeSelect
-            aria-label={t("settings.appearance.language")}
-            className="w-full"
-            onChange={(event) => void i18n.changeLanguage(event.target.value)}
+          <Select
+            onValueChange={(value) => void i18n.changeLanguage(value)}
             value={i18n.resolvedLanguage}
           >
-            {languageOptions.map((option) => (
-              <NativeSelectOption key={option.value} value={option.value}>
-                {t(option.labelKey)}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
+            <SelectTrigger
+              aria-label={t("settings.appearance.language")}
+              className="w-full"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {languageOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {t(option.labelKey)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         }
         description={t("settings.appearance.languageDescription")}
         title={t("settings.appearance.language")}

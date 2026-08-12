@@ -1,14 +1,15 @@
 import type { ChatCreationLocation } from "@angel-engine/daemon-api/chat";
 import type { Project } from "@angel-engine/daemon-api/projects";
-import type { ChangeEvent } from "react";
-
 import { FolderOpen, GitBranch } from "@phosphor-icons/react";
 import { useTranslation } from "react-i18next";
 import { getProjectDisplayName } from "@/app/workspace/workspace-display";
 import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/platform/utils";
 
 const NO_PROJECT_SELECT_VALUE = Symbol("angel.projectSelect.noProject");
@@ -26,7 +27,7 @@ const projectControlVariants = {
   /**
    * Draft-screen capsule. The DNA only lets `rounded-full` into app context for
    * chips, so this variant is scoped to the composer toolbar rather than being
-   * folded into `native-select` itself.
+   * folded into the shared select itself.
    */
   chip: "h-8 max-w-[16rem] rounded-full border border-border-subtle bg-card py-0 pr-7 pl-7 text-xs hover:bg-overlay-hover dark:bg-surface-1",
 };
@@ -46,8 +47,7 @@ export function DraftProjectSelect({
 }) {
   const { t } = useTranslation();
   const value = selectedProjectId ?? String(NO_PROJECT_SELECT_VALUE);
-  const handleProjectChange = async (event: ChangeEvent<HTMLSelectElement>) => {
-    const nextValue = event.currentTarget.value;
+  const handleProjectChange = async (nextValue: string) => {
     const selectedSymbol = PROJECT_SELECT_SYMBOLS.get(nextValue);
 
     if (selectedSymbol === NEW_PROJECT_SELECT_VALUE) {
@@ -72,44 +72,49 @@ export function DraftProjectSelect({
         "
         weight="regular"
       />
-      <NativeSelect
-        aria-label={t("workspace.projectSelect")}
-        className="max-w-[18rem]"
-        onChange={(event) => void handleProjectChange(event)}
-        selectClassName={cn(
-          projectControlVariants[variant],
-          variant === "default" &&
-            `
-              hover:bg-background/92
-              focus-visible:border-foreground/12! focus-visible:ring-0!
-              dark:hover:bg-card/90
-              dark:focus-visible:border-white/14!
-            `,
-        )}
-        size="sm"
-        title={t("workspace.projectSelect")}
+      <Select
+        onValueChange={(nextValue) => void handleProjectChange(nextValue)}
         value={value}
       >
-        <NativeSelectOption value={String(NO_PROJECT_SELECT_VALUE)}>
-          {t("workspace.noProject")}
-        </NativeSelectOption>
-        <NativeSelectOption value={String(NEW_PROJECT_SELECT_VALUE)}>
-          {t("sidebar.addProject")}
-        </NativeSelectOption>
-        {projects.map((project) => {
-          const projectName = getProjectDisplayName(project.path);
+        <SelectTrigger
+          aria-label={t("workspace.projectSelect")}
+          className={cn(
+            projectControlVariants[variant],
+            variant === "default" &&
+              `
+                hover:bg-background/92
+                focus-visible:border-foreground/12! focus-visible:ring-0!
+                dark:hover:bg-card/90
+                dark:focus-visible:border-white/14!
+              `,
+          )}
+          size="sm"
+          title={t("workspace.projectSelect")}
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={String(NO_PROJECT_SELECT_VALUE)}>
+            {t("workspace.noProject")}
+          </SelectItem>
+          <SelectItem value={String(NEW_PROJECT_SELECT_VALUE)}>
+            {t("sidebar.addProject")}
+          </SelectItem>
+          {projects.map((project) => {
+            const projectName = getProjectDisplayName(project.path);
 
-          return (
-            <NativeSelectOption
-              key={project.id}
-              title={project.path}
-              value={project.id}
-            >
-              {projectName}
-            </NativeSelectOption>
-          );
-        })}
-      </NativeSelect>
+            return (
+              <SelectItem
+                key={project.id}
+                title={project.path}
+                value={project.id}
+              >
+                {projectName}
+              </SelectItem>
+            );
+          })}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
@@ -134,34 +139,39 @@ export function DraftCreationLocationSelect({
         "
         weight="regular"
       />
-      <NativeSelect
-        aria-label={t("workspace.creationLocationSelect")}
-        className="max-w-48"
-        onChange={(event) =>
-          onValueChange(event.currentTarget.value as ChatCreationLocation)
+      <Select
+        onValueChange={(nextValue) =>
+          onValueChange(nextValue as ChatCreationLocation)
         }
-        selectClassName={cn(
-          projectControlVariants[variant],
-          "max-w-48",
-          variant === "default" &&
-            `
-              hover:bg-background/92
-              focus-visible:border-foreground/12! focus-visible:ring-0!
-              dark:hover:bg-card/90
-              dark:focus-visible:border-white/14!
-            `,
-        )}
-        size="sm"
-        title={t("workspace.creationLocationSelect")}
         value={value}
       >
-        <NativeSelectOption value="project">
-          {t("workspace.creationLocationProject")}
-        </NativeSelectOption>
-        <NativeSelectOption value="worktree">
-          {t("workspace.creationLocationWorktree")}
-        </NativeSelectOption>
-      </NativeSelect>
+        <SelectTrigger
+          aria-label={t("workspace.creationLocationSelect")}
+          className={cn(
+            projectControlVariants[variant],
+            "max-w-48",
+            variant === "default" &&
+              `
+                hover:bg-background/92
+                focus-visible:border-foreground/12! focus-visible:ring-0!
+                dark:hover:bg-card/90
+                dark:focus-visible:border-white/14!
+              `,
+          )}
+          size="sm"
+          title={t("workspace.creationLocationSelect")}
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="project">
+            {t("workspace.creationLocationProject")}
+          </SelectItem>
+          <SelectItem value="worktree">
+            {t("workspace.creationLocationWorktree")}
+          </SelectItem>
+        </SelectContent>
+      </Select>
     </div>
   );
 }

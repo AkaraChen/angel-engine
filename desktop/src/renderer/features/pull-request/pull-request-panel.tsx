@@ -31,9 +31,12 @@ import { Button } from "@/components/ui/button";
 import { CollapsibleText } from "@/components/ui/collapsible-text";
 import { confirmAction } from "@/components/ui/confirm-dialog";
 import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import { archiveWorkspaceMutationOptions } from "@/features/chat/api/queries";
 import {
@@ -362,29 +365,35 @@ export const PullRequestPanel: FC<{ root: string }> = ({ root }) => {
           ) : null}
 
           <div className="flex gap-2">
-            <NativeSelect
-              aria-label={t("workspace.tools.pullRequest.method")}
-              className="min-w-0 flex-1"
-              onChange={(event) => {
-                const next = event.target.value as GitHubMergeMethod;
+            <Select
+              onValueChange={(value) => {
+                const next = value as GitHubMergeMethod;
                 setSelectedMethod(next);
                 writeMergeMethod(root, next);
               }}
               value={method}
             >
-              {mergeMethods.map((candidate) => (
-                <NativeSelectOption
-                  disabled={!status.allowedMergeMethods.includes(candidate)}
-                  key={candidate}
-                  value={candidate}
-                >
-                  {t(`workspace.tools.pullRequest.methods.${candidate}`)}
-                  {status.allowedMergeMethods.includes(candidate)
-                    ? ""
-                    : ` — ${t("workspace.tools.pullRequest.methodDisabled")}`}
-                </NativeSelectOption>
-              ))}
-            </NativeSelect>
+              <SelectTrigger
+                aria-label={t("workspace.tools.pullRequest.method")}
+                className="min-w-0 flex-1"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {mergeMethods.map((candidate) => (
+                  <SelectItem
+                    disabled={!status.allowedMergeMethods.includes(candidate)}
+                    key={candidate}
+                    value={candidate}
+                  >
+                    {t(`workspace.tools.pullRequest.methods.${candidate}`)}
+                    {status.allowedMergeMethods.includes(candidate)
+                      ? ""
+                      : ` — ${t("workspace.tools.pullRequest.methodDisabled")}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button
               disabled={!canMerge || mergeMutation.isPending}
               onClick={() => void merge()}

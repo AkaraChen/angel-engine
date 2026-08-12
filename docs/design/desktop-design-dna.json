@@ -188,7 +188,7 @@
 
     "components": {
       "button_style": "Seven variants over a shared base: solid `default` (primary fill), `soft` (primary-soft tint — the signature quiet-emphasis variant), `outline`, `secondary`, `ghost`, `destructive` (10–20% danger tint with danger-colored text, never a solid red fill), and `link`. Radius `lg`, heights 24/32/36/40px, icon gap auto-tightens via `has-data-[icon=inline-start]` padding rules.",
-      "input_style": "32–36px, 1px `border-input`, background surface, radius md, focus expressed as a soft `ring-ring/30` rather than a color swap. Native `<select>` is used deliberately (NativeSelect) so OS dropdown behavior is preserved.",
+      "input_style": "32–36px, 1px `border-input`, background surface, radius md, focus expressed as a soft `ring-ring/30` rather than a color swap. Select controls use the shared shadcn Select primitives for consistent themed behavior.",
       "card_style": "1px `border-subtle`, radius xl, `bg-card`, `shadow-xs`, contents divided by hairlines. Grouped-list cards (iOS/macOS settings idiom) are the dominant content container.",
       "navigation_pattern": "Persistent left rail with collapsible sidebar; secondary navigation is a vertical tablist where the active item is a spring-animated `layoutId` pill in `primary-soft`.",
       "modal_style": "Centered Radix dialog, radius xl, `bg-popover`, `ring-1 ring-border-subtle` instead of a border, `shadow-overlay`, 180ms swift ease, zoom 0.97→1. Overlay is black/40 with only a 2px backdrop blur — enough to separate, not enough to look glassy.",
