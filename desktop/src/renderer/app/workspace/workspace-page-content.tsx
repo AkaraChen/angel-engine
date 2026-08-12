@@ -7,7 +7,10 @@ import { useWorkspaceNavigation } from "@/app/workspace/use-workspace-navigation
 import { useWorkspacePageModel } from "@/app/workspace/use-workspace-page-model";
 import { useWorktreeDraftGuard } from "@/app/workspace/use-worktree-draft-guard";
 import { WorkspacePageView } from "@/app/workspace/workspace-page-view";
-import { chatRoutePath } from "@/app/workspace/workspace-route-paths";
+import {
+  chatRoutePath,
+  projectDraftRoutePath,
+} from "@/app/workspace/workspace-route-paths";
 
 interface WorkspacePageContentProps {
   api: ReturnType<typeof useApi>;
@@ -52,6 +55,18 @@ export function WorkspacePageContent({
     if (canonicalPath !== currentRoutePath) {
       return <Redirect replace to={canonicalPath} />;
     }
+  }
+
+  if (
+    model.isProjectMode &&
+    model.isDraftPage &&
+    model.projectsQuery.isSuccess &&
+    model.draftProject.project === undefined &&
+    model.projects[0] !== undefined
+  ) {
+    return (
+      <Redirect replace to={projectDraftRoutePath(model.projects[0].id)} />
+    );
   }
 
   if (

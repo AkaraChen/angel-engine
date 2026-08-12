@@ -46,7 +46,7 @@ interface NewChatThreadProps {
     | Promise<ChatComposerBeforeSubmitResult>;
   onCreateProject: () => Project | undefined | Promise<Project | undefined>;
   onOpenChat: (chat: Chat) => void;
-  onProjectChange: (projectId: string | null) => void;
+  onProjectChange: (projectId: string) => void;
   permissionMode?: string;
   prewarmId?: string;
   projectId?: string;

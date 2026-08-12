@@ -32,12 +32,14 @@ const projectControlVariants = {
 };
 
 export function DraftProjectSelect({
+  allowNoProject,
   onCreateProject,
   onProjectChange,
   projects,
   selectedProjectId,
   variant = "default",
 }: {
+  allowNoProject: boolean;
   onCreateProject: () => Project | undefined | Promise<Project | undefined>;
   onProjectChange: (projectId: string | null) => void;
   projects: Project[];
@@ -45,7 +47,9 @@ export function DraftProjectSelect({
   variant?: keyof typeof projectControlVariants;
 }) {
   const { t } = useTranslation();
-  const value = selectedProjectId ?? String(NO_PROJECT_SELECT_VALUE);
+  const value =
+    selectedProjectId ??
+    String(allowNoProject ? NO_PROJECT_SELECT_VALUE : NEW_PROJECT_SELECT_VALUE);
   const handleProjectChange = async (event: ChangeEvent<HTMLSelectElement>) => {
     const nextValue = event.currentTarget.value;
     const selectedSymbol = PROJECT_SELECT_SYMBOLS.get(nextValue);
@@ -90,9 +94,11 @@ export function DraftProjectSelect({
         title={t("workspace.projectSelect")}
         value={value}
       >
-        <NativeSelectOption value={String(NO_PROJECT_SELECT_VALUE)}>
-          {t("workspace.noProject")}
-        </NativeSelectOption>
+        {allowNoProject ? (
+          <NativeSelectOption value={String(NO_PROJECT_SELECT_VALUE)}>
+            {t("workspace.noProject")}
+          </NativeSelectOption>
+        ) : null}
         <NativeSelectOption value={String(NEW_PROJECT_SELECT_VALUE)}>
           {t("sidebar.addProject")}
         </NativeSelectOption>
