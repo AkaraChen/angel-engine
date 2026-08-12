@@ -60,17 +60,12 @@ describe.each(translatedLanguages)("%s locale", (language) => {
   it("does not silently reuse English pull request copy", () => {
     const intentionallySame: Partial<Record<typeof language, string[]>> = {
       de: ["shepherd.rounds", "shepherd.title"],
-      es: ["shepherd.rounds", "shepherd.title", "title"],
-      fr: ["description", "shepherd.rounds", "shepherd.title", "title"],
+      es: ["shepherd.rounds", "shepherd.title"],
+      fr: ["description", "shepherd.rounds", "shepherd.title"],
       ja: ["shepherd.rounds", "shepherd.title"],
       ko: ["shepherd.rounds", "shepherd.title"],
-      "zh-CN": ["shepherd.rounds", "shepherd.start", "shepherd.title"],
-      "zh-TW": [
-        "description",
-        "shepherd.rounds",
-        "shepherd.start",
-        "shepherd.title",
-      ],
+      "zh-CN": ["shepherd.rounds", "shepherd.title"],
+      "zh-TW": ["description", "shepherd.rounds", "shepherd.title"],
     };
 
     expect(
@@ -85,6 +80,14 @@ describe.each(translatedLanguages)("%s locale", (language) => {
 describe.each(
   supportedLanguages,
 )("%s source control terminology", (language) => {
+  it("localizes the no-changes empty state", () => {
+    const noChanges =
+      resources[language].translation.workspace.tools.empty.noChanges;
+
+    expect(noChanges.length).toBeGreaterThan(0);
+    if (language !== "en") expect(noChanges).not.toBe("No changes");
+  });
+
   it("uses the provider-neutral composer keys", () => {
     const composer = resources[language].translation.composer;
 
