@@ -1,6 +1,6 @@
 import type { LocaleResource } from "./schema";
 import { scheduleFr } from "./schedule";
-import { pullRequestEn } from "./pull-request";
+import { pullRequestFr } from "./pull-request";
 
 export const fr = {
   translation: {
@@ -284,7 +284,7 @@ export const fr = {
           },
           pushing: "Envoi en cours",
         },
-        pullRequest: pullRequestEn,
+        pullRequest: pullRequestFr,
         listeningPorts: "Ports en écoute",
         resizeFileTree: "Redimensionner l’arborescence",
         resizeGitList: "Redimensionner la liste des changements",

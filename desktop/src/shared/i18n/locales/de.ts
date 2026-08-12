@@ -1,6 +1,6 @@
 import type { LocaleResource } from "./schema";
 import { scheduleDe } from "./schedule";
-import { pullRequestEn } from "./pull-request";
+import { pullRequestDe } from "./pull-request";
 
 export const de = {
   translation: {
@@ -284,7 +284,7 @@ export const de = {
           },
           pushing: "Wird gepusht",
         },
-        pullRequest: pullRequestEn,
+        pullRequest: pullRequestDe,
         listeningPorts: "Lauschende Ports",
         resizeFileTree: "Dateibaumbreite anpassen",
         resizeGitList: "Breite der Änderungsliste anpassen",
