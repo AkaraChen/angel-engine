@@ -1,4 +1,3 @@
-import type { GitHubPullRequestStatus } from "@angel-engine/daemon-api/github";
 import type {
   CapabilityMatrix,
   CheckRun,
@@ -46,6 +45,7 @@ import {
   pullRequestStatusQueryOptions,
   reviewThreadsQueryOptions,
   resolveReviewThreadMutationOptions,
+  type ChangeRequestStatusView,
 } from "@/features/change-request/api/queries";
 import {
   deriveMergeBlockers,
@@ -735,7 +735,7 @@ const MergedPrompt: FC<{
   method: MergeMethod | null;
   onArchive: () => Promise<void>;
   onContinue: () => void;
-  status: GitHubPullRequestStatus;
+  status: ChangeRequestStatusView;
 }> = ({ chatId, method, onArchive, onContinue, status }) => {
   const { t } = useTranslation();
   return (

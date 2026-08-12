@@ -50,6 +50,30 @@ describe("createDaemonClient", () => {
     );
   });
 
+  it("reads and updates project source-control configuration", async () => {
+    const fetchMock = vi.fn().mockImplementation(async () => jsonResponse({}));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createDaemonClient({ baseUrl: "", token: null });
+    await client.sourceControl.config("project 1");
+    await client.sourceControl.updateConfig("project 1", {
+      provider: { providerId: "forge-a", remote: "upstream" },
+    });
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "/api/source-control/config?projectId=project+1",
+    );
+    expect(fetchMock.mock.calls[1]).toEqual([
+      "/api/source-control/config?projectId=project+1",
+      expect.objectContaining({
+        body: JSON.stringify({
+          provider: { providerId: "forge-a", remote: "upstream" },
+        }),
+        method: "PUT",
+      }),
+    ]);
+  });
+
   it("uses generic source-control attachment list routes", async () => {
     const fetchMock = vi.fn().mockImplementation(async () => jsonResponse([]));
     vi.stubGlobal("fetch", fetchMock);

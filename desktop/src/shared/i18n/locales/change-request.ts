@@ -49,6 +49,24 @@ export const changeRequestEn = {
       "Run the provider CLI auth login, then refresh this panel.",
   },
   generalComment: "General comment",
+  hostedFallback: {
+    ambiguousDetail:
+      "Choose which remote should provide hosted source control for this workspace.",
+    ambiguousTitle: "Multiple source control remotes detected",
+    apply: "Use remote",
+    configure: "Configure source control",
+    configuredProviderMissing:
+      "The configured source control provider is not available.",
+    errorDetail: "Source control provider detection failed. Try again.",
+    noProviderDetail:
+      "Local Git remains available. Configure a provider to use hosted change requests, checks, and reviews.",
+    remoteLabel: "Source control remote",
+    retry: "Detect again",
+    saving: "Configuring…",
+    title: "No Source control provider detected",
+    unavailableDetail:
+      "The source control provider is unavailable. Local Git remains available.",
+  },
   merge: "Merge",
   mergeChanged: "The change request changed before the merge completed.",
   mergeFailed: "Merge failed",
@@ -170,6 +188,21 @@ export const changeRequestZhCN = {
     unauthenticatedDetail: "请通过提供方 CLI 登录，然后刷新此面板。",
   },
   generalComment: "一般评论",
+  hostedFallback: {
+    ambiguousDetail: "请选择用于此工作区托管源代码控制的远程仓库。",
+    ambiguousTitle: "检测到多个源代码控制远程仓库",
+    apply: "使用此远程仓库",
+    configure: "配置源代码控制",
+    configuredProviderMissing: "已配置的源代码控制提供方不可用。",
+    errorDetail: "检测源代码控制提供方失败，请重试。",
+    noProviderDetail:
+      "本地 Git 仍可使用。配置提供方后即可使用托管变更请求、检查和审阅。",
+    remoteLabel: "源代码控制远程仓库",
+    retry: "重新检测",
+    saving: "配置中…",
+    title: "未检测到源代码控制提供方",
+    unavailableDetail: "源代码控制提供方不可用。本地 Git 仍可使用。",
+  },
   merge: "合并",
   mergeChanged: "合并完成前变更请求状态已变化。",
   mergeFailed: "合并失败",
@@ -287,6 +320,21 @@ export const changeRequestZhTW = {
     unauthenticatedDetail: "請透過提供者 CLI 登入，然後重新整理此面板。",
   },
   generalComment: "一般留言",
+  hostedFallback: {
+    ambiguousDetail: "請選擇要為此工作區提供託管原始碼控制的遠端儲存庫。",
+    ambiguousTitle: "偵測到多個原始碼控制遠端儲存庫",
+    apply: "使用此遠端儲存庫",
+    configure: "設定原始碼控制",
+    configuredProviderMissing: "已設定的原始碼控制提供者無法使用。",
+    errorDetail: "偵測原始碼控制提供者失敗，請再試一次。",
+    noProviderDetail:
+      "本機 Git 仍可使用。設定提供者後即可使用託管變更要求、檢查和審閱。",
+    remoteLabel: "原始碼控制遠端儲存庫",
+    retry: "重新偵測",
+    saving: "設定中…",
+    title: "未偵測到原始碼控制提供者",
+    unavailableDetail: "原始碼控制提供者無法使用。本機 Git 仍可使用。",
+  },
   merge: "合併",
   mergeChanged: "合併完成前，變更要求的狀態已變更。",
   mergeFailed: "合併失敗",
@@ -420,6 +468,25 @@ export const changeRequestFr = {
       "Exécutez le CLI du fournisseur auth login, puis actualisez ce panneau.",
   },
   generalComment: "Commentaire général",
+  hostedFallback: {
+    ambiguousDetail:
+      "Choisissez le dépôt distant qui fournira la gestion de code source hébergée pour cet espace de travail.",
+    ambiguousTitle: "Plusieurs dépôts distants de code source détectés",
+    apply: "Utiliser ce dépôt distant",
+    configure: "Configurer la gestion de code source",
+    configuredProviderMissing:
+      "Le fournisseur de gestion de code source configuré n’est pas disponible.",
+    errorDetail:
+      "La détection du fournisseur de gestion de code source a échoué. Réessayez.",
+    noProviderDetail:
+      "Git local reste disponible. Configurez un fournisseur pour utiliser les demandes de changement, vérifications et revues hébergées.",
+    remoteLabel: "Dépôt distant de code source",
+    retry: "Détecter à nouveau",
+    saving: "Configuration…",
+    title: "Aucun fournisseur de gestion de code source détecté",
+    unavailableDetail:
+      "Le fournisseur de gestion de code source est indisponible. Git local reste disponible.",
+  },
   merge: "Fusionner",
   mergeChanged: "La demande de changement a changé avant la fin de la fusion.",
   mergeFailed: "Échec de la fusion",
@@ -557,6 +624,25 @@ export const changeRequestDe = {
       "Führe die Anbieter-CLI auth login aus und aktualisiere dann dieses Panel.",
   },
   generalComment: "Allgemeiner Kommentar",
+  hostedFallback: {
+    ambiguousDetail:
+      "Wähle das Remote aus, das die gehostete Quellcodeverwaltung für diesen Arbeitsbereich bereitstellt.",
+    ambiguousTitle: "Mehrere Quellcodeverwaltungs-Remotes erkannt",
+    apply: "Remote verwenden",
+    configure: "Quellcodeverwaltung konfigurieren",
+    configuredProviderMissing:
+      "Der konfigurierte Quellcodeverwaltungsanbieter ist nicht verfügbar.",
+    errorDetail:
+      "Der Quellcodeverwaltungsanbieter konnte nicht erkannt werden. Versuche es erneut.",
+    noProviderDetail:
+      "Lokales Git bleibt verfügbar. Konfiguriere einen Anbieter für gehostete Änderungsanfragen, Prüfungen und Reviews.",
+    remoteLabel: "Quellcodeverwaltungs-Remote",
+    retry: "Erneut erkennen",
+    saving: "Wird konfiguriert…",
+    title: "Kein Quellcodeverwaltungsanbieter erkannt",
+    unavailableDetail:
+      "Der Quellcodeverwaltungsanbieter ist nicht verfügbar. Lokales Git bleibt verfügbar.",
+  },
   merge: "Zusammenführen",
   mergeChanged: "Der Änderungsanfrage wurde vor Abschluss des Merges geändert.",
   mergeFailed: "Merge fehlgeschlagen",
@@ -693,6 +779,25 @@ export const changeRequestJa = {
       "プロバイダー CLI auth login を実行してから、このパネルを更新してください。",
   },
   generalComment: "全体へのコメント",
+  hostedFallback: {
+    ambiguousDetail:
+      "このワークスペースのホスト型ソース管理に使用するリモートを選択してください。",
+    ambiguousTitle: "複数のソース管理リモートを検出しました",
+    apply: "このリモートを使用",
+    configure: "ソース管理を設定",
+    configuredProviderMissing:
+      "設定されたソース管理プロバイダーを利用できません。",
+    errorDetail:
+      "ソース管理プロバイダーを検出できませんでした。再試行してください。",
+    noProviderDetail:
+      "ローカル Git は引き続き利用できます。ホスト型の変更リクエスト、チェック、レビューを使うにはプロバイダーを設定してください。",
+    remoteLabel: "ソース管理リモート",
+    retry: "再検出",
+    saving: "設定中…",
+    title: "ソース管理プロバイダーが検出されませんでした",
+    unavailableDetail:
+      "ソース管理プロバイダーを利用できません。ローカル Git は引き続き利用できます。",
+  },
   merge: "マージ",
   mergeChanged: "マージの完了前に変更リクエストが変更されました。",
   mergeFailed: "マージに失敗しました",
@@ -824,6 +929,23 @@ export const changeRequestKo = {
       "공급자 CLI auth login을 실행한 후 이 패널을 새로 고치세요.",
   },
   generalComment: "일반 댓글",
+  hostedFallback: {
+    ambiguousDetail:
+      "이 작업 공간의 호스팅 소스 제어에 사용할 원격을 선택하세요.",
+    ambiguousTitle: "여러 소스 제어 원격이 감지됨",
+    apply: "이 원격 사용",
+    configure: "소스 제어 구성",
+    configuredProviderMissing: "구성된 소스 제어 공급자를 사용할 수 없습니다.",
+    errorDetail: "소스 제어 공급자를 감지하지 못했습니다. 다시 시도하세요.",
+    noProviderDetail:
+      "로컬 Git은 계속 사용할 수 있습니다. 호스팅 변경 요청, 검사 및 리뷰를 사용하려면 공급자를 구성하세요.",
+    remoteLabel: "소스 제어 원격",
+    retry: "다시 감지",
+    saving: "구성 중…",
+    title: "소스 제어 공급자가 감지되지 않음",
+    unavailableDetail:
+      "소스 제어 공급자를 사용할 수 없습니다. 로컬 Git은 계속 사용할 수 있습니다.",
+  },
   merge: "병합",
   mergeChanged: "병합이 완료되기 전에 변경 요청가 변경되었습니다.",
   mergeFailed: "병합 실패",
@@ -959,6 +1081,25 @@ export const changeRequestEs = {
       "Ejecuta el CLI del proveedor auth login y después actualiza este panel.",
   },
   generalComment: "Comentario general",
+  hostedFallback: {
+    ambiguousDetail:
+      "Elige el remoto que proporcionará el control de código fuente alojado para este espacio de trabajo.",
+    ambiguousTitle: "Se detectaron varios remotos de control de código fuente",
+    apply: "Usar este remoto",
+    configure: "Configurar control de código fuente",
+    configuredProviderMissing:
+      "El proveedor de control de código fuente configurado no está disponible.",
+    errorDetail:
+      "No se pudo detectar el proveedor de control de código fuente. Inténtalo de nuevo.",
+    noProviderDetail:
+      "Git local sigue disponible. Configura un proveedor para usar solicitudes de cambio, comprobaciones y revisiones alojadas.",
+    remoteLabel: "Remoto de control de código fuente",
+    retry: "Detectar de nuevo",
+    saving: "Configurando…",
+    title: "No se detectó ningún proveedor de control de código fuente",
+    unavailableDetail:
+      "El proveedor de control de código fuente no está disponible. Git local sigue disponible.",
+  },
   merge: "Fusionar",
   mergeChanged:
     "La solicitud de cambio cambió antes de que terminara la fusión.",
