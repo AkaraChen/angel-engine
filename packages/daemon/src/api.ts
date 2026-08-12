@@ -278,6 +278,7 @@ export function registerApi(
     chatRuns,
     chatEvents,
     run: (effect) => run(effect),
+    sourceControl,
   });
   void shepherd.start().catch(() => undefined);
   const queuedRunRecovery = run(
