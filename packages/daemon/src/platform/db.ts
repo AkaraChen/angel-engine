@@ -17,6 +17,7 @@ import {
   chats,
   customAgents,
   projects,
+  providerHostMappings,
   pullRequests,
 } from "../db/schema";
 import { DaemonError } from "./errors";
@@ -28,6 +29,7 @@ export type AppDatabase = LibSQLDatabase<{
   chats: typeof chats;
   customAgents: typeof customAgents;
   projects: typeof projects;
+  providerHostMappings: typeof providerHostMappings;
   pullRequests: typeof pullRequests;
 }> & { $client: Client };
 
@@ -131,6 +133,7 @@ function openDatabase(
           chats,
           customAgents,
           projects,
+          providerHostMappings,
           pullRequests,
         },
       }) as AppDatabase;

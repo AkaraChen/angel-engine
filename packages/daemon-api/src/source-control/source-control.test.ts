@@ -2,6 +2,7 @@ import { type } from "arktype";
 import { describe, expect, it } from "vitest";
 
 import { capabilityState, repositoryKey } from "./capabilities";
+import { sourceControlProjectConfigSchema } from "./config";
 import {
   changeRequestSchema,
   checkRunSchema,
@@ -39,13 +40,18 @@ describe("source-control contracts", () => {
 
   it("keeps missing capabilities fail-closed after serialization", () => {
     const activation = {
+      generation: 0,
       provider: {
         id: "azure-devops",
         displayName: "Azure DevOps",
         hosts: ["dev.azure.com"],
         capabilities: ["provider.auth", "repositoryIdentity"],
       },
-      remote: "https://dev.azure.com/acme/widgets/_git/web",
+      projectPath: "/workspace/web",
+      remote: {
+        name: "origin",
+        url: "https://dev.azure.com/acme/widgets/_git/web",
+      },
       repository: {
         providerId: "azure-devops",
         host: "dev.azure.com",
@@ -173,6 +179,18 @@ describe("source-control contracts", () => {
       displayPath: "akarachen/angel-engine",
       webUrl: null,
       owner: "akarachen",
+    });
+
+    expect(result).toBeInstanceOf(type.errors);
+  });
+
+  it("rejects credentials in project provider configuration", () => {
+    const result = sourceControlProjectConfigSchema({
+      provider: {
+        providerId: "github",
+        remote: "origin",
+        token: "must-not-be-stored-here",
+      },
     });
 
     expect(result).toBeInstanceOf(type.errors);

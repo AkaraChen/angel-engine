@@ -1,9 +1,10 @@
 import type { Chat, ChatRunStartInput } from "@angel-engine/daemon-api/chat";
 import type {
-  GitHubCheckItem,
-  GitHubChecksSnapshot,
-  GitHubReviewThreadsResult,
-} from "@angel-engine/daemon-api/github";
+  CheckRun,
+  CheckSummary,
+  RepositoryIdentity,
+  ReviewThread,
+} from "@angel-engine/daemon-api/source-control";
 import type { ShepherdSession } from "@angel-engine/daemon-api/shepherd";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -12,7 +13,7 @@ import { ChatRunRegistry } from "../chat/run-registry";
 import type { PersistedQueuedChatRun } from "../chat/repository";
 import type { ShepherdPorts, ShepherdSnapshot } from "./service";
 import { ShepherdService } from "./service";
-import { checkFingerprint } from "./fingerprints";
+import { checkFingerprint, commentFingerprint } from "./fingerprints";
 
 const chat: Chat = {
   archived: false,
@@ -27,31 +28,58 @@ const chat: Chat = {
   updatedAt: "2026-08-10T00:00:00.000Z",
 };
 
+const repository: RepositoryIdentity = {
+  providerId: "github",
+  host: "github.com",
+  namespace: ["acme"],
+  name: "app",
+  remoteId: null,
+  displayPath: "acme/app",
+  webUrl: "https://github.com/acme/app",
+};
+
 function checkItem(
-  overrides: Partial<GitHubCheckItem> & Pick<GitHubCheckItem, "name">,
-): GitHubCheckItem {
+  overrides: Partial<CheckRun> &
+    Pick<CheckRun, "name"> & { checkRunId?: string },
+): CheckRun {
+  const { checkRunId, ...rest } = overrides;
   return {
     attempt: 1,
-    checkRunId: "100",
-    conclusion: "FAILURE",
+    id: checkRunId ?? "100",
+    group: {
+      id: "group-1",
+      kind: "workflow-run",
+      name: "ci",
+      stage: null,
+      parentGroupId: null,
+      attempt: 1,
+      detailsUrl: null,
+    },
+    conclusion: "failure",
     detailsUrl: null,
-    isPending: false,
-    isRequired: true,
-    status: "COMPLETED",
-    workflowName: "ci",
-    workflowRunId: "9",
-    ...overrides,
+    requiredness: "required",
+    blocking: true,
+    status: "completed",
+    retryOf: null,
+    allowFailure: false,
+    manual: false,
+    startedAt: null,
+    completedAt: null,
+    logRef: { kind: "workflow-run", runId: "9", jobId: null },
+    ...rest,
   };
 }
 
 function checksSnapshot(
-  overrides: Partial<GitHubChecksSnapshot> = {},
-): GitHubChecksSnapshot {
+  overrides: Partial<CheckSummary> & {
+    failedRequired?: readonly CheckRun[];
+  } = {},
+): CheckSummary {
   const failedRequired = overrides.failedRequired ?? [];
   return {
     checks: overrides.checks ?? failedRequired,
     failed: overrides.failed ?? failedRequired,
-    failedRequired,
+    failedBlocking: failedRequired,
     hasPending: overrides.hasPending ?? false,
     headOid: overrides.headOid ?? "sha-a",
     requiredAllGreen: overrides.requiredAllGreen ?? failedRequired.length === 0,
@@ -59,19 +87,17 @@ function checksSnapshot(
 }
 
 function threadsResult(
-  overrides: Partial<GitHubReviewThreadsResult> = {},
-): GitHubReviewThreadsResult {
-  return {
-    resolvedCount: 0,
-    threads: [],
-    unresolved: [],
-    unresolvedCount: 0,
-    ...overrides,
-  };
+  overrides: { unresolved?: readonly ReviewThread[] } = {},
+): readonly ReviewThread[] {
+  return overrides.unresolved ?? [];
 }
 
+type SnapshotInput = Omit<ShepherdSnapshot, "repository"> & {
+  repository?: RepositoryIdentity;
+};
+
 function createMemoryPorts(options: {
-  snapshot: ShepherdSnapshot | (() => ShepherdSnapshot);
+  snapshot: SnapshotInput | (() => SnapshotInput);
   queuedRuns?: PersistedQueuedChatRun[];
   ambiguousRun?: PersistedQueuedChatRun | null;
 }): {
@@ -142,11 +168,14 @@ function createMemoryPorts(options: {
     getChat: async () => chat,
     listQueuedChatRuns: async () => options.queuedRuns ?? [],
     getAmbiguousQueuedChatRun: async () => options.ambiguousRun ?? null,
-    fetchSnapshot: async () =>
-      typeof options.snapshot === "function"
-        ? options.snapshot()
-        : options.snapshot,
-    fetchFailureLog: async () => ({ lines: ["error: boom"], truncated: false }),
+    fetchSnapshot: async () => {
+      const snapshot =
+        typeof options.snapshot === "function"
+          ? options.snapshot()
+          : options.snapshot;
+      return { ...snapshot, repository: snapshot.repository ?? repository };
+    },
+    fetchFailureLog: async () => ({ text: "error: boom", truncated: false }),
   };
 
   return { ports, sessions, byChat };
@@ -248,7 +277,9 @@ describe("ShepherdService", () => {
 
     const stored = sessions.get(session.id);
     expect(stored?.round).toBe(1);
-    expect(stored?.handledFingerprints).toContain(checkFingerprint(failed));
+    expect(stored?.handledFingerprints).toContain(
+      checkFingerprint(failed, repository),
+    );
     expect(events.shepherdChanged).toHaveBeenCalled();
   });
 
@@ -469,21 +500,31 @@ describe("ShepherdService", () => {
           requiredAllGreen: false,
         }),
         threads: threadsResult({
-          unresolvedCount: 1,
           unresolved: [
             {
               id: "t1",
-              isResolved: false,
-              path: "a.ts",
-              line: 1,
+              state: "unresolved",
+              resolvable: true,
+              location: {
+                path: "a.ts",
+                side: "right",
+                startLine: 1,
+                endLine: 1,
+              },
               comments: [
                 {
                   id: commentId,
-                  author: "rev",
+                  author: {
+                    id: null,
+                    login: "rev",
+                    displayName: null,
+                    avatarUrl: null,
+                    webUrl: null,
+                  },
                   body: "please fix",
-                  path: "a.ts",
-                  line: 1,
                   createdAt: "2026-08-10T00:00:00.000Z",
+                  updatedAt: null,
+                  webUrl: null,
                 },
               ],
             },
@@ -502,8 +543,34 @@ describe("ShepherdService", () => {
     await service.pollOnceForTests();
     expect(started).toHaveLength(1);
     const afterFirst = sessions.get(session.id)!;
+    const commentFp = commentFingerprint(
+      threadsResult({
+        unresolved: [
+          {
+            id: "t",
+            state: "unresolved",
+            resolvable: true,
+            location: null,
+            comments: [
+              {
+                id: commentId,
+                author: null,
+                body: "",
+                createdAt: "2026-08-10T00:00:00.000Z",
+                updatedAt: null,
+                webUrl: null,
+              },
+            ],
+          },
+        ],
+      })[0]!.comments[0]!,
+    );
+    const checkFp = checkFingerprint(
+      checkItem({ name: "build", checkRunId: "10" }),
+      repository,
+    );
     expect(afterFirst.handledFingerprints).toEqual(
-      expect.arrayContaining([commentId, "10:1"]),
+      expect.arrayContaining([commentFp, checkFp]),
     );
     expect(afterFirst.round).toBe(1);
     // Settle the shepherd turn so the next poll is not held by running activity.
@@ -516,13 +583,13 @@ describe("ShepherdService", () => {
 
     const afterHead = sessions.get(session.id)!;
     expect(afterHead.headSha).toBe("sha-b");
-    expect(afterHead.handledFingerprints).toContain(commentId);
+    expect(afterHead.handledFingerprints).toContain(commentFp);
     // Old check fingerprint must not force re-dispatch of the comment.
-    expect(afterHead.handledFingerprints).not.toContain("10:1");
+    expect(afterHead.handledFingerprints).toContain(checkFp);
     // New required failure still triggers a turn once.
     expect(started).toHaveLength(2);
     expect(afterHead.round).toBe(2);
-    expect(afterHead.handledFingerprints).toContain("11:1");
+    expect(afterHead.handledFingerprints).toContain(checkFp);
     activity.clearChat("chat-1");
     // Comment must not burn another round on its own after head change.
     await service.pollOnceForTests();
