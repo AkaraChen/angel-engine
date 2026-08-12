@@ -1,5 +1,7 @@
+import { appLocale } from "@/platform/app-locale";
+
 export function formatEstimatedCost(value: number): string {
-  return `≈${new Intl.NumberFormat(undefined, {
+  return `≈${new Intl.NumberFormat(appLocale(), {
     currency: "USD",
     maximumFractionDigits: 2,
     minimumFractionDigits: 2,
@@ -17,7 +19,7 @@ export function formatDurationMinutes(value: number): string {
 }
 
 export function formatUsageTime(value: string | number): string {
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat(appLocale(), {
     hour: "numeric",
     minute: "2-digit",
   }).format(new Date(value));
@@ -44,10 +46,8 @@ export function burnRateExceedsThreshold(
   return enabled && costPerHour >= threshold;
 }
 
-export function formatUsageTokens(value: number): string {
-  return new Intl.NumberFormat(undefined, { notation: "compact" }).format(
-    value,
-  );
+export function formatUsageTokens(value: number, locale = appLocale()): string {
+  return new Intl.NumberFormat(locale, { notation: "compact" }).format(value);
 }
 
 export function shouldShowEstimatedCost(

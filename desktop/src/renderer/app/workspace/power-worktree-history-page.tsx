@@ -14,6 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { displayChatTitle } from "@/app/workspace/workspace-display";
+import { appLocale } from "@/platform/app-locale";
 import {
   buildWorkspaceToolPatchList,
   getWorkspaceToolPatchFileLineChanges,
@@ -103,7 +104,7 @@ export function PowerWorktreeHistoryPage({
         <dl className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
           <PowerWorktreeStat
             label={t("sidebar.chats")}
-            value={historyChats.length.toLocaleString()}
+            value={historyChats.length.toLocaleString(appLocale())}
           />
           <PowerWorktreeStat
             label={t("workspace.statsLastActive")}
@@ -127,14 +128,16 @@ export function PowerWorktreeHistoryPage({
                 "0"
               ) : (
                 <span className="flex items-baseline gap-2 tabular-nums">
-                  <span>{gitStats.changedFiles.toLocaleString()}</span>
+                  <span>
+                    {gitStats.changedFiles.toLocaleString(appLocale())}
+                  </span>
                   {gitStats.additions > 0 ? (
                     <span
                       className="
                         font-mono text-xs font-medium text-status-success
                       "
                     >
-                      +{gitStats.additions.toLocaleString()}
+                      +{gitStats.additions.toLocaleString(appLocale())}
                     </span>
                   ) : null}
                   {gitStats.deletions > 0 ? (
@@ -143,7 +146,7 @@ export function PowerWorktreeHistoryPage({
                         font-mono text-xs font-medium text-status-danger
                       "
                     >
-                      −{gitStats.deletions.toLocaleString()}
+                      −{gitStats.deletions.toLocaleString(appLocale())}
                     </span>
                   ) : null}
                 </span>

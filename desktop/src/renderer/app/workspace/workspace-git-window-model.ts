@@ -7,8 +7,9 @@ export function formatWorkspaceGitCommitTime(
   if (!iso) return "";
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;
+  const resolvedLocale = locale ?? appLocale();
   try {
-    return new Intl.DateTimeFormat(locale, {
+    return new Intl.DateTimeFormat(resolvedLocale, {
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
@@ -16,7 +17,7 @@ export function formatWorkspaceGitCommitTime(
       year: "numeric",
     }).format(date);
   } catch {
-    return date.toLocaleString();
+    return date.toLocaleString(resolvedLocale);
   }
 }
 
@@ -26,3 +27,4 @@ export function workspaceGitRemoteFromUpstream(upstream?: string) {
   if (slash <= 0) return "origin";
   return upstream.slice(0, slash);
 }
+import { appLocale } from "@/platform/app-locale";

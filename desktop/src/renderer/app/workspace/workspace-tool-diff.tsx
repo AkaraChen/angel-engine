@@ -36,6 +36,7 @@ import {
 } from "@/app/workspace/workspace-tool-patch-model";
 import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
 import { cn } from "@/platform/utils";
+import { appLocale } from "@/platform/app-locale";
 
 const baseDiffOptions = {
   disableFileHeader: true,
@@ -175,12 +176,12 @@ export function WorkspaceToolPatchFileLineStats({
     >
       {lineChanges.additions > 0 ? (
         <span className="font-medium text-status-success">
-          +{lineChanges.additions.toLocaleString()}
+          +{lineChanges.additions.toLocaleString(appLocale())}
         </span>
       ) : null}
       {lineChanges.deletions > 0 ? (
         <span className="font-medium text-status-danger">
-          −{lineChanges.deletions.toLocaleString()}
+          −{lineChanges.deletions.toLocaleString(appLocale())}
         </span>
       ) : null}
     </span>

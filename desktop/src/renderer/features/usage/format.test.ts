@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { resolveAppLocale } from "@/platform/app-locale";
 import {
   billingBlockProgress,
   burnRateExceedsThreshold,
   formatDurationMinutes,
   formatEstimatedCost,
+  formatUsageTokens,
   shouldShowEstimatedCost,
 } from "./format";
 
@@ -11,6 +13,11 @@ describe("usage formatting", () => {
   it("keeps cents for estimated costs", () => {
     expect(formatEstimatedCost(17.724416)).toMatch(/17[.,]72/);
     expect(formatEstimatedCost(128.4212)).toMatch(/128[.,]42/);
+  });
+
+  it("formats numbers with the app locale instead of the system locale", () => {
+    const locale = resolveAppLocale("zh-CN", "en-US");
+    expect(formatUsageTokens(12_000, locale)).toBe("1.2万");
   });
 
   it("formats remaining billing time without minute arithmetic", () => {
