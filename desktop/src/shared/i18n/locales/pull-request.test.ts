@@ -1,7 +1,12 @@
 import { createInstance } from "i18next";
 import { describe, expect, it } from "vitest";
 
-import { pullRequestEn, pullRequestZhTW } from "./pull-request";
+import {
+  pullRequestEn,
+  pullRequestJa,
+  pullRequestKo,
+  pullRequestZhTW,
+} from "./pull-request";
 
 describe("pull request translations", () => {
   it.each([
@@ -43,5 +48,35 @@ describe("pull request translations", () => {
   it("keeps Traditional Chinese pull request copy independent", () => {
     expect(pullRequestZhTW.archive).toBe("封存此工作區");
     expect(pullRequestZhTW.blockers.conflict).toBe("此提取要求存在合併衝突。");
+  });
+
+  it.each([
+    {
+      expected: "必須チェック 1 件が失敗しました：build。",
+      language: "ja",
+      resource: pullRequestJa,
+    },
+    {
+      expected: "필수 검사 1개 실패: build.",
+      language: "ko",
+      resource: pullRequestKo,
+    },
+  ])("uses the CLDR other branch for $language", async (testCase) => {
+    const i18n = createInstance();
+    await i18n.init({
+      lng: testCase.language,
+      resources: {
+        [testCase.language]: {
+          translation: { pullRequest: testCase.resource },
+        },
+      },
+    });
+
+    expect(
+      i18n.t("pullRequest.blockers.checksFailed", {
+        count: 1,
+        names: "build",
+      }),
+    ).toBe(testCase.expected);
   });
 });

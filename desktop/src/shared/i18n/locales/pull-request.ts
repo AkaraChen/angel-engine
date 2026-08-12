@@ -358,3 +358,672 @@ export const pullRequestZhTW = {
   title: "提取要求",
   unresolvedTitle: "未解決的留言（{{count}}）",
 } satisfies LocaleResourceTranslationWorkspaceToolsPullRequest;
+
+export const pullRequestFr = {
+  ...pullRequestEn,
+  archive: "Archiver l’espace de travail",
+  archiveDetail:
+    "L’archivage ferme cette conversation et supprime son worktree géré.",
+  archiveFailed: "Impossible d’archiver l’espace de travail",
+  archiveConfirmDetail:
+    "Cette action archive la conversation et supprime le worktree géré situé à {{path}}.",
+  archiveConfirmDirtyDetail:
+    "Le worktree situé à {{path}} contient des modifications non validées. L’archivage le supprime et abandonne définitivement ces modifications.",
+  archiveConfirmTitle: "Archiver cet espace de travail ?",
+  archiveUnavailable:
+    "Cet espace de travail n’est associé à aucune conversation.",
+  blocked: "Fusion impossible",
+  blockers: {
+    behindBase_one:
+      "La branche a {{count}} commit de retard sur la branche cible.",
+    behindBase_other:
+      "La branche a {{count}} commits de retard sur la branche cible.",
+    changesRequested:
+      "Une personne chargée de la revue a demandé des modifications.",
+    checksFailed_one: "{{count}} vérification requise a échoué : {{names}}.",
+    checksFailed_other:
+      "{{count}} vérifications requises ont échoué : {{names}}.",
+    checksPending_one:
+      "{{count}} vérification requise est toujours en cours : {{names}}.",
+    checksPending_other:
+      "{{count}} vérifications requises sont toujours en cours : {{names}}.",
+    conflict: "La pull request présente des conflits de fusion.",
+    draft: "La pull request est encore un brouillon.",
+    permissionDenied: "Vous n’avez pas l’autorisation de fusionner ce dépôt.",
+    repositoryPolicy: "Une règle du dépôt bloque cette fusion.",
+    reviewRequired: "Une revue d’approbation est requise.",
+    unresolvedThreads_one: "{{count}} conversation de revue n’est pas résolue.",
+    unresolvedThreads_other:
+      "{{count}} conversations de revue ne sont pas résolues.",
+  },
+  checking: "Recherche de la pull request associée à cette branche…",
+  checkingMergeability: "GitHub calcule encore si la fusion est possible.",
+  continue: "Continuer à travailler",
+  deleteBranch: "Supprimer la branche distante après la fusion",
+  description: "Description",
+  errors: {
+    cliMissing: "GitHub CLI est requis",
+    cliMissingDetail:
+      "Installez gh pour fusionner des pull requests dans Angel Engine.",
+    fetch: "Pull request indisponible",
+    fetchDetail: "GitHub est inaccessible. Vérifiez le dépôt et réessayez.",
+    permission: "Accès GitHub en lecture seule",
+    permissionDetail:
+      "Ouvrez la pull request dans GitHub et demandez sa fusion à une personne responsable du dépôt.",
+    unauthenticated: "GitHub CLI n’est pas connecté",
+    unauthenticatedDetail:
+      "Exécutez gh auth login, puis actualisez ce panneau.",
+  },
+  generalComment: "Commentaire général",
+  merge: "Fusionner",
+  mergeChanged: "La pull request a changé avant la fin de la fusion.",
+  mergeFailed: "Échec de la fusion",
+  merged: "Pull request nº {{number}} fusionnée",
+  mergedDetail: "La pull request a été fusionnée.",
+  mergedMethod: "Fusionnée avec la méthode {{method}}.",
+  merging: "Fusion en cours…",
+  method: "Méthode de fusion",
+  methodDisabled: "non activée dans le dépôt",
+  methods: {
+    merge: "Créer un commit de fusion",
+    rebase: "Rebaser et fusionner",
+    squash: "Compresser et fusionner",
+  },
+  noOpen: "Aucune pull request ouverte",
+  noOpenDetail:
+    "Poussez cette branche et ouvrez une pull request pour la fusionner ici.",
+  open: "Ouvrir sur GitHub",
+  optionalChecksFailed_one:
+    "{{count}} vérification facultative a échoué : {{names}}. Elle ne bloque pas la fusion.",
+  optionalChecksFailed_other:
+    "{{count}} vérifications facultatives ont échoué : {{names}}. Elles ne bloquent pas la fusion.",
+  ready: "Prête à fusionner",
+  refresh: "Actualiser",
+  resolve: "Marquer comme résolue",
+  shepherd: {
+    actionFailed: "Échec de l’action Shepherd",
+    hold: {
+      ambiguous: "Shepherd attend que l’envoi ambigu soit résolu.",
+      queuedRun: "Shepherd attend la fin d’un message en file d’attente.",
+      waitingForYou: "Shepherd attend votre intervention avant de continuer.",
+    },
+    invalidUrl: "Impossible d’analyser l’URL de la pull request.",
+    noChat:
+      "Ouvrez une conversation d’espace de travail avant de lancer Shepherd.",
+    queued: "Shepherd continuera une fois la réponse en cours terminée.",
+    resume: "Reprendre",
+    resumeFailed: "Impossible de reprendre Shepherd",
+    rounds: "{{round}} / {{max}}",
+    settled: {
+      blocked: {
+        detail:
+          "Aucune progression après plusieurs tentatives. Prenez la main ou modifiez la PR.",
+        title: "Shepherd est bloqué",
+      },
+      budget: {
+        detail:
+          "La limite de tours a été atteinte. Reprenez ou augmentez-la ultérieurement.",
+        title: "Limite de tours atteinte",
+      },
+      closed: {
+        detail: "La pull request a été fusionnée ou fermée.",
+        title: "Pull request fermée",
+      },
+      green: {
+        detail:
+          "Les vérifications requises sont au vert et les conversations de revue sont résolues.",
+        title: "Prête à fusionner",
+      },
+      stopped: {
+        detail:
+          "Shepherd est en pause. Reprenez lorsque vous souhaitez lui redonner la main.",
+        title: "Shepherd arrêté",
+      },
+    },
+    shepherdingStop: "Shepherd en cours… (cliquer pour arrêter)",
+    sourceCollapse: "Réduire la source de Shepherd",
+    sourceExpand: "Développer la source de Shepherd",
+    start: "Confier cette PR à Shepherd",
+    startFailed: "Impossible de lancer Shepherd",
+    started: "Shepherd démarré",
+    stopped: "Shepherd arrêté",
+    title: "Shepherd",
+    working: "Traitement en cours…",
+    yielded: "Shepherd est en pause — vous avez repris la session.",
+    yieldedDetail:
+      "Reprenez lorsque vous souhaitez que Shepherd surveille de nouveau cette PR.",
+  },
+  title: "Pull request",
+  unresolvedTitle: "Conversations non résolues ({{count}})",
+} satisfies LocaleResourceTranslationWorkspaceToolsPullRequest;
+
+export const pullRequestDe = {
+  ...pullRequestEn,
+  archive: "Arbeitsbereich archivieren",
+  archiveDetail:
+    "Beim Archivieren wird dieser Chat geschlossen und der verwaltete Worktree entfernt.",
+  archiveFailed: "Arbeitsbereich konnte nicht archiviert werden",
+  archiveConfirmDetail:
+    "Dadurch wird der Chat archiviert und der verwaltete Worktree unter {{path}} entfernt.",
+  archiveConfirmDirtyDetail:
+    "Der Worktree unter {{path}} enthält nicht committete Änderungen. Beim Archivieren wird er entfernt und diese Änderungen werden dauerhaft verworfen.",
+  archiveConfirmTitle: "Diesen Arbeitsbereich archivieren?",
+  archiveUnavailable: "Dieser Arbeitsbereich ist keinem Chat zugeordnet.",
+  blocked: "Zusammenführen nicht möglich",
+  blockers: {
+    behindBase_one: "Der Branch liegt {{count}} Commit hinter dem Ziel-Branch.",
+    behindBase_other:
+      "Der Branch liegt {{count}} Commits hinter dem Ziel-Branch.",
+    changesRequested: "Bei der Überprüfung wurden Änderungen angefordert.",
+    checksFailed_one:
+      "{{count}} erforderliche Prüfung fehlgeschlagen: {{names}}.",
+    checksFailed_other:
+      "{{count}} erforderliche Prüfungen fehlgeschlagen: {{names}}.",
+    checksPending_one:
+      "{{count}} erforderliche Prüfung wird noch ausgeführt: {{names}}.",
+    checksPending_other:
+      "{{count}} erforderliche Prüfungen werden noch ausgeführt: {{names}}.",
+    conflict: "Der Pull Request enthält Merge-Konflikte.",
+    draft: "Der Pull Request ist noch ein Entwurf.",
+    permissionDenied: "Du darfst dieses Repository nicht zusammenführen.",
+    repositoryPolicy: "Eine Repository-Regel blockiert diesen Merge.",
+    reviewRequired: "Eine genehmigende Überprüfung ist erforderlich.",
+    unresolvedThreads_one: "{{count}} Review-Unterhaltung ist noch offen.",
+    unresolvedThreads_other: "{{count}} Review-Unterhaltungen sind noch offen.",
+  },
+  checking: "Pull Request für diesen Branch wird gesucht…",
+  checkingMergeability: "GitHub berechnet noch, ob der Merge möglich ist.",
+  continue: "Weiterarbeiten",
+  deleteBranch: "Remote-Branch nach dem Merge löschen",
+  description: "Beschreibung",
+  errors: {
+    cliMissing: "GitHub CLI ist erforderlich",
+    cliMissingDetail:
+      "Installiere gh, um Pull Requests in Angel Engine zusammenzuführen.",
+    fetch: "Pull Request nicht verfügbar",
+    fetchDetail:
+      "GitHub ist nicht erreichbar. Prüfe das Repository und versuche es erneut.",
+    permission: "Nur-Lese-Zugriff auf GitHub",
+    permissionDetail:
+      "Öffne den Pull Request in GitHub und bitte einen Maintainer um den Merge.",
+    unauthenticated: "GitHub CLI ist nicht angemeldet",
+    unauthenticatedDetail:
+      "Führe gh auth login aus und aktualisiere dann dieses Panel.",
+  },
+  generalComment: "Allgemeiner Kommentar",
+  merge: "Zusammenführen",
+  mergeChanged: "Der Pull Request wurde vor Abschluss des Merges geändert.",
+  mergeFailed: "Merge fehlgeschlagen",
+  merged: "Pull Request Nr. {{number}} zusammengeführt",
+  mergedDetail: "Der Pull Request wurde erfolgreich zusammengeführt.",
+  mergedMethod: "Mit {{method}} zusammengeführt.",
+  merging: "Wird zusammengeführt…",
+  method: "Merge-Methode",
+  methodDisabled: "im Repository nicht aktiviert",
+  methods: {
+    merge: "Merge-Commit erstellen",
+    rebase: "Rebase und Merge",
+    squash: "Squash und Merge",
+  },
+  noOpen: "Kein offener Pull Request",
+  noOpenDetail:
+    "Pushe diesen Branch und öffne einen Pull Request, um ihn hier zusammenzuführen.",
+  open: "Auf GitHub öffnen",
+  optionalChecksFailed_one:
+    "{{count}} optionale Prüfung fehlgeschlagen: {{names}}. Sie blockiert den Merge nicht.",
+  optionalChecksFailed_other:
+    "{{count}} optionale Prüfungen fehlgeschlagen: {{names}}. Sie blockieren den Merge nicht.",
+  ready: "Bereit zum Zusammenführen",
+  refresh: "Aktualisieren",
+  resolve: "Als gelöst markieren",
+  shepherd: {
+    actionFailed: "Shepherd-Aktion fehlgeschlagen",
+    hold: {
+      ambiguous: "Shepherd wartet, bis der mehrdeutige Versand geklärt ist.",
+      queuedRun:
+        "Shepherd wartet auf den Abschluss einer Nachricht in der Warteschlange.",
+      waitingForYou: "Shepherd wartet vor dem Fortfahren auf deine Eingabe.",
+    },
+    invalidUrl: "Die Pull-Request-URL konnte nicht verarbeitet werden.",
+    noChat: "Öffne einen Arbeitsbereich-Chat, bevor du Shepherd startest.",
+    queued:
+      "Shepherd fährt fort, sobald die aktuelle Antwort abgeschlossen ist.",
+    resume: "Fortsetzen",
+    resumeFailed: "Shepherd konnte nicht fortgesetzt werden",
+    rounds: "{{round}} / {{max}}",
+    settled: {
+      blocked: {
+        detail:
+          "Nach mehreren Versuchen gibt es keinen Fortschritt. Übernimm oder passe den PR an.",
+        title: "Shepherd blockiert",
+      },
+      budget: {
+        detail:
+          "Das Rundenlimit wurde erreicht. Setze später fort oder erhöhe das Limit.",
+        title: "Rundenlimit erreicht",
+      },
+      closed: {
+        detail: "Der Pull Request wurde zusammengeführt oder geschlossen.",
+        title: "Pull Request geschlossen",
+      },
+      green: {
+        detail:
+          "Die erforderlichen Prüfungen sind grün und alle Review-Unterhaltungen sind geklärt.",
+        title: "Bereit zum Zusammenführen",
+      },
+      stopped: {
+        detail:
+          "Shepherd ist pausiert. Setze fort, wenn Shepherd wieder übernehmen soll.",
+        title: "Shepherd angehalten",
+      },
+    },
+    shepherdingStop: "Shepherd arbeitet… (zum Anhalten klicken)",
+    sourceCollapse: "Shepherd-Quelle einklappen",
+    sourceExpand: "Shepherd-Quelle ausklappen",
+    start: "Diesen PR mit Shepherd betreuen",
+    startFailed: "Shepherd konnte nicht gestartet werden",
+    started: "Shepherd gestartet",
+    stopped: "Shepherd angehalten",
+    title: "Shepherd",
+    working: "In Arbeit…",
+    yielded: "Shepherd pausiert — du hast die Sitzung übernommen.",
+    yieldedDetail:
+      "Setze fort, wenn Shepherd diesen PR wieder überwachen soll.",
+  },
+  title: "Pull Request",
+  unresolvedTitle: "Offene Unterhaltungen ({{count}})",
+} satisfies LocaleResourceTranslationWorkspaceToolsPullRequest;
+
+export const pullRequestJa = {
+  ...pullRequestEn,
+  archive: "ワークスペースをアーカイブ",
+  archiveDetail:
+    "アーカイブすると、このチャットが閉じられ、管理対象の worktree が削除されます。",
+  archiveFailed: "ワークスペースをアーカイブできませんでした",
+  archiveConfirmDetail:
+    "チャットをアーカイブし、{{path}} にある管理対象の worktree を削除します。",
+  archiveConfirmDirtyDetail:
+    "{{path}} の worktree に未コミットの変更があります。アーカイブすると worktree が削除され、変更は完全に破棄されます。",
+  archiveConfirmTitle: "このワークスペースをアーカイブしますか？",
+  archiveUnavailable: "このワークスペースはチャットに関連付けられていません。",
+  blocked: "マージできません",
+  blockers: {
+    behindBase_one:
+      "ブランチはベースブランチより {{count}} コミット遅れています。",
+    behindBase_other:
+      "ブランチはベースブランチより {{count}} コミット遅れています。",
+    changesRequested: "レビュー担当者が変更をリクエストしました。",
+    checksFailed_one: "必須チェック {{count}} 件が失敗しました：{{names}}。",
+    checksFailed_other: "必須チェック {{count}} 件が失敗しました：{{names}}。",
+    checksPending_one: "必須チェック {{count}} 件を実行中です：{{names}}。",
+    checksPending_other: "必須チェック {{count}} 件を実行中です：{{names}}。",
+    conflict: "プルリクエストにマージ競合があります。",
+    draft: "プルリクエストはまだ下書きです。",
+    permissionDenied: "このリポジトリをマージする権限がありません。",
+    repositoryPolicy:
+      "リポジトリのルールによってマージがブロックされています。",
+    reviewRequired: "承認レビューが必要です。",
+    unresolvedThreads_one: "未解決のレビュー会話が {{count}} 件あります。",
+    unresolvedThreads_other: "未解決のレビュー会話が {{count}} 件あります。",
+  },
+  checking: "このブランチのプルリクエストを確認中…",
+  checkingMergeability: "GitHub がマージ可能かどうかを計算しています。",
+  continue: "作業を続ける",
+  deleteBranch: "マージ後にリモートブランチを削除",
+  description: "説明",
+  errors: {
+    cliMissing: "GitHub CLI が必要です",
+    cliMissingDetail:
+      "Angel Engine 内でプルリクエストをマージするには gh をインストールしてください。",
+    fetch: "プルリクエストを利用できません",
+    fetchDetail:
+      "GitHub に接続できませんでした。リポジトリを確認して再試行してください。",
+    permission: "GitHub は読み取り専用です",
+    permissionDetail:
+      "GitHub でプルリクエストを開き、メンテナーにマージを依頼してください。",
+    unauthenticated: "GitHub CLI にサインインしていません",
+    unauthenticatedDetail:
+      "gh auth login を実行してから、このパネルを更新してください。",
+  },
+  generalComment: "全体へのコメント",
+  merge: "マージ",
+  mergeChanged: "マージの完了前にプルリクエストが変更されました。",
+  mergeFailed: "マージに失敗しました",
+  merged: "プルリクエスト #{{number}} をマージしました",
+  mergedDetail: "プルリクエストを正常にマージしました。",
+  mergedMethod: "{{method}} でマージしました。",
+  merging: "マージ中…",
+  method: "マージ方法",
+  methodDisabled: "リポジトリで有効になっていません",
+  methods: {
+    merge: "マージコミットを作成",
+    rebase: "リベースしてマージ",
+    squash: "スカッシュしてマージ",
+  },
+  noOpen: "開いているプルリクエストはありません",
+  noOpenDetail:
+    "このブランチをプッシュしてプルリクエストを作成すると、ここでマージできます。",
+  open: "GitHub で開く",
+  optionalChecksFailed_one:
+    "任意チェック {{count}} 件が失敗しました：{{names}}。マージはブロックされません。",
+  optionalChecksFailed_other:
+    "任意チェック {{count}} 件が失敗しました：{{names}}。マージはブロックされません。",
+  ready: "マージできます",
+  refresh: "更新",
+  resolve: "解決済みにする",
+  shepherd: {
+    actionFailed: "Shepherd の操作に失敗しました",
+    hold: {
+      ambiguous: "Shepherd は曖昧な送信が解決されるまで待機しています。",
+      queuedRun:
+        "Shepherd はキュー内のメッセージが完了するまで待機しています。",
+      waitingForYou: "Shepherd は続行する前に入力を待っています。",
+    },
+    invalidUrl: "プルリクエストの URL を解析できませんでした。",
+    noChat: "Shepherd を開始する前にワークスペースのチャットを開いてください。",
+    queued: "現在の返信が完了すると Shepherd が続行します。",
+    resume: "再開",
+    resumeFailed: "Shepherd を再開できませんでした",
+    rounds: "{{round}} / {{max}}",
+    settled: {
+      blocked: {
+        detail:
+          "繰り返し試行しても進展がありません。引き継ぐか PR を調整してください。",
+        title: "Shepherd がブロックされました",
+      },
+      budget: {
+        detail:
+          "ラウンド上限に達しました。後で再開するか上限を増やしてください。",
+        title: "ラウンド上限に達しました",
+      },
+      closed: {
+        detail: "プルリクエストはマージまたはクローズされました。",
+        title: "プルリクエストはクローズ済みです",
+      },
+      green: {
+        detail: "必須チェックが成功し、レビュー会話もすべて解決されています。",
+        title: "マージできます",
+      },
+      stopped: {
+        detail: "Shepherd は一時停止中です。再び任せるときに再開してください。",
+        title: "Shepherd を停止しました",
+      },
+    },
+    shepherdingStop: "Shepherd が対応中…（クリックして停止）",
+    sourceCollapse: "Shepherd のソースを折りたたむ",
+    sourceExpand: "Shepherd のソースを展開",
+    start: "この PR を Shepherd に任せる",
+    startFailed: "Shepherd を開始できませんでした",
+    started: "Shepherd を開始しました",
+    stopped: "Shepherd を停止しました",
+    title: "Shepherd",
+    working: "処理中…",
+    yielded: "Shepherd は一時停止しました — セッションを引き継ぎました。",
+    yieldedDetail:
+      "Shepherd にこの PR の監視を続けさせる場合は再開してください。",
+  },
+  title: "プルリクエスト",
+  unresolvedTitle: "未解決の会話（{{count}}）",
+} satisfies LocaleResourceTranslationWorkspaceToolsPullRequest;
+
+export const pullRequestKo = {
+  ...pullRequestEn,
+  archive: "작업 공간 보관",
+  archiveDetail: "보관하면 이 채팅이 닫히고 관리되는 worktree가 제거됩니다.",
+  archiveFailed: "작업 공간을 보관할 수 없습니다",
+  archiveConfirmDetail:
+    "채팅을 보관하고 {{path}}의 관리되는 worktree를 제거합니다.",
+  archiveConfirmDirtyDetail:
+    "{{path}}의 worktree에 커밋하지 않은 변경 사항이 있습니다. 보관하면 worktree가 제거되고 변경 사항이 영구적으로 삭제됩니다.",
+  archiveConfirmTitle: "이 작업 공간을 보관할까요?",
+  archiveUnavailable: "이 작업 공간은 채팅에 연결되어 있지 않습니다.",
+  blocked: "병합할 수 없음",
+  blockers: {
+    behindBase_one:
+      "브랜치가 기본 브랜치보다 {{count}}개 커밋 뒤처져 있습니다.",
+    behindBase_other:
+      "브랜치가 기본 브랜치보다 {{count}}개 커밋 뒤처져 있습니다.",
+    changesRequested: "검토자가 변경을 요청했습니다.",
+    checksFailed_one: "필수 검사 {{count}}개 실패: {{names}}.",
+    checksFailed_other: "필수 검사 {{count}}개 실패: {{names}}.",
+    checksPending_one: "필수 검사 {{count}}개 실행 중: {{names}}.",
+    checksPending_other: "필수 검사 {{count}}개 실행 중: {{names}}.",
+    conflict: "풀 리퀘스트에 병합 충돌이 있습니다.",
+    draft: "풀 리퀘스트가 아직 초안입니다.",
+    permissionDenied: "이 저장소를 병합할 권한이 없습니다.",
+    repositoryPolicy: "저장소 규칙이 병합을 차단하고 있습니다.",
+    reviewRequired: "승인 검토가 필요합니다.",
+    unresolvedThreads_one: "해결되지 않은 검토 대화가 {{count}}개 있습니다.",
+    unresolvedThreads_other: "해결되지 않은 검토 대화가 {{count}}개 있습니다.",
+  },
+  checking: "이 브랜치의 풀 리퀘스트 확인 중…",
+  checkingMergeability: "GitHub에서 병합 가능 여부를 계산하고 있습니다.",
+  continue: "계속 작업",
+  deleteBranch: "병합 후 원격 브랜치 삭제",
+  description: "설명",
+  errors: {
+    cliMissing: "GitHub CLI가 필요합니다",
+    cliMissingDetail:
+      "Angel Engine에서 풀 리퀘스트를 병합하려면 gh를 설치하세요.",
+    fetch: "풀 리퀘스트를 사용할 수 없음",
+    fetchDetail:
+      "GitHub에 연결할 수 없습니다. 저장소를 확인하고 다시 시도하세요.",
+    permission: "GitHub 읽기 전용 액세스",
+    permissionDetail:
+      "GitHub에서 풀 리퀘스트를 열고 관리자에게 병합을 요청하세요.",
+    unauthenticated: "GitHub CLI에 로그인하지 않았습니다",
+    unauthenticatedDetail: "gh auth login을 실행한 후 이 패널을 새로 고치세요.",
+  },
+  generalComment: "일반 댓글",
+  merge: "병합",
+  mergeChanged: "병합이 완료되기 전에 풀 리퀘스트가 변경되었습니다.",
+  mergeFailed: "병합 실패",
+  merged: "풀 리퀘스트 #{{number}} 병합됨",
+  mergedDetail: "풀 리퀘스트가 성공적으로 병합되었습니다.",
+  mergedMethod: "{{method}} 방식으로 병합되었습니다.",
+  merging: "병합 중…",
+  method: "병합 방식",
+  methodDisabled: "저장소에서 활성화되지 않음",
+  methods: {
+    merge: "병합 커밋 만들기",
+    rebase: "리베이스 후 병합",
+    squash: "스쿼시 후 병합",
+  },
+  noOpen: "열린 풀 리퀘스트 없음",
+  noOpenDetail:
+    "이 브랜치를 푸시하고 풀 리퀘스트를 만들면 여기에서 병합할 수 있습니다.",
+  open: "GitHub에서 열기",
+  optionalChecksFailed_one:
+    "선택 검사 {{count}}개 실패: {{names}}. 병합은 차단되지 않습니다.",
+  optionalChecksFailed_other:
+    "선택 검사 {{count}}개 실패: {{names}}. 병합은 차단되지 않습니다.",
+  ready: "병합 준비 완료",
+  refresh: "새로 고침",
+  resolve: "해결됨으로 표시",
+  shepherd: {
+    actionFailed: "Shepherd 작업 실패",
+    hold: {
+      ambiguous: "Shepherd가 모호한 전송이 해결될 때까지 기다리고 있습니다.",
+      queuedRun: "Shepherd가 대기열 메시지가 완료될 때까지 기다리고 있습니다.",
+      waitingForYou: "Shepherd가 계속하기 전에 입력을 기다리고 있습니다.",
+    },
+    invalidUrl: "풀 리퀘스트 URL을 분석할 수 없습니다.",
+    noChat: "Shepherd를 시작하기 전에 작업 공간 채팅을 여세요.",
+    queued: "현재 응답이 끝나면 Shepherd가 계속 진행합니다.",
+    resume: "다시 시작",
+    resumeFailed: "Shepherd를 다시 시작할 수 없습니다",
+    rounds: "{{round}} / {{max}}",
+    settled: {
+      blocked: {
+        detail:
+          "반복해서 시도했지만 진전이 없습니다. 직접 처리하거나 PR을 조정하세요.",
+        title: "Shepherd 차단됨",
+      },
+      budget: {
+        detail:
+          "라운드 한도에 도달했습니다. 나중에 다시 시작하거나 한도를 늘리세요.",
+        title: "라운드 한도 도달",
+      },
+      closed: {
+        detail: "풀 리퀘스트가 병합되었거나 닫혔습니다.",
+        title: "풀 리퀘스트 닫힘",
+      },
+      green: {
+        detail: "필수 검사가 통과했고 검토 대화가 모두 해결되었습니다.",
+        title: "병합 준비 완료",
+      },
+      stopped: {
+        detail: "Shepherd가 일시 중지되었습니다. 다시 맡기려면 재개하세요.",
+        title: "Shepherd 중지됨",
+      },
+    },
+    shepherdingStop: "Shepherd 작업 중… (클릭하여 중지)",
+    sourceCollapse: "Shepherd 소스 접기",
+    sourceExpand: "Shepherd 소스 펼치기",
+    start: "Shepherd에게 이 PR 맡기기",
+    startFailed: "Shepherd를 시작할 수 없습니다",
+    started: "Shepherd 시작됨",
+    stopped: "Shepherd 중지됨",
+    title: "Shepherd",
+    working: "작업 중…",
+    yielded: "Shepherd 일시 중지 — 세션을 직접 처리하고 있습니다.",
+    yieldedDetail: "Shepherd가 이 PR을 다시 감시하게 하려면 재개하세요.",
+  },
+  title: "풀 리퀘스트",
+  unresolvedTitle: "해결되지 않은 대화 ({{count}})",
+} satisfies LocaleResourceTranslationWorkspaceToolsPullRequest;
+
+export const pullRequestEs = {
+  ...pullRequestEn,
+  archive: "Archivar espacio de trabajo",
+  archiveDetail:
+    "Al archivar se cierra este chat y se elimina su worktree administrado.",
+  archiveFailed: "No se pudo archivar el espacio de trabajo",
+  archiveConfirmDetail:
+    "Esta acción archiva el chat y elimina el worktree administrado de {{path}}.",
+  archiveConfirmDirtyDetail:
+    "El worktree de {{path}} tiene cambios sin confirmar. Al archivarlo se eliminará y esos cambios se descartarán permanentemente.",
+  archiveConfirmTitle: "¿Archivar este espacio de trabajo?",
+  archiveUnavailable: "Este espacio de trabajo no está vinculado a un chat.",
+  blocked: "No se puede fusionar",
+  blockers: {
+    behindBase_one: "La rama está {{count}} commit por detrás de la rama base.",
+    behindBase_other:
+      "La rama está {{count}} commits por detrás de la rama base.",
+    changesRequested: "Una persona revisora solicitó cambios.",
+    checksFailed_one: "Falló {{count}} comprobación obligatoria: {{names}}.",
+    checksFailed_other:
+      "Fallaron {{count}} comprobaciones obligatorias: {{names}}.",
+    checksPending_one:
+      "{{count}} comprobación obligatoria sigue en ejecución: {{names}}.",
+    checksPending_other:
+      "{{count}} comprobaciones obligatorias siguen en ejecución: {{names}}.",
+    conflict: "La pull request tiene conflictos de fusión.",
+    draft: "La pull request todavía es un borrador.",
+    permissionDenied: "No tienes permiso para fusionar este repositorio.",
+    repositoryPolicy: "Una regla del repositorio bloquea esta fusión.",
+    reviewRequired: "Se necesita una revisión aprobatoria.",
+    unresolvedThreads_one:
+      "Hay {{count}} conversación de revisión sin resolver.",
+    unresolvedThreads_other:
+      "Hay {{count}} conversaciones de revisión sin resolver.",
+  },
+  checking: "Comprobando la pull request de esta rama…",
+  checkingMergeability: "GitHub todavía está calculando si se puede fusionar.",
+  continue: "Seguir trabajando",
+  deleteBranch: "Eliminar la rama remota después de fusionar",
+  description: "Descripción",
+  errors: {
+    cliMissing: "Se necesita GitHub CLI",
+    cliMissingDetail:
+      "Instala gh para fusionar pull requests dentro de Angel Engine.",
+    fetch: "Pull request no disponible",
+    fetchDetail:
+      "No se pudo acceder a GitHub. Comprueba el repositorio e inténtalo de nuevo.",
+    permission: "Acceso de solo lectura a GitHub",
+    permissionDetail:
+      "Abre la pull request en GitHub y pide a una persona responsable que la fusione.",
+    unauthenticated: "GitHub CLI no ha iniciado sesión",
+    unauthenticatedDetail:
+      "Ejecuta gh auth login y después actualiza este panel.",
+  },
+  generalComment: "Comentario general",
+  merge: "Fusionar",
+  mergeChanged: "La pull request cambió antes de que terminara la fusión.",
+  mergeFailed: "Error al fusionar",
+  merged: "Pull request n.º {{number}} fusionada",
+  mergedDetail: "La pull request se fusionó correctamente.",
+  mergedMethod: "Fusionada mediante {{method}}.",
+  merging: "Fusionando…",
+  method: "Método de fusión",
+  methodDisabled: "no habilitado en el repositorio",
+  methods: {
+    merge: "Crear un commit de fusión",
+    rebase: "Rebase y fusión",
+    squash: "Squash y fusión",
+  },
+  noOpen: "No hay ninguna pull request abierta",
+  noOpenDetail: "Sube esta rama y abre una pull request para fusionarla aquí.",
+  open: "Abrir en GitHub",
+  optionalChecksFailed_one:
+    "Falló {{count}} comprobación opcional: {{names}}. No bloquea la fusión.",
+  optionalChecksFailed_other:
+    "Fallaron {{count}} comprobaciones opcionales: {{names}}. No bloquean la fusión.",
+  ready: "Lista para fusionar",
+  refresh: "Actualizar",
+  resolve: "Marcar como resuelta",
+  shepherd: {
+    actionFailed: "Error en la acción de Shepherd",
+    hold: {
+      ambiguous: "Shepherd espera a que se resuelva el envío ambiguo.",
+      queuedRun: "Shepherd espera a que termine un mensaje en cola.",
+      waitingForYou: "Shepherd espera tu intervención antes de continuar.",
+    },
+    invalidUrl: "No se pudo interpretar la URL de la pull request.",
+    noChat: "Abre un chat del espacio de trabajo antes de iniciar Shepherd.",
+    queued: "Shepherd continuará cuando termine la respuesta actual.",
+    resume: "Reanudar",
+    resumeFailed: "No se pudo reanudar Shepherd",
+    rounds: "{{round}} / {{max}}",
+    settled: {
+      blocked: {
+        detail:
+          "No hubo avances tras varios intentos. Toma el control o ajusta la PR.",
+        title: "Shepherd está bloqueado",
+      },
+      budget: {
+        detail:
+          "Se alcanzó el límite de rondas. Reanuda o amplía el límite más adelante.",
+        title: "Límite de rondas alcanzado",
+      },
+      closed: {
+        detail: "La pull request se fusionó o cerró.",
+        title: "Pull request cerrada",
+      },
+      green: {
+        detail:
+          "Las comprobaciones obligatorias están correctas y las conversaciones de revisión están resueltas.",
+        title: "Lista para fusionar",
+      },
+      stopped: {
+        detail:
+          "Shepherd está en pausa. Reanúdalo cuando quieras que vuelva a encargarse.",
+        title: "Shepherd detenido",
+      },
+    },
+    shepherdingStop: "Shepherd trabajando… (haz clic para detener)",
+    sourceCollapse: "Contraer la fuente de Shepherd",
+    sourceExpand: "Expandir la fuente de Shepherd",
+    start: "Encargar esta PR a Shepherd",
+    startFailed: "No se pudo iniciar Shepherd",
+    started: "Shepherd iniciado",
+    stopped: "Shepherd detenido",
+    title: "Shepherd",
+    working: "Trabajando…",
+    yielded: "Shepherd está en pausa: has tomado el control de la sesión.",
+    yieldedDetail:
+      "Reanúdalo cuando quieras que Shepherd vuelva a supervisar esta PR.",
+  },
+  title: "Pull request",
+  unresolvedTitle: "Conversaciones sin resolver ({{count}})",
+} satisfies LocaleResourceTranslationWorkspaceToolsPullRequest;

@@ -56,4 +56,28 @@ describe.each(translatedLanguages)("%s locale", (language) => {
       ),
     ).toEqual(intentionallySame[language] ?? []);
   });
+
+  it("does not silently reuse English pull request copy", () => {
+    const intentionallySame: Partial<Record<typeof language, string[]>> = {
+      de: ["shepherd.rounds", "shepherd.title"],
+      es: ["shepherd.rounds", "shepherd.title", "title"],
+      fr: ["description", "shepherd.rounds", "shepherd.title", "title"],
+      ja: ["shepherd.rounds", "shepherd.title"],
+      ko: ["shepherd.rounds", "shepherd.title"],
+      "zh-CN": ["shepherd.rounds", "shepherd.start", "shepherd.title"],
+      "zh-TW": [
+        "description",
+        "shepherd.rounds",
+        "shepherd.start",
+        "shepherd.title",
+      ],
+    };
+
+    expect(
+      pathsMatchingEnglish(
+        resources.en.translation.workspace.tools.pullRequest,
+        resources[language].translation.workspace.tools.pullRequest,
+      ),
+    ).toEqual(intentionallySame[language]);
+  });
 });
