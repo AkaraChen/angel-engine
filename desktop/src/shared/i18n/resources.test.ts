@@ -81,3 +81,20 @@ describe.each(translatedLanguages)("%s locale", (language) => {
     ).toEqual(intentionallySame[language]);
   });
 });
+
+describe.each(
+  supportedLanguages,
+)("%s source control terminology", (language) => {
+  it("uses the provider-neutral composer keys", () => {
+    const composer = resources[language].translation.composer;
+
+    expect(composer).toHaveProperty("attachChangeRequest");
+    expect(composer).toHaveProperty("workItem");
+    expect(composer).toHaveProperty("changeRequest");
+    expect(composer).toHaveProperty("taskLinkHintSourceControlPath");
+    expect(composer).not.toHaveProperty("attachGitHub");
+    expect(composer).not.toHaveProperty("githubIssue");
+    expect(composer).not.toHaveProperty("githubPullRequest");
+    expect(composer).not.toHaveProperty("taskLinkHintGitHubPath");
+  });
+});

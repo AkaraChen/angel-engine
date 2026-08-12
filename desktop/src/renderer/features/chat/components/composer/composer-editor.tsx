@@ -241,8 +241,8 @@ function ComposerEditorHeader({
               item.providerId === "linear"
                 ? t("composer.linearIssue")
                 : item.kind === "workItem"
-                  ? t("composer.githubIssue")
-                  : t("composer.githubPullRequest")
+                  ? t("composer.workItem")
+                  : t("composer.changeRequest")
             }
           />
         );

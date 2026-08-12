@@ -118,7 +118,7 @@ class StubResizeObserver {
 const originalResizeObserver = window.ResizeObserver;
 window.ResizeObserver = StubResizeObserver as unknown as typeof ResizeObserver;
 
-import { PullRequestPanel } from "./pull-request-panel";
+import { ChangeRequestPanel } from "./change-request-panel";
 
 const longThreadBody = Array.from(
   { length: 30 },
@@ -231,7 +231,7 @@ function renderPanel() {
   return render(
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <PullRequestPanel projectId="project-1" root="/repo" />
+        <ChangeRequestPanel projectId="project-1" root="/repo" />
       </TooltipProvider>
     </QueryClientProvider>,
   );
@@ -288,7 +288,7 @@ afterAll(() => {
   }
 });
 
-describe("PullRequestPanel", () => {
+describe("ChangeRequestPanel", () => {
   it("keeps checks focus parked while PR status is loading", async () => {
     focusChecksSection = true;
     let resolveStatus: (value: GitHubPullRequestStatus) => void = () => {};

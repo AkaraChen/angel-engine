@@ -264,7 +264,7 @@ export const WorkspaceCommandPalette: FC<WorkspaceCommandPaletteProps> = ({
         onSelect: () => {
           void shepherdPr();
         },
-        title: t("ui.commandShepherdPr"),
+        title: t("ui.commandShepherdChangeRequest"),
       },
       // Import has no button anywhere in the chrome; the palette is where a
       // rarely-used verb belongs. Hidden when no project owns the destination.

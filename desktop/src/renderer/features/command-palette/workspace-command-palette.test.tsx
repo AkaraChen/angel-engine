@@ -318,7 +318,7 @@ describe("WorkspaceCommandPalette", () => {
 
     await openPaletteViaCommand();
     await act(async () => {
-      fireEvent.click(screen.getByText("ui.commandShepherdPr"));
+      fireEvent.click(screen.getByText("ui.commandShepherdChangeRequest"));
     });
 
     await waitFor(() => {
@@ -350,7 +350,7 @@ describe("WorkspaceCommandPalette", () => {
 
     await openPaletteViaCommand();
     await act(async () => {
-      fireEvent.click(screen.getByText("ui.commandShepherdPr"));
+      fireEvent.click(screen.getByText("ui.commandShepherdChangeRequest"));
     });
     await waitFor(() => {
       expect(startShepherd).toHaveBeenCalledWith(
@@ -393,7 +393,7 @@ describe("WorkspaceCommandPalette", () => {
 
     await openPaletteViaCommand();
     await act(async () => {
-      fireEvent.click(screen.getByText("ui.commandShepherdPr"));
+      fireEvent.click(screen.getByText("ui.commandShepherdChangeRequest"));
     });
 
     await waitFor(() => {
@@ -422,7 +422,7 @@ describe("WorkspaceCommandPalette", () => {
 
     await openPaletteViaCommand();
     await act(async () => {
-      fireEvent.click(screen.getByText("ui.commandShepherdPr"));
+      fireEvent.click(screen.getByText("ui.commandShepherdChangeRequest"));
     });
 
     await waitFor(() => expect(toast).toHaveBeenCalled());

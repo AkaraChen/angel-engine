@@ -46,18 +46,18 @@ import {
   pullRequestStatusQueryOptions,
   reviewThreadsQueryOptions,
   resolveReviewThreadMutationOptions,
-} from "@/features/pull-request/api/queries";
+} from "@/features/change-request/api/queries";
 import {
   deriveMergeBlockers,
   optionalFailedChecks,
   type MergeBlocker,
-} from "@/features/pull-request/derive-merge-blockers";
+} from "@/features/change-request/derive-merge-blockers";
 import { ShepherdSection } from "@/features/shepherd/shepherd-section";
 import { cn } from "@/platform/utils";
 
 const mergeMethods: MergeMethod[] = ["squash", "merge", "rebase"];
 
-export const PullRequestPanel: FC<{
+export const ChangeRequestPanel: FC<{
   projectId: string | null;
   root: string;
 }> = ({ projectId, root }) => {

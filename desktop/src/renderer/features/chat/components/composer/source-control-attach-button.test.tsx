@@ -299,7 +299,7 @@ describe("PromptSourceControlAttachButton", () => {
       expect(mocks.resolveUrl).toHaveBeenCalledWith("/repos/widgets", url),
     );
     expect(await screen.findByText("Add widget spinner")).toBeDefined();
-    fireEvent.click(screen.getByText("composer.attachGitHubConfirm"));
+    fireEvent.click(screen.getByText("composer.attachChangeRequestConfirm"));
     expect(onAttached).toHaveBeenCalledWith(
       expect.objectContaining({
         kind: "changeRequest",

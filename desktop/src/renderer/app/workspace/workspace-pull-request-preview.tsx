@@ -27,7 +27,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
-import { pullRequestDetailQueryOptions } from "@/features/pull-requests/api/queries";
+import { pullRequestDetailQueryOptions } from "@/features/change-requests/api/queries";
 import { useSourceControlActivation } from "@/features/source-control/api/use-activation";
 import { capabilityState } from "@/features/source-control/model";
 
