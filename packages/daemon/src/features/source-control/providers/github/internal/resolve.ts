@@ -1,9 +1,4 @@
 import type {
-  GitHubItemKind,
-  GitHubResolveUrlInput,
-  GitHubResolvedItem,
-} from "@angel-engine/daemon-api/github";
-import type {
   NumberedItemInput,
   ProviderOperationContext,
   RepositoryIdentity,
@@ -22,6 +17,11 @@ import {
   normalizeText,
   runGhCli,
 } from "./gh-cli";
+import type {
+  GitHubItemKind,
+  GitHubResolveUrlInput,
+  GitHubResolvedItem,
+} from "./types";
 
 const BODY_MAX_CHARS = 12_000;
 const positiveInteger = arkType("number").narrow(
@@ -104,6 +104,10 @@ export function parseGitHubRepositoryUrl(
   raw: string,
 ): RepositoryIdentity | null {
   const trimmed = raw.trim();
+  const shorthand = /^([\w.-]+)\/([\w.-]+?)(?:\.git)?$/.exec(trimmed);
+  if (shorthand) {
+    return gitHubRepositoryIdentity(shorthand[1], shorthand[2]);
+  }
   const scpMatch = /^[\w.-]+@([^:]+):(.+)$/.exec(trimmed);
   let host: string;
   let pathname: string;
@@ -127,6 +131,13 @@ export function parseGitHubRepositoryUrl(
     ? segments[1].slice(0, -4)
     : segments[1];
   if (!is.nonEmptyString(namespace) || !is.nonEmptyString(name)) return null;
+  return gitHubRepositoryIdentity(namespace, name);
+}
+
+function gitHubRepositoryIdentity(
+  namespace: string,
+  name: string,
+): RepositoryIdentity {
   return {
     providerId: "github",
     host: "github.com",

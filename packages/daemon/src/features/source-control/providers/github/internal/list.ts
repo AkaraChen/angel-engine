@@ -1,10 +1,4 @@
 import type {
-  GitHubItemKind,
-  GitHubListItem,
-  GitHubListItemsInput,
-  GitHubListItemsResult,
-} from "@angel-engine/daemon-api/github";
-import type {
   ListOperationInput,
   ProviderOperationContext,
   WorkItem,
@@ -22,6 +16,12 @@ import {
   runGhCli,
 } from "./gh-cli";
 import { normalizeGitHubWorkItemState, parseGitHubUrl } from "./resolve";
+import type {
+  GitHubItemKind,
+  GitHubListItem,
+  GitHubListItemsInput,
+  GitHubListItemsResult,
+} from "./types";
 
 const DEFAULT_LIMIT = 30;
 const MAX_LIMIT = 100;

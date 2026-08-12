@@ -122,6 +122,28 @@ describe("GitHub source-control provider", () => {
     ).toMatchObject({ providerId: "github" });
   });
 
+  it("returns every matching remote so the registry can report ambiguity", () => {
+    const plugin = createGitHubPlugin();
+    const matches = plugin.discovery.match(
+      context(
+        [
+          remote("https://github.com/acme/widgets.git", "origin"),
+          remote("https://github.com/acme/widgets.git", "mirror"),
+        ],
+        { defaultRemote: null },
+      ),
+    );
+
+    expect(matches).toEqual([
+      expect.objectContaining({
+        remote: expect.objectContaining({ name: "mirror" }),
+      }),
+      expect.objectContaining({
+        remote: expect.objectContaining({ name: "origin" }),
+      }),
+    ]);
+  });
+
   it("reports authenticated readiness through gh auth status", async () => {
     const runGh = vi.fn(async () => ({ stderr: "", stdout: "" }));
     const plugin = createGitHubPlugin({
@@ -183,6 +205,34 @@ describe("GitHub source-control provider", () => {
     expect(
       plugin.repositories?.parseUrl("https://gitlab.com/acme/widgets"),
     ).toBeNull();
+    expect(plugin.repositories?.parseUrl("acme/widgets")).toEqual(repository);
+  });
+
+  it("matches task links and clones through provider capabilities", async () => {
+    const runGh = vi.fn(async () => ({ stderr: "", stdout: "" }));
+    const plugin = createGitHubPlugin({
+      findGh: async () => "/usr/bin/gh",
+      runGh,
+    });
+
+    expect(
+      plugin.links?.parseUrl("https://github.com/acme/widgets/issues/3"),
+    ).toEqual({
+      id: "3",
+      kind: "work-item",
+      repository,
+      url: "https://github.com/acme/widgets/issues/3",
+    });
+    await expect(
+      plugin.git.clone?.(
+        { repository, targetPath: "/tmp/widgets" },
+        operationContext(),
+      ),
+    ).resolves.toEqual({ projectPath: "/tmp/widgets" });
+    expect(runGh).toHaveBeenCalledWith(
+      ["repo", "clone", "acme/widgets", "/tmp/widgets", "--", "--progress"],
+      expect.objectContaining({ timeoutMs: expect.any(Number) }),
+    );
   });
 
   it("lists namespaces and repositories through discovery capabilities", async () => {
@@ -508,5 +558,148 @@ describe("GitHub source-control provider", () => {
         cwd: "/repos/widgets",
       },
     ]);
+  });
+
+  it("lists checks, reads logs, builds fix prompts, and manages review threads through generic capabilities", async () => {
+    const checkNode = {
+      __typename: "CheckRun",
+      checkSuite: {
+        workflowRun: { databaseId: 9001, workflow: { name: "CI" } },
+      },
+      conclusion: "FAILURE",
+      databaseId: 111,
+      detailsUrl: "https://github.com/acme/widgets/actions/runs/9001",
+      isRequired: true,
+      name: "test",
+      status: "COMPLETED",
+    };
+    const reviewThread = {
+      comments: {
+        nodes: [
+          {
+            author: { login: "reviewer" },
+            body: "Please rename this",
+            createdAt: "2026-07-20T11:00:00Z",
+            id: "comment-1",
+            line: 3,
+            path: "src/a.ts",
+          },
+        ],
+      },
+      id: "thread-1",
+      isOutdated: false,
+      isResolved: false,
+      line: 3,
+      path: "src/a.ts",
+    };
+    const plugin = createGitHubPlugin({
+      findGh: async () => "/usr/bin/gh",
+      runGh: async (args) => {
+        if (args[0] === "pr" && args[1] === "view") {
+          return { stderr: "", stdout: JSON.stringify(pullRequest) };
+        }
+        if (args[0] === "run") {
+          return { stderr: "", stdout: "failure line" };
+        }
+        const query = args.find((arg) => arg.startsWith("query=")) ?? "";
+        if (query.includes("resolveReviewThread")) {
+          return {
+            stderr: "",
+            stdout: JSON.stringify({
+              data: {
+                resolveReviewThread: {
+                  thread: { ...reviewThread, isResolved: true },
+                },
+              },
+            }),
+          };
+        }
+        if (query.includes("reviewThreads")) {
+          return {
+            stderr: "",
+            stdout: JSON.stringify({
+              data: {
+                repository: {
+                  pullRequest: { reviewThreads: { nodes: [reviewThread] } },
+                },
+              },
+            }),
+          };
+        }
+        if (query.includes("statusCheckRollup")) {
+          return {
+            stderr: "",
+            stdout: JSON.stringify({
+              data: {
+                repository: {
+                  pullRequest: {
+                    commits: {
+                      nodes: [
+                        {
+                          commit: {
+                            oid: "abc",
+                            statusCheckRollup: {
+                              contexts: { nodes: [checkNode] },
+                            },
+                          },
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
+            }),
+          };
+        }
+        return {
+          stderr: "",
+          stdout: JSON.stringify({
+            data: { repository: { pullRequest: { id: "PR_7" } } },
+          }),
+        };
+      },
+    });
+
+    await expect(
+      plugin.checks?.list?.({ id: "7", repository }, operationContext()),
+    ).resolves.toEqual([
+      expect.objectContaining({ name: "test", conclusion: "failure" }),
+    ]);
+    await expect(
+      plugin.checks?.snapshot?.({ id: "7", repository }, operationContext()),
+    ).resolves.toMatchObject({
+      failedBlocking: [expect.objectContaining({ name: "test" })],
+      headOid: "abc",
+    });
+    await expect(
+      plugin.checks?.failureLog?.(
+        {
+          logRef: { kind: "workflow-run", runId: "9001", jobId: "111" },
+          repository,
+          tailLines: 40,
+        },
+        operationContext(),
+      ),
+    ).resolves.toEqual({ text: "failure line", truncated: false });
+    await expect(
+      plugin.checks?.fixPrompt?.({ id: "7", repository }, operationContext()),
+    ).resolves.toMatchObject({
+      prompt: expect.stringContaining("test"),
+      checks: { failed: [expect.objectContaining({ name: "test" })] },
+    });
+    await expect(
+      plugin.reviews?.listThreads?.(
+        { id: "7", repository },
+        operationContext(),
+      ),
+    ).resolves.toEqual([
+      expect.objectContaining({ id: "thread-1", state: "unresolved" }),
+    ]);
+    await expect(
+      plugin.reviews?.resolveThread?.(
+        { repository, threadId: "thread-1" },
+        operationContext(),
+      ),
+    ).resolves.toMatchObject({ id: "thread-1", state: "resolved" });
   });
 });

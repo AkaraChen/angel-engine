@@ -3,6 +3,11 @@ import path from "node:path";
 import is from "@sindresorhus/is";
 import { Effect } from "effect";
 
+import type {
+  ChangeRequestTemplate,
+  ChangeRequestTemplateResult,
+} from "@angel-engine/daemon-api/source-control";
+
 import { DaemonError } from "../../../platform/errors";
 
 function normalizeText(value: string) {
@@ -32,18 +37,6 @@ const TEMPLATE_DIRECTORIES = [
   path.join("docs", "PULL_REQUEST_TEMPLATE"),
   path.join("docs", "pull_request_template"),
 ] as const;
-
-export interface ChangeRequestTemplate {
-  body: string;
-  name: string;
-  path: string | null;
-  relativePath: string | null;
-}
-
-export interface ChangeRequestTemplateResult {
-  body: string;
-  templates: ChangeRequestTemplate[];
-}
 
 /**
  * Discover repository PR templates under `cwd`. Pure filesystem — no `gh` call.

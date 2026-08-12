@@ -7,8 +7,8 @@ import type {
   ComposerCatalog,
   ComposerInteractionRefs,
 } from "@/features/chat/components/composer/composer-editor-extensions";
-import type { ComposerGitHubAttachment } from "@/features/chat/components/composer/github-attachments";
 import type { ComposerTerminalSelection } from "@/features/chat/components/composer/terminal-selection-to-composer";
+import type { ComposerSourceControlAttachment } from "@/features/chat/components/composer/source-control-attachments";
 import { useEditor, useEditorState } from "@tiptap/react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -26,17 +26,19 @@ export interface ComposerEditorInteractions {
 }
 
 export interface ComposerEditorController {
-  addGitHubAttachment: (attachment: ComposerGitHubAttachment) => void;
+  addSourceControlAttachment: (
+    attachment: ComposerSourceControlAttachment,
+  ) => void;
   addPasteSourceUrl: (sourceUrl: string) => void;
   addTerminalSelection: (selection: ComposerTerminalSelection) => void;
   editor: Editor | null;
   focus: () => void;
   getMarkdown: () => string;
-  githubAttachments: ComposerGitHubAttachment[];
+  sourceControlAttachments: ComposerSourceControlAttachment[];
   isEmpty: boolean;
   mentionedFiles: ComposerMentionedFile[];
   pasteSourceUrls: string[];
-  removeGitHubAttachment: (id: string) => void;
+  removeSourceControlAttachment: (id: string) => void;
   removeMention: (id: string) => void;
   removeTerminalSelection: (id: string) => void;
   removePasteSourceUrl: (sourceUrl: string) => void;
@@ -59,8 +61,8 @@ export function useComposerEditor({
     [],
   );
   const [pasteSourceUrls, setPasteSourceUrls] = useState<string[]>([]);
-  const [githubAttachments, setGitHubAttachments] = useState<
-    ComposerGitHubAttachment[]
+  const [sourceControlAttachments, setSourceControlAttachments] = useState<
+    ComposerSourceControlAttachment[]
   >([]);
   const addPasteSourceUrl = useCallback((sourceUrl: string) => {
     setPasteSourceUrls((current) =>
@@ -70,9 +72,9 @@ export function useComposerEditor({
   const removePasteSourceUrl = useCallback((sourceUrl: string) => {
     setPasteSourceUrls((current) => current.filter((url) => url !== sourceUrl));
   }, []);
-  const addGitHubAttachment = useCallback(
-    (attachment: ComposerGitHubAttachment) => {
-      setGitHubAttachments((current) => {
+  const addSourceControlAttachment = useCallback(
+    (attachment: ComposerSourceControlAttachment) => {
+      setSourceControlAttachments((current) => {
         if (current.some((item) => item.url === attachment.url)) {
           return current;
         }
@@ -81,8 +83,10 @@ export function useComposerEditor({
     },
     [],
   );
-  const removeGitHubAttachment = useCallback((id: string) => {
-    setGitHubAttachments((current) => current.filter((item) => item.id !== id));
+  const removeSourceControlAttachment = useCallback((id: string) => {
+    setSourceControlAttachments((current) =>
+      current.filter((item) => item.id !== id),
+    );
   }, []);
   const [terminalSelections, setTerminalSelections] = useState<
     ComposerTerminalSelection[]
@@ -189,8 +193,8 @@ export function useComposerEditor({
       editor.commands.clearContent();
     }
     setPasteSourceUrls([]);
-    setGitHubAttachments([]);
     setTerminalSelections([]);
+    setSourceControlAttachments([]);
   }, [editor]);
   const removeMention = useCallback(
     (id: string) => {
@@ -227,17 +231,17 @@ export function useComposerEditor({
   );
 
   return {
-    addGitHubAttachment,
+    addSourceControlAttachment,
     addPasteSourceUrl,
     addTerminalSelection,
     editor,
     focus,
     getMarkdown,
-    githubAttachments,
+    sourceControlAttachments,
     isEmpty: emptyState ?? true,
     mentionedFiles,
     pasteSourceUrls,
-    removeGitHubAttachment,
+    removeSourceControlAttachment,
     removeMention,
     removePasteSourceUrl,
     removeTerminalSelection,

@@ -1,39 +1,61 @@
 import type {
-  GitHubCheckItem,
-  GitHubChecksSnapshot,
-  GitHubReviewThreadsResult,
-} from "@angel-engine/daemon-api/github";
+  CheckRun,
+  CheckSummary,
+  RepositoryIdentity,
+  ReviewThread,
+} from "@angel-engine/daemon-api/source-control";
 import type { ShepherdSession } from "@angel-engine/daemon-api/shepherd";
 import { describe, expect, it } from "vitest";
 
-import { evaluateShepherdTick, progressAfterShepherdTurn } from "./evaluate";
+import {
+  evaluateShepherdTick as evaluateTick,
+  progressAfterShepherdTurn,
+  type ShepherdEvaluateInput,
+} from "./evaluate";
 import { checkFingerprint, retainCommentFingerprints } from "./fingerprints";
 
+const repository: RepositoryIdentity = {
+  providerId: "github",
+  host: "github.com",
+  namespace: ["acme"],
+  name: "app",
+  remoteId: null,
+  displayPath: "acme/app",
+  webUrl: "https://github.com/acme/app",
+};
+
 function check(
-  overrides: Partial<GitHubCheckItem> & Pick<GitHubCheckItem, "name">,
-): GitHubCheckItem {
+  overrides: Partial<CheckRun> & Pick<CheckRun, "name">,
+): CheckRun {
   return {
     attempt: 1,
-    checkRunId: "100",
-    conclusion: "FAILURE",
+    id: "100",
+    group: null,
+    conclusion: "failure",
     detailsUrl: null,
-    isPending: false,
-    isRequired: true,
-    status: "COMPLETED",
-    workflowName: null,
-    workflowRunId: "9",
+    status: "completed",
+    requiredness: "required",
+    blocking: true,
+    retryOf: null,
+    allowFailure: false,
+    manual: false,
+    startedAt: null,
+    completedAt: null,
+    logRef: { kind: "workflow-run", runId: "9", jobId: null },
     ...overrides,
   };
 }
 
 function snapshot(
-  overrides: Partial<GitHubChecksSnapshot> = {},
-): GitHubChecksSnapshot {
+  overrides: Partial<CheckSummary> & {
+    failedRequired?: readonly CheckRun[];
+  } = {},
+): CheckSummary {
   const failedRequired = overrides.failedRequired ?? [];
   return {
     checks: overrides.checks ?? failedRequired,
     failed: overrides.failed ?? failedRequired,
-    failedRequired,
+    failedBlocking: failedRequired,
     hasPending: overrides.hasPending ?? false,
     headOid: overrides.headOid ?? "sha-a",
     requiredAllGreen: overrides.requiredAllGreen ?? failedRequired.length === 0,
@@ -41,15 +63,15 @@ function snapshot(
 }
 
 function threads(
-  overrides: Partial<GitHubReviewThreadsResult> = {},
-): GitHubReviewThreadsResult {
-  return {
-    resolvedCount: 0,
-    threads: [],
-    unresolved: [],
-    unresolvedCount: 0,
-    ...overrides,
-  };
+  overrides: { unresolved?: readonly ReviewThread[] } = {},
+): readonly ReviewThread[] {
+  return overrides.unresolved ?? [];
+}
+
+function evaluateShepherdTick(
+  input: Omit<ShepherdEvaluateInput, "repository">,
+) {
+  return evaluateTick({ ...input, repository });
 }
 
 function session(overrides: Partial<ShepherdSession> = {}): ShepherdSession {
@@ -93,7 +115,7 @@ describe("evaluateShepherdTick", () => {
       evaluateShepherdTick({
         session: session(),
         checks: snapshot({ requiredAllGreen: true, failedRequired: [] }),
-        threads: threads({ unresolvedCount: 0 }),
+        threads: threads(),
         prState: "OPEN",
       }),
     ).toEqual({ kind: "settle", reason: "green" });
@@ -116,7 +138,7 @@ describe("evaluateShepherdTick", () => {
         session: session({ headSha: "sha-a", round: 3 }),
         checks: snapshot({
           headOid: "sha-b",
-          failedRequired: [check({ name: "build", checkRunId: "1" })],
+          failedRequired: [check({ name: "build", id: "1" })],
         }),
         threads: threads(),
         prState: "OPEN",
@@ -125,7 +147,7 @@ describe("evaluateShepherdTick", () => {
   });
 
   it("dispatches on unhandled required failures", () => {
-    const failed = check({ name: "build", checkRunId: "42", attempt: 2 });
+    const failed = check({ name: "build", id: "42", attempt: 2 });
     const result = evaluateShepherdTick({
       session: session(),
       checks: snapshot({
@@ -137,13 +159,13 @@ describe("evaluateShepherdTick", () => {
     });
     expect(result.kind).toBe("dispatch");
     if (result.kind !== "dispatch") return;
-    expect(result.fingerprints).toEqual([checkFingerprint(failed)]);
+    expect(result.fingerprints).toEqual([checkFingerprint(failed, repository)]);
     expect(result.failedRequired).toEqual([failed]);
   });
 
   it("dedupes already-handled fingerprints", () => {
-    const failed = check({ name: "build", checkRunId: "42", attempt: 1 });
-    const fp = checkFingerprint(failed);
+    const failed = check({ name: "build", id: "42", attempt: 1 });
+    const fp = checkFingerprint(failed, repository);
     expect(
       evaluateShepherdTick({
         session: session({ handledFingerprints: [fp] }),
@@ -162,21 +184,26 @@ describe("evaluateShepherdTick", () => {
       session: session(),
       checks: snapshot({ requiredAllGreen: true }),
       threads: threads({
-        unresolvedCount: 1,
         unresolved: [
           {
             id: "t1",
-            isResolved: false,
-            path: "a.ts",
-            line: 3,
+            state: "unresolved",
+            resolvable: true,
+            location: { path: "a.ts", side: "right", startLine: 3, endLine: 3 },
             comments: [
               {
                 id: "c1",
-                author: "rev",
+                author: {
+                  id: null,
+                  login: "rev",
+                  displayName: null,
+                  avatarUrl: null,
+                  webUrl: null,
+                },
                 body: "fix me",
-                path: "a.ts",
-                line: 3,
                 createdAt: "2026-08-10T00:00:00.000Z",
+                updatedAt: null,
+                webUrl: null,
               },
             ],
           },
@@ -186,7 +213,7 @@ describe("evaluateShepherdTick", () => {
     });
     expect(result).toMatchObject({
       kind: "dispatch",
-      fingerprints: ["c1"],
+      fingerprints: [expect.stringMatching(/^review-comment:v1:/)],
       newCommentIds: ["c1"],
     });
   });
@@ -224,12 +251,10 @@ describe("retainCommentFingerprints", () => {
   it("drops check fingerprints and keeps comment ids after head change", () => {
     expect(
       retainCommentFingerprints([
-        "42:1",
-        "status:lint:1",
-        "PRRC_kwDOComment1",
-        "100:3",
+        "check:v1:2:ci",
+        "review-comment:v1:18:PRRC_kwDOComment1",
       ]),
-    ).toEqual(["PRRC_kwDOComment1"]);
+    ).toEqual(["review-comment:v1:18:PRRC_kwDOComment1"]);
   });
 });
 
