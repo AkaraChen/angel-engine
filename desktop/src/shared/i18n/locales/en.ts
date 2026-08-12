@@ -41,6 +41,7 @@ export const en = {
       answered: "Answered",
       attachment: "Attachment",
       backendUnavailable: "Backend unavailable",
+      desktopOperationFailed: "Desktop operation failed",
       build: "Build",
       bypassPermission: "Bypass permission",
       cancel: "Cancel",
@@ -94,6 +95,31 @@ export const en = {
       open: "Open {{name}}",
     },
     workspace: {
+      browser: { back: "Back", forward: "Forward", urlLabel: "URL" },
+      files: {
+        fileUnavailable: "File unavailable",
+        openFiles: "Open files",
+        selectFile: "Select a file",
+      },
+      processes: {
+        actions: "Actions",
+        address: "Address",
+        command: "Command",
+        emptyDetail: "Processes the agent starts will show up here.",
+        kill: "Kill",
+        name: "Name",
+        port: "Port",
+        process: "Process",
+        service: "Service",
+      },
+      rightSidebar: {
+        focus: "Focus workspace tools",
+        hide: "Hide workspace tools",
+        resize: "Resize tool sidebar",
+        show: "Show workspace tools",
+        toggle: "Toggle workspace tools",
+      },
+      title: "Workspace",
       ambiguousSend: {
         description:
           "Angel Engine restarted while sending. To avoid a duplicate, this message was not sent again automatically.",
@@ -137,6 +163,11 @@ export const en = {
       statsLastActive: "Last active",
 
       tools: {
+        browser: "Browser",
+        diffUnavailable: "Diff unavailable",
+        openInWindow: "Open in window",
+        terminal: "Terminal",
+        unavailable: "Unavailable",
         checks: {
           fixFailures: "Fix failures",
           fixNeedsChat: "Open a chat to send a fix turn.",

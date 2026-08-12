@@ -1,11 +1,9 @@
 import type { Chat } from "@angel-engine/daemon-api/chat";
 import is from "@sindresorhus/is";
+import { localizedErrorMessage } from "@/platform/error-message";
 
 export function getErrorMessage(error: unknown) {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return String(error);
+  return localizedErrorMessage(error);
 }
 
 export function getWorkspaceTitle({

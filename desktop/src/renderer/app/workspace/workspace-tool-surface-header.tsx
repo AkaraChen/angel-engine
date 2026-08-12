@@ -10,6 +10,7 @@ import {
 import is from "@sindresorhus/is";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
 import { workspaceToolRootName } from "@/app/workspace/workspace-file-display";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,7 @@ export function WorkspaceToolSidebarHeader({
   trailingActions?: ReactNode;
   onRequestHost: (host: WorkspaceToolSurfaceHost) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div
       className="
@@ -63,7 +65,7 @@ export function WorkspaceToolSidebarHeader({
       />
       <WorkspaceToolHeaderButton
         icon={<WindowIcon weight="regular" />}
-        label="Open in window"
+        label={t("workspace.tools.openInWindow")}
         onClick={() => onRequestHost("window")}
       />
       {trailingActions}
@@ -80,6 +82,7 @@ function WorkspaceToolContextLabel({
   root?: string | null;
   showRepositoryName: boolean;
 }) {
+  const { t } = useTranslation();
   const hasRoot = is.nonEmptyString(root);
   const branchQuery = useQuery({
     enabled: api !== undefined && hasRoot && !showRepositoryName,
@@ -102,7 +105,7 @@ function WorkspaceToolContextLabel({
     ? branch
     : hasRoot
       ? workspaceToolRootName(root)
-      : "Workspace";
+      : t("workspace.title");
 
   return (
     <div

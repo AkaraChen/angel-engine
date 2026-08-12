@@ -1,5 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
 import type { UsageAvailability } from "@angel-engine/usage-collector/types";
+import i18n from "i18next";
 import { queryKeys } from "@/platform/query-keys";
 
 async function invokeUsage(
@@ -7,7 +8,7 @@ async function invokeUsage(
 ): Promise<UsageAvailability> {
   if (!window.tipc) {
     return {
-      detail: "Desktop IPC bridge is unavailable.",
+      detail: i18n.t("common.backendUnavailable"),
       kind: "unavailable",
       reason: "exec-failed",
     };

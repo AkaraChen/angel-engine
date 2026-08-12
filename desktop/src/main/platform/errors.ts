@@ -1,12 +1,10 @@
 import { Data } from "effect";
+import type {
+  MainIpcErrorCode,
+  MainIpcErrorEnvelope,
+} from "../../shared/main-ipc-error";
 
-/** Stable machine-readable main-process IPC error codes. */
-export type MainIpcErrorCode =
-  | "daemon-request-failed"
-  | "daemon-unavailable"
-  | "main-invalid-request"
-  | "main-not-found"
-  | "main-operation-failed";
+export type { MainIpcErrorCode } from "../../shared/main-ipc-error";
 
 interface MainIpcErrorProps {
   cause?: unknown;
@@ -51,4 +49,15 @@ export class MainIpcError extends Data.TaggedError(
           : "Desktop operation failed.",
     });
   }
+}
+
+export function mainIpcErrorEnvelope(
+  error: MainIpcError,
+): MainIpcErrorEnvelope {
+  return {
+    __angelMainIpcError: {
+      code: error.code,
+      message: error.message,
+    },
+  };
 }

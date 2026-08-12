@@ -1,4 +1,5 @@
 import type { WorkspaceFileReadResult } from "@angel-engine/daemon-api/workspace-tools";
+import { localizedErrorMessage } from "@/platform/error-message";
 
 export function formatUnsupportedFileReason(
   result: Extract<WorkspaceFileReadResult, { type: "unsupported" }>,
@@ -22,7 +23,7 @@ export function formatBytes(size: number) {
 }
 
 export function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : String(error);
+  return localizedErrorMessage(error);
 }
 
 export function workspaceToolRootName(root: string) {

@@ -119,7 +119,7 @@ export const WorkspaceProcessesView: FC<WorkspaceProcessesViewProps> = ({
   if (processes.length === 0 && ports.length === 0) {
     return (
       <WorkspaceToolEmpty
-        detail="Processes the agent starts will show up here."
+        detail={t("workspace.processes.emptyDetail")}
         icon={Cpu}
         title={t("workspace.tools.empty.noProcesses")}
       />
@@ -146,13 +146,19 @@ export const WorkspaceProcessesView: FC<WorkspaceProcessesViewProps> = ({
             <table className="w-full table-fixed text-xs">
               <thead>
                 <tr className="bg-surface-1 text-left text-muted-foreground">
-                  <ProcessHeaderCell className="w-44">Name</ProcessHeaderCell>
+                  <ProcessHeaderCell className="w-44">
+                    {t("workspace.processes.name")}
+                  </ProcessHeaderCell>
                   <ProcessHeaderCell className="w-20 text-right">
                     PID
                   </ProcessHeaderCell>
-                  <ProcessHeaderCell>Command</ProcessHeaderCell>
+                  <ProcessHeaderCell>
+                    {t("workspace.processes.command")}
+                  </ProcessHeaderCell>
                   <ProcessHeaderCell className="w-20">
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">
+                      {t("workspace.processes.actions")}
+                    </span>
                   </ProcessHeaderCell>
                 </tr>
               </thead>
@@ -196,7 +202,7 @@ export const WorkspaceProcessesView: FC<WorkspaceProcessesViewProps> = ({
                         variant="ghost"
                         onClick={() => kill(process.pid, process.name)}
                       >
-                        Kill
+                        {t("workspace.processes.kill")}
                       </Button>
                     </td>
                   </tr>
@@ -211,17 +217,21 @@ export const WorkspaceProcessesView: FC<WorkspaceProcessesViewProps> = ({
               <thead>
                 <tr className="bg-surface-1 text-left text-muted-foreground">
                   <ProcessHeaderCell className="w-20 text-right">
-                    Port
+                    {t("workspace.processes.port")}
                   </ProcessHeaderCell>
                   <ProcessHeaderCell className="w-32">
-                    Service
+                    {t("workspace.processes.service")}
                   </ProcessHeaderCell>
                   <ProcessHeaderCell className="w-44">
-                    Address
+                    {t("workspace.processes.address")}
                   </ProcessHeaderCell>
-                  <ProcessHeaderCell>Process</ProcessHeaderCell>
+                  <ProcessHeaderCell>
+                    {t("workspace.processes.process")}
+                  </ProcessHeaderCell>
                   <ProcessHeaderCell className="w-20">
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">
+                      {t("workspace.processes.actions")}
+                    </span>
                   </ProcessHeaderCell>
                 </tr>
               </thead>

@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron";
 
 import { TIPC_CHANNEL_SET } from "../../shared/ipc-channels";
+import { isMainIpcErrorEnvelope } from "../../shared/main-ipc-error";
 
 export function exposeTipcClientBridge() {
   contextBridge.exposeInMainWorld("tipc", {
@@ -8,7 +9,13 @@ export function exposeTipcClientBridge() {
       if (!TIPC_CHANNEL_SET.has(channel)) {
         throw new Error(`Blocked IPC channel: ${channel}`);
       }
-      return ipcRenderer.invoke(channel, input) as Promise<unknown>;
+      const result: unknown = await ipcRenderer.invoke(channel, input);
+      if (isMainIpcErrorEnvelope(result)) {
+        throw Object.assign(new Error(result.__angelMainIpcError.message), {
+          code: result.__angelMainIpcError.code,
+        });
+      }
+      return result;
     },
   });
 }
