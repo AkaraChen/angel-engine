@@ -190,7 +190,10 @@ export function registerWorkspaceBrowserIpc() {
     WORKSPACE_BROWSER_DESIGN_START_CHANNEL,
     (_event, input: unknown) => {
       const request = designModeService.parseCommandInput(input);
-      return designModeService.start(request.browserViewId);
+      return designModeService.start(
+        request.browserViewId,
+        request.outputDetail,
+      );
     },
   );
 

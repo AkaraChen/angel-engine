@@ -1,16 +1,24 @@
 /**
  * Design Mode guest preload for workspace-browser WebContentsView.
  *
- * Security invariants (KIT-840):
+ * Security invariants:
  * - No `contextBridge.exposeInMainWorld` — page scripts get zero Design Mode API.
  * - Runtime is dormant until main sends `start`; `stop` fully tears down.
- * - Selection / screenshot / send are intentionally absent in stage 1.
+ * - Sensitive form values never enter selection payloads (see design-mode-capture).
+ * - Stage 2 anchors: `element` (click) + `region` (drag). No text/point yet.
  */
 import { ipcRenderer } from "electron";
 
+import {
+  captureDesignElement,
+  normalizeDesignOutputDetail,
+  pickTargetElementAtPoint,
+  rectFromDomRect,
+} from "../shared/design-mode-capture";
 import type {
   DesignGuestCommand,
   DesignGuestEvent,
+  DesignOutputDetail,
 } from "../shared/workspace-browser";
 import {
   WORKSPACE_BROWSER_DESIGN_GUEST_COMMAND_CHANNEL,
@@ -19,9 +27,15 @@ import {
 
 const OVERLAY_ROOT_ID = "angel-design-mode-root";
 const OVERLAY_STYLE_ID = "angel-design-mode-style";
+const HIGHLIGHT_ATTR = "data-angel-design-highlight";
+const REGION_ATTR = "data-angel-design-region";
+const LABEL_ATTR = "data-angel-design-label";
+const HIT_ATTR = "data-angel-design-hit";
+const DRAG_THRESHOLD_PX = 6;
 
 let active = false;
 let cleanup: (() => void) | undefined;
+let outputDetail: DesignOutputDetail = "standard";
 
 ipcRenderer.on(
   WORKSPACE_BROWSER_DESIGN_GUEST_COMMAND_CHANNEL,
@@ -31,7 +45,14 @@ ipcRenderer.on(
       return;
     }
     if (command.type === "start") {
+      if (command.outputDetail) {
+        outputDetail = normalizeDesignOutputDetail(command.outputDetail);
+      }
       startDesignModeRuntime();
+      return;
+    }
+    if (command.type === "setOutputDetail") {
+      outputDetail = normalizeDesignOutputDetail(command.outputDetail);
       return;
     }
     stopDesignModeRuntime();
@@ -43,7 +64,7 @@ function startDesignModeRuntime() {
     return;
   }
   active = true;
-  cleanup = mountDormantOverlay();
+  cleanup = mountInteractiveOverlay();
   emitGuestEvent({ type: "started" });
 }
 
@@ -55,16 +76,16 @@ function stopDesignModeRuntime() {
   active = false;
   cleanup?.();
   cleanup = undefined;
-  // Defensive second pass in case navigation left orphaned nodes.
   removeOverlayNodes();
   emitGuestEvent({ type: "stopped" });
 }
 
 /**
- * Stage 1 overlay: a non-interactive top rail marker only.
- * No pointer capture, no element pick, no page API.
+ * Interactive overlay: full-viewport hit layer + highlight + optional region.
+ * pointer-events only on the hit layer so we can track targets without
+ * permanently blocking page interaction after stop (nodes are removed).
  */
-function mountDormantOverlay(): () => void {
+function mountInteractiveOverlay(): () => void {
   removeOverlayNodes();
 
   const style = document.createElement("style");
@@ -72,15 +93,23 @@ function mountDormantOverlay(): () => void {
   style.textContent = `
     #${OVERLAY_ROOT_ID} {
       position: fixed;
-      inset: 0 0 auto 0;
+      inset: 0;
       z-index: 2147483646;
       pointer-events: none;
-      display: flex;
-      justify-content: center;
-      padding-top: 8px;
       font: 12px/1.2 ui-sans-serif, system-ui, sans-serif;
     }
+    #${OVERLAY_ROOT_ID} [${HIT_ATTR}] {
+      position: absolute;
+      inset: 0;
+      pointer-events: auto;
+      cursor: crosshair;
+      background: transparent;
+    }
     #${OVERLAY_ROOT_ID} [data-angel-design-badge] {
+      position: fixed;
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%);
       pointer-events: none;
       border-radius: 999px;
       padding: 4px 10px;
@@ -90,18 +119,64 @@ function mountDormantOverlay(): () => void {
       box-shadow: 0 6px 20px color-mix(in oklab, #020617 35%, transparent);
       letter-spacing: 0.02em;
       user-select: none;
+      z-index: 2;
+    }
+    #${OVERLAY_ROOT_ID} [${HIGHLIGHT_ATTR}] {
+      position: fixed;
+      pointer-events: none;
+      box-sizing: border-box;
+      border: 2px solid #38bdf8;
+      background: color-mix(in oklab, #38bdf8 16%, transparent);
+      border-radius: 2px;
+      z-index: 1;
+      display: none;
+    }
+    #${OVERLAY_ROOT_ID} [${REGION_ATTR}] {
+      position: fixed;
+      pointer-events: none;
+      box-sizing: border-box;
+      border: 1.5px dashed #f472b6;
+      background: color-mix(in oklab, #f472b6 12%, transparent);
+      z-index: 1;
+      display: none;
+    }
+    #${OVERLAY_ROOT_ID} [${LABEL_ATTR}] {
+      position: fixed;
+      pointer-events: none;
+      z-index: 2;
+      max-width: min(420px, 80vw);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #0f172a;
+      background: #38bdf8;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: none;
     }
   `;
 
   const root = document.createElement("div");
   root.id = OVERLAY_ROOT_ID;
   root.setAttribute("data-angel-design-mode", "active");
-  root.setAttribute("aria-hidden", "true");
 
   const badge = document.createElement("div");
   badge.setAttribute("data-angel-design-badge", "");
-  badge.textContent = "Design Mode";
-  root.append(badge);
+  badge.textContent = "Design Mode · click element · drag region";
+
+  const hit = document.createElement("div");
+  hit.setAttribute(HIT_ATTR, "");
+
+  const highlight = document.createElement("div");
+  highlight.setAttribute(HIGHLIGHT_ATTR, "");
+
+  const regionBox = document.createElement("div");
+  regionBox.setAttribute(REGION_ATTR, "");
+
+  const label = document.createElement("div");
+  label.setAttribute(LABEL_ATTR, "");
+
+  root.append(hit, highlight, regionBox, label, badge);
 
   const attach = () => {
     if (!document.documentElement.contains(style)) {
@@ -111,23 +186,216 @@ function mountDormantOverlay(): () => void {
       document.documentElement.append(root);
     }
   };
-
   attach();
 
-  // Re-attach if the page wipes the document (soft navigations / frameworks).
   const observer = new MutationObserver(() => {
     if (active) {
       attach();
     }
   });
-  observer.observe(document.documentElement, {
-    childList: true,
-  });
+  observer.observe(document.documentElement, { childList: true });
+
+  let hoverElement: Element | null = null;
+  let dragStart: { x: number; y: number } | null = null;
+  let dragging = false;
+
+  const onPointerMove = (event: PointerEvent) => {
+    if (dragging && dragStart) {
+      paintRegion(
+        regionBox,
+        dragStart.x,
+        dragStart.y,
+        event.clientX,
+        event.clientY,
+      );
+      hideBox(highlight);
+      hideBox(label);
+      return;
+    }
+
+    // Temporarily disable hit layer so elementsFromPoint sees the page.
+    hit.style.pointerEvents = "none";
+    const target = pickTargetElementAtPoint(event.clientX, event.clientY);
+    hit.style.pointerEvents = "auto";
+
+    hoverElement = target;
+    if (!target) {
+      hideBox(highlight);
+      hideBox(label);
+      return;
+    }
+
+    const rect = target.getBoundingClientRect();
+    paintBox(highlight, rect);
+    const names = captureDesignElement(target, "compact").reactComponents;
+    const tag = target.tagName.toLowerCase();
+    label.textContent =
+      names && names.length > 0
+        ? `${names.map((name) => `<${name}>`).join(" ")} · ${tag}`
+        : tag;
+    paintLabel(label, rect);
+  };
+
+  const onPointerDown = (event: PointerEvent) => {
+    if (event.button !== 0) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    dragStart = { x: event.clientX, y: event.clientY };
+    dragging = false;
+    hideBox(regionBox);
+  };
+
+  const onPointerUp = (event: PointerEvent) => {
+    if (!dragStart || event.button !== 0) {
+      dragStart = null;
+      dragging = false;
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const dx = event.clientX - dragStart.x;
+    const dy = event.clientY - dragStart.y;
+    const distance = Math.hypot(dx, dy);
+
+    if (dragging || distance >= DRAG_THRESHOLD_PX) {
+      const rect = normalizeRegionRect(
+        dragStart.x,
+        dragStart.y,
+        event.clientX,
+        event.clientY,
+      );
+      if (rect.width >= 2 && rect.height >= 2) {
+        emitGuestEvent({
+          anchor: { kind: "region", rect },
+          type: "selection",
+        });
+      }
+    } else {
+      hit.style.pointerEvents = "none";
+      const target =
+        hoverElement ?? pickTargetElementAtPoint(event.clientX, event.clientY);
+      hit.style.pointerEvents = "auto";
+      if (target) {
+        const element = captureDesignElement(target, outputDetail);
+        emitGuestEvent({
+          anchor: {
+            kind: "element",
+            rect: element.rect,
+            selector: element.selector,
+          },
+          element,
+          type: "selection",
+        });
+        paintBox(highlight, target.getBoundingClientRect());
+      }
+    }
+
+    dragStart = null;
+    dragging = false;
+    hideBox(regionBox);
+  };
+
+  const onPointerMoveDrag = (event: PointerEvent) => {
+    if (!dragStart) {
+      return;
+    }
+    const distance = Math.hypot(
+      event.clientX - dragStart.x,
+      event.clientY - dragStart.y,
+    );
+    if (distance >= DRAG_THRESHOLD_PX) {
+      dragging = true;
+    }
+  };
+
+  const onClick = (event: MouseEvent) => {
+    // Block page clicks while Design Mode is active.
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  hit.addEventListener("pointermove", onPointerMove, true);
+  hit.addEventListener("pointerdown", onPointerDown, true);
+  hit.addEventListener("pointerup", onPointerUp, true);
+  hit.addEventListener("pointermove", onPointerMoveDrag, true);
+  hit.addEventListener("click", onClick, true);
+  hit.addEventListener("auxclick", onClick, true);
 
   return () => {
     observer.disconnect();
+    hit.removeEventListener("pointermove", onPointerMove, true);
+    hit.removeEventListener("pointerdown", onPointerDown, true);
+    hit.removeEventListener("pointerup", onPointerUp, true);
+    hit.removeEventListener("pointermove", onPointerMoveDrag, true);
+    hit.removeEventListener("click", onClick, true);
+    hit.removeEventListener("auxclick", onClick, true);
     removeOverlayNodes();
   };
+}
+
+function paintBox(box: HTMLElement, rect: DOMRect | DOMRectReadOnly) {
+  box.style.display = "block";
+  box.style.left = `${rect.x}px`;
+  box.style.top = `${rect.y}px`;
+  box.style.width = `${Math.max(rect.width, 1)}px`;
+  box.style.height = `${Math.max(rect.height, 1)}px`;
+}
+
+function paintLabel(label: HTMLElement, rect: DOMRect | DOMRectReadOnly) {
+  label.style.display = "block";
+  const top = Math.max(0, rect.y - 20);
+  label.style.left = `${Math.max(0, rect.x)}px`;
+  label.style.top = `${top}px`;
+}
+
+function paintRegion(
+  box: HTMLElement,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+) {
+  const left = Math.min(x1, x2);
+  const top = Math.min(y1, y2);
+  const width = Math.abs(x2 - x1);
+  const height = Math.abs(y2 - y1);
+  box.style.display = "block";
+  box.style.left = `${left}px`;
+  box.style.top = `${top}px`;
+  box.style.width = `${width}px`;
+  box.style.height = `${height}px`;
+}
+
+function hideBox(box: HTMLElement) {
+  box.style.display = "none";
+}
+
+function normalizeRegionRect(x1: number, y1: number, x2: number, y2: number) {
+  const left = Math.min(x1, x2);
+  const top = Math.min(y1, y2);
+  const width = Math.abs(x2 - x1);
+  const height = Math.abs(y2 - y1);
+  return rectFromDomRect(
+    DOMRect.fromRect
+      ? DOMRect.fromRect({ x: left, y: top, width, height })
+      : ({
+          x: left,
+          y: top,
+          width,
+          height,
+          top,
+          left,
+          right: left + width,
+          bottom: top + height,
+          toJSON() {
+            return this;
+          },
+        } as DOMRect),
+  );
 }
 
 function removeOverlayNodes() {
@@ -140,13 +408,29 @@ function emitGuestEvent(event: DesignGuestEvent) {
 }
 
 function parseGuestCommand(payload: unknown): DesignGuestCommand | null {
-  if (
-    typeof payload === "object" &&
-    payload !== null &&
-    "type" in payload &&
-    (payload.type === "start" || payload.type === "stop")
-  ) {
-    return { type: payload.type };
+  if (typeof payload !== "object" || payload === null || !("type" in payload)) {
+    return null;
+  }
+  const type = (payload as { type?: unknown }).type;
+  if (type === "stop") {
+    return { type: "stop" };
+  }
+  if (type === "start") {
+    const detail = (payload as { outputDetail?: unknown }).outputDetail;
+    return {
+      type: "start",
+      outputDetail: detail ? normalizeDesignOutputDetail(detail) : undefined,
+    };
+  }
+  if (type === "setOutputDetail") {
+    const detail = (payload as { outputDetail?: unknown }).outputDetail;
+    if (detail === undefined) {
+      return null;
+    }
+    return {
+      type: "setOutputDetail",
+      outputDetail: normalizeDesignOutputDetail(detail),
+    };
   }
   return null;
 }

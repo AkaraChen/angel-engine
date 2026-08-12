@@ -67,7 +67,7 @@ describe("WorkspaceBrowserDesignModeService", () => {
     expect(started.ok).toBe(true);
     expect(webContents.send).toHaveBeenCalledWith(
       "workspace-browser:design:guest-command",
-      { type: "start" },
+      { outputDetail: "standard", type: "start" },
     );
 
     const stopped = service.stop("view-1");
@@ -75,6 +75,63 @@ describe("WorkspaceBrowserDesignModeService", () => {
     expect(webContents.send).toHaveBeenCalledWith(
       "workspace-browser:design:guest-command",
       { type: "stop" },
+    );
+  });
+
+  it("forwards outputDetail on start and updates it while active", () => {
+    const webContents = createMockWebContents("http://localhost:5173/");
+    views.set("view-1", { browserViewId: "view-1", webContents });
+
+    service.start("view-1", "compact");
+    expect(webContents.send).toHaveBeenCalledWith(
+      "workspace-browser:design:guest-command",
+      { outputDetail: "compact", type: "start" },
+    );
+
+    webContents.send.mockClear();
+    service.start("view-1", "detailed");
+    expect(webContents.send).toHaveBeenCalledWith(
+      "workspace-browser:design:guest-command",
+      { outputDetail: "detailed", type: "setOutputDetail" },
+    );
+  });
+
+  it("forwards selection events with trusted origin stamp", () => {
+    const webContents = createMockWebContents("http://localhost:5173/app");
+    views.set("view-1", { browserViewId: "view-1", webContents });
+    service.start("view-1");
+    sendToAllWindows.mockClear();
+
+    (
+      service as unknown as {
+        handleGuestEvent: (sender: unknown, payload: unknown) => void;
+      }
+    ).handleGuestEvent(webContents, {
+      anchor: {
+        kind: "element",
+        rect: { height: 20, width: 40, x: 1, y: 2 },
+        selector: "button.primary",
+      },
+      element: {
+        rect: { height: 20, width: 40, x: 1, y: 2 },
+        selector: "button.primary",
+        tagName: "button",
+        reactComponents: ["PricingCard", "Button"],
+      },
+      type: "selection",
+    });
+
+    expect(sendToAllWindows).toHaveBeenCalledWith(
+      "workspace-browser:design:event:view-1",
+      expect.objectContaining({
+        browserViewId: "view-1",
+        origin: "http://localhost:5173",
+        type: "selection",
+        element: expect.objectContaining({
+          selector: "button.primary",
+          reactComponents: ["PricingCard", "Button"],
+        }),
+      }),
     );
   });
 
@@ -141,5 +198,33 @@ describe("parseDesignGuestEvent", () => {
     });
     expect(parseDesignGuestEvent(null)).toBeNull();
     expect(parseDesignGuestEvent({ type: "sendPrompt" })).toBeNull();
+  });
+
+  it("accepts element/region selection and rejects reserved text/point", () => {
+    expect(
+      parseDesignGuestEvent({
+        type: "selection",
+        anchor: {
+          kind: "region",
+          rect: { x: 0, y: 0, width: 10, height: 10 },
+        },
+      }),
+    ).not.toBeNull();
+    expect(
+      parseDesignGuestEvent({
+        type: "selection",
+        anchor: {
+          kind: "text",
+          rect: { x: 0, y: 0, width: 1, height: 1 },
+          text: "x",
+        },
+      }),
+    ).toBeNull();
+    expect(
+      parseDesignGuestEvent({
+        type: "selection",
+        anchor: { kind: "point", x: 1, y: 2 },
+      }),
+    ).toBeNull();
   });
 });

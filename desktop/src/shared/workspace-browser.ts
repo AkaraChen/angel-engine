@@ -136,13 +136,37 @@ export type DesignAnchor =
     };
 
 /**
- * Collected element context for agent prompts. Stage 1 does not populate this;
- * stage 2 fills fields after pick + redaction.
+ * How much element context the guest capture pipeline includes.
+ * Default is `standard`. Higher detail costs more agent context tokens.
+ */
+export type DesignOutputDetail = "compact" | "standard" | "detailed";
+
+/**
+ * Parent-chain summary only — never carries input values.
+ * Used so agents can place the leaf without a full tree scan.
+ */
+export interface DesignElementParentSummary {
+  label?: string;
+  reactComponents?: string[];
+  role?: string;
+  selector: string;
+  tagName: string;
+}
+
+/**
+ * Collected element context for agent prompts after pick + redaction.
+ *
+ * Sensitive input values (password / email / tel / cc-* / one-time-code)
+ * are never included in `attributes`, `text`, or any other field.
  */
 export interface DesignElement {
+  /** Safe attributes only; `value` is omitted when sensitive. */
+  attributes?: Record<string, string>;
   computedStyles?: Record<string, string>;
   href?: string;
   label?: string;
+  /** Ancestor summaries (nearest parent first). No values. */
+  parents?: DesignElementParentSummary[];
   reactComponents?: string[];
   rect: DesignRect;
   role?: string;
@@ -206,10 +230,16 @@ export type DesignGuestEvent =
       type: "selection";
     };
 
-export type DesignGuestCommand = { type: "start" } | { type: "stop" };
+export type DesignGuestCommand =
+  | { outputDetail?: DesignOutputDetail; type: "start" }
+  | { type: "stop" }
+  | { outputDetail: DesignOutputDetail; type: "setOutputDetail" };
 
 export interface WorkspaceBrowserDesignStartInput
-  extends WorkspaceBrowserCommandInput {}
+  extends WorkspaceBrowserCommandInput {
+  /** Capture detail tier; default `standard` when omitted. */
+  outputDetail?: DesignOutputDetail;
+}
 
 export interface WorkspaceBrowserDesignStopInput
   extends WorkspaceBrowserCommandInput {}
