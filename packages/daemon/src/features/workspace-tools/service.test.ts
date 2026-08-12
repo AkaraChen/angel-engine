@@ -19,7 +19,7 @@ import {
   gitOutput,
   parseAheadBehindCounts,
   parseGitStatusOutput,
-} from "./git";
+} from "../source-control/local-git/workspace";
 import {
   workspaceGitBranches,
   workspaceGitCheckout,
