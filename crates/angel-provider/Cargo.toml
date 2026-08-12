@@ -19,7 +19,7 @@ percent-encoding = "2.3.2"
 rusqlite = { version = "0.38", features = ["bundled"], optional = true }
 
 [build-dependencies]
-prettyplease = "0.2"
+prettyplease = "0.3"
 schemars = "0.8"
 serde_json = "1"
 syn = "2"
