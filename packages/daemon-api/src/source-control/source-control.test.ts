@@ -45,7 +45,11 @@ describe("source-control contracts", () => {
         hosts: ["dev.azure.com"],
         capabilities: ["provider.auth", "repositoryIdentity"],
       },
-      remote: "https://dev.azure.com/acme/widgets/_git/web",
+      projectPath: "/workspace/web",
+      remote: {
+        name: "origin",
+        url: "https://dev.azure.com/acme/widgets/_git/web",
+      },
       repository: {
         providerId: "azure-devops",
         host: "dev.azure.com",

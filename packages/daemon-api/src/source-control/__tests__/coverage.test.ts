@@ -11,6 +11,74 @@ import {
   gitLabJobFixtures,
   legacyGitHubCheckFixture,
 } from "./fixtures";
+import { sourceControlOperationSchemas } from "../operations";
+import type { SourceControlCapabilityId } from "../types";
+
+const inventoryNamesByCapability = {
+  "provider.auth": ["provider.auth"],
+  "discovery.listNamespaces": ["discovery.listNamespaces"],
+  "discovery.listRepositories": ["discovery.listRepositories"],
+  repositoryIdentity: ["repositoryIdentity"],
+  "changeRequests.create": ["changeRequests.create"],
+  "changeRequests.get": ["changeRequests.get"],
+  "changeRequests.getByUrl": ["changeRequests.getByUrl"],
+  "changeRequests.list": ["changeRequests.list"],
+  "changeRequests.status": ["changeRequests.status"],
+  "changeRequests.comment": ["changeRequests.comments.add"],
+  "changeRequests.merge": ["changeRequests.merge"],
+  "changeRequests.preflight": ["changeRequests.preflight"],
+  "changeRequests.resolveHead": ["changeRequests.resolveHead"],
+  "checks.list": ["checks.list"],
+  "checks.snapshot": ["checks.snapshot"],
+  "checks.failureLog": ["checks.failureLog"],
+  "checks.fixPrompt": ["checks.buildFixPrompt"],
+  "reviewThreads.list": ["changeRequests.reviewThreads.list"],
+  "reviewThreads.resolve": ["changeRequests.reviewThreads.resolve"],
+  "workItems.get": ["workItems.resolve"],
+  "workItems.getByUrl": ["workItems.resolve"],
+  "workItems.list": ["workItems.list"],
+  "branches.publish": ["branches.publish"],
+  "provider.clone": ["provider.clone"],
+} as const satisfies Record<SourceControlCapabilityId, readonly string[]>;
+
+describe("source-control operation coverage", () => {
+  const inventory = readFileSync(
+    resolve(process.cwd(), "../../docs/source-control-plugin-inventory.md"),
+    "utf8",
+  );
+
+  it("defines exactly one schema pair for every capability id", () => {
+    expect(Object.keys(sourceControlOperationSchemas).sort()).toEqual(
+      Object.keys(inventoryNamesByCapability).sort(),
+    );
+  });
+
+  it("maps every capability id to at least one inventory operation", () => {
+    for (const [capability, names] of Object.entries(
+      inventoryNamesByCapability,
+    )) {
+      expect(
+        names.some((name) => inventory.includes(`\`${name}\``)),
+        `inventory mapping for ${capability}`,
+      ).toBe(true);
+    }
+  });
+
+  it("gives every migration-matrix row an operation and destination", () => {
+    const matrix = inventory.slice(
+      inventory.indexOf("## 4. Migration matrix"),
+      inventory.indexOf("## 5. LocalGitBackend boundary decisions"),
+    );
+    const rows = matrix.split("\n").filter((line) => line.startsWith("| `"));
+
+    expect(rows.length).toBeGreaterThan(80);
+    for (const row of rows) {
+      expect(row).toMatch(
+        /^\| `.+?\|\s+.+?\|\s+(?:migrated|local-git|exception)\s+\|/,
+      );
+    }
+  });
+});
 
 const legacyExportCoverage = {
   GitHubItemKind: "WorkItemKind + ChangeRequestState",

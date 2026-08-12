@@ -202,7 +202,7 @@ export const capabilityMatrixSchema = arkType({
 });
 
 const capabilityIdSchema = arkType(
-  "'provider.auth' | 'discovery' | 'repositoryIdentity' | 'changeRequests.create' | 'changeRequests.get' | 'changeRequests.list' | 'changeRequests.status' | 'changeRequests.comment' | 'changeRequests.merge' | 'checks.list' | 'checks.snapshot' | 'checks.failureLog' | 'reviewThreads.list' | 'reviewThreads.resolve' | 'workItems.get' | 'workItems.list' | 'branches.publish' | 'provider.clone'",
+  "'provider.auth' | 'discovery.listNamespaces' | 'discovery.listRepositories' | 'repositoryIdentity' | 'changeRequests.create' | 'changeRequests.get' | 'changeRequests.getByUrl' | 'changeRequests.list' | 'changeRequests.status' | 'changeRequests.comment' | 'changeRequests.merge' | 'changeRequests.preflight' | 'changeRequests.resolveHead' | 'checks.list' | 'checks.snapshot' | 'checks.failureLog' | 'checks.fixPrompt' | 'reviewThreads.list' | 'reviewThreads.resolve' | 'workItems.get' | 'workItems.getByUrl' | 'workItems.list' | 'branches.publish' | 'provider.clone'",
 );
 
 export const providerManifestSchema = arkType({
@@ -225,7 +225,12 @@ export const providerDiagnosticSchema = arkType({
 export const providerActivationSchema = arkType({
   "+": "reject",
   provider: providerManifestSchema,
-  remote: "string > 0",
+  projectPath: "string > 0",
+  remote: {
+    "+": "reject",
+    name: "string > 0",
+    url: "string > 0",
+  },
   repository: repositoryIdentitySchema.or("null"),
   authentication:
     "'authenticated' | 'unauthenticated' | 'unavailable' | 'unknown'",

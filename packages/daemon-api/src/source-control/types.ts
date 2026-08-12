@@ -204,20 +204,26 @@ export interface MergeRequirement {
 
 export type SourceControlCapabilityId =
   | "provider.auth"
-  | "discovery"
+  | "discovery.listNamespaces"
+  | "discovery.listRepositories"
   | "repositoryIdentity"
   | "changeRequests.create"
   | "changeRequests.get"
+  | "changeRequests.getByUrl"
   | "changeRequests.list"
   | "changeRequests.status"
   | "changeRequests.comment"
   | "changeRequests.merge"
+  | "changeRequests.preflight"
+  | "changeRequests.resolveHead"
   | "checks.list"
   | "checks.snapshot"
   | "checks.failureLog"
+  | "checks.fixPrompt"
   | "reviewThreads.list"
   | "reviewThreads.resolve"
   | "workItems.get"
+  | "workItems.getByUrl"
   | "workItems.list"
   | "branches.publish"
   | "provider.clone";
@@ -269,7 +275,11 @@ export interface ProviderDiagnostic {
 
 export interface ProviderActivation {
   provider: ProviderManifest;
-  remote: string;
+  projectPath: string;
+  remote: {
+    name: string;
+    url: string;
+  };
   repository: RepositoryIdentity | null;
   authentication: ProviderAuthenticationState;
   capabilities: CapabilityMatrix;
