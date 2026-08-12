@@ -156,8 +156,8 @@ import {
   discardManagedCreatedWorktree,
   managedWorktreePath,
   removeManagedWorktree,
-} from "./features/projects/git";
-import { projectGitStatus } from "./features/projects/git";
+} from "./features/source-control/local-git/projects";
+import { projectGitStatus } from "./features/source-control/local-git/projects";
 import { projectSetupLifecycle } from "./features/projects/setup-lifecycle";
 import { readProjectLifecycleSnapshot } from "./features/projects/lifecycle";
 import {

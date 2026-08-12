@@ -9,7 +9,7 @@ import { Effect } from "effect";
 
 import { DaemonError } from "../../platform/errors";
 import { createChat } from "../chat/repository";
-import { createProjectWorktree } from "../projects/git";
+import { createProjectWorktree } from "../source-control/local-git/projects";
 import { getProject } from "../projects/repository";
 import { findGhPath, type GhRunner, mapGhFailure, runGhCli } from "./gh-cli";
 import { parseGitHubUrl } from "./resolve";

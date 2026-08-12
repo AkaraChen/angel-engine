@@ -4,23 +4,21 @@ import type {
   ProjectWorktreeCreateInput,
   ProjectWorktreeCreateResult,
 } from "@angel-engine/daemon-api/projects";
-import type { Db } from "../../platform/db";
-import { execFile } from "node:child_process";
+import type { Db } from "../../../platform/db";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { promisify } from "node:util";
 import is from "@sindresorhus/is";
 import { Effect } from "effect";
 
-import { DaemonError } from "../../platform/errors";
-import { findActiveChatByCwd } from "../chat/repository";
-import { loadProjectLifecycleConfig } from "./config";
-import { getProject } from "./repository";
-import { projectSetupLifecycle } from "./setup-lifecycle";
+import { DaemonError } from "../../../platform/errors";
+import { findActiveChatByCwd } from "../../chat/repository";
+import { loadProjectLifecycleConfig } from "../../projects/config";
+import { getProject } from "../../projects/repository";
+import { projectSetupLifecycle } from "../../projects/setup-lifecycle";
+import { executeGit } from "./backend";
 
-const execFileAsync = promisify(execFile);
 const GIT_OUTPUT_MAX_BUFFER = 1024 * 1024;
 const GIT_OPERATION_TIMEOUT_MS = 5 * 60 * 1000;
 const WORKTREE_BRANCH_PREFIX = "angel";
@@ -113,15 +111,9 @@ export function createProjectWorktree(
       yield* Effect.tryPromise({
         catch: (cause) => DaemonError.worktreeCreateFailed(cause),
         try: () =>
-          execFileAsync(
-            "git",
-            [
-              "-C",
-              root,
-              "fetch",
-              startPointFetch.remote,
-              startPointFetch.refspec,
-            ],
+          executeGit(
+            root,
+            ["fetch", startPointFetch.remote, startPointFetch.refspec],
             {
               maxBuffer: GIT_OUTPUT_MAX_BUFFER,
               signal,
@@ -133,7 +125,7 @@ export function createProjectWorktree(
       yield* Effect.tryPromise({
         catch: (cause) => DaemonError.worktreeCreateFailed(cause),
         try: () =>
-          execFileAsync("git", ["-C", root, "fetch", "--prune"], {
+          executeGit(root, ["fetch", "--prune"], {
             maxBuffer: GIT_OUTPUT_MAX_BUFFER,
             signal,
             timeout: GIT_OPERATION_TIMEOUT_MS,
@@ -210,7 +202,7 @@ export function createProjectWorktree(
       const created = yield* Effect.tryPromise({
         catch: (cause) => cause,
         try: () =>
-          execFileAsync("git", ["-C", root, ...addArgs], {
+          executeGit(root, addArgs, {
             maxBuffer: GIT_OUTPUT_MAX_BUFFER,
             signal,
             timeout: GIT_OPERATION_TIMEOUT_MS,
@@ -391,7 +383,7 @@ function gitOutput(
   return Effect.tryPromise({
     catch: (cause) => DaemonError.gitFailed(cause),
     try: async () => {
-      const result = await execFileAsync("git", ["-C", cwd, ...args], {
+      const result = await executeGit(cwd, args, {
         maxBuffer: GIT_OUTPUT_MAX_BUFFER,
       });
       return result.stdout.trim();
@@ -413,11 +405,9 @@ function removeGitWorktree(
     yield* Effect.tryPromise({
       catch: (cause) => DaemonError.worktreeRemoveFailed(cause),
       try: () =>
-        execFileAsync(
-          "git",
-          ["-C", gitRoot, "worktree", "remove", "--force", worktreePath],
-          { maxBuffer: GIT_OUTPUT_MAX_BUFFER },
-        ),
+        executeGit(gitRoot, ["worktree", "remove", "--force", worktreePath], {
+          maxBuffer: GIT_OUTPUT_MAX_BUFFER,
+        }),
     });
   });
 }
@@ -431,11 +421,9 @@ export async function discardCreatedWorktree(
 ) {
   const operationErrors: unknown[] = [];
 
-  await execFileAsync(
-    "git",
-    ["-C", root, "worktree", "remove", "--force", cwd],
-    { maxBuffer: GIT_OUTPUT_MAX_BUFFER },
-  ).catch((cause) => operationErrors.push(cause));
+  await executeGit(root, ["worktree", "remove", "--force", cwd], {
+    maxBuffer: GIT_OUTPUT_MAX_BUFFER,
+  }).catch((cause) => operationErrors.push(cause));
 
   try {
     fs.rmSync(cwd, { force: true, recursive: true });
@@ -443,11 +431,9 @@ export async function discardCreatedWorktree(
     operationErrors.push(cause);
   }
 
-  await execFileAsync(
-    "git",
-    ["-C", root, "worktree", "prune", "--expire", "now"],
-    { maxBuffer: GIT_OUTPUT_MAX_BUFFER },
-  ).catch((cause) => operationErrors.push(cause));
+  await executeGit(root, ["worktree", "prune", "--expire", "now"], {
+    maxBuffer: GIT_OUTPUT_MAX_BUFFER,
+  }).catch((cause) => operationErrors.push(cause));
 
   const branchBeforeDelete = await gitOutputAsync(root, [
     "branch",
@@ -458,7 +444,7 @@ export async function discardCreatedWorktree(
     return branch;
   });
   if (deleteBranch && branchBeforeDelete.trim().length > 0) {
-    await execFileAsync("git", ["-C", root, "branch", "-D", branch], {
+    await executeGit(root, ["branch", "-D", branch], {
       maxBuffer: GIT_OUTPUT_MAX_BUFFER,
     }).catch((cause) => operationErrors.push(cause));
   }
@@ -503,14 +489,7 @@ export async function discardCreatedWorktree(
 function validateBranch(root: string, branch: string) {
   return Effect.tryPromise({
     catch: () => DaemonError.invalidRequest("Pull request branch is invalid."),
-    try: () =>
-      execFileAsync("git", [
-        "-C",
-        root,
-        "check-ref-format",
-        "--branch",
-        branch,
-      ]),
+    try: () => executeGit(root, ["check-ref-format", "--branch", branch]),
   });
 }
 
@@ -518,9 +497,9 @@ function hasLocalBranch(root: string, branch: string) {
   return Effect.tryPromise({
     catch: (cause) => DaemonError.gitFailed(cause),
     try: async () => {
-      const result = await execFileAsync(
-        "git",
-        ["-C", root, "show-ref", "--verify", `refs/heads/${branch}`],
+      const result = await executeGit(
+        root,
+        ["show-ref", "--verify", `refs/heads/${branch}`],
         { maxBuffer: GIT_OUTPUT_MAX_BUFFER },
       ).catch(() => undefined);
       return result !== undefined;
@@ -593,16 +572,9 @@ function fetchRemoteCommit(
     catch: (cause) => DaemonError.worktreeCreateFailed(cause),
     try: async () => {
       const temporaryRef = `refs/angel/pr-heads/${randomUUID()}`;
-      await execFileAsync(
-        "git",
-        [
-          "-C",
-          root,
-          "fetch",
-          "--no-tags",
-          "origin",
-          `${remoteRef}:${temporaryRef}`,
-        ],
+      await executeGit(
+        root,
+        ["fetch", "--no-tags", "origin", `${remoteRef}:${temporaryRef}`],
         {
           maxBuffer: GIT_OUTPUT_MAX_BUFFER,
           signal,
@@ -616,13 +588,9 @@ function fetchRemoteCommit(
           `${temporaryRef}^{commit}`,
         ]);
       } finally {
-        await execFileAsync(
-          "git",
-          ["-C", root, "update-ref", "-d", temporaryRef],
-          {
-            maxBuffer: GIT_OUTPUT_MAX_BUFFER,
-          },
-        );
+        await executeGit(root, ["update-ref", "-d", temporaryRef], {
+          maxBuffer: GIT_OUTPUT_MAX_BUFFER,
+        });
       }
     },
   });
@@ -631,8 +599,7 @@ function fetchRemoteCommit(
 function validateRemoteRef(root: string, remoteRef: string) {
   return Effect.tryPromise({
     catch: () => DaemonError.invalidRequest("Pull request ref is invalid."),
-    try: () =>
-      execFileAsync("git", ["-C", root, "check-ref-format", remoteRef]),
+    try: () => executeGit(root, ["check-ref-format", remoteRef]),
   });
 }
 
@@ -641,9 +608,9 @@ function isAncestor(root: string, ancestor: string, descendant: string) {
     catch: (cause) => DaemonError.gitFailed(cause),
     try: async () => {
       try {
-        await execFileAsync(
-          "git",
-          ["-C", root, "merge-base", "--is-ancestor", ancestor, descendant],
+        await executeGit(
+          root,
+          ["merge-base", "--is-ancestor", ancestor, descendant],
           { maxBuffer: GIT_OUTPUT_MAX_BUFFER },
         );
         return true;
@@ -680,7 +647,7 @@ function nonEmpty(value: string) {
 }
 
 async function gitOutputAsync(cwd: string, args: string[]) {
-  const result = await execFileAsync("git", ["-C", cwd, ...args], {
+  const result = await executeGit(cwd, args, {
     maxBuffer: GIT_OUTPUT_MAX_BUFFER,
   });
   return result.stdout.trim();

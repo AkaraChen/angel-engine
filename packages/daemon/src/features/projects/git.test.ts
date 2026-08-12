@@ -14,7 +14,7 @@ import {
   discardCreatedWorktree,
   projectGitStatus,
   removeManagedWorktree,
-} from "./git";
+} from "../source-control/local-git/projects";
 import { projectSetupLifecycle } from "./setup-lifecycle";
 
 const execFileAsync = promisify(execFile);

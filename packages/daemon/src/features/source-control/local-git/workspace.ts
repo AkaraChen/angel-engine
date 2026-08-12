@@ -5,13 +5,10 @@ import type {
   WorkspaceToolGitStatusEntry,
 } from "@angel-engine/daemon-api/workspace-tools";
 
-import { execFile } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { promisify } from "node:util";
-import { fromTreePath, normalizeGitPath } from "./paths";
-
-const execFileAsync = promisify(execFile);
+import { fromTreePath, normalizeGitPath } from "../../workspace-tools/paths";
+import { executeGit } from "./backend";
 
 const GIT_OUTPUT_MAX_BUFFER = 12 * 1024 * 1024;
 const GIT_NETWORK_TIMEOUT_MS = 120_000;
@@ -239,7 +236,7 @@ export async function gitOutput(
   args: string[],
   options: { network?: boolean } = {},
 ) {
-  const result = await execFileAsync("git", ["-C", cwd, ...args], {
+  const result = await executeGit(cwd, args, {
     env: options.network ? nonInteractiveGitEnv() : process.env,
     maxBuffer: GIT_OUTPUT_MAX_BUFFER,
     timeout: options.network ? GIT_NETWORK_TIMEOUT_MS : undefined,

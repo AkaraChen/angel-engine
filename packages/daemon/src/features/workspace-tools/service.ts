@@ -35,7 +35,7 @@ import {
   parseAheadBehindCounts,
   parseGitNumstatOutput,
   parseGitStatusOutput,
-} from "./git";
+} from "../source-control/local-git/workspace";
 import {
   absolutePathToTreePath,
   isMissingPathError,
