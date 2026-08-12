@@ -24,7 +24,6 @@ describe("LocalGitBackend boundary", () => {
 
     expect(matches).toEqual([
       "features/github/pull-request-create.ts",
-      "features/github/pull-request.ts",
       "features/projects/clone.ts",
       "features/source-control/local-git/backend.ts",
     ]);

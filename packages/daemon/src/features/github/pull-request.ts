@@ -1,5 +1,3 @@
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 import type {
   GitHubMergeInput,
   GitHubMergeMethod,
@@ -16,9 +14,9 @@ import { type as arkType } from "arktype";
 import { Cause, Effect, Exit } from "effect";
 
 import { DaemonError } from "../../platform/errors";
+import { executeGit } from "../source-control/local-git/backend";
 import { findGhPath, type GhRunner, mapGhFailure, runGhCli } from "./gh-cli";
 
-const execFileAsync = promisify(execFile);
 const MERGE_TIMEOUT_MS = 60_000;
 const PR_FIELDS = [
   "author",
@@ -583,9 +581,7 @@ function gitWorktreeDirty(
     catch: (cause) => DaemonError.gitFailed(cause),
     try: async () => {
       if (injected !== undefined) return injected(cwd);
-      const result = await execFileAsync("git", ["status", "--porcelain"], {
-        cwd,
-      });
+      const result = await executeGit(cwd, ["status", "--porcelain"]);
       return result.stdout.toString().trim().length > 0;
     },
   });

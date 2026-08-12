@@ -23,7 +23,15 @@ import {
   getGitHubWorkItem,
   getGitHubWorkItemByUrl,
   parseGitHubRepositoryUrl,
+  parseGitHubUrl,
 } from "./internal/resolve";
+import {
+  getGitHubChangeRequest,
+  getGitHubChangeRequestByUrl,
+  getGitHubChangeRequestStatus,
+  listGitHubChangeRequests,
+  resolveGitHubChangeRequestHead,
+} from "./internal/change-requests";
 
 const PROVIDER_ID = "github";
 const PUBLIC_HOSTS = new Set(["github.com", "www.github.com"]);
@@ -169,6 +177,11 @@ export function createGitHubPlugin(
         "discovery.listNamespaces",
         "discovery.listRepositories",
         "repositoryIdentity",
+        "changeRequests.get",
+        "changeRequests.getByUrl",
+        "changeRequests.list",
+        "changeRequests.status",
+        "changeRequests.resolveHead",
         "workItems.get",
         "workItems.getByUrl",
         "workItems.list",
@@ -193,10 +206,29 @@ export function createGitHubPlugin(
     },
     git: {
       parseUrl: parseGitHubRepositoryUrl,
-      parseChangeRequestUrl: () => null,
+      parseChangeRequestUrl: (url) => {
+        const parsed = parseGitHubUrl(url);
+        if (parsed?.kind !== "pullRequest") return null;
+        const repository = parseGitHubRepositoryUrl(parsed.url);
+        return repository === null
+          ? null
+          : { repository, id: String(parsed.number) };
+      },
     },
     repositories: {
       parseUrl: parseGitHubRepositoryUrl,
+    },
+    changeRequests: {
+      get: (input, context) =>
+        getGitHubChangeRequest(input, context, resolvedDependencies),
+      getByUrl: (input, context) =>
+        getGitHubChangeRequestByUrl(input, context, resolvedDependencies),
+      list: (input, context) =>
+        listGitHubChangeRequests(input, context, resolvedDependencies),
+      status: (input, context) =>
+        getGitHubChangeRequestStatus(input, context, resolvedDependencies),
+      resolveHead: (input, context) =>
+        resolveGitHubChangeRequestHead(input, context, resolvedDependencies),
     },
     workItems: {
       get: (input, context) =>

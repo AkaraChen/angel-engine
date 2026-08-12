@@ -56,6 +56,33 @@ const issue = {
   url: "https://github.com/acme/widgets/issues/3",
 };
 
+const pullRequest = {
+  additions: 12,
+  author: { login: "alice" },
+  baseRefName: "main",
+  body: "Pull request body",
+  changedFiles: 2,
+  commits: [{ oid: "abc" }],
+  createdAt: "2026-07-20T08:00:00Z",
+  deletions: 3,
+  headRefName: "feature",
+  headRefOid: "abc",
+  headRepository: {
+    nameWithOwner: "alice/widgets",
+    url: "https://github.com/alice/widgets",
+  },
+  isDraft: false,
+  mergeable: "MERGEABLE",
+  mergeStateStatus: "CLEAN",
+  mergedAt: null,
+  number: 7,
+  reviewDecision: "APPROVED",
+  state: "OPEN",
+  title: "Improve widgets",
+  updatedAt: "2026-07-20T10:00:00Z",
+  url: "https://github.com/acme/widgets/pull/7",
+};
+
 describe("GitHub source-control provider", () => {
   it.each([
     "https://github.com/acme/widgets.git",
@@ -246,5 +273,94 @@ describe("GitHub source-control provider", () => {
     expect(listCall?.at((listCall?.indexOf("--search") ?? -1) + 1)).toBe(
       "broken sort:updated-desc",
     );
+  });
+
+  it("reads change requests through every generic read capability", async () => {
+    const calls: string[][] = [];
+    const plugin = createGitHubPlugin({
+      findGh: async () => "/usr/bin/gh",
+      runGh: async (args) => {
+        calls.push(args);
+        if (args[0] === "repo") {
+          return {
+            stderr: "",
+            stdout: JSON.stringify({
+              mergeCommitAllowed: false,
+              nameWithOwner: "acme/widgets",
+              rebaseMergeAllowed: true,
+              squashMergeAllowed: true,
+              viewerPermission: "WRITE",
+            }),
+          };
+        }
+        return {
+          stderr: "",
+          stdout: JSON.stringify(
+            args[1] === "list" ? [pullRequest] : pullRequest,
+          ),
+        };
+      },
+    });
+
+    await expect(
+      plugin.changeRequests?.get?.({ id: "7", repository }, operationContext()),
+    ).resolves.toMatchObject({
+      id: "7",
+      repository,
+      source: {
+        name: "feature",
+        repository: { displayPath: "alice/widgets" },
+      },
+      state: "open",
+      target: { name: "main", repository },
+    });
+    await expect(
+      plugin.changeRequests?.getByUrl?.(
+        { url: pullRequest.url },
+        operationContext(),
+      ),
+    ).resolves.toMatchObject({ id: "7", title: "Improve widgets" });
+    await expect(
+      plugin.changeRequests?.list?.(
+        { limit: 10, query: "improve", repository },
+        operationContext(),
+      ),
+    ).resolves.toEqual([
+      expect.objectContaining({ id: "7", title: "Improve widgets" }),
+    ]);
+    await expect(
+      plugin.changeRequests?.status?.(
+        { id: "7", repository },
+        operationContext(),
+      ),
+    ).resolves.toMatchObject({
+      changeRequest: {
+        allowedMergeMethods: ["squash", "rebase"],
+        reviewDecision: "approved",
+        viewerCanMerge: true,
+      },
+      checks: null,
+    });
+    await expect(
+      plugin.changeRequests?.resolveHead?.(
+        { id: "7", repository },
+        operationContext(),
+      ),
+    ).resolves.toMatchObject({
+      ref: "feature",
+      remoteUrl: "https://github.com/alice/widgets",
+    });
+    expect(calls).toContainEqual(
+      expect.arrayContaining(["--repo", "acme/widgets"]),
+    );
+  });
+
+  it("parses GitHub pull request URLs through the git capability", () => {
+    expect(
+      createGitHubPlugin().git.parseChangeRequestUrl(pullRequest.url),
+    ).toEqual({ repository, id: "7" });
+    expect(
+      createGitHubPlugin().git.parseChangeRequestUrl(issue.url),
+    ).toBeNull();
   });
 });
