@@ -8,24 +8,29 @@ export interface TerminalSelectionInsert {
   selection: string;
 }
 
-interface TerminalSelectionInsertMessage {
+export interface ComposerTerminalSelection extends TerminalSelectionInsert {
   id: string;
-  markdown: string;
+}
+
+interface TerminalSelectionInsertMessage {
+  selection: ComposerTerminalSelection;
   senderId: string;
 }
 
-type TerminalSelectionInsertHandler = (markdown: string) => void;
+type TerminalSelectionInsertHandler = (
+  selection: ComposerTerminalSelection,
+) => void;
 
 const localHandlers = new Set<TerminalSelectionInsertHandler>();
 const broadcastChannel = createBroadcastChannel();
-let pendingMarkdown: string | null = null;
+let pendingSelection: ComposerTerminalSelection | null = null;
 
 broadcastChannel?.addEventListener(
   "message",
   (event: MessageEvent<unknown>) => {
     const message = readTerminalSelectionInsertMessage(event.data);
     if (message === null || message.senderId === senderId) return;
-    deliverTerminalSelectionMarkdown(message.markdown);
+    deliverTerminalSelection(message.selection);
   },
 );
 
@@ -34,14 +39,13 @@ export function publishTerminalSelectionInsert(
 ) {
   if (!hasTerminalSelection(insertion.selection)) return false;
 
-  const markdown = formatTerminalSelectionForComposer(insertion);
-  const message: TerminalSelectionInsertMessage = {
+  const selection: ComposerTerminalSelection = {
+    cwd: insertion.cwd,
     id: crypto.randomUUID(),
-    markdown,
-    senderId,
+    selection: insertion.selection,
   };
-  deliverTerminalSelectionMarkdown(markdown);
-  broadcastChannel?.postMessage(message);
+  deliverTerminalSelection(selection);
+  broadcastChannel?.postMessage({ selection, senderId });
   return true;
 }
 
@@ -49,14 +53,14 @@ export function subscribeToTerminalSelectionInserts(
   handler: TerminalSelectionInsertHandler,
 ) {
   localHandlers.add(handler);
-  if (pendingMarkdown !== null) {
-    const markdown = pendingMarkdown;
-    handler(markdown);
+  if (pendingSelection !== null) {
+    const selection = pendingSelection;
+    handler(selection);
     // React Strict Mode remounts effects in the same turn. Keep the pending
     // insert until after that recycle so the second mount still receives it.
     queueMicrotask(() => {
-      if (pendingMarkdown === markdown) {
-        pendingMarkdown = null;
+      if (pendingSelection === selection) {
+        pendingSelection = null;
       }
     });
   }
@@ -67,6 +71,16 @@ export function subscribeToTerminalSelectionInserts(
 
 export function hasTerminalSelection(selection: string) {
   return selection.trim().length > 0;
+}
+
+/** Short single-line title for the composer chip. */
+export function terminalSelectionLabel(selection: string) {
+  const firstLine =
+    selection
+      .split("\n")
+      .map((line) => line.trim())
+      .find((line) => line.length > 0) ?? "";
+  return firstLine.length > 60 ? `${firstLine.slice(0, 60)}…` : firstLine;
 }
 
 export function formatTerminalSelectionForComposer({
@@ -83,19 +97,26 @@ export function formatTerminalSelectionForComposer({
   return `Terminal selection (cwd: ${normalizedCwd})\n\n${fence}text\n${content}\n${fence}`;
 }
 
-export function appendComposerMarkdown(current: string, insertion: string) {
-  const existing = current.trimEnd();
-  return existing.length === 0 ? insertion : `${existing}\n\n${insertion}`;
+export function appendTerminalSelections(
+  text: string,
+  selections: readonly ComposerTerminalSelection[],
+) {
+  if (selections.length === 0) return text;
+  const block = selections
+    .map((item) => formatTerminalSelectionForComposer(item))
+    .join("\n\n");
+  const trimmed = text.trimEnd();
+  return trimmed.length === 0 ? block : `${trimmed}\n\n${block}`;
 }
 
-function deliverTerminalSelectionMarkdown(markdown: string) {
+function deliverTerminalSelection(selection: ComposerTerminalSelection) {
   if (localHandlers.size === 0) {
-    pendingMarkdown = markdown;
+    pendingSelection = selection;
     return;
   }
 
-  pendingMarkdown = null;
-  for (const handler of localHandlers) handler(markdown);
+  pendingSelection = null;
+  for (const handler of localHandlers) handler(selection);
 }
 
 function truncateTerminalSelection(selection: string) {
@@ -124,17 +145,23 @@ function readTerminalSelectionInsertMessage(
 ): TerminalSelectionInsertMessage | null {
   if (value === null || typeof value !== "object") return null;
   const input = value as Partial<TerminalSelectionInsertMessage>;
+  const selection = input.selection;
   if (
-    typeof input.id !== "string" ||
-    typeof input.markdown !== "string" ||
-    typeof input.senderId !== "string"
+    typeof input.senderId !== "string" ||
+    selection === undefined ||
+    typeof selection.id !== "string" ||
+    typeof selection.cwd !== "string" ||
+    typeof selection.selection !== "string"
   ) {
     return null;
   }
 
   return {
-    id: input.id,
-    markdown: input.markdown,
+    selection: {
+      cwd: selection.cwd,
+      id: selection.id,
+      selection: selection.selection,
+    },
     senderId: input.senderId,
   };
 }

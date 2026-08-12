@@ -849,6 +849,7 @@ export const ko = {
       taskLinkStateClosed: "닫힘",
       taskLinkStateMerged: "병합됨",
       taskLinkStateOpen: "열림",
+      terminalSelection: "터미널 선택",
       toasts: {
         couldNotChangeMode: "모드를 변경할 수 없습니다",
         couldNotReadFile: "파일을 읽을 수 없습니다",

@@ -9,6 +9,7 @@ import type {
 } from "@/features/chat/components/composer/composer-attachments";
 import type { AttachmentInputError } from "@/features/chat/components/composer/composer-helpers";
 import type { ComposerGitHubAttachment } from "@/features/chat/components/composer/github-attachments";
+import type { ComposerTerminalSelection } from "@/features/chat/components/composer/terminal-selection-to-composer";
 import type { ComposerEditorController } from "@/features/chat/components/composer/use-composer-editor";
 import is from "@sindresorhus/is";
 import { useCallback } from "react";
@@ -25,12 +26,14 @@ import {
   attachmentErrorTitle,
 } from "@/features/chat/components/composer/composer-helpers";
 import { appendGitHubContexts } from "@/features/chat/components/composer/github-attachments";
+import { appendTerminalSelections } from "@/features/chat/components/composer/terminal-selection-to-composer";
 
 export interface ChatComposerSubmission {
   files: PromptInputFile[];
   githubAttachments: ComposerGitHubAttachment[];
   mentionedFiles: ComposerMentionedFile[];
   selectedSkills: ComposerMentionedSkill[];
+  terminalSelections: ComposerTerminalSelection[];
   text: string;
   worktreeSetupApproval?: string;
 }
@@ -80,6 +83,7 @@ export function ChatComposer({
     pasteSourceUrls,
     reset,
     selectedSkills,
+    terminalSelections,
   } = controller;
 
   const handleSubmit = useCallback(
@@ -89,7 +93,8 @@ export function ChatComposer({
         message.files.length > 0 ||
         mentionedFiles.length > 0 ||
         selectedSkills.length > 0 ||
-        githubAttachments.length > 0;
+        githubAttachments.length > 0 ||
+        terminalSelections.length > 0;
       if (!hasMessage) return;
       const beforeSubmitResult = onBeforeSubmit ? await onBeforeSubmit() : true;
       if (beforeSubmitResult === false) return;
@@ -98,14 +103,19 @@ export function ChatComposer({
       // turn first would run reset() against an editor that may have been
       // unmounted mid-turn (draft composers navigate to the created chat).
       const githubSnapshot = [...githubAttachments];
+      const terminalSnapshot = [...terminalSelections];
       const submission: ChatComposerSubmission = {
         files: message.files as PromptInputFile[],
         githubAttachments: githubSnapshot,
         mentionedFiles: [...mentionedFiles],
         selectedSkills: [...selectedSkills],
-        text: appendGitHubContexts(
-          appendPasteSourceUrls(message.text, pasteSourceUrls),
-          githubSnapshot,
+        terminalSelections: terminalSnapshot,
+        text: appendTerminalSelections(
+          appendGitHubContexts(
+            appendPasteSourceUrls(message.text, pasteSourceUrls),
+            githubSnapshot,
+          ),
+          terminalSnapshot,
         ),
         worktreeSetupApproval:
           typeof beforeSubmitResult === "string"
@@ -123,6 +133,7 @@ export function ChatComposer({
       reset,
       selectedSkills,
       send,
+      terminalSelections,
     ],
   );
 

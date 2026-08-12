@@ -855,6 +855,7 @@ export const en = {
       taskLinkStateClosed: "Closed",
       taskLinkStateMerged: "Merged",
       taskLinkStateOpen: "Open",
+      terminalSelection: "Terminal selection",
       toasts: {
         couldNotChangeMode: "Could not change mode",
         couldNotReadFile: "Could not read file",

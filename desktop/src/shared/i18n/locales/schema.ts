@@ -1054,6 +1054,7 @@ export interface LocaleResourceTranslationComposer {
   taskLinkStateClosed: string;
   taskLinkStateMerged: string;
   taskLinkStateOpen: string;
+  terminalSelection: string;
   toasts: LocaleResourceTranslationComposerToasts;
 }
 

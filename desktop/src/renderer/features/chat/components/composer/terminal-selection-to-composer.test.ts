@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
-  appendComposerMarkdown,
+  appendTerminalSelections,
   formatTerminalSelectionForComposer,
   hasTerminalSelection,
   publishTerminalSelectionInsert,
@@ -81,16 +81,26 @@ describe("terminal selection composer formatting", () => {
     ).toContain("Terminal selection (cwd: /repo secret)");
   });
 
-  it("appends to an existing draft without changing its content", () => {
-    expect(appendComposerMarkdown("Fix this", "```text\nerror\n```")).toBe(
-      "Fix this\n\n```text\nerror\n```",
+  it("appends selection context below an existing draft", () => {
+    expect(
+      appendTerminalSelections("Fix this", [
+        { cwd: "/repo", id: "a", selection: "error" },
+      ]),
+    ).toBe(
+      "Fix this\n\nTerminal selection (cwd: /repo)\n\n```text\nerror\n```",
     );
   });
 
-  it("uses the insertion alone when the composer draft is empty", () => {
-    expect(appendComposerMarkdown("   ", "```text\nerror\n```")).toBe(
-      "```text\nerror\n```",
-    );
+  it("uses the selection context alone when the draft is empty", () => {
+    expect(
+      appendTerminalSelections("   ", [
+        { cwd: "/repo", id: "a", selection: "error" },
+      ]),
+    ).toBe("Terminal selection (cwd: /repo)\n\n```text\nerror\n```");
+  });
+
+  it("keeps the draft untouched when nothing is attached", () => {
+    expect(appendTerminalSelections("Fix this", [])).toBe("Fix this");
   });
 
   it("treats whitespace-only selections as empty", () => {
@@ -115,8 +125,8 @@ describe("terminal selection composer formatting", () => {
     ).toBe(true);
 
     const received: string[] = [];
-    const unsubscribe = subscribeToTerminalSelectionInserts((markdown) => {
-      received.push(markdown);
+    const unsubscribe = subscribeToTerminalSelectionInserts((item) => {
+      received.push(item.selection);
     });
 
     expect(received).toHaveLength(1);
@@ -126,8 +136,8 @@ describe("terminal selection composer formatting", () => {
     await Promise.resolve();
 
     const receivedAgain: string[] = [];
-    const unsubscribeAgain = subscribeToTerminalSelectionInserts((markdown) => {
-      receivedAgain.push(markdown);
+    const unsubscribeAgain = subscribeToTerminalSelectionInserts((item) => {
+      receivedAgain.push(item.selection);
     });
     expect(receivedAgain).toEqual([]);
     unsubscribeAgain();
@@ -135,8 +145,8 @@ describe("terminal selection composer formatting", () => {
 
   it("delivers immediately to an active subscriber", () => {
     const received: string[] = [];
-    const unsubscribe = subscribeToTerminalSelectionInserts((markdown) => {
-      received.push(markdown);
+    const unsubscribe = subscribeToTerminalSelectionInserts((item) => {
+      received.push(item.selection);
     });
 
     expect(

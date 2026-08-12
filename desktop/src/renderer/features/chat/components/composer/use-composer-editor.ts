@@ -8,12 +8,12 @@ import type {
   ComposerInteractionRefs,
 } from "@/features/chat/components/composer/composer-editor-extensions";
 import type { ComposerGitHubAttachment } from "@/features/chat/components/composer/github-attachments";
+import type { ComposerTerminalSelection } from "@/features/chat/components/composer/terminal-selection-to-composer";
 import { useEditor, useEditorState } from "@tiptap/react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { createComposerExtensions } from "@/features/chat/components/composer/composer-editor-extensions";
 import { composerMentionsFromDocument } from "@/features/chat/components/composer/composer-editor-model";
-import { appendComposerMarkdown } from "@/features/chat/components/composer/terminal-selection-to-composer";
 import { useChatEnvironment } from "@/features/chat/runtime/chat-environment-context";
 import { useApi } from "@/platform/use-api";
 
@@ -28,7 +28,7 @@ export interface ComposerEditorInteractions {
 export interface ComposerEditorController {
   addGitHubAttachment: (attachment: ComposerGitHubAttachment) => void;
   addPasteSourceUrl: (sourceUrl: string) => void;
-  appendMarkdown: (markdown: string) => boolean;
+  addTerminalSelection: (selection: ComposerTerminalSelection) => void;
   editor: Editor | null;
   focus: () => void;
   getMarkdown: () => string;
@@ -38,9 +38,11 @@ export interface ComposerEditorController {
   pasteSourceUrls: string[];
   removeGitHubAttachment: (id: string) => void;
   removeMention: (id: string) => void;
+  removeTerminalSelection: (id: string) => void;
   removePasteSourceUrl: (sourceUrl: string) => void;
   reset: () => void;
   selectedSkills: ComposerMentionedSkill[];
+  terminalSelections: ComposerTerminalSelection[];
   setInteractions: (interactions: ComposerEditorInteractions) => void;
   setTextInput: (setInput: (value: string) => void) => void;
 }
@@ -81,6 +83,24 @@ export function useComposerEditor({
   );
   const removeGitHubAttachment = useCallback((id: string) => {
     setGitHubAttachments((current) => current.filter((item) => item.id !== id));
+  }, []);
+  const [terminalSelections, setTerminalSelections] = useState<
+    ComposerTerminalSelection[]
+  >([]);
+  const addTerminalSelection = useCallback(
+    (selection: ComposerTerminalSelection) => {
+      setTerminalSelections((current) =>
+        current.some((item) => item.id === selection.id)
+          ? current
+          : [...current, selection],
+      );
+    },
+    [],
+  );
+  const removeTerminalSelection = useCallback((id: string) => {
+    setTerminalSelections((current) =>
+      current.filter((item) => item.id !== id),
+    );
   }, []);
   const [selectedSkills, setSelectedSkills] = useState<
     ComposerMentionedSkill[]
@@ -162,18 +182,6 @@ export function useComposerEditor({
 
   const focus = useCallback(() => editor?.commands.focus(), [editor]);
   const getMarkdown = useCallback(() => editor?.getMarkdown() ?? "", [editor]);
-  const appendMarkdown = useCallback(
-    (markdown: string) => {
-      if (editor === null || editor.isDestroyed) return false;
-      editor.commands.setContent(
-        appendComposerMarkdown(editor.getMarkdown(), markdown),
-        { contentType: "markdown" },
-      );
-      editor.commands.focus("end");
-      return true;
-    },
-    [editor],
-  );
   const reset = useCallback(() => {
     // A destroyed editor throws from its `commands` getter, so `?.` alone
     // is not enough once the composer has unmounted.
@@ -182,6 +190,7 @@ export function useComposerEditor({
     }
     setPasteSourceUrls([]);
     setGitHubAttachments([]);
+    setTerminalSelections([]);
   }, [editor]);
   const removeMention = useCallback(
     (id: string) => {
@@ -220,7 +229,7 @@ export function useComposerEditor({
   return {
     addGitHubAttachment,
     addPasteSourceUrl,
-    appendMarkdown,
+    addTerminalSelection,
     editor,
     focus,
     getMarkdown,
@@ -231,8 +240,10 @@ export function useComposerEditor({
     removeGitHubAttachment,
     removeMention,
     removePasteSourceUrl,
+    removeTerminalSelection,
     reset,
     selectedSkills,
+    terminalSelections,
     setInteractions,
     setTextInput,
   };
