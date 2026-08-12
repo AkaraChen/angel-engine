@@ -156,10 +156,7 @@ export const SchedulePage: FC<SchedulePageProps> = ({ projects }) => {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-background">
-      <div className="flex items-center justify-between gap-4 px-6 py-4">
-        <h1 className="font-display text-lg font-semibold tracking-tight">
-          {t("schedule.title")}
-        </h1>
+      <div className="flex items-center justify-end gap-4 px-6 py-4">
         <Button size="sm" onClick={() => setCreateOpen(true)}>
           <Plus weight="bold" />
           {t("schedule.newAutomation")}
@@ -710,7 +707,7 @@ function ScheduleSkeleton() {
 function ScheduleNotice({ text }: { text: string }) {
   return (
     <div className="m-3 flex items-start gap-2 rounded-lg border border-border-subtle bg-surface-1 p-3 text-sm text-muted-foreground">
-      <WarningCircle className="mt-0.5 shrink-0" />
+      <WarningCircle className="mt-0.5 size-4 shrink-0" />
       <span>{text}</span>
     </div>
   );
