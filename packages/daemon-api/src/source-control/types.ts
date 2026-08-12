@@ -77,6 +77,9 @@ export interface WorkItem {
   extensions?: SourceControlExtensions;
 }
 
+/** Provider-neutral result returned by the source-control link resolver. */
+export type ResolvedSourceControlLink = ChangeRequest | WorkItem;
+
 export type CheckGroupKind = "workflow-run" | "pipeline" | "policy-set";
 
 export interface CheckGroup {

@@ -87,6 +87,7 @@ export function WorkspaceToolSurface({
           api={api}
           contextKey={model.contextKey}
           key={model.root}
+          projectId={model.projectId}
           root={model.root}
         />
       ) : null}

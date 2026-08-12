@@ -23,21 +23,6 @@ export const queryKeys = {
     runtimeConfig: (runtime: string | null, cwd: string | null) =>
       ["chats", "runtime-config", runtime, cwd] as const,
   },
-  github: {
-    items: (cwd: string | null, query: string) =>
-      ["github", "items", cwd, query] as const,
-    prChecks: (cwd: string | null) => ["github", "pr-checks", cwd] as const,
-    pullRequestDetail: (cwd: string | null, number: number | null) =>
-      ["github", "pull-request", cwd, number] as const,
-    pullRequest: (cwd: string | null) =>
-      ["github", "pull-request-status", cwd] as const,
-    repositories: (owner: string | null) =>
-      ["github", "repositories", owner] as const,
-    repositoryOwners: () => ["github", "repository-owners"] as const,
-    resolve: (url: string | null) => ["github", "resolve", url] as const,
-    pullRequestPreflight: (root: string | null, base?: string) =>
-      ["github", "pull-request", "preflight", root, base] as const,
-  },
   sourceControl: {
     all: () => ["source-control"] as const,
     activation: (projectId: string | null) =>
@@ -115,6 +100,8 @@ export const queryKeys = {
       ["source-control", providerIdentity, "checks", id] as const,
     checksSummary: (providerIdentity: string | null, id: string | null) =>
       ["source-control", providerIdentity, "checks", id, "summary"] as const,
+    reviewThreadsRoot: (providerIdentity: string | null) =>
+      ["source-control", providerIdentity, "reviews"] as const,
     reviewThreads: (providerIdentity: string | null, id: string | null) =>
       ["source-control", providerIdentity, "reviews", id, "threads"] as const,
   },
