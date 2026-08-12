@@ -288,6 +288,36 @@ export interface ProviderActivation {
   diagnostics: readonly ProviderDiagnostic[];
 }
 
+export interface ProviderActivationCandidate {
+  providerId: string;
+  remote: {
+    name: string;
+    url: string;
+    fetchUrl: string;
+    pushUrl: string | null;
+  };
+  repository: RepositoryIdentity | null;
+  score: number;
+  source: "explicit" | "upstream" | "default-remote" | "remote";
+}
+
+export type SourceControlActivationResult =
+  | {
+      status: "active";
+      projectPath: string;
+      activation: ProviderActivation;
+    }
+  | {
+      status: "ambiguous";
+      projectPath: string;
+      candidates: readonly ProviderActivationCandidate[];
+    }
+  | {
+      status: "unresolved";
+      projectPath: string;
+      reason: "no-match" | "configured-provider-missing";
+    };
+
 export interface SourceControlErrorDetails {
   providerId: string;
   operation: string;

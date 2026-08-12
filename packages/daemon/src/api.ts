@@ -1170,14 +1170,13 @@ export function registerApi(
       readSourceControlProjectConfig(project.path),
       run(listProviderHostMappings()),
     ]);
-    return context.json(
-      await sourceControl.activate({
-        hostMappings,
-        projectPath: project.path,
-        providerConfig: config.provider,
-        signal: context.req.raw.signal,
-      }),
-    );
+    const result = await sourceControl.activate({
+      hostMappings,
+      projectPath: project.path,
+      providerConfig: config.provider,
+      signal: context.req.raw.signal,
+    });
+    return context.json({ ...result, projectPath: project.path });
   });
   app.get("/api/source-control/config", async (context) => {
     const projectId = requireQuery(context.req.query("projectId"), "projectId");
