@@ -246,12 +246,37 @@ describe("SourceControlRegistry", () => {
       `https://user:${token}@github.com/acme/app.git`,
     );
     const plugin = fakePlugin({ host: "github.com", id: "fake-github" });
+    const match = plugin.discovery.match.bind(plugin.discovery);
+    plugin.discovery.match = (context) => {
+      const candidate = match(context);
+      if (candidate === null) return null;
+      return {
+        ...candidate,
+        repository: {
+          displayPath: "acme/app",
+          host: "github.com",
+          name: "app",
+          namespace: ["acme"],
+          providerId: plugin.manifest.id,
+          remoteId: null,
+          webUrl: `https://user:${token}@github.com/acme/app`,
+        },
+      };
+    };
     const registry = new SourceControlRegistry({
       log: (message) => logs.push(message),
     });
     registry.register(plugin);
     const result = await registry.activate({ projectPath: root });
     if (result.status !== "active") throw new Error("Expected activation.");
+
+    expect(result.activation.remote.url).toBe(
+      "https://github.com/acme/app.git",
+    );
+    expect(result.activation.repository?.webUrl).toBe(
+      "https://github.com/acme/app",
+    );
+    expect(JSON.stringify(result)).not.toContain(token);
 
     const failure = await registry
       .invoke({
@@ -265,6 +290,44 @@ describe("SourceControlRegistry", () => {
     expect(failure.message).not.toContain(token);
     expect(logs.join("\n")).not.toContain(token);
     expect(failure.message).toContain("[REDACTED]");
+  });
+
+  it("removes URL credentials from ambiguous provider candidates", async () => {
+    const githubToken = "github-secret-token";
+    const gitlabToken = "gitlab-secret-token";
+    const root = await repository(
+      `https://user:${githubToken}@github.com/acme/app.git`,
+    );
+    await executeGit(root, [
+      "remote",
+      "add",
+      "mirror",
+      `https://user:${gitlabToken}@gitlab.com/acme/app.git`,
+    ]);
+    const registry = new SourceControlRegistry();
+    registry.register(fakePlugin({ host: "github.com", id: "fake-github" }));
+    registry.register(fakePlugin({ host: "gitlab.com", id: "fake-gitlab" }));
+
+    const result = await registry.activate({ projectPath: root });
+
+    expect(result.status).toBe("ambiguous");
+    expect(JSON.stringify(result)).not.toContain(githubToken);
+    expect(JSON.stringify(result)).not.toContain(gitlabToken);
+    if (result.status !== "ambiguous") throw new Error("Expected ambiguity.");
+    expect(result.candidates.map((candidate) => candidate.remote)).toEqual([
+      {
+        fetchUrl: "https://github.com/acme/app.git",
+        name: "origin",
+        pushUrl: "https://github.com/acme/app.git",
+        url: "https://github.com/acme/app.git",
+      },
+      {
+        fetchUrl: "https://gitlab.com/acme/app.git",
+        name: "mirror",
+        pushUrl: "https://gitlab.com/acme/app.git",
+        url: "https://gitlab.com/acme/app.git",
+      },
+    ]);
   });
 
   it("propagates caller cancellation as a typed provider error", async () => {

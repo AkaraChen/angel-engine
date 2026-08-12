@@ -21,6 +21,7 @@ import {
   errorText,
   redactSourceControlText,
   redactSourceControlValue,
+  sanitizeSourceControlValue,
 } from "./redaction";
 
 export type ActivationResult =
@@ -53,6 +54,41 @@ function secretsFromUrl(remoteUrl: string) {
   }
 }
 
+function outboundSecretsFromUrl(remoteUrl: string) {
+  try {
+    const url = new URL(remoteUrl);
+    return url.password ? [url.password] : [url.username].filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+function secretsFromMatch(match: ProviderMatch) {
+  const urls = [
+    match.remote.url,
+    match.remote.fetchUrl,
+    match.remote.pushUrl,
+    match.repository?.webUrl,
+  ];
+  return [...new Set(urls.flatMap((url) => (url ? secretsFromUrl(url) : [])))];
+}
+
+function outboundSecretsFromMatch(match: ProviderMatch) {
+  const urls = [
+    match.remote.url,
+    match.remote.fetchUrl,
+    match.remote.pushUrl,
+    match.repository?.webUrl,
+  ];
+  return [
+    ...new Set(urls.flatMap((url) => (url ? outboundSecretsFromUrl(url) : []))),
+  ];
+}
+
+function activationKey(activation: ProviderActivation) {
+  return `${activation.projectPath}\0${activation.generation}\0${activation.provider.id}\0${activation.remote.name}\0${activation.remote.url}`;
+}
+
 function capabilityMatrix(
   plugin: SourceControlProviderPlugin,
   authenticated: boolean,
@@ -82,6 +118,7 @@ export interface SourceControlRegistryOptions {
 }
 
 export class SourceControlRegistry {
+  readonly #activationSecrets = new Map<string, readonly string[]>();
   readonly #plugins = new Map<string, SourceControlProviderPlugin>();
   readonly #generations = new Map<string, number>();
   readonly #invocationTimeoutMs: number;
@@ -114,6 +151,10 @@ export class SourceControlRegistry {
 
   invalidate(projectPath: string) {
     this.#generations.set(projectPath, this.generation(projectPath) + 1);
+    for (const [key] of this.#activationSecrets) {
+      if (key.startsWith(`${projectPath}\0`))
+        this.#activationSecrets.delete(key);
+    }
     for (const key of this.#readinessCache.keys()) {
       if (key.startsWith(`${projectPath}\0`)) this.#readinessCache.delete(key);
     }
@@ -158,13 +199,17 @@ export class SourceControlRegistry {
     }
 
     const resolution: ProviderResolution = resolveProvider(context, matches);
-    if (resolution.status !== "resolved") return resolution;
+    if (resolution.status === "ambiguous") {
+      const secrets = resolution.candidates.flatMap(outboundSecretsFromMatch);
+      return sanitizeSourceControlValue(resolution, secrets);
+    }
+    if (resolution.status === "unresolved") return resolution;
     const match = resolution.match;
     const plugin = this.#plugins.get(match.providerId);
     if (!plugin) {
       return { status: "unresolved", reason: "no-match" };
     }
-    const secrets = secretsFromUrl(match.remote.url);
+    const secrets = secretsFromMatch(match);
     const readinessKey = `${options.projectPath}\0${this.generation(
       options.projectPath,
     )}\0${plugin.manifest.id}\0${match.remote.name}\0${match.remote.url}`;
@@ -189,25 +234,33 @@ export class SourceControlRegistry {
       });
     }
     const authenticated = readiness.authentication === "authenticated";
-    return {
-      status: "active",
-      activation: {
-        authentication: readiness.authentication,
-        capabilities: capabilityMatrix(plugin, authenticated),
-        diagnostics: redactSourceControlValue(readiness.diagnostics, secrets),
-        generation: this.generation(options.projectPath),
-        projectPath: options.projectPath,
-        provider: plugin.manifest,
-        remote: { name: match.remote.name, url: match.remote.url },
-        repository: match.repository,
-        unavailableReason: authenticated
-          ? null
-          : {
-              kind: "unauthenticated",
-              message: `${plugin.manifest.displayName} is not authenticated.`,
-            },
+    const outboundSecrets = outboundSecretsFromMatch(match);
+    const result = sanitizeSourceControlValue<ActivationResult>(
+      {
+        status: "active",
+        activation: {
+          authentication: readiness.authentication,
+          capabilities: capabilityMatrix(plugin, authenticated),
+          diagnostics: redactSourceControlValue(readiness.diagnostics, secrets),
+          generation: this.generation(options.projectPath),
+          projectPath: options.projectPath,
+          provider: plugin.manifest,
+          remote: { name: match.remote.name, url: match.remote.url },
+          repository: match.repository,
+          unavailableReason: authenticated
+            ? null
+            : {
+                kind: "unauthenticated",
+                message: `${plugin.manifest.displayName} is not authenticated.`,
+              },
+        },
       },
-    };
+      outboundSecrets,
+    );
+    if (result.status === "active") {
+      this.#activationSecrets.set(activationKey(result.activation), secrets);
+    }
+    return result;
   }
 
   async invoke<A>(options: {
@@ -246,7 +299,9 @@ export class SourceControlRegistry {
       operation: options.operation,
       providerId: plugin.manifest.id,
       run: (context) => options.run(plugin, context),
-      secrets: secretsFromUrl(activation.remote.url),
+      secrets:
+        this.#activationSecrets.get(activationKey(activation)) ??
+        secretsFromUrl(activation.remote.url),
       signal: options.signal,
       timeoutMs: this.#invocationTimeoutMs,
     });
