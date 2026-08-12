@@ -27,13 +27,15 @@ const commandHandlers = new Map<CommandId, (args?: unknown) => unknown>();
 const toolContext = {
   chatId: "chat-1" as string | null,
   contextKey: "ctx-1" as string | null,
+  projectId: "project-1" as string | null,
   root: "/tmp/repo-1" as string | null,
 };
 
 const startShepherd = vi.fn();
 const stopShepherd = vi.fn();
 const getShepherd = vi.fn();
-const pullRequestStatus = vi.fn();
+const currentChangeRequest = vi.fn();
+const resolveLink = vi.fn();
 const toast = vi.fn();
 const updateWorkspaceToolSnapshot = vi.fn();
 
@@ -66,8 +68,9 @@ vi.mock("@/platform/keymap/provider", () => ({
 
 vi.mock("@/platform/use-api", () => ({
   useApi: () => ({
-    github: {
-      pullRequestStatus,
+    sourceControl: {
+      currentChangeRequest,
+      resolveLink,
     },
     shepherd: {
       get: getShepherd,
@@ -75,6 +78,23 @@ vi.mock("@/platform/use-api", () => ({
       stop: stopShepherd,
     },
   }),
+}));
+
+const activation = {
+  capabilities: {
+    entries: {
+      "changeRequests.getByUrl": { supported: true as const },
+      "changeRequests.list": { supported: true as const },
+      "changeRequests.status": { supported: true as const },
+    },
+  },
+  projectPath: "/tmp/repo-1",
+  providerIdentity: "github:github.com/acme/widgets:1",
+  status: "active" as "active" | "unresolved",
+};
+
+vi.mock("@/features/source-control/api/use-activation", () => ({
+  useSourceControlActivation: () => activation,
 }));
 
 vi.mock("@/components/ui/toast", () => ({
@@ -185,18 +205,31 @@ beforeEach(() => {
   commandHandlers.clear();
   toolContext.chatId = "chat-1";
   toolContext.contextKey = "ctx-1";
+  toolContext.projectId = "project-1";
   toolContext.root = "/tmp/repo-1";
+  activation.projectPath = "/tmp/repo-1";
+  activation.status = "active";
   startShepherd.mockReset();
   stopShepherd.mockReset();
   getShepherd.mockReset();
-  pullRequestStatus.mockReset();
+  currentChangeRequest.mockReset();
+  resolveLink.mockReset();
   toast.mockReset();
   updateWorkspaceToolSnapshot.mockReset();
   getShepherd.mockResolvedValue({ session: null });
-  pullRequestStatus.mockResolvedValue({
-    state: "OPEN",
-    url: "https://github.com/acme/widgets/pull/1",
+  const changeRequest = {
+    id: "1",
+    number: 1,
+    repository: { name: "widgets", namespace: ["acme"] },
+    source: { name: "feature" },
+    state: "open",
+    webUrl: "https://github.com/acme/widgets/pull/1",
+  };
+  currentChangeRequest.mockResolvedValue({
+    changeRequest,
+    checks: null,
   });
+  resolveLink.mockResolvedValue(changeRequest);
   startShepherd.mockResolvedValue({
     id: "s1",
     chatId: "chat-1",
@@ -296,7 +329,11 @@ describe("WorkspaceCommandPalette", () => {
         repo: "widgets",
       });
     });
-    expect(pullRequestStatus).toHaveBeenCalledWith({ cwd: "/tmp/repo-1" });
+    expect(currentChangeRequest).toHaveBeenCalledWith("/tmp/repo-1");
+    expect(resolveLink).toHaveBeenCalledWith(
+      "/tmp/repo-1",
+      "https://github.com/acme/widgets/pull/1",
+    );
     expect(updateWorkspaceToolSnapshot).toHaveBeenCalled();
   });
 
@@ -324,13 +361,24 @@ describe("WorkspaceCommandPalette", () => {
     // Switch workspace context without changing chats/t (the stale-closure bug).
     toolContext.chatId = "chat-2";
     toolContext.contextKey = "ctx-2";
+    toolContext.projectId = "project-2";
     toolContext.root = "/tmp/repo-2";
-    pullRequestStatus.mockResolvedValue({
-      state: "OPEN",
-      url: "https://github.com/acme/other/pull/9",
+    activation.projectPath = "/tmp/repo-2";
+    const nextChangeRequest = {
+      id: "9",
+      number: 9,
+      repository: { name: "other", namespace: ["acme"] },
+      source: { name: "feature" },
+      state: "open",
+      webUrl: "https://gitlab.example.com/acme/other/-/merge_requests/9",
+    };
+    currentChangeRequest.mockResolvedValue({
+      changeRequest: nextChangeRequest,
+      checks: null,
     });
+    resolveLink.mockResolvedValue(nextChangeRequest);
     startShepherd.mockClear();
-    pullRequestStatus.mockClear();
+    currentChangeRequest.mockClear();
 
     // Force a re-render so useCallback picks up new toolContext deps.
     view.rerender(
@@ -356,6 +404,29 @@ describe("WorkspaceCommandPalette", () => {
         repo: "other",
       });
     });
-    expect(pullRequestStatus).toHaveBeenCalledWith({ cwd: "/tmp/repo-2" });
+    expect(currentChangeRequest).toHaveBeenCalledWith("/tmp/repo-2");
+  });
+
+  it("makes zero source-control business requests when activation is not active", async () => {
+    activation.status = "unresolved";
+    activation.projectPath = "";
+    render(
+      <WorkspaceCommandPalette
+        chats={[]}
+        onNewWorkspace={vi.fn()}
+        onOpenSession={vi.fn()}
+        onOpenSettings={vi.fn()}
+      />,
+    );
+
+    await openPaletteViaCommand();
+    await act(async () => {
+      fireEvent.click(screen.getByText("ui.commandShepherdPr"));
+    });
+
+    await waitFor(() => expect(toast).toHaveBeenCalled());
+    expect(currentChangeRequest).not.toHaveBeenCalled();
+    expect(resolveLink).not.toHaveBeenCalled();
+    expect(startShepherd).not.toHaveBeenCalled();
   });
 });

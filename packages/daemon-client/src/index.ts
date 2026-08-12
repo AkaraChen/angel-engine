@@ -142,6 +142,7 @@ import type {
   MergeMethod,
   PublishBranchResult,
   ReviewThread,
+  ResolvedSourceControlLink,
   SourceControlActivationResult,
   WorkItem,
 } from "@angel-engine/daemon-api/source-control";
@@ -776,6 +777,11 @@ export function createDaemonClient(options: DaemonClientOptions) {
             projectPath,
             query: queryText,
           })}`,
+        ),
+      resolveLink: (projectPath: string, url: string) =>
+        request<ResolvedSourceControlLink>(
+          "/api/source-control/links/resolve",
+          json("POST", { projectPath, url }),
         ),
       changeRequestPreflight: (projectPath: string, targetBranch?: string) =>
         request<ChangeRequestCreatePreflightResult>(

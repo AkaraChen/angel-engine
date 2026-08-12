@@ -29,7 +29,6 @@ export const queryKeys = {
     repositories: (owner: string | null) =>
       ["github", "repositories", owner] as const,
     repositoryOwners: () => ["github", "repository-owners"] as const,
-    resolve: (url: string | null) => ["github", "resolve", url] as const,
   },
   sourceControl: {
     all: () => ["source-control"] as const,

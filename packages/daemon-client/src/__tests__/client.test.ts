@@ -70,6 +70,28 @@ describe("createDaemonClient", () => {
     );
   });
 
+  it("resolves links through the activated source-control project", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ id: "42" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createDaemonClient({ baseUrl: "", token: null });
+    await client.sourceControl.resolveLink(
+      "/repo with spaces",
+      "https://gitlab.example.com/group/repo/-/merge_requests/42",
+    );
+
+    expect(fetchMock.mock.calls[0]).toEqual([
+      "/api/source-control/links/resolve",
+      expect.objectContaining({
+        body: JSON.stringify({
+          projectPath: "/repo with spaces",
+          url: "https://gitlab.example.com/group/repo/-/merge_requests/42",
+        }),
+        method: "POST",
+      }),
+    ]);
+  });
+
   it("uses generic source-control checks and review routes", async () => {
     const fetchMock = vi.fn().mockImplementation(async () => jsonResponse({}));
     vi.stubGlobal("fetch", fetchMock);

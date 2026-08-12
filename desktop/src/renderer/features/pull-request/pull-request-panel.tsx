@@ -556,7 +556,10 @@ export const PullRequestPanel: FC<{
           </section>
         ) : null}
 
-        <ShepherdSection status={status} />
+        <ShepherdSection
+          changeRequest={status.changeRequest}
+          projectId={projectId}
+        />
       </div>
     </div>
   );

@@ -5,7 +5,7 @@ import type {
   ChatPrewarmResult,
   ChatRuntimeConfig,
 } from "@angel-engine/daemon-api/chat";
-import type { ResolvedTaskLink } from "@angel-engine/daemon-api/links";
+import type { ResolvedSourceControlLink } from "@angel-engine/daemon-api/source-control";
 
 import type { QueryClient } from "@tanstack/react-query";
 import type { ApiClient } from "@/platform/api-client";
@@ -71,14 +71,14 @@ interface SourceControlItemsQueryParams {
   staleTime?: number;
 }
 
-interface GitHubResolveQueryParams {
+interface SourceControlLinkResolveQueryParams {
   api: ApiClient;
   enabled?: boolean;
+  projectPath: string | null;
+  providerIdentity: string | null;
   staleTime?: number;
   url: string | null;
 }
-
-interface TaskLinkResolveQueryParams extends GitHubResolveQueryParams {}
 
 interface ChatPrewarmQueryParams {
   api: ApiClient;
@@ -343,32 +343,23 @@ export function sourceControlChangeRequestsQueryOptions({
   });
 }
 
-export function githubResolveQueryOptions({
+export function sourceControlLinkResolveQueryOptions({
   api,
   enabled = true,
-  staleTime = 60_000,
-  url,
-}: GitHubResolveQueryParams) {
-  return queryOptions({
-    enabled: enabled && is.nonEmptyString(url),
-    queryFn: async () => api.github.resolveUrl({ url: url ?? "" }),
-    queryKey: queryKeys.github.resolve(url),
-    retry: false,
-    staleTime,
-  });
-}
-
-export function taskLinkResolveQueryOptions({
-  api,
-  enabled = true,
+  projectPath,
+  providerIdentity,
   staleTime = 30_000,
   url,
-}: TaskLinkResolveQueryParams) {
+}: SourceControlLinkResolveQueryParams) {
   return queryOptions({
-    enabled: enabled && is.nonEmptyString(url),
-    queryFn: async (): Promise<ResolvedTaskLink> =>
-      api.links.resolve({ url: url ?? "" }),
-    queryKey: ["task-link", "resolve", url],
+    enabled:
+      enabled &&
+      is.nonEmptyString(projectPath) &&
+      is.nonEmptyString(providerIdentity) &&
+      is.nonEmptyString(url),
+    queryFn: async (): Promise<ResolvedSourceControlLink> =>
+      api.sourceControl.resolveLink(projectPath ?? "", url ?? ""),
+    queryKey: queryKeys.sourceControl.links(providerIdentity, url),
     retry: false,
     staleTime,
   });

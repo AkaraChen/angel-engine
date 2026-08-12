@@ -1,5 +1,5 @@
 import type { ShepherdSession } from "@angel-engine/daemon-api/shepherd";
-import type { GitHubPullRequestStatus } from "@angel-engine/daemon-api/github";
+import type { ChangeRequest } from "@angel-engine/daemon-api/source-control";
 import type { FC } from "react";
 
 import { DaemonRequestError } from "@angel-engine/daemon-client";
@@ -20,6 +20,9 @@ import { useTranslation } from "react-i18next";
 import { WorkspaceToolBanner } from "@/app/workspace/workspace-tool-layout";
 import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
 import { Button } from "@/components/ui/button";
+import { useSourceControlActivation } from "@/features/source-control/api/use-activation";
+import { CapabilityGate } from "@/features/source-control/components/capability-gate";
+import { capabilityState } from "@/features/source-control/model";
 import { useToast } from "@/components/ui/toast";
 import {
   isShepherdActive,
@@ -28,7 +31,7 @@ import {
   startShepherdMutationOptions,
   stopShepherdMutationOptions,
 } from "@/features/shepherd/api/queries";
-import { parseGitHubPullRequestUrl } from "@/features/shepherd/parse-github-pr-url";
+import { resolveShepherdTarget } from "@/features/shepherd/resolve-shepherd-target";
 import {
   isResumableShepherdSession,
   shepherdHoldReason,
@@ -37,12 +40,22 @@ import {
 import { cn } from "@/platform/utils";
 
 export const ShepherdSection: FC<{
-  status: GitHubPullRequestStatus;
-}> = ({ status }) => {
+  changeRequest: ChangeRequest;
+  projectId: string | null;
+}> = ({ changeRequest, projectId }) => {
   const { active, api, chatId } = useWorkspaceToolSurface();
   const queryClient = useQueryClient();
   const { t } = useTranslation();
   const toast = useToast();
+  const sourceControl = useSourceControlActivation(projectId);
+  const linkCapability = capabilityState(
+    sourceControl.capabilities,
+    "changeRequests.getByUrl",
+  );
+  const canResolveTarget =
+    sourceControl.status === "active" &&
+    is.nonEmptyString(sourceControl.projectPath) &&
+    linkCapability.supported;
 
   const sessionQuery = useQuery(
     shepherdSessionQueryOptions({
@@ -128,8 +141,15 @@ export const ShepherdSection: FC<{
         return;
       }
 
-      const parsed = parseGitHubPullRequestUrl(status.url);
-      if (parsed === null) {
+      if (!canResolveTarget || !is.nonEmptyString(sourceControl.projectPath)) {
+        return;
+      }
+      const target = await resolveShepherdTarget({
+        api,
+        projectPath: sourceControl.projectPath,
+        url: changeRequest.webUrl,
+      });
+      if (target === null) {
         toast({
           title: t("workspace.tools.pullRequest.shepherd.startFailed"),
           description: t("workspace.tools.pullRequest.shepherd.invalidUrl"),
@@ -140,9 +160,7 @@ export const ShepherdSection: FC<{
 
       await startMutation.mutateAsync({
         chatId,
-        owner: parsed.owner,
-        prNumber: parsed.prNumber,
-        repo: parsed.repo,
+        ...target,
       });
     } catch (error) {
       const code =
@@ -159,8 +177,18 @@ export const ShepherdSection: FC<{
         });
         return;
       }
+      if (
+        code === "source-control/url-unsupported" ||
+        code === "source-control/item-not-found"
+      ) {
+        toast({
+          description: t("workspace.tools.pullRequest.shepherd.invalidUrl"),
+          title: t("workspace.tools.pullRequest.shepherd.startFailed"),
+          variant: "destructive",
+        });
+        return;
+      }
       toast({
-        description: error instanceof Error ? error.message : String(error),
         title: t("workspace.tools.pullRequest.shepherd.actionFailed"),
         variant: "destructive",
       });
@@ -207,16 +235,36 @@ export const ShepherdSection: FC<{
             />
           ) : null}
         </div>
-        <Button
-          data-testid="shepherd-toggle"
-          disabled={busy || !is.nonEmptyString(chatId)}
-          onClick={() => void toggle()}
-          size="sm"
-          variant={activeShepherd ? "default" : "outline"}
-        >
-          {busy ? <SpinnerGap className="animate-spin" /> : null}
-          {buttonLabel}
-        </Button>
+        {canResolveTarget || activeShepherd || resumable ? (
+          <Button
+            data-testid="shepherd-toggle"
+            disabled={busy || !is.nonEmptyString(chatId)}
+            onClick={() => void toggle()}
+            size="sm"
+            variant={activeShepherd ? "default" : "outline"}
+          >
+            {busy ? <SpinnerGap className="animate-spin" /> : null}
+            {buttonLabel}
+          </Button>
+        ) : (
+          <CapabilityGate
+            capabilities={sourceControl.capabilities}
+            capability="changeRequests.getByUrl"
+            onRemediate={() => void sourceControl.refetch()}
+            remediationLabel={t("common.retry")}
+          >
+            <Button
+              data-testid="shepherd-toggle"
+              disabled={busy || !is.nonEmptyString(chatId)}
+              onClick={() => void toggle()}
+              size="sm"
+              variant="outline"
+            >
+              {busy ? <SpinnerGap className="animate-spin" /> : null}
+              {buttonLabel}
+            </Button>
+          </CapabilityGate>
+        )}
       </div>
 
       {session?.state === "queued" ? (

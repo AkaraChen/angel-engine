@@ -83,7 +83,9 @@ const changeRequest: ChangeRequest = {
 };
 const supportedCapabilities: CapabilityMatrix = {
   entries: {
+    "changeRequests.getByUrl": { supported: true },
     "changeRequests.list": { supported: true },
+    "workItems.getByUrl": { supported: true },
     "workItems.list": { supported: true },
   },
 };
@@ -100,10 +102,10 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/platform/use-api", () => ({
   useApi: () => ({
-    links: { resolve: mocks.resolveUrl },
     sourceControl: {
       listChangeRequests: mocks.listChangeRequests,
       listWorkItems: mocks.listWorkItems,
+      resolveLink: mocks.resolveUrl,
     },
   }),
 }));
@@ -264,6 +266,46 @@ describe("PromptSourceControlAttachButton", () => {
     expect(screen.queryByText("provider details must not leak")).toBeNull();
   });
 
+  it("resolves a non-GitHub URL through the active provider", async () => {
+    const gitlabRepository = {
+      ...repository,
+      displayPath: "group/widgets",
+      host: "gitlab.example.com",
+      namespace: ["group"],
+      providerId: "gitlab",
+      webUrl: "https://gitlab.example.com/group/widgets",
+    };
+    const url = "https://gitlab.example.com/group/widgets/-/merge_requests/7";
+    const resolved = {
+      ...changeRequest,
+      repository: gitlabRepository,
+      source: { ...changeRequest.source, repository: gitlabRepository },
+      target: { ...changeRequest.target, repository: gitlabRepository },
+      webUrl: url,
+    };
+    mocks.resolveUrl.mockResolvedValue(resolved);
+    const onAttached = vi.fn();
+    renderButton(onAttached);
+    openDialog();
+
+    fireEvent.change(screen.getByPlaceholderText("Search or paste a link"), {
+      target: { value: url },
+    });
+
+    await waitFor(() =>
+      expect(mocks.resolveUrl).toHaveBeenCalledWith("/repos/widgets", url),
+    );
+    expect(await screen.findByText("Add widget spinner")).toBeDefined();
+    fireEvent.click(screen.getByText("composer.attachGitHubConfirm"));
+    expect(onAttached).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: "changeRequest",
+        providerId: "gitlab",
+        repositoryPath: "group/widgets",
+      }),
+    );
+  });
+
   it("fails closed with a disabled reason and zero business requests", () => {
     mocks.status = "unresolved";
     mocks.capabilities = { entries: {} };
@@ -273,7 +315,7 @@ describe("PromptSourceControlAttachButton", () => {
     expect(trigger.getAttribute("disabled")).not.toBeNull();
     expect(
       trigger.closest("[data-capability]")?.getAttribute("data-capability"),
-    ).toBe("workItems.list");
+    ).toBe("workItems.getByUrl");
     fireEvent.click(trigger);
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(mocks.listWorkItems).not.toHaveBeenCalled();
