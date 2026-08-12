@@ -25,7 +25,7 @@ export function configureApplicationMenu({
   rebuildApplicationMenu();
 }
 
-/** Rebuild menu so accelerators mirror current keymap (KIT-796). */
+/** Rebuild the menu so accelerators and translated labels stay current. */
 export function rebuildApplicationMenu() {
   if (!openSettingsWindowRef) return;
   const openSettingsWindow = openSettingsWindowRef;
@@ -111,7 +111,7 @@ function menuTemplate({
       ],
     },
     {
-      label: "View",
+      label: translate("menu.view"),
       submenu: [
         commandItem(
           "toggle-sidebar",
@@ -131,7 +131,7 @@ function menuTemplate({
       ],
     },
     {
-      label: "Window",
+      label: translate("menu.window"),
       submenu: [
         { role: "minimize" },
         { role: "zoom" },

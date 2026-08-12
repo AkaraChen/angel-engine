@@ -7,6 +7,10 @@ export const ko = {
     app: {
       name: "Angel Engine",
     },
+    menu: {
+      view: "보기",
+      window: "창",
+    },
     commands: {
       categories: {
         app: "앱",

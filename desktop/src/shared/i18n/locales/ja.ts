@@ -7,6 +7,10 @@ export const ja = {
     app: {
       name: "Angel Engine",
     },
+    menu: {
+      view: "表示",
+      window: "ウインドウ",
+    },
     commands: {
       categories: {
         app: "アプリ",
