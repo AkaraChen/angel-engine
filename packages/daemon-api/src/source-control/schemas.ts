@@ -224,6 +224,7 @@ export const providerDiagnosticSchema = arkType({
 
 export const providerActivationSchema = arkType({
   "+": "reject",
+  generation: "number.integer >= 0",
   provider: providerManifestSchema,
   projectPath: "string > 0",
   remote: {

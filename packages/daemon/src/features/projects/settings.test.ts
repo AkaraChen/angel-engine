@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   root: "",
 }));
 
-vi.mock("./git", () => ({
+vi.mock("../source-control/local-git/projects", () => ({
   projectGitStatus: () =>
     Effect.succeed({
       isDirty: false,

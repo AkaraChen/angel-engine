@@ -444,6 +444,12 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
             onClone={startClone}
             onOpenChange={setCloneDialogOpen}
             open={cloneDialogOpen}
+            projectId={
+              selectedChat?.projectId ??
+              selectedProjectId ??
+              draftProject.id ??
+              null
+            }
           />
           <CloneProgressDialog
             onClose={closeCloneProgress}
@@ -462,6 +468,9 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           <WorkspaceToolContextBridge
             chatId={selectedChatId ?? null}
             contextKey={workspaceToolContextKey ?? null}
+            projectId={
+              selectedChat?.projectId ?? selectedProjectId ?? draftProject.id
+            }
             root={workspaceToolRoot ?? null}
           />
 

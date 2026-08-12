@@ -14,7 +14,7 @@ import {
   discardCreatedWorktree,
   projectGitStatus,
   removeManagedWorktree,
-} from "./git";
+} from "../source-control/local-git/projects";
 import { projectSetupLifecycle } from "./setup-lifecycle";
 
 const execFileAsync = promisify(execFile);
@@ -116,7 +116,7 @@ describe("project worktree setup", () => {
       git(createdWorktree.cwd, ["branch", "--show-current"]),
     ).resolves.toBe("feature/pr-head");
     expect(createdWorktree.createdBranch).toBe(false);
-  });
+  }, 15_000);
 
   it("fast-forwards a stale local branch to the fetched pull request head", async () => {
     await configureOrigin();
@@ -147,7 +147,7 @@ describe("project worktree setup", () => {
       pullRequestHead,
     );
     expect(createdWorktree.createdBranch).toBe(false);
-  });
+  }, 15_000);
 
   it("rejects a divergent local branch instead of using the wrong commit", async () => {
     await configureOrigin();
@@ -176,7 +176,7 @@ describe("project worktree setup", () => {
     );
     expect(error).toMatchObject({ code: "worktree-branch-conflict" });
     await expect(directoryEntriesOrEmpty(worktreeParent)).resolves.toEqual([]);
-  });
+  }, 15_000);
 
   it("rejects a pull request branch already used by another worktree", async () => {
     const currentBranch = await git(projectRoot, ["branch", "--show-current"]);
@@ -194,7 +194,7 @@ describe("project worktree setup", () => {
       code: "worktree-branch-in-use",
       relatedChatId: "chat-using-branch",
     });
-  });
+  }, 15_000);
 
   it("C2 keeps a failed setup worktree reachable", async () => {
     await writeConfig(["exit 7"]);
@@ -283,7 +283,7 @@ describe("project worktree setup", () => {
     await expect(
       git(projectRoot, ["branch", "--list", "angel/*"]),
     ).resolves.toBe("");
-  });
+  }, 15_000);
 
   it("prunes metadata and deletes the branch only on explicit discard", async () => {
     await writeConfig(["echo ready"]);

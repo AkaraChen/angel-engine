@@ -28,7 +28,11 @@ it("repairs automation tables skipped by the out-of-order migration", async () =
     await copyMigrations(
       historicalMigrationsDir,
       (tag) =>
-        !["0010_odd_midnight", "0012_repair_automation_tables"].includes(tag),
+        ![
+          "0010_odd_midnight",
+          "0012_repair_automation_tables",
+          "0013_pink_marrow",
+        ].includes(tag),
     );
 
     const client = createClient({
@@ -120,6 +124,42 @@ it("preserves existing automation data when applying the repair", async () => {
         },
       ],
     });
+    client.close();
+  } finally {
+    await rm(temporaryDir, { force: true, recursive: true });
+  }
+});
+
+it("adds provider mappings after the released automation repair", async () => {
+  const temporaryDir = await mkdtemp(
+    path.join(tmpdir(), "angel-migration-test-"),
+  );
+  const historicalMigrationsDir = path.join(temporaryDir, "migrations");
+  await mkdir(path.join(historicalMigrationsDir, "meta"), { recursive: true });
+  try {
+    await copyMigrations(
+      historicalMigrationsDir,
+      (tag) => tag !== "0013_pink_marrow",
+    );
+    const client = createClient({
+      url: `file:${path.join(temporaryDir, "database.sqlite")}`,
+    });
+
+    await migrate(drizzle(client), {
+      migrationsFolder: historicalMigrationsDir,
+    });
+    await expect(
+      client.execute("SELECT * FROM automations"),
+    ).resolves.toMatchObject({ rows: [] });
+    await expect(
+      client.execute("SELECT * FROM provider_host_mappings"),
+    ).rejects.toThrow();
+
+    await migrate(drizzle(client), { migrationsFolder: migrationsDir });
+
+    await expect(
+      client.execute("SELECT host, provider_id FROM provider_host_mappings"),
+    ).resolves.toMatchObject({ rows: [] });
     client.close();
   } finally {
     await rm(temporaryDir, { force: true, recursive: true });
