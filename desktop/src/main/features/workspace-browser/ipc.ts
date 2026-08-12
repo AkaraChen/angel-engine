@@ -9,6 +9,7 @@ import type {
   WorkspaceBrowserState,
 } from "../../../shared/workspace-browser";
 
+import path from "node:path";
 import is from "@sindresorhus/is";
 import { type } from "arktype";
 import { BrowserWindow, ipcMain, shell, WebContentsView } from "electron";
@@ -18,6 +19,10 @@ import {
   WORKSPACE_BROWSER_CREATE_CHANNEL,
   WORKSPACE_BROWSER_DESTROY_CHANNEL,
   WORKSPACE_BROWSER_DETACH_CHANNEL,
+  WORKSPACE_BROWSER_DESIGN_GET_STATE_CHANNEL,
+  WORKSPACE_BROWSER_DESIGN_SET_ALLOWED_ORIGINS_CHANNEL,
+  WORKSPACE_BROWSER_DESIGN_START_CHANNEL,
+  WORKSPACE_BROWSER_DESIGN_STOP_CHANNEL,
   WORKSPACE_BROWSER_GET_STATE_CHANNEL,
   WORKSPACE_BROWSER_GO_BACK_CHANNEL,
   WORKSPACE_BROWSER_GO_FORWARD_CHANNEL,
@@ -26,6 +31,7 @@ import {
   WORKSPACE_BROWSER_SET_BOUNDS_CHANNEL,
   workspaceBrowserEventChannel,
 } from "../../../shared/workspace-browser";
+import { WorkspaceBrowserDesignModeService } from "./design-mode";
 
 interface WorkspaceBrowserAttachment {
   attachmentId: string;
@@ -42,6 +48,28 @@ interface WorkspaceBrowserInstance {
 }
 
 const workspaceBrowserInstances = new Map<string, WorkspaceBrowserInstance>();
+
+const designModeService = new WorkspaceBrowserDesignModeService(
+  (browserViewId) => {
+    const instance = workspaceBrowserInstances.get(browserViewId);
+    if (!instance) {
+      return undefined;
+    }
+    return {
+      browserViewId,
+      webContents: instance.view.webContents,
+    };
+  },
+  {
+    sendToAllWindows(channel, payload) {
+      for (const window of BrowserWindow.getAllWindows()) {
+        if (!window.isDestroyed()) {
+          window.webContents.send(channel, payload);
+        }
+      }
+    },
+  },
+);
 
 const nonEmptyTrimmedString = type("string.trim").to("string > 0");
 const finiteNumber = type("number").narrow(
@@ -100,6 +128,8 @@ const workspaceBrowserNavigateInput = type({
 });
 
 export function registerWorkspaceBrowserIpc() {
+  designModeService.register();
+
   ipcMain.handle(WORKSPACE_BROWSER_CREATE_CHANNEL, (_event, input: unknown) => {
     const request = parseWorkspaceBrowserCreateInput(input);
     const instance = ensureWorkspaceBrowserInstance(request);
@@ -148,10 +178,43 @@ export function registerWorkspaceBrowserIpc() {
         return { ok: true };
       }
 
+      designModeService.forget(request.browserViewId);
       detachWorkspaceBrowserView(instance);
       workspaceBrowserInstances.delete(request.browserViewId);
       instance.view.webContents.close();
       return { ok: true };
+    },
+  );
+
+  ipcMain.handle(
+    WORKSPACE_BROWSER_DESIGN_START_CHANNEL,
+    (_event, input: unknown) => {
+      const request = designModeService.parseCommandInput(input);
+      return designModeService.start(request.browserViewId);
+    },
+  );
+
+  ipcMain.handle(
+    WORKSPACE_BROWSER_DESIGN_STOP_CHANNEL,
+    (_event, input: unknown) => {
+      const request = designModeService.parseCommandInput(input);
+      return designModeService.stop(request.browserViewId);
+    },
+  );
+
+  ipcMain.handle(
+    WORKSPACE_BROWSER_DESIGN_GET_STATE_CHANNEL,
+    (_event, input: unknown) => {
+      const request = designModeService.parseCommandInput(input);
+      return designModeService.getState(request.browserViewId);
+    },
+  );
+
+  ipcMain.handle(
+    WORKSPACE_BROWSER_DESIGN_SET_ALLOWED_ORIGINS_CHANNEL,
+    (_event, input: unknown) => {
+      const request = designModeService.parseSetAllowedOriginsInput(input);
+      return designModeService.setAllowedOrigins(request);
     },
   );
 
@@ -211,7 +274,12 @@ function ensureWorkspaceBrowserInstance({
 
   const view = new WebContentsView({
     webPreferences: {
+      // Guest Design Mode preload only — never the host-window preload.
+      contextIsolation: true,
+      nodeIntegration: false,
       partition: "persist:workspace-browser",
+      preload: workspaceBrowserDesignModePreloadPath(),
+      sandbox: true,
     },
   });
   const instance: WorkspaceBrowserInstance = {
@@ -226,6 +294,11 @@ function ensureWorkspaceBrowserInstance({
   configureWorkspaceBrowserWebContents(instance);
   loadWorkspaceBrowserUrl(instance, initialUrl);
   return instance;
+}
+
+function workspaceBrowserDesignModePreloadPath() {
+  // Main and preload builds both land in `.vite/build/` next to main.js.
+  return path.join(__dirname, "design-mode-preload.js");
 }
 
 function configureWorkspaceBrowserWebContents(
@@ -261,10 +334,12 @@ function configureWorkspaceBrowserWebContents(
   });
   webContents.on("did-navigate", (_event, url) => {
     instance.url = url;
+    designModeService.onNavigation(instance.browserViewId);
     emitWorkspaceBrowserState(instance);
   });
   webContents.on("did-navigate-in-page", (_event, url) => {
     instance.url = url;
+    designModeService.onNavigation(instance.browserViewId);
     emitWorkspaceBrowserState(instance);
   });
   webContents.on("page-title-updated", (_event, title) => {
@@ -272,6 +347,7 @@ function configureWorkspaceBrowserWebContents(
     emitWorkspaceBrowserState(instance);
   });
   webContents.on("destroyed", () => {
+    designModeService.forget(instance.browserViewId);
     workspaceBrowserInstances.delete(instance.browserViewId);
   });
 }

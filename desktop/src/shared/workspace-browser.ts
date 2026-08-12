@@ -12,8 +12,38 @@ export const WORKSPACE_BROWSER_RELOAD_CHANNEL = "workspace-browser:reload";
 export const WORKSPACE_BROWSER_SET_BOUNDS_CHANNEL =
   "workspace-browser:set-bounds";
 
+/** Host → main: enter Design Mode on a browser view (no-op if already active). */
+export const WORKSPACE_BROWSER_DESIGN_START_CHANNEL =
+  "workspace-browser:design:start";
+/** Host → main: leave Design Mode and tear down guest overlay. */
+export const WORKSPACE_BROWSER_DESIGN_STOP_CHANNEL =
+  "workspace-browser:design:stop";
+/** Host → main: replace extra allowlisted origins for a browser view. */
+export const WORKSPACE_BROWSER_DESIGN_SET_ALLOWED_ORIGINS_CHANNEL =
+  "workspace-browser:design:set-allowed-origins";
+/** Host → main: read Design Mode state for a browser view. */
+export const WORKSPACE_BROWSER_DESIGN_GET_STATE_CHANNEL =
+  "workspace-browser:design:get-state";
+
+/**
+ * Main → guest preload: start/stop commands for the design-mode runtime.
+ * Guest pages never see this channel name through `window.*`.
+ */
+export const WORKSPACE_BROWSER_DESIGN_GUEST_COMMAND_CHANNEL =
+  "workspace-browser:design:guest-command";
+/**
+ * Guest preload → main: runtime lifecycle / future selection events.
+ * Main stamps `browserViewId` + trusted origin before forwarding to host.
+ */
+export const WORKSPACE_BROWSER_DESIGN_GUEST_EVENT_CHANNEL =
+  "workspace-browser:design:guest-event";
+
 export function workspaceBrowserEventChannel(browserViewId: string) {
   return `workspace-browser:event:${browserViewId}`;
+}
+
+export function workspaceBrowserDesignEventChannel(browserViewId: string) {
+  return `workspace-browser:design:event:${browserViewId}`;
 }
 
 export interface WorkspaceBrowserBounds {
@@ -71,6 +101,149 @@ export interface WorkspaceBrowserOkResult {
   ok: true;
 }
 
+// --- Design Mode contracts (F04 skeleton; selection/capture later) ---
+
+export interface DesignRect {
+  height: number;
+  width: number;
+  x: number;
+  y: number;
+}
+
+/**
+ * Selection anchor shapes. Stage 1 only wires the pipeline; stage 2 fills
+ * `element` / `region`. `text` / `point` stay reserved.
+ */
+export type DesignAnchor =
+  | {
+      kind: "element";
+      rect: DesignRect;
+      selector: string;
+    }
+  | {
+      kind: "region";
+      rect: DesignRect;
+    }
+  | {
+      kind: "text";
+      rect: DesignRect;
+      text: string;
+    }
+  | {
+      kind: "point";
+      x: number;
+      y: number;
+    };
+
+/**
+ * Collected element context for agent prompts. Stage 1 does not populate this;
+ * stage 2 fills fields after pick + redaction.
+ */
+export interface DesignElement {
+  computedStyles?: Record<string, string>;
+  href?: string;
+  label?: string;
+  reactComponents?: string[];
+  rect: DesignRect;
+  role?: string;
+  selector: string;
+  tagName: string;
+  testId?: string;
+  text?: string;
+}
+
+/** CSS draft change from the inspector (stage 4). */
+export interface DesignChange {
+  property: string;
+  value: string;
+}
+
+export type DesignModeErrorCode =
+  | "origin-not-allowed"
+  | "instance-missing"
+  | "not-active"
+  | "unknown";
+
+/**
+ * Host-facing Design Mode events. Main always stamps `browserViewId` and
+ * `origin` from trusted webContents state — never from guest-reported values.
+ */
+export type DesignRuntimeEvent =
+  | {
+      browserViewId: string;
+      origin: string;
+      type: "started";
+    }
+  | {
+      browserViewId: string;
+      origin: string;
+      type: "stopped";
+    }
+  | {
+      browserViewId: string;
+      code: DesignModeErrorCode;
+      message: string;
+      origin: string;
+      type: "error";
+    }
+  | {
+      anchor: DesignAnchor;
+      browserViewId: string;
+      changes?: DesignChange[];
+      element?: DesignElement;
+      origin: string;
+      type: "selection";
+    };
+
+/** Guest → main payload before main stamps browserViewId/origin. */
+export type DesignGuestEvent =
+  | { type: "started" }
+  | { type: "stopped" }
+  | {
+      anchor: DesignAnchor;
+      changes?: DesignChange[];
+      element?: DesignElement;
+      type: "selection";
+    };
+
+export type DesignGuestCommand = { type: "start" } | { type: "stop" };
+
+export interface WorkspaceBrowserDesignStartInput
+  extends WorkspaceBrowserCommandInput {}
+
+export interface WorkspaceBrowserDesignStopInput
+  extends WorkspaceBrowserCommandInput {}
+
+export interface WorkspaceBrowserDesignSetAllowedOriginsInput
+  extends WorkspaceBrowserCommandInput {
+  /** Extra origins (e.g. `http://192.168.1.10:5173`) beyond default localhost. */
+  origins: string[];
+}
+
+export interface WorkspaceBrowserDesignState {
+  active: boolean;
+  /** True when the current page origin is allowlisted for Design Mode. */
+  allowed: boolean;
+  /** Trusted origin from webContents URL, or null when blank/unparsed. */
+  origin: string | null;
+}
+
+export interface WorkspaceBrowserDesignStartResult {
+  ok: true;
+  state: WorkspaceBrowserDesignState;
+}
+
+export interface WorkspaceBrowserDesignStartDeniedResult {
+  code: DesignModeErrorCode;
+  message: string;
+  ok: false;
+  state: WorkspaceBrowserDesignState;
+}
+
+export type WorkspaceBrowserDesignStartOutcome =
+  | WorkspaceBrowserDesignStartResult
+  | WorkspaceBrowserDesignStartDeniedResult;
+
 export interface WorkspaceBrowserApi {
   attach: (
     input: WorkspaceBrowserAttachInput,
@@ -84,6 +257,9 @@ export interface WorkspaceBrowserApi {
   detach: (
     input: WorkspaceBrowserDetachInput,
   ) => Promise<WorkspaceBrowserOkResult>;
+  getDesignState: (
+    input: WorkspaceBrowserCommandInput,
+  ) => Promise<WorkspaceBrowserDesignState>;
   getState: (
     input: WorkspaceBrowserCommandInput,
   ) => Promise<WorkspaceBrowserState>;
@@ -96,6 +272,10 @@ export interface WorkspaceBrowserApi {
   navigate: (
     input: WorkspaceBrowserNavigateInput,
   ) => Promise<WorkspaceBrowserState>;
+  onDesignEvent: (
+    browserViewId: string,
+    handler: (event: DesignRuntimeEvent) => void,
+  ) => () => void;
   onEvent: (
     browserViewId: string,
     handler: (event: WorkspaceBrowserEvent) => void,
@@ -106,4 +286,93 @@ export interface WorkspaceBrowserApi {
   setBounds: (
     input: WorkspaceBrowserSetBoundsInput,
   ) => Promise<WorkspaceBrowserState>;
+  setDesignAllowedOrigins: (
+    input: WorkspaceBrowserDesignSetAllowedOriginsInput,
+  ) => Promise<WorkspaceBrowserDesignState>;
+  startDesignMode: (
+    input: WorkspaceBrowserDesignStartInput,
+  ) => Promise<WorkspaceBrowserDesignStartOutcome>;
+  stopDesignMode: (
+    input: WorkspaceBrowserDesignStopInput,
+  ) => Promise<WorkspaceBrowserDesignState>;
+}
+
+/**
+ * Built-in Design Mode allowlist: loopback preview hosts only.
+ * Extra project/dev-server origins are registered via
+ * `setDesignAllowedOrigins` and are never inferred from guest-reported data.
+ */
+export function isDefaultDesignModeAllowedHost(hostname: string): boolean {
+  const host = hostname.trim().toLowerCase();
+  if (!host) {
+    return false;
+  }
+  if (host === "localhost" || host.endsWith(".localhost")) {
+    return true;
+  }
+  if (host === "127.0.0.1" || host === "[::1]" || host === "::1") {
+    return true;
+  }
+  return false;
+}
+
+export function designModeOriginFromUrl(url: string): string | null {
+  const trimmed = url.trim();
+  if (!trimmed || trimmed === "about:blank") {
+    return null;
+  }
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return null;
+    }
+    return parsed.origin;
+  } catch {
+    return null;
+  }
+}
+
+export function isDesignModeAllowedOrigin(
+  urlOrOrigin: string,
+  extraOrigins: readonly string[] = [],
+): boolean {
+  const origin =
+    designModeOriginFromUrl(urlOrOrigin) ?? normalizeOrigin(urlOrOrigin);
+  if (!origin) {
+    return false;
+  }
+
+  try {
+    const hostname = new URL(origin).hostname;
+    if (isDefaultDesignModeAllowedHost(hostname)) {
+      return true;
+    }
+  } catch {
+    return false;
+  }
+
+  const allowed = new Set(
+    extraOrigins
+      .map((candidate) => normalizeOrigin(candidate))
+      .filter((candidate): candidate is string => candidate !== null),
+  );
+  return allowed.has(origin);
+}
+
+function normalizeOrigin(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+  try {
+    const parsed = new URL(
+      trimmed.includes("://") ? trimmed : `http://${trimmed}`,
+    );
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return null;
+    }
+    return parsed.origin;
+  } catch {
+    return null;
+  }
 }

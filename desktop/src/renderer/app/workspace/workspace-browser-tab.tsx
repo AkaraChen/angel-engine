@@ -1,4 +1,7 @@
-import type { WorkspaceBrowserState } from "@shared/workspace-browser";
+import type {
+  WorkspaceBrowserDesignState,
+  WorkspaceBrowserState,
+} from "@shared/workspace-browser";
 import type {
   WorkspaceToolSurfaceDynamicTab,
   WorkspaceToolSurfaceSnapshot,
@@ -8,6 +11,7 @@ import type { FormEvent } from "react";
 import {
   ArrowLeft,
   ArrowRight,
+  CursorClick,
   Globe,
   LockSimple,
   ArrowClockwise as Refresh,
@@ -23,6 +27,7 @@ import {
 import { WorkspaceBrowserNativeView } from "@/app/workspace/workspace-browser-view";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/platform/utils";
 
 /**
  * Stands in for a favicon: the leading glyph says what kind of origin this is
@@ -58,6 +63,11 @@ export function WorkspaceBrowserTabContent({
     title: tab.title,
     url: tab.url,
   });
+  const [designState, setDesignState] = useState<WorkspaceBrowserDesignState>({
+    active: false,
+    allowed: false,
+    origin: null,
+  });
 
   useEffect(() => {
     void window.workspaceBrowser
@@ -70,6 +80,58 @@ export function WorkspaceBrowserTabContent({
           tabId: tab.id,
         });
       });
+  }, [tab.browserViewId, tab.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const refreshDesignState = () => {
+      void window.workspaceBrowser
+        .getDesignState({ browserViewId: tab.browserViewId })
+        .then((state) => {
+          if (!cancelled) {
+            setDesignState(state);
+          }
+        })
+        .catch((error: unknown) => {
+          console.error("Failed to get workspace browser design state.", {
+            browserViewId: tab.browserViewId,
+            error,
+            tabId: tab.id,
+          });
+        });
+    };
+
+    refreshDesignState();
+    const unsubscribe = window.workspaceBrowser.onDesignEvent(
+      tab.browserViewId,
+      (event) => {
+        if (event.type === "started") {
+          setDesignState((current) => ({
+            ...current,
+            active: true,
+            allowed: true,
+            origin: event.origin || current.origin,
+          }));
+          return;
+        }
+        if (event.type === "stopped") {
+          setDesignState((current) => ({
+            ...current,
+            active: false,
+            origin: event.origin || current.origin,
+          }));
+          return;
+        }
+        if (event.type === "error") {
+          refreshDesignState();
+        }
+      },
+    );
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, [tab.browserViewId, tab.id]);
 
   const updateBrowserTab = useCallback(
@@ -98,8 +160,14 @@ export function WorkspaceBrowserTabContent({
         title: state.title.trim() || browserTitleFromUrl(state.url),
         url: state.url || current.url,
       }));
+      void window.workspaceBrowser
+        .getDesignState({ browserViewId: tab.browserViewId })
+        .then(setDesignState)
+        .catch(() => {
+          // Design state is advisory for the toolbar button; browse still works.
+        });
     },
-    [updateBrowserTab],
+    [tab.browserViewId, updateBrowserTab],
   );
   const updateDraftUrl = useCallback(
     (draftUrl: string) => {
@@ -179,8 +247,47 @@ export function WorkspaceBrowserTabContent({
         });
       });
   }, [handleStateChange, tab.browserViewId, tab.id]);
+  const toggleDesignMode = useCallback(() => {
+    if (!designState.allowed && !designState.active) {
+      return;
+    }
+
+    const input = { browserViewId: tab.browserViewId };
+    if (designState.active) {
+      void window.workspaceBrowser
+        .stopDesignMode(input)
+        .then(setDesignState)
+        .catch((error: unknown) => {
+          console.error("Failed to stop Design Mode.", {
+            browserViewId: tab.browserViewId,
+            error,
+            tabId: tab.id,
+          });
+        });
+      return;
+    }
+
+    void window.workspaceBrowser
+      .startDesignMode(input)
+      .then((result) => {
+        setDesignState(result.state);
+      })
+      .catch((error: unknown) => {
+        console.error("Failed to start Design Mode.", {
+          browserViewId: tab.browserViewId,
+          error,
+          tabId: tab.id,
+        });
+      });
+  }, [designState.active, designState.allowed, tab.browserViewId, tab.id]);
 
   const SiteIcon = workspaceBrowserSiteIcon(tab.url);
+  const designModeDisabled = !designState.active && !designState.allowed;
+  const designModeTitle = designState.active
+    ? "Exit Design Mode"
+    : designState.allowed
+      ? "Enter Design Mode"
+      : "Design Mode is only available on localhost and registered preview origins";
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -268,6 +375,22 @@ export function WorkspaceBrowserTabContent({
             <Refresh />
           </Button>
         </div>
+        <Button
+          aria-label={designModeTitle}
+          aria-pressed={designState.active}
+          className={cn(
+            "shrink-0 active:bg-overlay-active",
+            designState.active && "bg-overlay-active text-primary",
+          )}
+          disabled={designModeDisabled}
+          onClick={toggleDesignMode}
+          size="icon-xs"
+          title={designModeTitle}
+          type="button"
+          variant="ghost"
+        >
+          <CursorClick weight={designState.active ? "fill" : "regular"} />
+        </Button>
         {browserState.ready ? null : (
           // No animated gradient: the rail is either there or it is not.
           <span
