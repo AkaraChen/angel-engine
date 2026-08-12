@@ -46,6 +46,7 @@ interface ToastMessage {
   action?: ToastAction;
   duration?: number;
   id: string;
+  revision: number;
   title: string;
   description?: string;
   variant?: ToastVariant;
@@ -56,7 +57,7 @@ interface ToastAction {
   onClick: () => void;
 }
 
-type ToastInput = Omit<ToastMessage, "id">;
+type ToastInput = Omit<ToastMessage, "id" | "revision">;
 
 type ToastHandle = (() => void) & {
   update: (toast: ToastInput) => void;
@@ -79,7 +80,11 @@ function ToastProvider({ children }: { children: React.ReactNode }) {
 
   const update = React.useCallback((id: string, input: ToastInput) => {
     setToasts((current) =>
-      current.map((toast) => (toast.id === id ? { ...input, id } : toast)),
+      current.map((toast) =>
+        toast.id === id
+          ? { ...input, id, revision: toast.revision + 1 }
+          : toast,
+      ),
     );
   }, []);
 
@@ -91,6 +96,7 @@ function ToastProvider({ children }: { children: React.ReactNode }) {
         {
           ...input,
           id,
+          revision: 0,
         },
       ]);
       const handle = (() => dismiss(id)) as ToastHandle;
@@ -141,7 +147,7 @@ function ToastProvider({ children }: { children: React.ReactNode }) {
                 motion-reduce:animate-none
               "
               duration={toast.duration ?? DEFAULT_TOAST_DURATION_MS}
-              key={toast.id}
+              key={`${toast.id}:${toast.revision}`}
               onOpenChange={(open) => {
                 if (!open) dismiss(toast.id);
               }}
