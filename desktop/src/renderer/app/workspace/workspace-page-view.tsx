@@ -444,6 +444,12 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
             onClone={startClone}
             onOpenChange={setCloneDialogOpen}
             open={cloneDialogOpen}
+            projectId={
+              selectedChat?.projectId ??
+              selectedProjectId ??
+              draftProject.id ??
+              null
+            }
           />
           <CloneProgressDialog
             onClose={closeCloneProgress}
