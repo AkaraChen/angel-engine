@@ -31,6 +31,9 @@ describe("createGhRunner", () => {
       stderr: "not logged into GitHub",
       stdout: "ignored",
     });
-    expect(mapGhFailure(cause).code).toBe("source-control/unauthenticated");
+    expect(mapGhFailure(cause)).toMatchObject({
+      code: "source-control/unauthenticated",
+      sourceControl: { providerId: "github" },
+    });
   });
 });

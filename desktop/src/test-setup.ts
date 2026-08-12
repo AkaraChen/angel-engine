@@ -1,5 +1,23 @@
 import { configure } from "@testing-library/dom";
 
+if (typeof window !== "undefined") {
+  const values = new Map<string, string>();
+  const storage: Storage = {
+    clear: () => values.clear(),
+    getItem: (key) => values.get(key) ?? null,
+    key: (index) => [...values.keys()][index] ?? null,
+    get length() {
+      return values.size;
+    },
+    removeItem: (key) => values.delete(key),
+    setItem: (key, value) => values.set(key, value),
+  };
+  Object.defineProperty(window, "localStorage", {
+    configurable: true,
+    value: storage,
+  });
+}
+
 // Testing Library's 1s default for `findBy*`/`waitFor` is a scheduling budget,
 // not a correctness signal. `bun run test` fans every workspace suite out
 // through turbo at once, so a shared CI runner can take longer than a second to

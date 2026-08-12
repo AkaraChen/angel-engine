@@ -86,6 +86,7 @@ export function registerSourceControlHttpApi(
   function repository(activation: ProviderActivation): RepositoryIdentity {
     if (activation.repository) return activation.repository;
     throw DaemonError.sourceControlUrlUnsupported(
+      activation.provider.id,
       "The activated remote does not identify a repository.",
     );
   }
@@ -126,6 +127,7 @@ export function registerSourceControlHttpApi(
       parsed.providerId !== activation.provider.id
     ) {
       throw DaemonError.sourceControlUrlUnsupported(
+        activation.provider.id,
         "The URL is not supported by the activated provider.",
       );
     }
@@ -398,7 +400,12 @@ export function registerSourceControlHttpApi(
         plugin.git.parseUrl(activation.remote.url),
     });
     return context.json(
-      await options.runDb(discoverPullRequestTemplates({ cwd: projectPath })),
+      await options.runDb(
+        discoverPullRequestTemplates({
+          cwd: projectPath,
+          providerId: activation.provider.id,
+        }),
+      ),
     );
   });
 

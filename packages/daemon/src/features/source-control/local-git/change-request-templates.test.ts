@@ -24,7 +24,7 @@ describe("discoverPullRequestTemplates", () => {
   it("returns empty when no templates exist", async () => {
     const cwd = tempRepo();
     const result = await Effect.runPromise(
-      discoverPullRequestTemplates({ cwd }),
+      discoverPullRequestTemplates({ cwd, providerId: "github" }),
     );
     expect(result).toEqual({ body: "", templates: [] });
   });
@@ -39,7 +39,7 @@ describe("discoverPullRequestTemplates", () => {
     );
 
     const result = await Effect.runPromise(
-      discoverPullRequestTemplates({ cwd }),
+      discoverPullRequestTemplates({ cwd, providerId: "github" }),
     );
 
     expect(result.body).toContain("## Summary");
@@ -58,7 +58,7 @@ describe("discoverPullRequestTemplates", () => {
     fs.writeFileSync(path.join(dir, "feature.md"), "Feature body", "utf8");
 
     const result = await Effect.runPromise(
-      discoverPullRequestTemplates({ cwd }),
+      discoverPullRequestTemplates({ cwd, providerId: "github" }),
     );
 
     expect(result.templates.map((template) => template.name).sort()).toEqual([

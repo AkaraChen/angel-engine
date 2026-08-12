@@ -739,30 +739,33 @@ function createDefaultPorts(deps: ShepherdServiceDeps): ShepherdPorts {
           capability: "checks.snapshot",
           operation: "checks.snapshot",
           run: (plugin, context) =>
-            requireOperation(plugin.checks?.snapshot, "checks.snapshot")(
-              item,
-              context,
-            ),
+            requireOperation(
+              plugin.checks?.snapshot,
+              "checks.snapshot",
+              plugin.manifest.id,
+            )(item, context),
         }),
         sourceControl.registry.invoke({
           activation,
           capability: "reviewThreads.list",
           operation: "reviewThreads.list",
           run: (plugin, context) =>
-            requireOperation(plugin.reviews?.listThreads, "reviewThreads.list")(
-              item,
-              context,
-            ),
+            requireOperation(
+              plugin.reviews?.listThreads,
+              "reviewThreads.list",
+              plugin.manifest.id,
+            )(item, context),
         }),
         sourceControl.registry.invoke({
           activation,
           capability: "changeRequests.get",
           operation: "changeRequests.get",
           run: (plugin, context) =>
-            requireOperation(plugin.changeRequests?.get, "changeRequests.get")(
-              item,
-              context,
-            ),
+            requireOperation(
+              plugin.changeRequests?.get,
+              "changeRequests.get",
+              plugin.manifest.id,
+            )(item, context),
         }),
       ]);
       return {
@@ -784,7 +787,11 @@ function createDefaultPorts(deps: ShepherdServiceDeps): ShepherdPorts {
           capability: "checks.failureLog",
           operation: "checks.failureLog",
           run: (plugin, context) =>
-            requireOperation(plugin.checks?.failureLog, "checks.failureLog")(
+            requireOperation(
+              plugin.checks?.failureLog,
+              "checks.failureLog",
+              plugin.manifest.id,
+            )(
               {
                 repository: input.repository,
                 logRef: input.logRef,
@@ -808,6 +815,7 @@ async function requireProviderActivation(
   const result = await sourceControl.activate({ projectPath });
   if (result.status !== "active" || result.activation.repository === null) {
     throw DE.sourceControlFetchFailed(
+      "unknown",
       new Error("No source-control provider is active for this project."),
     );
   }
@@ -820,9 +828,11 @@ async function requireProviderActivation(
 function requireOperation<A extends (...args: never[]) => unknown>(
   operation: A | undefined,
   name: string,
+  providerId: string,
 ): A {
   if (operation === undefined) {
     throw DE.sourceControlFetchFailed(
+      providerId,
       new Error(`The active provider does not implement ${name}.`),
     );
   }

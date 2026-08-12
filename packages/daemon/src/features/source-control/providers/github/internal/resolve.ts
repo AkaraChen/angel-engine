@@ -10,6 +10,7 @@ import { type as arkType } from "arktype";
 import { Effect } from "effect";
 
 import { DaemonError } from "../../../../../platform/errors";
+import { GitHubError } from "./errors";
 import {
   findGhPath,
   type GhRunner,
@@ -243,16 +244,16 @@ export function resolveGitHubUrl(
   return Effect.gen(function* () {
     const parsed = parseGitHubUrl(input.url);
     if (parsed === null) {
-      return yield* Effect.fail(DaemonError.sourceControlUrlUnsupported());
+      return yield* Effect.fail(GitHubError.sourceControlUrlUnsupported());
     }
 
     const whichGh = deps.whichGh ?? findGhPath;
     const ghPath = yield* Effect.tryPromise({
-      catch: (cause) => DaemonError.sourceControlFetchFailed(cause),
+      catch: (cause) => GitHubError.sourceControlFetchFailed(cause),
       try: whichGh,
     });
     if (!is.nonEmptyString(ghPath)) {
-      return yield* Effect.fail(DaemonError.sourceControlCliMissing());
+      return yield* Effect.fail(GitHubError.sourceControlCliMissing());
     }
 
     const runGh = deps.runGh ?? runGhCli;
@@ -275,7 +276,7 @@ export function resolveGitHubUrl(
       json = JSON.parse(output.stdout);
     } catch (cause) {
       return yield* Effect.fail(
-        DaemonError.sourceControlFetchFailed(
+        GitHubError.sourceControlFetchFailed(
           cause,
           "GitHub CLI returned invalid JSON.",
         ),
@@ -286,7 +287,7 @@ export function resolveGitHubUrl(
       catch: (cause) =>
         cause instanceof DaemonError
           ? cause
-          : DaemonError.sourceControlFetchFailed(cause),
+          : GitHubError.sourceControlFetchFailed(cause),
       try: () => buildResolvedItem(parsed, json),
     });
   });
@@ -322,7 +323,7 @@ export async function getGitHubWorkItemByUrl(
 ): Promise<WorkItem> {
   const parsed = parseGitHubUrl(input.url);
   if (parsed?.kind !== "issue") {
-    throw DaemonError.sourceControlUrlUnsupported(
+    throw GitHubError.sourceControlUrlUnsupported(
       "Only GitHub issue URLs are supported for work items.",
     );
   }
@@ -342,9 +343,9 @@ async function fetchGitHubWorkItem(
   expected: { id: string; owner: string; repo: string },
 ): Promise<WorkItem> {
   const ghPath = await (deps.whichGh ?? findGhPath)().catch((cause) => {
-    throw DaemonError.sourceControlFetchFailed(cause);
+    throw GitHubError.sourceControlFetchFailed(cause);
   });
-  if (!is.nonEmptyString(ghPath)) throw DaemonError.sourceControlCliMissing();
+  if (!is.nonEmptyString(ghPath)) throw GitHubError.sourceControlCliMissing();
   const output = await (deps.runGh ?? runGhCli)([
     ...command,
     "--json",
@@ -356,7 +357,7 @@ async function fetchGitHubWorkItem(
   try {
     json = JSON.parse(output.stdout);
   } catch (cause) {
-    throw DaemonError.sourceControlFetchFailed(
+    throw GitHubError.sourceControlFetchFailed(
       cause,
       "GitHub CLI returned invalid JSON.",
     );
@@ -507,7 +508,7 @@ function gitHubPayloadIdentity(
 }
 
 function unexpectedGitHubPayload(details: string): DaemonError {
-  return DaemonError.sourceControlFetchFailed(
+  return GitHubError.sourceControlFetchFailed(
     new TypeError(`Unexpected GitHub CLI payload: ${details}`),
   );
 }

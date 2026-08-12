@@ -45,10 +45,12 @@ const TEMPLATE_DIRECTORIES = [
  */
 export function discoverPullRequestTemplates(input: {
   cwd: string;
+  providerId: string;
 }): Effect.Effect<ChangeRequestTemplateResult, DaemonError> {
   return Effect.try({
     catch: (cause) =>
       DaemonError.sourceControlFetchFailed(
+        input.providerId,
         cause,
         "Could not read pull request templates.",
       ),
