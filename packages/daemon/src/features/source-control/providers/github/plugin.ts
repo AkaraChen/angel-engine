@@ -111,7 +111,7 @@ function matchGitHub(
   const matches = candidates.map((candidate) => ({
     providerId: PROVIDER_ID,
     remote: candidate.remote,
-    repository: null,
+    repository: parseGitHubRepositoryUrl(candidate.remote.url),
     score: candidate.score,
     source: candidate.source,
   }));
