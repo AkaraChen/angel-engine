@@ -132,10 +132,14 @@ import type {
 } from "@angel-engine/daemon-api/projects";
 import type {
   ChangeRequest,
+  ChangeRequestCreatePreflightResult,
   ChangeRequestStatusResult,
+  ChangeRequestTemplateResult,
   CheckRun,
   CheckSummary,
   ChecksFixPromptResult,
+  CreateChangeRequestWorkspaceResult,
+  MergeMethod,
   ReviewThread,
   SourceControlActivationResult,
 } from "@angel-engine/daemon-api/source-control";
@@ -181,6 +185,29 @@ export interface DaemonClientOptions {
   onUnauthorized?: () => void;
   /** Bearer token; omit when the transport injects authorization itself. */
   token?: string | null;
+}
+
+export interface SourceControlCreateChangeRequestInput {
+  body: string;
+  draft: boolean;
+  projectPath: string;
+  publish: boolean;
+  sourceBranch: string;
+  targetBranch: string;
+  title: string;
+}
+
+export interface SourceControlCreateWorkspaceInput {
+  projectPath: string;
+  runtime?: string;
+  setupApproval?: string;
+  title?: string;
+}
+
+export interface SourceControlMergeChangeRequestInput {
+  deleteSourceBranch: boolean;
+  method: MergeMethod;
+  projectPath: string;
 }
 
 export interface DaemonEventHandlers {
@@ -723,6 +750,35 @@ export function createDaemonClient(options: DaemonClientOptions) {
       getChangeRequest: (projectPath: string, id: string) =>
         request<ChangeRequest>(
           `/api/source-control/change-requests/${encodeURIComponent(id)}?${query({ projectPath })}`,
+        ),
+      changeRequestPreflight: (projectPath: string, targetBranch?: string) =>
+        request<ChangeRequestCreatePreflightResult>(
+          `/api/source-control/change-requests/preflight?${query({ projectPath, targetBranch })}`,
+        ),
+      changeRequestTemplate: (projectPath: string) =>
+        request<ChangeRequestTemplateResult>(
+          `/api/source-control/change-requests/template?${query({ projectPath })}`,
+        ),
+      createChangeRequest: (input: SourceControlCreateChangeRequestInput) =>
+        request<ChangeRequest>(
+          "/api/source-control/change-requests",
+          json("POST", input),
+        ),
+      mergeChangeRequest: (
+        id: string,
+        input: SourceControlMergeChangeRequestInput,
+      ) =>
+        request<ChangeRequest>(
+          `/api/source-control/change-requests/${encodeURIComponent(id)}/merge`,
+          json("POST", input),
+        ),
+      createChangeRequestWorkspace: (
+        id: string,
+        input: SourceControlCreateWorkspaceInput,
+      ) =>
+        request<CreateChangeRequestWorkspaceResult>(
+          `/api/source-control/change-requests/${encodeURIComponent(id)}/workspace`,
+          json("POST", input),
         ),
       checks: (projectPath: string, id: string) =>
         request<CheckRun[]>(

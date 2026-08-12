@@ -85,7 +85,7 @@ export function WorkspaceGitPanel({
   layout: WorkspaceToolPanelLayout;
   root: string;
 }) {
-  const { api, chatId } = useWorkspaceToolSurface();
+  const { api, chatId, projectId } = useWorkspaceToolSurface();
   const { t } = useTranslation();
   const { baseKind, setBaseKind } = useWorkspaceGitBasePreference(root);
   const {
@@ -108,7 +108,7 @@ export function WorkspaceGitPanel({
   );
   const [panelView, setPanelView] = useState<WorkspaceGitPanelView>("changes");
   const [activeCommitHash, setActiveCommitHash] = useState<string | null>(null);
-  const pullRequestQuery = useWorkspaceGitPullRequestPreflight(api, root);
+  const pullRequestQuery = useWorkspaceGitPullRequestPreflight(api, projectId);
   const updateGitListWidth = useCallback((width: number) => {
     setGitListWidth(width);
     window.localStorage.setItem(
@@ -167,7 +167,12 @@ export function WorkspaceGitPanel({
       pushError={pushMutation.isError ? pushMutation.error : undefined}
       pushPending={pushMutation.isPending}
       pullRequestAction={
-        <WorkspaceGitPullRequestAction preflight={pullRequestQuery.data} />
+        <WorkspaceGitPullRequestAction
+          capabilities={pullRequestQuery.capabilities}
+          preflight={pullRequestQuery.data}
+          providerActive={pullRequestQuery.providerActive}
+          onRemediate={() => void pullRequestQuery.refetchActivation()}
+        />
       }
       statusLabel={
         pullRequestQuery.data?.reason === "pull-request-no-commits"

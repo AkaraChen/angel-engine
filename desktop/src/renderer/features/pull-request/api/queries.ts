@@ -1,6 +1,7 @@
 import type {
   ChangeRequest,
   ChangeRequestStatusResult,
+  MergeMethod,
 } from "@angel-engine/daemon-api/source-control";
 import type {
   GitHubPullRequestCheck,
@@ -80,24 +81,30 @@ async function delay(delayMs: number) {
 
 export function mergePullRequestMutationOptions({
   api,
+  projectPath,
   providerIdentity,
   queryClient,
-  root,
 }: {
   api: ApiClient;
+  projectPath: string | null;
   providerIdentity: string | null;
   queryClient: QueryClient;
-  root: string;
 }) {
   return mutationOptions({
-    mutationFn: api.github.mergePullRequest,
+    mutationFn: (input: {
+      deleteSourceBranch: boolean;
+      id: string;
+      method: MergeMethod;
+    }) =>
+      api.sourceControl.mergeChangeRequest(input.id, {
+        deleteSourceBranch: input.deleteSourceBranch,
+        method: input.method,
+        projectPath: projectPath ?? "",
+      }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey:
           queryKeys.sourceControl.currentChangeRequest(providerIdentity),
-      });
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.github.pullRequest(root),
       });
     },
   });

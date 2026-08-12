@@ -1,4 +1,7 @@
-import type { ChangeRequestHeadResult } from "@angel-engine/daemon-api/source-control";
+import type {
+  ChangeRequestHeadResult,
+  CreateChangeRequestWorkspaceResult,
+} from "@angel-engine/daemon-api/source-control";
 import { Effect } from "effect";
 
 import type { Db } from "../../../platform/db";
@@ -20,15 +23,6 @@ export interface CreateChangeRequestWorkspaceInput {
   runtime?: string;
   setupApproval?: string;
   title?: string;
-}
-
-export interface CreateChangeRequestWorkspaceResult {
-  branch: string;
-  chatId: string;
-  cwd: string;
-  number: number;
-  title: string;
-  url: string;
 }
 
 /**

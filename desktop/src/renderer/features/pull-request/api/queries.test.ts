@@ -1,9 +1,14 @@
 import type { GitHubPullRequestStatus } from "@angel-engine/daemon-api/github";
 import type { ApiClient } from "@/platform/api-client";
-import { QueryClient, QueryObserver } from "@tanstack/react-query";
+import {
+  MutationObserver,
+  QueryClient,
+  QueryObserver,
+} from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  mergePullRequestMutationOptions,
   pullRequestStatusQueryOptions,
   retryUnknownMergeability,
 } from "./queries";
@@ -76,5 +81,36 @@ describe("pullRequestStatusQueryOptions", () => {
 
     expect(currentChangeRequest).not.toHaveBeenCalled();
     unsubscribe();
+  });
+});
+
+describe("mergePullRequestMutationOptions", () => {
+  it("uses the generic change-request merge route with activation projectPath", async () => {
+    const mergeChangeRequest = vi.fn(async () => ({ state: "merged" }));
+    const api = {
+      sourceControl: { mergeChangeRequest },
+    } as unknown as ApiClient;
+    const queryClient = new QueryClient();
+    const observer = new MutationObserver(
+      queryClient,
+      mergePullRequestMutationOptions({
+        api,
+        projectPath: "/repo",
+        providerIdentity: "github:github.com/acme/widgets:1",
+        queryClient,
+      }),
+    );
+
+    await observer.mutate({
+      deleteSourceBranch: true,
+      id: "42",
+      method: "squash",
+    });
+
+    expect(mergeChangeRequest).toHaveBeenCalledWith("42", {
+      deleteSourceBranch: true,
+      method: "squash",
+      projectPath: "/repo",
+    });
   });
 });

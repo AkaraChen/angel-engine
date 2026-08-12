@@ -41,6 +41,7 @@ let focusChecksSection = false;
 let capabilities: CapabilityMatrix = {
   entries: {
     "changeRequests.list": { supported: true as const },
+    "changeRequests.merge": { supported: true as const },
     "changeRequests.status": { supported: true as const },
     "checks.snapshot": { supported: true as const },
     "reviewThreads.list": { supported: true as const },
@@ -73,6 +74,7 @@ vi.mock("@/features/source-control/api/use-activation", () => ({
     capabilities,
     projectPath: "/repo",
     providerIdentity: "github:github.com/acme/widgets:1",
+    refetch: vi.fn(),
     status: "active",
   }),
 }));

@@ -88,6 +88,52 @@ describe("createDaemonClient", () => {
     ]);
   });
 
+  it("uses generic source-control create, merge, template, preflight, and workspace routes", async () => {
+    const fetchMock = vi.fn().mockImplementation(async () => jsonResponse({}));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createDaemonClient({ baseUrl: "", token: null });
+    await client.sourceControl.changeRequestPreflight("/repo", "release/v1");
+    await client.sourceControl.changeRequestTemplate("/repo");
+    await client.sourceControl.createChangeRequest({
+      body: "Body",
+      draft: true,
+      projectPath: "/repo",
+      publish: true,
+      sourceBranch: "feature",
+      targetBranch: "main",
+      title: "Feature",
+    });
+    await client.sourceControl.mergeChangeRequest("42/part", {
+      deleteSourceBranch: true,
+      method: "squash",
+      projectPath: "/repo",
+    });
+    await client.sourceControl.createChangeRequestWorkspace("42/part", {
+      projectPath: "/repo",
+      runtime: "codex",
+    });
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "/api/source-control/change-requests/preflight?projectPath=%2Frepo&targetBranch=release%2Fv1",
+    );
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(
+      "/api/source-control/change-requests/template?projectPath=%2Frepo",
+    );
+    expect(fetchMock.mock.calls[2]).toEqual([
+      "/api/source-control/change-requests",
+      expect.objectContaining({ method: "POST" }),
+    ]);
+    expect(fetchMock.mock.calls[3]).toEqual([
+      "/api/source-control/change-requests/42%2Fpart/merge",
+      expect.objectContaining({ method: "POST" }),
+    ]);
+    expect(fetchMock.mock.calls[4]).toEqual([
+      "/api/source-control/change-requests/42%2Fpart/workspace",
+      expect.objectContaining({ method: "POST" }),
+    ]);
+  });
+
   it("injects a bearer token when one is configured", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ version: "1" }));
     vi.stubGlobal("fetch", fetchMock);

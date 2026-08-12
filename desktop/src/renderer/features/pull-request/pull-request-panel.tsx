@@ -91,6 +91,10 @@ export const PullRequestPanel: FC<{
     sourceControl.capabilities,
     "reviewThreads.resolve",
   );
+  const mergeCapability = capabilityState(
+    sourceControl.capabilities,
+    "changeRequests.merge",
+  );
   const { t } = useTranslation();
   const toast = useToast();
   const statusQuery = useQuery(
@@ -106,9 +110,9 @@ export const PullRequestPanel: FC<{
   const mergeMutation = useMutation(
     mergePullRequestMutationOptions({
       api,
+      projectPath: sourceControl.projectPath,
       providerIdentity: sourceControl.providerIdentity,
       queryClient,
-      root,
     }),
   );
   const resolveMutation = useMutation(
@@ -309,6 +313,7 @@ export const PullRequestPanel: FC<{
   );
   const effectiveDeleteBranch = deleteBranch ?? status.deleteBranchOnMerge;
   const canMerge =
+    mergeCapability.supported &&
     blockers.length === 0 &&
     !checkingMergeability &&
     status.allowedMergeMethods.length > 0;
@@ -317,12 +322,11 @@ export const PullRequestPanel: FC<{
     if (!canMerge) return;
     try {
       const result = await mergeMutation.mutateAsync({
-        cwd: root,
-        deleteBranch: effectiveDeleteBranch,
+        deleteSourceBranch: effectiveDeleteBranch,
+        id: status.changeRequest.id,
         method,
-        number: status.number,
       });
-      if (!result.merged) {
+      if (result.state !== "merged") {
         throw new Error(t("workspace.tools.pullRequest.mergeChanged"));
       }
       rememberMerge(root, status.number, method);
@@ -450,17 +454,24 @@ export const PullRequestPanel: FC<{
                 </NativeSelectOption>
               ))}
             </NativeSelect>
-            <Button
-              disabled={!canMerge || mergeMutation.isPending}
-              onClick={() => void merge()}
+            <CapabilityGate
+              capabilities={sourceControl.capabilities}
+              capability="changeRequests.merge"
+              remediationLabel={t("common.retry")}
+              onRemediate={() => void sourceControl.refetch()}
             >
-              {mergeMutation.isPending ? (
-                <SpinnerGap className="animate-spin" />
-              ) : null}
-              {mergeMutation.isPending
-                ? t("workspace.tools.pullRequest.merging")
-                : t("workspace.tools.pullRequest.merge")}
-            </Button>
+              <Button
+                disabled={!canMerge || mergeMutation.isPending}
+                onClick={() => void merge()}
+              >
+                {mergeMutation.isPending ? (
+                  <SpinnerGap className="animate-spin" />
+                ) : null}
+                {mergeMutation.isPending
+                  ? t("workspace.tools.pullRequest.merging")
+                  : t("workspace.tools.pullRequest.merge")}
+              </Button>
+            </CapabilityGate>
           </div>
           <label className="flex items-center gap-2 text-xs text-muted-foreground">
             <input
