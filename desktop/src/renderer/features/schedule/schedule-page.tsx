@@ -164,7 +164,14 @@ export const SchedulePage: FC<SchedulePageProps> = ({ projects }) => {
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto" ref={listRef}>
-        <div className="mx-auto w-full max-w-2xl px-6 pb-6">
+        <div
+          className={cn(
+            "mx-auto w-full",
+            listQuery.isError
+              ? "flex min-h-full max-w-none"
+              : "max-w-2xl px-6 pb-6",
+          )}
+        >
           {listQuery.isPending ? (
             <ScheduleSkeleton />
           ) : listQuery.isError ? (
@@ -706,8 +713,8 @@ function ScheduleSkeleton() {
 
 function ScheduleNotice({ text }: { text: string }) {
   return (
-    <div className="m-3 flex items-start gap-2 rounded-lg border border-border-subtle bg-surface-1 p-3 text-sm text-muted-foreground">
-      <WarningCircle className="mt-0.5 size-4 shrink-0" />
+    <div className="flex flex-1 items-center justify-center gap-2 text-sm text-muted-foreground">
+      <WarningCircle className="size-4 shrink-0" />
       <span>{text}</span>
     </div>
   );
