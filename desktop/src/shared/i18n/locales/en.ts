@@ -826,9 +826,12 @@ export const en = {
       fileTypeBlocked: "File type blocked",
       fileTooLarge: "File is too large",
       files: "Files",
+      configureSourceControl: "Configure source control",
       fromLink: "From link",
       fromLinkPlaceholder:
         "Paste a GitHub or Linear issue link, or search GitHub",
+      sourceControlUnavailable:
+        "No source control provider is active for this project.",
       sourceControlErrors: {
         cliMissing:
           "GitHub CLI (gh) is not installed or not on PATH. Install it and try again.",

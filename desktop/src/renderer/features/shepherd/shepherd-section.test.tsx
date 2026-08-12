@@ -160,6 +160,30 @@ afterEach(() => {
 });
 
 describe("ShepherdSection", () => {
+  it("stacks the header and full-width action in a narrow panel", async () => {
+    const view = renderSection(null);
+    view.container.style.width = "246px";
+
+    await waitFor(() => {
+      expect(screen.getByTestId("shepherd-toggle")).toBeDefined();
+    });
+
+    expect(screen.getByTestId("shepherd-section").classList).toContain(
+      "@container",
+    );
+    expect(screen.getByTestId("shepherd-header").className).toContain(
+      "flex-col",
+    );
+    expect(screen.getByTestId("shepherd-header").className).toContain(
+      "@[360px]:flex-row",
+    );
+    expect(screen.getByTestId("shepherd-toggle").className).toContain("w-full");
+    expect(screen.getByTestId("shepherd-toggle").className).toContain(
+      "@[360px]:w-auto",
+    );
+    expect(view.container.style.width).toBe("246px");
+  });
+
   it("resolves the change-request URL before starting shepherd", async () => {
     renderSection(null);
     await waitFor(() => {

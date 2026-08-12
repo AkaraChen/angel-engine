@@ -140,6 +140,9 @@ vi.mock("react-i18next", () => ({
       ({
         "composer.fromLink": "From link",
         "composer.fromLinkPlaceholder": "Search or paste a link",
+        "composer.configureSourceControl": "Configure source control",
+        "composer.sourceControlUnavailable":
+          "No source control provider is active for this project.",
       })[key] ?? key,
   }),
 }));
@@ -306,12 +309,14 @@ describe("PromptSourceControlAttachButton", () => {
     );
   });
 
-  it("fails closed with a disabled reason and zero business requests", () => {
+  it("fails closed with a configuration reason and zero business requests", () => {
     mocks.status = "unresolved";
     mocks.capabilities = { entries: {} };
     renderButton(vi.fn());
 
-    const trigger = screen.getByTitle("From link");
+    const trigger = screen.getByTitle(
+      "No source control provider is active for this project.",
+    );
     expect(trigger.getAttribute("disabled")).not.toBeNull();
     expect(
       trigger.closest("[data-capability]")?.getAttribute("data-capability"),

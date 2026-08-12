@@ -840,9 +840,12 @@ export const fr = {
       fileTypeBlocked: "Type de fichier bloqué",
       fileTooLarge: "Le fichier est trop volumineux",
       files: "Fichiers",
+      configureSourceControl: "Configurer la gestion de code source",
       fromLink: "Depuis un lien",
       fromLinkPlaceholder:
         "Collez un lien d’issue GitHub ou Linear, ou recherchez sur GitHub",
+      sourceControlUnavailable:
+        "Aucun fournisseur de gestion de code source n’est actif pour ce projet.",
       sourceControlErrors: {
         cliMissing: "GitHub CLI (gh) n'est pas installée ou absente du PATH.",
         cliUnauthenticated:

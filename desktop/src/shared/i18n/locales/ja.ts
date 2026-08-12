@@ -833,9 +833,12 @@ export const ja = {
       fileTypeBlocked: "ファイル形式がブロックされました",
       fileTooLarge: "ファイルが大きすぎます",
       files: "ファイル",
+      configureSourceControl: "ソース管理を設定",
       fromLink: "リンクから",
       fromLinkPlaceholder:
         "GitHub または Linear の Issue リンクを貼り付けるか、GitHub を検索",
+      sourceControlUnavailable:
+        "このプロジェクトではソース管理プロバイダーが有効ではありません。",
       sourceControlErrors: {
         cliMissing:
           "GitHub CLI (gh) がインストールされていないか PATH にありません。",

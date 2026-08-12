@@ -821,9 +821,12 @@ export const ko = {
       fileTypeBlocked: "파일 형식 차단됨",
       fileTooLarge: "파일이 너무 큽니다",
       files: "파일",
+      configureSourceControl: "소스 제어 구성",
       fromLink: "링크에서",
       fromLinkPlaceholder:
         "GitHub 또는 Linear 이슈 링크를 붙여넣거나 GitHub 검색",
+      sourceControlUnavailable:
+        "이 프로젝트에 활성화된 소스 제어 공급자가 없습니다.",
       sourceControlErrors: {
         cliMissing: "GitHub CLI(gh)가 설치되지 않았거나 PATH에 없습니다.",
         cliUnauthenticated:

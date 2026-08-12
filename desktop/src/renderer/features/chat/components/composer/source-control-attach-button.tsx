@@ -212,13 +212,19 @@ export const PromptSourceControlAttachButton: FC<
       : changeRequestLinkCapability.supported
         ? "changeRequests.getByUrl"
         : "workItems.getByUrl";
+  const inactiveReason = providerActive
+    ? undefined
+    : {
+        kind: "not-implemented" as const,
+        message: t("composer.sourceControlUnavailable"),
+      };
   const trigger = (
     <Button
       className="focus-visible:ring-0!"
       disabled={disabled}
       onClick={() => handleOpenChange(true)}
       size="icon-sm"
-      title={t("composer.fromLink")}
+      title={inactiveReason?.message ?? t("composer.fromLink")}
       type="button"
       variant="ghost"
     >
@@ -235,8 +241,17 @@ export const PromptSourceControlAttachButton: FC<
         <CapabilityGate
           capabilities={activation.capabilities}
           capability={gateCapability}
-          onRemediate={() => void activation.refetch()}
-          remediationLabel={t("common.retry")}
+          onRemediate={() => {
+            if (providerActive) void activation.refetch();
+            else window.desktopWindow.openSettings();
+          }}
+          reasonOverride={inactiveReason}
+          remediationAvailable={!providerActive}
+          remediationLabel={
+            providerActive
+              ? t("common.retry")
+              : t("composer.configureSourceControl")
+          }
         >
           {trigger}
         </CapabilityGate>

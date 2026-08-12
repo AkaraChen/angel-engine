@@ -413,6 +413,7 @@ describe("WorkspaceCommandPalette", () => {
     render(
       <WorkspaceCommandPalette
         chats={[]}
+        onImportSession={vi.fn()}
         onNewWorkspace={vi.fn()}
         onOpenSession={vi.fn()}
         onOpenSettings={vi.fn()}

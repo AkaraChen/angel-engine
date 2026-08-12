@@ -1061,8 +1061,10 @@ export interface LocaleResourceTranslationComposer {
   fileTypeBlocked: string;
   fileTooLarge: string;
   files: string;
+  configureSourceControl: string;
   fromLink: string;
   fromLinkPlaceholder: string;
+  sourceControlUnavailable: string;
   sourceControlErrors: LocaleResourceTranslationComposerSourceControlErrors;
   githubIssue: string;
   githubPullRequest: string;

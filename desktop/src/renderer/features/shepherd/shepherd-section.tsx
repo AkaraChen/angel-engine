@@ -208,10 +208,13 @@ export const ShepherdSection: FC<{
 
   return (
     <section
-      className="space-y-2 border-t border-border-subtle pt-3"
+      className="@container space-y-2 border-t border-border-subtle pt-3"
       data-testid="shepherd-section"
     >
-      <div className="flex items-center justify-between gap-2">
+      <div
+        className="flex flex-col items-stretch gap-2 @[360px]:flex-row @[360px]:items-center @[360px]:justify-between"
+        data-testid="shepherd-header"
+      >
         <div className="flex min-w-0 items-center gap-1.5 text-xs font-medium">
           <Binoculars
             className={cn(
@@ -237,6 +240,7 @@ export const ShepherdSection: FC<{
         </div>
         {canResolveTarget || activeShepherd || resumable ? (
           <Button
+            className="w-full @[360px]:w-auto"
             data-testid="shepherd-toggle"
             disabled={busy || !is.nonEmptyString(chatId)}
             onClick={() => void toggle()}
@@ -254,6 +258,7 @@ export const ShepherdSection: FC<{
             remediationLabel={t("common.retry")}
           >
             <Button
+              className="w-full @[360px]:w-auto"
               data-testid="shepherd-toggle"
               disabled={busy || !is.nonEmptyString(chatId)}
               onClick={() => void toggle()}

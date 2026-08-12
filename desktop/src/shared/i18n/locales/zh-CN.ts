@@ -794,8 +794,10 @@ export const zhCN = {
       fileTypeBlocked: "文件类型被阻止",
       fileTooLarge: "文件过大",
       files: "文件",
+      configureSourceControl: "配置源代码控制",
       fromLink: "从链接",
       fromLinkPlaceholder: "粘贴 GitHub 或 Linear Issue 链接，或搜索 GitHub",
+      sourceControlUnavailable: "此项目未激活源代码控制提供方。",
       sourceControlErrors: {
         cliMissing: "未安装 GitHub CLI (gh) 或不在 PATH 中。请安装后重试。",
         cliUnauthenticated:

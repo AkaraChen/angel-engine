@@ -795,8 +795,10 @@ export const zhTW = {
       fileTypeBlocked: "檔案類型被阻擋",
       fileTooLarge: "檔案過大",
       files: "檔案",
+      configureSourceControl: "設定原始碼控制",
       fromLink: "從連結",
       fromLinkPlaceholder: "貼上 GitHub 或 Linear Issue 連結，或搜尋 GitHub",
+      sourceControlUnavailable: "此專案未啟用原始碼控制提供者。",
       sourceControlErrors: {
         cliMissing: "未安裝 GitHub CLI (gh) 或不在 PATH 中。請安裝後重試。",
         cliUnauthenticated:

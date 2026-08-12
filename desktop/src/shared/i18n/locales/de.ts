@@ -838,9 +838,12 @@ export const de = {
       fileTypeBlocked: "Dateityp blockiert",
       fileTooLarge: "Datei ist zu groß",
       files: "Dateien",
+      configureSourceControl: "Quellcodeverwaltung konfigurieren",
       fromLink: "Aus Link",
       fromLinkPlaceholder:
         "GitHub- oder Linear-Issue-Link einfügen oder GitHub durchsuchen",
+      sourceControlUnavailable:
+        "Für dieses Projekt ist kein Quellcodeverwaltungsanbieter aktiv.",
       sourceControlErrors: {
         cliMissing: "GitHub CLI (gh) ist nicht installiert oder nicht im PATH.",
         cliUnauthenticated:
