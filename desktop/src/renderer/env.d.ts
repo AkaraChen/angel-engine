@@ -5,6 +5,7 @@ import type {
   DesktopUpdateDownloadedEvent,
   DesktopUpdateMessageEvent,
   DesktopWindowCommand,
+  DesktopWindowRole,
 } from "@shared/desktop-window";
 import type {
   DesktopNotificationHistory,
@@ -55,6 +56,7 @@ declare global {
       platform: DesktopPlatform;
     };
     desktopWindow: {
+      role: DesktopWindowRole;
       closeCurrent: () => void;
       notifyContentReady: () => void;
       onCommand: (

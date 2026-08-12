@@ -11,11 +11,33 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 const updateConfig = vi.fn();
 const refetch = vi.fn();
 let activation: SourceControlActivationView;
+const originalScrollIntoView = Element.prototype.scrollIntoView;
+
+beforeAll(() => {
+  Element.prototype.scrollIntoView = vi.fn();
+});
+
+afterAll(() => {
+  if (originalScrollIntoView) {
+    Element.prototype.scrollIntoView = originalScrollIntoView;
+  } else {
+    Reflect.deleteProperty(Element.prototype, "scrollIntoView");
+  }
+});
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -120,13 +142,16 @@ describe("HostedSourceControlPanel", () => {
         "workspace.tools.pullRequest.hostedFallback.ambiguousTitle",
       ),
     ).toBeDefined();
-    fireEvent.change(
-      screen.getByLabelText(
-        "workspace.tools.pullRequest.hostedFallback.remoteLabel",
-      ),
-      {
-        target: { value: "0" },
-      },
+    fireEvent.keyDown(
+      screen.getByRole("combobox", {
+        name: "workspace.tools.pullRequest.hostedFallback.remoteLabel",
+      }),
+      { key: "ArrowDown" },
+    );
+    fireEvent.click(
+      await screen.findByRole("option", {
+        name: "origin · forge-a · https://forge.example/acme/repo.git",
+      }),
     );
     fireEvent.click(
       screen.getByRole("button", {

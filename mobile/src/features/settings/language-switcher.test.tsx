@@ -27,6 +27,21 @@ function renderSection() {
   );
 }
 
+function openLanguageSelect(name = "Language") {
+  const trigger = screen.getByRole("combobox", { name });
+  fireEvent.pointerDown(trigger, {
+    button: 0,
+    ctrlKey: false,
+    pointerType: "mouse",
+  });
+  return trigger;
+}
+
+async function selectLanguage(label: string) {
+  openLanguageSelect();
+  fireEvent.click(await screen.findByRole("option", { name: label }));
+}
+
 beforeEach(async () => {
   // Start every case from English so a prior case's switch can't skew the
   // translated aria-label this test queries by.
@@ -43,29 +58,26 @@ afterEach(async () => {
 });
 
 describe("language switcher", () => {
-  it("lists all eight supported languages", () => {
+  it("lists all eight supported languages", async () => {
     renderSection();
-    const select = screen.getByRole("combobox", { name: "Language" });
-    const values = [...select.querySelectorAll("option")].map(
-      (option) => option.value,
-    );
-    expect(values).toEqual([
-      "en",
-      "zh-CN",
-      "zh-TW",
-      "fr",
-      "de",
-      "ko",
-      "ja",
-      "es",
+    openLanguageSelect();
+
+    const options = await screen.findAllByRole("option");
+    expect(options.map((option) => option.textContent)).toEqual([
+      "English",
+      "简体中文",
+      "繁體中文",
+      "Français",
+      "Deutsch",
+      "한국어",
+      "日本語",
+      "Español",
     ]);
   });
 
   it("switches language, persists it, and updates the document language", async () => {
     renderSection();
-    const select = screen.getByRole("combobox", { name: "Language" });
-
-    fireEvent.change(select, { target: { value: "ja" } });
+    await selectLanguage("日本語");
 
     await waitFor(() => {
       expect(i18n.language).toBe("ja");
@@ -78,9 +90,7 @@ describe("language switcher", () => {
 
   it("renders the label in the active language after switching", async () => {
     renderSection();
-    const select = screen.getByRole("combobox", { name: "Language" });
-
-    fireEvent.change(select, { target: { value: "fr" } });
+    await selectLanguage("Français");
 
     await waitFor(() => {
       expect(i18n.language).toBe("fr");

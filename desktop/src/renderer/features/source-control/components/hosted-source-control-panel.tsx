@@ -9,9 +9,12 @@ import { useTranslation } from "react-i18next";
 import { WorkspaceToolEmpty } from "@/app/workspace/workspace-tool-layout";
 import { Button } from "@/components/ui/button";
 import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useSourceControlActivation } from "@/features/source-control/api/use-activation";
 import { useApi } from "@/platform/use-api";
 
@@ -79,22 +82,22 @@ export function HostedSourceControlPanel({
             >
               {t("workspace.tools.pullRequest.hostedFallback.remoteLabel")}
             </label>
-            <NativeSelect
-              id="source-control-remote"
-              onChange={(event) => setSelection(event.target.value)}
-              value={selection}
-            >
-              <NativeSelectOption value="">—</NativeSelectOption>
-              {sourceControl.candidates.map((candidate, index) => (
-                <NativeSelectOption
-                  key={`${candidate.providerId}:${candidate.remote.name}:${candidate.remote.url}`}
-                  value={String(index)}
-                >
-                  {candidate.remote.name} · {candidate.providerId} ·{" "}
-                  {candidate.remote.url}
-                </NativeSelectOption>
-              ))}
-            </NativeSelect>
+            <Select onValueChange={setSelection} value={selection}>
+              <SelectTrigger className="w-full" id="source-control-remote">
+                <SelectValue placeholder="—" />
+              </SelectTrigger>
+              <SelectContent>
+                {sourceControl.candidates.map((candidate, index) => (
+                  <SelectItem
+                    key={`${candidate.providerId}:${candidate.remote.name}:${candidate.remote.url}`}
+                    value={String(index)}
+                  >
+                    {candidate.remote.name} · {candidate.providerId} ·{" "}
+                    {candidate.remote.url}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button
               disabled={selectedIndex === null || configure.isPending}
               onClick={() => {

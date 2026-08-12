@@ -31,6 +31,7 @@ import {
 import { WorkspacePullRequestPreviewDialog } from "@/app/workspace/workspace-pull-request-preview";
 import { WorkspaceToolBanner } from "@/app/workspace/workspace-tool-layout";
 import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
+import { chatMetadataQueryOptions } from "@/features/chat/api/queries";
 import { Button } from "@/components/ui/button";
 import { useSourceControlActivation } from "@/features/source-control/api/use-activation";
 import { CapabilityGate } from "@/features/source-control/components/capability-gate";
@@ -45,9 +46,12 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
@@ -343,10 +347,11 @@ function WorkspaceCreatePullRequestDialog({
     ? contextKey.slice("chat:".length)
     : null;
   const chatQuery = useQuery({
-    enabled: open && chatId !== null,
-    queryFn: () => api.chats.get(chatId ?? ""),
-    queryKey: queryKeys.chats.detail(chatId),
-    staleTime: 30_000,
+    ...chatMetadataQueryOptions({
+      api,
+      chatId: chatId ?? "",
+      enabled: open && chatId !== null,
+    }),
   });
   const preflightQuery = useWorkspaceGitPullRequestPreflight(
     api,
@@ -547,22 +552,28 @@ function WorkspaceCreatePullRequestDialog({
               </WorkspaceToolBanner>
             ) : null}
             <div className="flex items-center gap-2 text-sm">
-              <NativeSelect
-                aria-label={t("workspace.tools.createPullRequest.base")}
-                className="min-w-40"
+              <Select
                 disabled={createMutation.isPending}
                 value={base}
-                onChange={(event) => {
-                  setBase(event.currentTarget.value);
+                onValueChange={(value) => {
+                  setBase(value);
                   setFailure(undefined);
                 }}
               >
-                {preflight.availableBaseBranches.map((branch) => (
-                  <NativeSelectOption key={branch} value={branch}>
-                    {branch}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
+                <SelectTrigger
+                  aria-label={t("workspace.tools.createPullRequest.base")}
+                  className="min-w-40"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {preflight.availableBaseBranches.map((branch) => (
+                    <SelectItem key={branch} value={branch}>
+                      {branch}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <span aria-hidden="true" className="text-muted-foreground">
                 ←
               </span>

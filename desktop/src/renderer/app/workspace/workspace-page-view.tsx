@@ -648,6 +648,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                     projectName={selectedProjectName}
                     projectPath={draftProject.path}
                     projects={projects}
+                    projectsStatus={projectsQuery.status}
                     reasoningEffort={reasoningEffortOverride}
                     runOrigin={{
                       config: draftAgentConfigFromExplicitOverrides({

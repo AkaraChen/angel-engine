@@ -17,6 +17,10 @@ import { Trans, useTranslation } from "react-i18next";
 import { DraftProjectSelect } from "@/app/workspace/draft-project-select";
 import { NewChatRecentSection } from "@/app/workspace/new-chat-recent";
 import {
+  ProjectRequirementNotice,
+  type ProjectsQueryStatus,
+} from "@/app/workspace/project-requirement-notice";
+import {
   isProjectWorkspaceMode,
   useWorkspaceUiStore,
 } from "@/app/workspace/workspace-ui-store";
@@ -127,12 +131,13 @@ interface NewChatComposerProps {
   ) => void;
   onCreateProject: () => Project | undefined | Promise<Project | undefined>;
   onOpenChat: (chat: Chat) => void;
-  onProjectChange: (projectId: string | null) => void;
+  onProjectChange: (projectId: string) => void;
   permissionMode?: string;
   prewarmId?: string;
   projectId?: string;
   projectName?: string;
   projects: Project[];
+  projectsStatus: ProjectsQueryStatus;
   reasoningEffort?: string;
   runtime: string;
   slotKey: string;
@@ -159,6 +164,7 @@ export function NewChatComposer({
   projectId,
   projectName,
   projects,
+  projectsStatus,
   reasoningEffort,
   runtime,
   slotKey,
@@ -167,6 +173,8 @@ export function NewChatComposer({
   const isRunning = useChatRunIsRunning(slotKey);
   const cancelRun = useChatRunStore((state) => state.cancelRun);
   const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
+  const projectRequired =
+    isProjectWorkspaceMode(workspaceMode) && !is.nonEmptyString(projectId);
   const suggestionKeys = isProjectWorkspaceMode(workspaceMode)
     ? projectSuggestionKeys
     : chatSuggestionKeys;
@@ -303,72 +311,88 @@ export function NewChatComposer({
             {t("thread.empty.description")}
           </p>
 
-          <div
-            className="
+          {projectRequired ? (
+            <div className="mt-8 flex flex-col items-center gap-3 rounded-xl px-6 py-8 text-center">
+              <ProjectRequirementNotice
+                onCreateProject={onCreateProject}
+                projectCount={projects.length}
+                projectsStatus={projectsStatus}
+              />
+            </div>
+          ) : (
+            <div
+              className="
             relative mt-8 animate-in duration-300 ease-standard fade-in-0
             slide-in-from-bottom-[6px] [animation-delay:120ms]
             [animation-fill-mode:backwards]
           "
-            onDragEnter={handleDragEnter}
-            onDragLeave={handleDragLeave}
-            onDragEnd={handleDragEnd}
-            onDrop={handleDragEnd}
-          >
-            {notice}
-            <ChatComposer
-              blockSubmit={isRunning}
-              canCancel={isRunning}
-              controller={editor}
-              disabled={isRunning}
-              headerClassName={newChatHeaderClassName}
-              inputGroupClassName={cn(
-                newChatInputGroupClassName,
-                isDropTarget && newChatDropTargetClassName,
-              )}
-              onBeforeSubmit={onBeforeSubmit}
-              onCancel={handleCancel}
-              rows={3}
-              send={send}
-              textareaClassName="
+              onDragEnter={handleDragEnter}
+              onDragLeave={handleDragLeave}
+              onDragEnd={handleDragEnd}
+              onDrop={handleDragEnd}
+            >
+              {notice}
+              <ChatComposer
+                blockSubmit={isRunning}
+                canCancel={isRunning}
+                controller={editor}
+                disabled={isRunning}
+                headerClassName={newChatHeaderClassName}
+                inputGroupClassName={cn(
+                  newChatInputGroupClassName,
+                  isDropTarget && newChatDropTargetClassName,
+                )}
+                onBeforeSubmit={onBeforeSubmit}
+                onCancel={handleCancel}
+                rows={3}
+                send={send}
+                textareaClassName="
               max-h-40 min-h-(--workspace-composer-min-height) resize-none
               px-3.5 py-3 [font-size:var(--workspace-composer-text-size)]
               leading-(--workspace-composer-line-height)
               placeholder:text-muted-foreground/55
             "
-            >
-              <NewChatComposerFooter
-                editor={editor}
-                editorIsEmpty={isEmpty}
-                isRunning={isRunning}
-                onCancel={handleCancel}
-                projectSelect={
-                  isProjectWorkspaceMode(workspaceMode) ? (
-                    <>
-                      <DraftProjectSelect
-                        onCreateProject={onCreateProject}
-                        onProjectChange={onProjectChange}
-                        projects={projects}
-                        selectedProjectId={projectId}
-                        variant="chip"
-                      />
-                      {creationLocationAccessory}
-                    </>
-                  ) : null
-                }
-              />
-            </ChatComposer>
-          </div>
+              >
+                <NewChatComposerFooter
+                  editor={editor}
+                  editorIsEmpty={isEmpty}
+                  isRunning={isRunning}
+                  onCancel={handleCancel}
+                  projectSelect={
+                    isProjectWorkspaceMode(workspaceMode) ? (
+                      <>
+                        <DraftProjectSelect
+                          allowNoProject={false}
+                          onCreateProject={onCreateProject}
+                          onProjectChange={(nextProjectId) => {
+                            if (is.nonEmptyString(nextProjectId)) {
+                              onProjectChange(nextProjectId);
+                            }
+                          }}
+                          projects={projects}
+                          selectedProjectId={projectId}
+                          variant="chip"
+                        />
+                        {creationLocationAccessory}
+                      </>
+                    ) : null
+                  }
+                />
+              </ChatComposer>
+            </div>
+          )}
 
-          <div
-            className="
+          {projectRequired ? null : (
+            <div
+              className="
             mt-4 flex animate-in flex-wrap justify-center gap-2 duration-300
             ease-standard fade-in-0 slide-in-from-bottom-[6px]
             [animation-delay:180ms] [animation-fill-mode:backwards]
           "
-          >
-            {suggestionKeys.map((suggestionKey) => (
-              <button
-                className="
+            >
+              {suggestionKeys.map((suggestionKey) => (
+                <button
+                  className="
                 rounded-full border border-border-subtle bg-card px-3 py-1
                 text-xs text-muted-foreground transition-colors duration-120
                 ease-standard
@@ -379,37 +403,40 @@ export function NewChatComposer({
                 active:scale-[0.98]
                 motion-reduce:transition-none
               "
-                key={suggestionKey}
-                onClick={() => {
-                  editor.editor
-                    ?.chain()
-                    .focus()
-                    .clearContent()
-                    .insertContent(t(suggestionKey))
-                    .run();
-                }}
-                type="button"
-              >
-                {t(suggestionKey)}
-              </button>
-            ))}
-          </div>
+                  key={suggestionKey}
+                  onClick={() => {
+                    editor.editor
+                      ?.chain()
+                      .focus()
+                      .clearContent()
+                      .insertContent(t(suggestionKey))
+                      .run();
+                  }}
+                  type="button"
+                >
+                  {t(suggestionKey)}
+                </button>
+              ))}
+            </div>
+          )}
 
-          <div
-            className="
+          {projectRequired ? null : (
+            <div
+              className="
             animate-in duration-300 ease-standard fade-in-0
             slide-in-from-bottom-[6px] [animation-delay:240ms]
             [animation-fill-mode:backwards]
           "
-          >
-            <NewChatRecentSection
-              chats={chats}
-              isProjectMode={isProjectWorkspaceMode(workspaceMode)}
-              onCreateProject={() => void onCreateProject()}
-              onOpenChat={onOpenChat}
-              projects={projects}
-            />
-          </div>
+            >
+              <NewChatRecentSection
+                chats={chats}
+                isProjectMode={isProjectWorkspaceMode(workspaceMode)}
+                onCreateProject={() => void onCreateProject()}
+                onOpenChat={onOpenChat}
+                projects={projects}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

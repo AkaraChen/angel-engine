@@ -58,26 +58,19 @@ describe("WorkspaceGitBaseSelect", () => {
       />,
     );
 
-    const select = screen.getByRole("combobox") as HTMLSelectElement;
-    expect(select.value).toBe("turn");
+    const select = screen.getByRole("combobox");
+    expect(select.textContent).toContain("Since previous turn");
     expect(onChange).not.toHaveBeenCalled();
     const root = container.querySelector(
       '[data-slot="workspace-git-base-select"]',
-    );
-    const wrapper = container.querySelector(
-      '[data-slot="native-select-wrapper"]',
     );
     expect(root?.classList.contains("w-full")).toBe(true);
     expect(root?.classList.contains("grid-cols-[auto_minmax(0,1fr)]")).toBe(
       true,
     );
-    expect(wrapper?.classList.contains("w-full")).toBe(true);
-    expect(wrapper?.classList.contains("min-w-0")).toBe(true);
     expect(select.classList.contains("w-full")).toBe(true);
     expect(select.classList.contains("min-w-32")).toBe(true);
-    expect(
-      screen.getByRole("option", { name: "Since previous turn" }).textContent,
-    ).not.toContain("deadbee");
+    expect(select.textContent).not.toContain("deadbee");
   });
 });
 

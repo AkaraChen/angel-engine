@@ -426,6 +426,7 @@ export const zhCN = {
       noStandaloneChats: "没有独立聊天",
       openBranchChat: "打开正在使用此分支的聊天",
       projects: "项目",
+      projectsLoadError: "加载项目失败",
       powerWorktreeHome: "主页",
       powerWorktreeHistoricalChat: "历史聊天",
       refreshProjects: "刷新项目",
@@ -490,10 +491,10 @@ export const zhCN = {
           confirmDeleteDetail:
             "将彻底删除 {{chatCount}} 个已归档会话，并移除 {{managedWorktreeCount}} 个 worktree 目录。此操作无法撤销。",
           confirmDeleteTitle: "要删除可清理的 worktree 吗？",
-          deleteFailed: "无法删除 worktree",
+          deleteFailed: "删除失败：{{message}}",
+          deletingToast: "正在删除 worktree…",
           deleteWorktree: "彻底删除 {{projectName}} 的 worktree {{identifier}}",
-          deletedToast:
-            "已删除 {{worktreeCount}} 个 worktree · {{chatCount}} 个已归档会话",
+          deletedToast: "已删除 worktree",
           empty: "没有可清理的 worktree",
           missingOnDisk: "磁盘上已不存在",
           noSessions: "孤立 worktree · 无已归档会话",

@@ -5,9 +5,12 @@ import { useTranslation } from "react-i18next";
 import { usePromptInputAttachments } from "@/components/ai-elements/prompt-input";
 import { Button } from "@/components/ui/button";
 import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 /* eslint-disable react-refresh/only-export-components -- Stable class-name constants are re-exported to preserve this module's public imports. */
 export {
@@ -72,22 +75,23 @@ export function ComposerOptionSelect({
       >
         {icon}
       </span>
-      <NativeSelect
-        aria-label={label}
-        className="max-w-36"
-        disabled={disabled}
-        onChange={(event) => onValueChange(event.currentTarget.value)}
-        selectClassName="h-8 max-w-36 rounded-md border border-border-subtle bg-background/55 py-0 pr-8 pl-8 text-xs focus-visible:!border-primary/35 focus-visible:!ring-0 dark:bg-card/60"
-        size="sm"
-        title={title ?? label}
-        value={value}
-      >
-        {options.map((option) => (
-          <NativeSelectOption key={option.value} value={option.value}>
-            {option.label}
-          </NativeSelectOption>
-        ))}
-      </NativeSelect>
+      <Select disabled={disabled} onValueChange={onValueChange} value={value}>
+        <SelectTrigger
+          aria-label={label}
+          className="h-8 max-w-36 rounded-md border border-border-subtle bg-background/55 py-0 pr-8 pl-8 text-xs focus-visible:!border-primary/35 focus-visible:!ring-0 dark:bg-card/60"
+          size="sm"
+          title={title ?? label}
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }

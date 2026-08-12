@@ -1,7 +1,7 @@
 import type { MenuItemConstructorOptions } from "electron";
 import type { DesktopWindowCommand } from "../../shared/desktop-window";
 
-import { app, BrowserWindow, Menu } from "electron";
+import { app, Menu } from "electron";
 import { DESKTOP_COMMAND_CHANNEL } from "../../shared/desktop-window";
 import {
   COMMAND_IDS,
@@ -9,6 +9,7 @@ import {
   detectKeymapPlatform,
 } from "../../shared/keybindings";
 import { checkForUpdatesFromMenu } from "../updater";
+import { ensureMainWindow } from "../windows/main-window";
 import { translate } from "./i18n";
 import { getKeybindingsState } from "./keybindings-store";
 
@@ -188,7 +189,10 @@ function updateItem(): MenuItemConstructorOptions {
 }
 
 function sendCommand(command: DesktopWindowCommand) {
-  const window =
-    BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
-  window?.webContents.send(DESKTOP_COMMAND_CHANNEL, { command });
+  const window = ensureMainWindow();
+  if (window.isMinimized()) window.restore();
+  if (!window.isVisible()) window.show();
+  window.focus();
+  app.focus({ steal: true });
+  window.webContents.send(DESKTOP_COMMAND_CHANNEL, { command });
 }

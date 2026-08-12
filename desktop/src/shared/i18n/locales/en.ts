@@ -433,6 +433,7 @@ export const en = {
       noStandaloneChats: "No standalone chats",
       openBranchChat: "Open chat using this branch",
       projects: "Projects",
+      projectsLoadError: "Failed to load projects",
       powerWorktreeHome: "Home",
       powerWorktreeHistoricalChat: "Historical Chat",
       refreshProjects: "Refresh projects",
@@ -497,11 +498,11 @@ export const en = {
           confirmDeleteDetail:
             "Archived sessions permanently deleted: {{chatCount}}. Worktree directories removed: {{managedWorktreeCount}}. This cannot be undone.",
           confirmDeleteTitle: "Delete removable worktrees?",
-          deleteFailed: "Could not remove worktree",
+          deleteFailed: "Deletion failed: {{message}}",
+          deletingToast: "Deleting worktree…",
           deleteWorktree:
             "Delete {{projectName}} worktree {{identifier}} permanently",
-          deletedToast:
-            "Worktrees removed: {{worktreeCount}} · Archived sessions deleted: {{chatCount}}",
+          deletedToast: "Worktree deleted",
           empty: "No worktrees are ready to remove",
           missingOnDisk: "Missing on disk",
           noSessions: "Orphaned worktree · no archived sessions",

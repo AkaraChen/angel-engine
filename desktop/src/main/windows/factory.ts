@@ -6,6 +6,11 @@ import is from "@sindresorhus/is";
 import { BrowserWindow, shell } from "electron";
 
 import {
+  DESKTOP_WINDOW_ROLE_ARGUMENT_PREFIX,
+  type DesktopWindowRole,
+} from "../../shared/desktop-window";
+
+import {
   configureDesktopWindowAppearance,
   desktopWindowChromeOptions,
 } from "./appearance";
@@ -21,6 +26,7 @@ interface CreateDesktopWindowOptions {
   bounds?: Parameters<typeof savedWindowBounds>[0];
   hash?: string;
   options?: BrowserWindowConstructorOptions;
+  role: DesktopWindowRole;
   stateFileName?: string;
 }
 
@@ -28,8 +34,9 @@ export function createDesktopWindow({
   bounds,
   hash,
   options,
+  role,
   stateFileName,
-}: CreateDesktopWindowOptions = {}) {
+}: CreateDesktopWindowOptions) {
   const rendererFilePath = path.join(
     __dirname,
     `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`,
@@ -45,6 +52,10 @@ export function createDesktopWindow({
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       ...options?.webPreferences,
+      additionalArguments: [
+        ...(options?.webPreferences?.additionalArguments ?? []),
+        `${DESKTOP_WINDOW_ROLE_ARGUMENT_PREFIX}${role}`,
+      ],
     },
   });
 

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import type { Chat } from "@angel-engine/daemon-api/chat";
+import type { Project } from "@angel-engine/daemon-api/projects";
 import type { WorkspacePageModel } from "@/app/workspace/use-workspace-page-model";
 
 import { act, renderHook } from "@testing-library/react";
@@ -60,6 +61,34 @@ function workspaceModel(
 }
 
 describe("useWorkspaceNavigation", () => {
+  it.each([
+    "work",
+    "power",
+  ] as const)("opens the first project when switching to %s mode without a remembered target", (workspaceMode) => {
+    const navigate = vi.fn();
+    const setWorkspaceMode = vi.fn();
+    const model = workspaceModel({
+      location: "/",
+      navigate,
+      projects: [
+        {
+          id: "project-1",
+          path: "/Users/akrc/angel-engine",
+        } as Project,
+      ],
+      setWorkspaceMode,
+      workspaceMode: "chat",
+    });
+    const { result } = renderHook(() => useWorkspaceNavigation(model));
+
+    act(() => result.current.changeWorkspaceMode(workspaceMode));
+
+    expect(setWorkspaceMode).toHaveBeenCalledWith(workspaceMode);
+    expect(navigate).toHaveBeenCalledWith("/project/project-1", {
+      replace: true,
+    });
+  });
+
   it("starts a standalone workspace in chat mode", () => {
     const model = workspaceModel();
     const { result } = renderHook(() => useWorkspaceNavigation(model));

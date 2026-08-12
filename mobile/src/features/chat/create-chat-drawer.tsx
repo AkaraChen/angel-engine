@@ -18,9 +18,12 @@ import {
 } from "@/components/ui/drawer";
 import { Label } from "@/components/ui/label";
 import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { AGENT_OPTIONS } from "@/platform/agent-catalog";
@@ -39,6 +42,9 @@ import {
   useProjectList,
   useRuntimeConfig,
 } from "./use-chats";
+
+const DEFAULT_SELECT_VALUE = "__default__";
+const NO_PROJECT_SELECT_VALUE = "__no_project__";
 
 type CreateChatDrawerProps = {
   children: ReactNode;
@@ -139,13 +145,12 @@ export const CreateChatDrawer: FC<CreateChatDrawerProps> = ({ children }) => {
               htmlFor="new-chat-project"
               label={t("createChat.projectLabel")}
             >
-              <NativeSelect
-                className="w-full"
+              <Select
                 disabled={projectsQuery.isPending}
-                id="new-chat-project"
-                value={form.projectId}
-                onChange={(event) => {
-                  const projectId = event.target.value;
+                value={form.projectId || NO_PROJECT_SELECT_VALUE}
+                onValueChange={(value) => {
+                  const projectId =
+                    value === NO_PROJECT_SELECT_VALUE ? "" : value;
                   setForm((previous) => ({
                     ...previous,
                     model: "",
@@ -158,44 +163,45 @@ export const CreateChatDrawer: FC<CreateChatDrawerProps> = ({ children }) => {
                   }));
                 }}
               >
-                <NativeSelectOption value="">
-                  {t("createChat.noProject")}
-                </NativeSelectOption>
-                {(projectsQuery.data ?? []).map((project) => (
-                  <NativeSelectOption key={project.id} value={project.id}>
-                    {basename(project.path)}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
+                <SelectTrigger className="w-full" id="new-chat-project">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_PROJECT_SELECT_VALUE}>
+                    {t("createChat.noProject")}
+                  </SelectItem>
+                  {(projectsQuery.data ?? []).map((project) => (
+                    <SelectItem key={project.id} value={project.id}>
+                      {basename(project.path)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
 
             {canUseWorktree(form) ? (
               <Field htmlFor="new-chat-location" label="Create in">
-                <NativeSelect
-                  className="w-full"
-                  id="new-chat-location"
+                <Select
                   value={form.useWorktree ? "worktree" : "project"}
-                  onChange={(event) =>
-                    update("useWorktree", event.target.value === "worktree")
+                  onValueChange={(value) =>
+                    update("useWorktree", value === "worktree")
                   }
                 >
-                  <NativeSelectOption value="project">
-                    Project
-                  </NativeSelectOption>
-                  <NativeSelectOption value="worktree">
-                    Create worktree
-                  </NativeSelectOption>
-                </NativeSelect>
+                  <SelectTrigger className="w-full" id="new-chat-location">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="project">Project</SelectItem>
+                    <SelectItem value="worktree">Create worktree</SelectItem>
+                  </SelectContent>
+                </Select>
               </Field>
             ) : null}
 
             <Field htmlFor="new-chat-agent" label={t("createChat.agentLabel")}>
-              <NativeSelect
-                className="w-full"
-                id="new-chat-agent"
+              <Select
                 value={form.runtime}
-                onChange={(event) => {
-                  const runtime = event.target.value;
+                onValueChange={(runtime) => {
                   setForm((previous) => ({
                     ...previous,
                     model: "",
@@ -204,12 +210,17 @@ export const CreateChatDrawer: FC<CreateChatDrawerProps> = ({ children }) => {
                   }));
                 }}
               >
-                {agentOptions.map((agent) => (
-                  <NativeSelectOption key={agent.id} value={agent.id}>
-                    {agent.label}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
+                <SelectTrigger className="w-full" id="new-chat-agent">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {agentOptions.map((agent) => (
+                    <SelectItem key={agent.id} value={agent.id}>
+                      {agent.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
 
             <div className="grid grid-cols-2 gap-3">
@@ -217,56 +228,64 @@ export const CreateChatDrawer: FC<CreateChatDrawerProps> = ({ children }) => {
                 htmlFor="new-chat-model"
                 label={t("createChat.modelLabel")}
               >
-                <NativeSelect
-                  className="w-full"
+                <Select
                   disabled={
                     runtimeConfigQuery.isFetching ||
                     runtimeConfigQuery.data?.canSetModel === false
                   }
-                  id="new-chat-model"
-                  value={form.model}
-                  onChange={(event) => update("model", event.target.value)}
+                  value={form.model || DEFAULT_SELECT_VALUE}
+                  onValueChange={(value) =>
+                    update("model", value === DEFAULT_SELECT_VALUE ? "" : value)
+                  }
                 >
-                  <NativeSelectOption value="">
-                    {t("createChat.reasoningOptions.default")}
-                  </NativeSelectOption>
-                  {(runtimeConfigQuery.data?.models ?? []).map((model) => (
-                    <NativeSelectOption key={model.value} value={model.value}>
-                      {model.label}
-                    </NativeSelectOption>
-                  ))}
-                </NativeSelect>
+                  <SelectTrigger className="w-full" id="new-chat-model">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={DEFAULT_SELECT_VALUE}>
+                      {t("createChat.reasoningOptions.default")}
+                    </SelectItem>
+                    {(runtimeConfigQuery.data?.models ?? []).map((model) => (
+                      <SelectItem key={model.value} value={model.value}>
+                        {model.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </Field>
               <Field
                 htmlFor="new-chat-reasoning"
                 label={t("createChat.reasoningLabel")}
               >
-                <NativeSelect
-                  className="w-full"
+                <Select
                   disabled={
                     runtimeConfigQuery.isFetching ||
                     runtimeConfigQuery.data?.canSetReasoningEffort === false
                   }
-                  id="new-chat-reasoning"
-                  value={form.reasoningEffort}
-                  onChange={(event) =>
-                    update("reasoningEffort", event.target.value)
+                  value={form.reasoningEffort || DEFAULT_SELECT_VALUE}
+                  onValueChange={(value) =>
+                    update(
+                      "reasoningEffort",
+                      value === DEFAULT_SELECT_VALUE ? "" : value,
+                    )
                   }
                 >
-                  <NativeSelectOption value="">
-                    {t("createChat.reasoningOptions.default")}
-                  </NativeSelectOption>
-                  {(runtimeConfigQuery.data?.reasoningEfforts ?? []).map(
-                    (option) => (
-                      <NativeSelectOption
-                        key={option.value}
-                        value={option.value}
-                      >
-                        {option.label}
-                      </NativeSelectOption>
-                    ),
-                  )}
-                </NativeSelect>
+                  <SelectTrigger className="w-full" id="new-chat-reasoning">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={DEFAULT_SELECT_VALUE}>
+                      {t("createChat.reasoningOptions.default")}
+                    </SelectItem>
+                    {(runtimeConfigQuery.data?.reasoningEfforts ?? []).map(
+                      (option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ),
+                    )}
+                  </SelectContent>
+                </Select>
               </Field>
             </div>
 

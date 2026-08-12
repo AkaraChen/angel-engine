@@ -15,7 +15,9 @@ import type {
   DesktopUpdateStatus,
 } from "../shared/update-channel";
 
-import { app, BrowserWindow, ipcMain } from "electron";
+import type { BrowserWindow } from "electron";
+
+import { app, ipcMain } from "electron";
 import log from "electron-log/main";
 import { autoUpdater, CancellationToken } from "electron-updater";
 
@@ -42,6 +44,7 @@ import {
   writeUpdateChannelPreference,
 } from "./updater-preferences";
 import { shouldRunBackgroundCheck } from "./updater-schedule";
+import { getMainWindow } from "./windows/main-window";
 
 const updateRepository = {
   owner: "AkaraChen",
@@ -330,7 +333,7 @@ function handleDownloadProgress(info: ProgressInfo) {
   }
 
   lastProgressBroadcastAt = now;
-  broadcastStatus();
+  sendStatusToMainWindow();
 }
 
 function clearProgress() {
@@ -388,7 +391,7 @@ function handleUpdateError(error: unknown, checkGeneration: number) {
   errorMessage = detail;
   clearProgress();
   state = "error";
-  broadcastStatus();
+  sendStatusToMainWindow();
   log.warn("Could not check for updates.", error);
 
   if (!userInitiatedCheck) return;
@@ -412,16 +415,14 @@ function setState(next: DesktopUpdateState) {
     clearProgress();
   }
 
-  broadcastStatus();
+  sendStatusToMainWindow();
 }
 
-function broadcastStatus() {
+function sendStatusToMainWindow() {
   const status = getUpdateStatus();
-
-  for (const window of BrowserWindow.getAllWindows()) {
-    if (window.isDestroyed()) continue;
-    window.webContents.send(DESKTOP_UPDATE_STATUS_CHANGED_CHANNEL, status);
-  }
+  const window = getMainWindow();
+  if (!window) return;
+  window.webContents.send(DESKTOP_UPDATE_STATUS_CHANGED_CHANNEL, status);
 }
 
 function notifyUpdateDownloaded(
@@ -441,9 +442,8 @@ function notifyUpdateDownloaded(
     releaseNotes: updateReleaseNotes(info),
   };
 
-  for (const window of BrowserWindow.getAllWindows()) {
-    sendUpdateDownloaded(window, event);
-  }
+  const window = getMainWindow();
+  if (window) sendUpdateDownloaded(window, event);
 }
 
 function showUpToDateMessage() {
@@ -491,10 +491,9 @@ function sendUpdateDownloaded(
 }
 
 /**
- * Update notices render as an in-app dialog in the renderer. The focused window
- * gets it so the notice lands where the user is looking; with no window open
- * there is nothing to show and the notice is dropped, exactly as a message box
- * with no parent would be dismissed unseen.
+ * Update notices render only in the main window. With no main window open there
+ * is nothing to show, so transient notices are dropped; update state remains in
+ * this process and is recovered by the next main window through getUpdateStatus.
  */
 function showUpdateMessage({
   actions = [],
@@ -507,10 +506,9 @@ function showUpdateMessage({
   message: string;
   tone?: "error" | "info";
 }) {
-  const targetWindow =
-    BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
-  if (targetWindow === undefined || targetWindow.isDestroyed()) {
-    log.info(`Dropping update notice with no window to show it in: ${message}`);
+  const targetWindow = getMainWindow();
+  if (!targetWindow) {
+    log.info(`Dropping update notice with no main window: ${message}`);
     return;
   }
 

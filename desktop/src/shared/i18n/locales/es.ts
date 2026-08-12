@@ -436,6 +436,7 @@ export const es = {
       noStandaloneChats: "No hay chats independientes",
       openBranchChat: "Abrir el chat que usa esta rama",
       projects: "Proyectos",
+      projectsLoadError: "No se pudieron cargar los proyectos",
       powerWorktreeHome: "Inicio",
       powerWorktreeHistoricalChat: "Historial de chats",
       refreshProjects: "Actualizar proyectos",
@@ -501,11 +502,11 @@ export const es = {
           confirmDeleteDetail:
             "Esto eliminará permanentemente {{chatCount}} sesión(es) archivada(s) y {{managedWorktreeCount}} directorio(s) worktree. Esta acción no se puede deshacer.",
           confirmDeleteTitle: "¿Eliminar los worktrees eliminables?",
-          deleteFailed: "No se pudo eliminar el worktree",
+          deleteFailed: "Error al eliminar: {{message}}",
+          deletingToast: "Eliminando worktree…",
           deleteWorktree:
             "Eliminar permanentemente el worktree {{identifier}} de {{projectName}}",
-          deletedToast:
-            "{{worktreeCount}} worktree(s) eliminado(s) · {{chatCount}} sesión(es) archivada(s) eliminada(s)",
+          deletedToast: "Worktree eliminado",
           empty: "No hay worktrees para eliminar",
           missingOnDisk: "No está en el disco",
           noSessions: "Worktree huérfano · sin sesiones archivadas",

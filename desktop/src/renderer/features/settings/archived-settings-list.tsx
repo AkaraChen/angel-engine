@@ -16,7 +16,12 @@ import {
 } from "@/app/workspace/workspace-display";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { NativeSelect } from "@/components/ui/native-select";
+import {
+  Select,
+  SelectContent,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { dangerActionClassName } from "@/features/settings/settings-controls";
 import { formatDateTime } from "@/platform/format-time";
 import { cn } from "@/platform/utils";
@@ -76,13 +81,16 @@ export function SettingsBulkCount({ children }: { children: ReactNode }) {
 /** Row shell: rounded hover target, `--primary-soft` when bulk-selected. */
 export function SettingsListRow({
   children,
+  disabled,
   selected,
 }: {
   children: ReactNode;
+  disabled?: boolean;
   selected?: boolean;
 }) {
   return (
     <article
+      aria-disabled={disabled === true}
       className={cn(
         `
           flex min-w-0 items-start gap-3 rounded-lg px-3 py-2.5 transition-colors
@@ -90,6 +98,7 @@ export function SettingsListRow({
           motion-reduce:transition-none
         `,
         selected === true ? "bg-primary-soft" : "hover:bg-overlay-hover",
+        disabled === true && "pointer-events-none opacity-50",
       )}
     >
       {children}
@@ -115,16 +124,16 @@ export function ArchivedFilterSelect({
       "
     >
       {label}
-      <NativeSelect
-        aria-label={label}
-        className="w-full"
-        onChange={(event) => onValueChange(event.currentTarget.value)}
-        selectClassName="h-8 w-full rounded-md border-border bg-background py-0 pr-8 pl-3 text-xs"
-        size="sm"
-        value={value}
-      >
-        {children}
-      </NativeSelect>
+      <Select onValueChange={onValueChange} value={value}>
+        <SelectTrigger
+          aria-label={label}
+          className="h-8 w-full rounded-md border-border bg-background py-0 pr-8 pl-3 text-xs"
+          size="sm"
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>{children}</SelectContent>
+      </Select>
     </label>
   );
 }

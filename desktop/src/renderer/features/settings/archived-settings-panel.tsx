@@ -14,7 +14,7 @@ import { useTranslation } from "react-i18next";
 import { getProjectDisplayName } from "@/app/workspace/workspace-display";
 import { Button } from "@/components/ui/button";
 import { confirmAction } from "@/components/ui/confirm-dialog";
-import { NativeSelectOption } from "@/components/ui/native-select";
+import { SelectItem } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import {
   archivedChatListQueryOptions,
@@ -229,9 +229,9 @@ export function ArchivedSettingsPanel() {
             value={timeFilter}
           >
             {timeFilterOptions.map((option) => (
-              <NativeSelectOption key={option.value} value={option.value}>
+              <SelectItem key={option.value} value={option.value}>
                 {t(option.labelKey)}
-              </NativeSelectOption>
+              </SelectItem>
             ))}
           </ArchivedFilterSelect>
           <ArchivedFilterSelect
@@ -239,16 +239,16 @@ export function ArchivedSettingsPanel() {
             onValueChange={setProjectFilter}
             value={projectFilter}
           >
-            <NativeSelectOption value="all">
+            <SelectItem value="all">
               {t("settings.archived.allProjects")}
-            </NativeSelectOption>
-            <NativeSelectOption value={NO_PROJECT_FILTER}>
+            </SelectItem>
+            <SelectItem value={NO_PROJECT_FILTER}>
               {t("settings.archived.noProject")}
-            </NativeSelectOption>
+            </SelectItem>
             {projects.map((project) => (
-              <NativeSelectOption key={project.id} value={project.id}>
+              <SelectItem key={project.id} value={project.id}>
                 {getProjectDisplayName(project.path)}
-              </NativeSelectOption>
+              </SelectItem>
             ))}
           </ArchivedFilterSelect>
           <div className="ml-auto flex items-center gap-2">

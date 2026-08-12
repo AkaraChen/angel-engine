@@ -5,16 +5,19 @@ import type {
   WorkspaceGitResolvedBase,
 } from "@angel-engine/daemon-api/workspace-tools";
 import type { TFunction } from "i18next";
-import type { ChangeEvent, FC, ReactNode } from "react";
+import type { FC, ReactNode } from "react";
 
 import { Copy } from "@phosphor-icons/react";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
-  NativeSelect,
-  NativeSelectOption,
-} from "@/components/ui/native-select";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 
 type WorkspaceGitBaseSelectProps = {
@@ -33,9 +36,6 @@ export const WorkspaceGitBaseSelect: FC<WorkspaceGitBaseSelectProps> = ({
   onChange,
 }) => {
   const { t } = useTranslation();
-  const handleChange = (event: ChangeEvent<HTMLSelectElement>) => {
-    onChange(event.currentTarget.value as WorkspaceGitDiffBaseKind);
-  };
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "[" && event.key !== "]") return;
@@ -68,24 +68,31 @@ export const WorkspaceGitBaseSelect: FC<WorkspaceGitBaseSelectProps> = ({
       <span className="shrink-0 text-xs text-muted-foreground">
         {t("workspace.tools.diffBase.label")}
       </span>
-      <NativeSelect
-        aria-label={t("workspace.tools.diffBase.label")}
-        className="w-full min-w-0"
-        selectClassName="h-7 w-full min-w-32 font-mono text-xs"
-        size="sm"
+      <Select
         value={value}
-        onChange={handleChange}
+        onValueChange={(nextValue) =>
+          onChange(nextValue as WorkspaceGitDiffBaseKind)
+        }
       >
-        {bases.map((base) => (
-          <NativeSelectOption
-            disabled={!base.available}
-            key={base.kind}
-            value={base.kind}
-          >
-            {t(`workspace.tools.diffBase.${base.kind}`)}
-          </NativeSelectOption>
-        ))}
-      </NativeSelect>
+        <SelectTrigger
+          aria-label={t("workspace.tools.diffBase.label")}
+          className="h-7 w-full min-w-32 font-mono text-xs"
+          size="sm"
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {bases.map((base) => (
+            <SelectItem
+              disabled={!base.available}
+              key={base.kind}
+              value={base.kind}
+            >
+              {t(`workspace.tools.diffBase.${base.kind}`)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       {resolvedBase.shortSha || summary ? (
         <div
           className="col-span-2 flex min-w-0 items-center justify-between gap-2"
