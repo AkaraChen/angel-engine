@@ -1,20 +1,32 @@
 import type {
+  AddChangeRequestCommentInput,
   ChangeRequest,
   ChangeRequestHeadResult,
+  ChangeRequestPreflightInput,
+  ChangeRequestPreflightResult,
   ChangeRequestStatusResult,
+  CreateChangeRequestInput,
   ListOperationInput,
+  MergeChangeRequestInput,
   MergeMethod,
   MergeRequirement,
   NumberedItemInput,
   ProviderOperationContext,
+  PublishBranchInput,
+  PublishBranchResult,
   RepositoryIdentity,
+  ReviewComment,
   ReviewDecision,
   UrlOperationInput,
 } from "@angel-engine/daemon-api/source-control";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import is from "@sindresorhus/is";
 import { type as arkType } from "arktype";
 
 import { DaemonError } from "../../../../../platform/errors";
+import { executeGit, type LocalGitRunner } from "../../../local-git/backend";
 import {
   findGhPath,
   type GhRunner,
@@ -75,6 +87,27 @@ const repositoryPayloadSchema = arkType({
   squashMergeAllowed: "boolean",
   viewerPermission: "string",
 });
+const createPayloadSchema = arkType({
+  "+": "ignore",
+  number: positiveInteger,
+  url: "string > 0",
+});
+const commentPayloadSchema = arkType({
+  "+": "ignore",
+  author: actorSchema,
+  body: "string | null",
+  createdAt: "string > 0",
+  id: "string | number",
+  url: "string > 0",
+});
+const commentsPayloadSchema = arkType({
+  "+": "ignore",
+  comments: commentPayloadSchema.array(),
+});
+const defaultBranchPayloadSchema = arkType({
+  "+": "ignore",
+  defaultBranchRef: { name: "string > 0" },
+});
 
 const CHANGE_REQUEST_FIELDS = [
   "additions",
@@ -110,6 +143,211 @@ const REPOSITORY_FIELDS = [
 interface GitHubChangeRequestDependencies {
   findGh?: () => Promise<string | null>;
   runGh?: GhRunner;
+  runGit?: LocalGitRunner;
+}
+
+export async function createGitHubChangeRequest(
+  input: CreateChangeRequestInput,
+  context: ProviderOperationContext,
+  dependencies: GitHubChangeRequestDependencies = {},
+): Promise<ChangeRequest> {
+  const repository = requireGitHubRepository(input.repository);
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "angel-pr-"));
+  const bodyPath = path.join(directory, "body.md");
+  try {
+    await fs.writeFile(bodyPath, input.body, "utf8");
+    const args = [
+      "pr",
+      "create",
+      "--repo",
+      repository.displayPath,
+      "--base",
+      input.targetBranch,
+      "--head",
+      input.sourceBranch,
+      "--title",
+      input.title.trim(),
+      "--body-file",
+      bodyPath,
+      "--json",
+      "number,url",
+    ];
+    if (input.draft) args.push("--draft");
+    const created = parsePayload(
+      createPayloadSchema,
+      (await runGh(args, dependencies)).stdout,
+    );
+    return getGitHubChangeRequest(
+      { id: String(created.number), repository },
+      context,
+      dependencies,
+    );
+  } finally {
+    await fs.rm(directory, { force: true, recursive: true });
+  }
+}
+
+export async function commentOnGitHubChangeRequest(
+  input: AddChangeRequestCommentInput,
+  _context: ProviderOperationContext,
+  dependencies: GitHubChangeRequestDependencies = {},
+): Promise<ReviewComment> {
+  const repository = requireGitHubRepository(input.repository);
+  const body = normalizeText(input.body);
+  if (body.length === 0)
+    throw DaemonError.invalidRequest("Comment body is required.");
+  await runGh(
+    [
+      "pr",
+      "comment",
+      input.id,
+      "--repo",
+      repository.displayPath,
+      "--body",
+      body,
+    ],
+    dependencies,
+  );
+  const payload = parsePayload(
+    commentsPayloadSchema,
+    (
+      await runGh(
+        [
+          "pr",
+          "view",
+          input.id,
+          "--repo",
+          repository.displayPath,
+          "--json",
+          "comments",
+        ],
+        dependencies,
+      )
+    ).stdout,
+  );
+  const comment =
+    [...payload.comments]
+      .reverse()
+      .find((entry) => normalizeText(entry.body ?? "") === body) ??
+    payload.comments.at(-1);
+  if (comment === undefined) {
+    return {
+      id: `local-${Date.now()}`,
+      author: null,
+      body,
+      createdAt: new Date().toISOString(),
+      updatedAt: null,
+      webUrl: null,
+    };
+  }
+  return {
+    id: String(comment.id),
+    author: comment.author
+      ? {
+          id: comment.author.id ?? null,
+          login: comment.author.login,
+          displayName: comment.author.name ?? null,
+          avatarUrl: comment.author.avatarUrl ?? null,
+          webUrl: comment.author.url ?? null,
+        }
+      : null,
+    body: normalizeText(comment.body ?? ""),
+    createdAt: comment.createdAt,
+    updatedAt: null,
+    webUrl: comment.url,
+  };
+}
+
+export async function mergeGitHubChangeRequest(
+  input: MergeChangeRequestInput,
+  context: ProviderOperationContext,
+  dependencies: GitHubChangeRequestDependencies = {},
+): Promise<ChangeRequest> {
+  const repository = requireGitHubRepository(input.repository);
+  const args = [
+    "pr",
+    "merge",
+    input.id,
+    "--repo",
+    repository.displayPath,
+    `--${input.method}`,
+  ];
+  if (input.deleteSourceBranch) args.push("--delete-branch");
+  await runGh(args, dependencies);
+  return getGitHubChangeRequest(input, context, dependencies);
+}
+
+export async function preflightGitHubChangeRequest(
+  input: ChangeRequestPreflightInput,
+  _context: ProviderOperationContext,
+  dependencies: GitHubChangeRequestDependencies = {},
+): Promise<ChangeRequestPreflightResult> {
+  const repository = requireGitHubRepository(input.repository);
+  const targetBranch =
+    input.targetBranch?.trim() ||
+    parsePayload(
+      defaultBranchPayloadSchema,
+      (
+        await runGh(
+          [
+            "repo",
+            "view",
+            repository.displayPath,
+            "--json",
+            "defaultBranchRef",
+          ],
+          dependencies,
+        )
+      ).stdout,
+    ).defaultBranchRef.name;
+  return {
+    targetBranch,
+    requirements: [
+      {
+        id: "distinct-branches",
+        kind: "other",
+        state:
+          input.sourceBranch === targetBranch ? "unsatisfied" : "satisfied",
+        blocking: input.sourceBranch === targetBranch,
+        label: "Source and target branches differ",
+        detailsUrl: null,
+      },
+    ],
+  };
+}
+
+export async function publishGitHubBranch(
+  input: PublishBranchInput,
+  _context: ProviderOperationContext,
+  dependencies: GitHubChangeRequestDependencies = {},
+): Promise<PublishBranchResult> {
+  requireGitHubRepository(input.repository);
+  const args = ["push", "-u"];
+  if (input.forceWithLease) args.push("--force-with-lease");
+  args.push(input.remoteName, input.localBranch);
+  try {
+    await (dependencies.runGit ?? executeGit)(input.projectPath, args);
+  } catch (cause) {
+    const message =
+      cause instanceof Error
+        ? cause.message.toLowerCase()
+        : String(cause).toLowerCase();
+    if (
+      message.includes("non-fast-forward") ||
+      message.includes("fetch first")
+    ) {
+      throw DaemonError.gitPushNotFastForward();
+    }
+    if (
+      message.includes("permission denied") ||
+      message.includes("permission to") ||
+      message.includes("403")
+    ) {
+      throw DaemonError.gitPushDenied();
+    }
+    throw DaemonError.gitFailed(cause);
+  }
+  return { remoteName: input.remoteName, remoteRef: input.localBranch };
 }
 
 export async function getGitHubChangeRequest(

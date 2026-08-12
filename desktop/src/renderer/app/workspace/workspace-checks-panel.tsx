@@ -1,7 +1,8 @@
 import type {
-  GitHubCheckBucket,
-  GitHubPrCheck,
-} from "@angel-engine/daemon-api/github";
+  CapabilityMatrix,
+  CheckRun,
+  CheckRunStatus,
+} from "@angel-engine/daemon-api/source-control";
 import {
   ArrowClockwise,
   ArrowSquareOut,
@@ -14,6 +15,7 @@ import {
 } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -25,36 +27,50 @@ import {
 import { useWorkspaceToolStore } from "@/app/workspace/workspace-tool-store";
 import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
 import { Button } from "@/components/ui/button";
+import { CapabilityGate } from "@/features/source-control/components/capability-gate";
+import { capabilityState } from "@/features/source-control/model";
+import { checksSummaryQueryOptions } from "@/features/change-request/api/queries";
 import { useChatRunStore } from "@/features/chat/state/chat-run-store";
 import { queryKeys } from "@/platform/query-keys";
 import { cn } from "@/platform/utils";
 
-const CHECKS_POLL_MS = 15_000;
-
-export function WorkspaceChecksSection({ root }: { root: string }) {
+export function WorkspaceChecksSection({
+  capabilities,
+  changeRequestId,
+  projectPath,
+  providerIdentity,
+}: {
+  capabilities: CapabilityMatrix;
+  changeRequestId: string | null;
+  projectPath: string | null;
+  providerIdentity: string | null;
+}) {
   const { active, api, openBrowserTab } = useWorkspaceToolSurface();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const chatId = useWorkspaceToolStore((state) => state.context.chatId);
   const startRun = useChatRunStore((state) => state.startRun);
   const [expanded, setExpanded] = useState(true);
+  const checksCapability = capabilityState(capabilities, "checks.snapshot");
+  const fixCapability = capabilityState(capabilities, "checks.fixPrompt");
 
-  const checksQuery = useQuery({
-    enabled: active && is.nonEmptyString(root),
-    queryFn: async () => api.github.listPrChecks({ cwd: root }),
-    queryKey: queryKeys.github.prChecks(root),
-    refetchInterval: (query) => {
-      const data = query.state.data;
-      if (data === undefined || !data.hasPullRequest) return false;
-      return data.summary.pending > 0 ? CHECKS_POLL_MS : false;
-    },
-    retry: false,
-    staleTime: 5_000,
-  });
+  const checksQuery = useQuery(
+    checksSummaryQueryOptions({
+      active,
+      api,
+      changeRequestId,
+      projectPath,
+      providerIdentity,
+      supported: checksCapability.supported,
+    }),
+  );
 
   const fixMutation = useMutation({
     mutationFn: async () => {
-      const result = await api.github.prChecksFixPrompt({ cwd: root });
+      const result = await api.sourceControl.checksFixPrompt(
+        projectPath ?? "",
+        changeRequestId ?? "",
+      );
       if (!is.nonEmptyString(chatId)) {
         throw new Error(t("workspace.tools.checks.fixNeedsChat"));
       }
@@ -78,73 +94,66 @@ export function WorkspaceChecksSection({ root }: { root: string }) {
 
   const refresh = useCallback(() => {
     void queryClient.invalidateQueries({
-      queryKey: queryKeys.github.prChecks(root),
+      queryKey: queryKeys.sourceControl.checksSummary(
+        providerIdentity,
+        changeRequestId,
+      ),
     });
-  }, [queryClient, root]);
+  }, [changeRequestId, providerIdentity, queryClient]);
 
   const data = checksQuery.data;
   const allPassed =
-    data !== undefined &&
-    data.checks.length > 0 &&
-    data.checks.every((check) => check.bucket === "pass");
-  const pullRequestNumber = data?.pullRequest?.number;
+    data !== undefined && data.checks.length > 0 && data.requiredAllGreen;
   useEffect(() => {
-    if (pullRequestNumber === undefined) {
-      return;
-    }
-    setExpanded(!allPassed);
-  }, [allPassed, pullRequestNumber]);
+    if (data !== undefined) setExpanded(!allPassed);
+  }, [allPassed, data]);
 
-  const sortedChecks = useMemo(() => {
-    if (data === undefined) {
-      return [];
-    }
-    const rank: Record<GitHubCheckBucket, number> = {
-      fail: 0,
-      pending: 1,
-      cancel: 2,
-      skipping: 3,
-      pass: 4,
-    };
-    return [...data.checks].sort(
-      (left, right) => rank[left.bucket] - rank[right.bucket],
+  const sortedChecks = useMemo(
+    () => [...(data?.checks ?? [])].sort(compareChecks),
+    [data],
+  );
+
+  if (!checksCapability.supported) {
+    return (
+      <section
+        className="space-y-2 border-t border-border-subtle pt-3"
+        data-testid="workspace-checks-unsupported"
+        id="workspace-tool-checks-section"
+      >
+        <h3 className="text-xs font-medium">
+          {t("workspace.tools.tabs.checks")}
+        </h3>
+        <p className="text-xs text-muted-foreground">
+          {checksCapability.reason.message}
+        </p>
+        <CapabilityGate
+          capabilities={capabilities}
+          capability="checks.snapshot"
+        >
+          <Button size="sm" variant="outline">
+            {t("workspace.tools.tabs.checks")}
+          </Button>
+        </CapabilityGate>
+      </section>
     );
-  }, [data]);
+  }
 
   if (checksQuery.isError) {
     return (
-      <section
-        className="space-y-2 border-t border-border-subtle pt-3"
-        id="workspace-tool-checks-section"
-      >
-        <h3 className="text-xs font-medium">
-          {t("workspace.tools.tabs.checks")}
-        </h3>
+      <ChecksSectionShell>
         <WorkspaceToolBanner tone="danger">
           {getErrorMessage(checksQuery.error)}
         </WorkspaceToolBanner>
-      </section>
+      </ChecksSectionShell>
     );
   }
-
   if (checksQuery.isLoading || data === undefined) {
-    return (
-      <section
-        className="space-y-2 border-t border-border-subtle pt-3"
-        id="workspace-tool-checks-section"
-      >
-        <h3 className="text-xs font-medium">
-          {t("workspace.tools.tabs.checks")}
-        </h3>
-      </section>
-    );
+    return <ChecksSectionShell />;
   }
 
-  if (!data.hasPullRequest || data.pullRequest === null) {
-    return null;
-  }
-
-  const failedCount = data.summary.fail;
+  const failedCount = data.failed.length;
+  const pendingCount = data.checks.filter(isPending).length;
+  const passCount = data.checks.filter(isPassing).length;
 
   return (
     <section
@@ -175,50 +184,70 @@ export function WorkspaceChecksSection({ root }: { root: string }) {
         </button>
         <Button size="xs" variant="ghost" onClick={refresh}>
           <ArrowClockwise
-            className={cn(
-              "size-3.5",
-              checksQuery.isFetching ? "animate-spin" : undefined,
-            )}
+            className={cn(checksQuery.isFetching && "animate-spin")}
           />
           <span className="sr-only">{t("workspace.tools.checks.refresh")}</span>
         </Button>
       </div>
-
       {expanded ? (
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
             <SummaryChip
               label={t("workspace.tools.checks.summaryPass", {
-                count: data.summary.pass,
+                count: passCount,
               })}
               tone="pass"
             />
             <SummaryChip
               label={t("workspace.tools.checks.summaryFail", {
-                count: data.summary.fail,
+                count: failedCount,
               })}
               tone="fail"
             />
             <SummaryChip
               label={t("workspace.tools.checks.summaryPending", {
-                count: data.summary.pending,
+                count: pendingCount,
               })}
               tone="pending"
             />
             {failedCount > 0 ? (
-              <Button
-                className="ml-auto"
-                disabled={fixMutation.isPending || !is.nonEmptyString(chatId)}
-                size="xs"
-                variant="secondary"
-                onClick={() => fixMutation.mutate()}
+              <CapabilityGate
+                capabilities={capabilities}
+                capability="checks.fixPrompt"
               >
-                {fixMutation.isPending
-                  ? t("workspace.tools.checks.fixing")
-                  : t("workspace.tools.checks.fixFailures")}
-              </Button>
+                <Button
+                  className="ml-auto"
+                  disabled={
+                    !fixCapability.supported ||
+                    fixMutation.isPending ||
+                    !is.nonEmptyString(chatId) ||
+                    projectPath === null ||
+                    changeRequestId === null
+                  }
+                  size="xs"
+                  variant="secondary"
+                  onClick={() => fixMutation.mutate()}
+                >
+                  {fixMutation.isPending
+                    ? t("workspace.tools.checks.fixing")
+                    : t("workspace.tools.checks.fixFailures")}
+                </Button>
+              </CapabilityGate>
             ) : null}
           </div>
+          {failedCount > 0 && !fixCapability.supported ? (
+            <p
+              className="text-xs text-muted-foreground"
+              data-testid="workspace-checks-fix-unsupported"
+            >
+              {fixCapability.reason.message}
+            </p>
+          ) : null}
+          {!is.nonEmptyString(chatId) && failedCount > 0 ? (
+            <WorkspaceToolBanner tone="attention">
+              {t("workspace.tools.checks.fixNeedsChat")}
+            </WorkspaceToolBanner>
+          ) : null}
           {fixMutation.isError ? (
             <WorkspaceToolBanner tone="danger">
               {getErrorMessage(fixMutation.error)}
@@ -229,12 +258,6 @@ export function WorkspaceChecksSection({ root }: { root: string }) {
               {t("workspace.tools.checks.fixStarted")}
             </WorkspaceToolBanner>
           ) : null}
-          {!is.nonEmptyString(chatId) && failedCount > 0 ? (
-            <WorkspaceToolBanner tone="attention">
-              {t("workspace.tools.checks.fixNeedsChat")}
-            </WorkspaceToolBanner>
-          ) : null}
-
           {sortedChecks.length === 0 ? (
             <WorkspaceToolEmpty
               icon={CheckCircle}
@@ -245,10 +268,10 @@ export function WorkspaceChecksSection({ root }: { root: string }) {
               {sortedChecks.map((check) => (
                 <CheckRow
                   check={check}
-                  key={`${check.name}:${check.workflow ?? ""}:${check.link ?? ""}`}
+                  key={check.id}
                   onOpenLink={
-                    is.nonEmptyString(check.link)
-                      ? () => openBrowserTab(check.link as string)
+                    check.detailsUrl
+                      ? () => openBrowserTab(check.detailsUrl as string)
                       : undefined
                   }
                 />
@@ -261,45 +284,45 @@ export function WorkspaceChecksSection({ root }: { root: string }) {
   );
 }
 
+function ChecksSectionShell({ children }: { children?: ReactNode }) {
+  const { t } = useTranslation();
+  return (
+    <section className="space-y-2 border-t border-border-subtle pt-3">
+      <h3 className="text-xs font-medium">
+        {t("workspace.tools.tabs.checks")}
+      </h3>
+      {children}
+    </section>
+  );
+}
+
 function CheckRow({
   check,
   onOpenLink,
 }: {
-  check: GitHubPrCheck;
+  check: CheckRun;
   onOpenLink?: () => void;
 }) {
   const { t } = useTranslation();
   return (
     <li className="flex items-start gap-2.5 px-3 py-2.5">
-      <CheckStatusIcon bucket={check.bucket} />
+      <CheckStatusIcon check={check} />
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="truncate text-sm font-medium text-foreground">
-            {check.name}
-          </span>
-          <span className="shrink-0 font-mono text-[10px] tracking-wide text-muted-foreground uppercase">
-            {check.state}
+          <span className="truncate text-sm font-medium">{check.name}</span>
+          <span className="shrink-0 font-mono text-[10px] uppercase text-muted-foreground">
+            {check.conclusion ?? check.status}
           </span>
         </div>
-        {is.nonEmptyString(check.workflow) ? (
+        {check.group?.name ? (
           <div className="mt-0.5 truncate text-[11px] text-muted-foreground">
-            {check.workflow}
-          </div>
-        ) : null}
-        {is.nonEmptyString(check.description) ? (
-          <div className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">
-            {check.description}
+            {check.group.name}
           </div>
         ) : null}
       </div>
-      {onOpenLink !== undefined ? (
-        <Button
-          className="shrink-0"
-          size="xs"
-          variant="ghost"
-          onClick={onOpenLink}
-        >
-          <ArrowSquareOut className="size-3.5" />
+      {onOpenLink ? (
+        <Button size="xs" variant="ghost" onClick={onOpenLink}>
+          <ArrowSquareOut />
           <span className="sr-only">
             {t("workspace.tools.checks.openCheck")}
           </span>
@@ -309,38 +332,45 @@ function CheckRow({
   );
 }
 
-function CheckStatusIcon({ bucket }: { bucket: GitHubCheckBucket }) {
-  switch (bucket) {
-    case "pass":
-      return (
-        <CheckCircle
-          className="mt-0.5 size-4 shrink-0 text-status-success"
-          weight="fill"
-        />
-      );
-    case "fail":
-      return (
-        <XCircle
-          className="mt-0.5 size-4 shrink-0 text-status-danger"
-          weight="fill"
-        />
-      );
-    case "pending":
-      return (
-        <CircleNotch
-          className="mt-0.5 size-4 shrink-0 animate-spin text-status-attention"
-          weight="bold"
-        />
-      );
-    case "cancel":
-    case "skipping":
-      return (
-        <WarningCircle
-          className="mt-0.5 size-4 shrink-0 text-muted-foreground"
-          weight="fill"
-        />
-      );
+function CheckStatusIcon({ check }: { check: CheckRun }) {
+  if (isPending(check))
+    return <CircleNotch className="animate-spin text-status-attention" />;
+  if (check.conclusion === "success")
+    return <CheckCircle className="text-status-success" weight="fill" />;
+  if (check.conclusion === "failure" || check.conclusion === "timed-out") {
+    return <XCircle className="text-status-danger" weight="fill" />;
   }
+  return <WarningCircle className="text-muted-foreground" weight="fill" />;
+}
+
+function compareChecks(left: CheckRun, right: CheckRun) {
+  return (
+    checkRank(left) - checkRank(right) || left.name.localeCompare(right.name)
+  );
+}
+
+function checkRank(check: CheckRun) {
+  if (check.conclusion === "failure" || check.conclusion === "timed-out")
+    return 0;
+  if (isPending(check)) return 1;
+  if (check.conclusion === "success") return 3;
+  return 2;
+}
+
+function isPending(check: { status: CheckRunStatus }) {
+  return (
+    check.status === "queued" ||
+    check.status === "running" ||
+    check.status === "waiting-manual"
+  );
+}
+
+function isPassing(check: CheckRun) {
+  return (
+    check.conclusion === "success" ||
+    check.conclusion === "neutral" ||
+    check.conclusion === "skipped"
+  );
 }
 
 function SummaryChip({

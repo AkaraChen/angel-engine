@@ -19,3 +19,11 @@ Provider transports must execute commands without a shell and pass arguments as 
 Every invocation receives an `AbortSignal` and absolute deadline. Caller cancellation produces `source-control/cancelled`; an exhausted deadline produces `source-control/timeout`; synchronous throws, rejected promises, and non-`Error` failures become `source-control/failed`. Providers should stop work when signaled, while the registry deadline remains authoritative even if a provider ignores cancellation.
 
 Activations carry a project generation. Remote or configuration changes increment that generation; an operation using an older activation fails with `source-control/stale-activation` and must probe again.
+
+## Stable check identity
+
+Consumers that deduplicate check events across provider attempts must use the v1 logical identity. Its ordered segments are provider id, `repositoryKey(repository)`, group kind (or the literal `ungrouped`), group name (or empty), group stage (or empty), and check name.
+
+Before encoding, every segment is normalized to Unicode NFC. The serialized key starts with `check:v1:` and encodes each segment as its UTF-8 byte length, `:`, then the segment bytes. Length-prefixing is mandatory: joining raw values with `:`, `/`, or another delimiter is not collision-safe because provider names and check labels may contain those characters. Repository consumers must use the shared `repositoryKey` helper rather than reconstructing the repository path.
+
+The identity deliberately excludes check id, group id, attempt, retry ancestry, status, conclusion, timestamps, details URL, and log reference. Consequently, retries of the same logical check keep one fingerprint even when their outcomes differ. An ungrouped check uses `ungrouped` plus empty group name and stage segments, keeping the absence of a group explicit and deterministic. Providers must populate group kind, name, and stage consistently across attempts; consumers must not infer identity from provider-specific extensions.

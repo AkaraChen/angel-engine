@@ -37,7 +37,9 @@ import {
   startShepherdMutationOptions,
   stopShepherdMutationOptions,
 } from "@/features/shepherd/api/queries";
-import { parseGitHubPullRequestUrl } from "@/features/shepherd/parse-github-pr-url";
+import { resolveShepherdTarget } from "@/features/shepherd/resolve-shepherd-target";
+import { useSourceControlActivation } from "@/features/source-control/api/use-activation";
+import { capabilityState } from "@/features/source-control/model";
 import { useCommand, useContextKey } from "@/platform/keymap/provider";
 import { queryKeys } from "@/platform/query-keys";
 import { useApi } from "@/platform/use-api";
@@ -75,6 +77,7 @@ export const WorkspaceCommandPalette: FC<WorkspaceCommandPaletteProps> = ({
     (state) => state.setRightSidebarOpen,
   );
   const toolContext = useWorkspaceToolStore((state) => state.context);
+  const sourceControl = useSourceControlActivation(toolContext.projectId);
   const updateWorkspaceToolSnapshot = useWorkspaceToolStore(
     (state) => state.updateWorkspaceToolSnapshot,
   );
@@ -120,8 +123,59 @@ export const WorkspaceCommandPalette: FC<WorkspaceCommandPaletteProps> = ({
         return;
       }
 
-      const status = await api.github.pullRequestStatus({ cwd: root });
-      if (status.state !== "OPEN") {
+      const supportsList = capabilityState(
+        sourceControl.capabilities,
+        "changeRequests.list",
+      ).supported;
+      const supportsStatus = capabilityState(
+        sourceControl.capabilities,
+        "changeRequests.status",
+      ).supported;
+      const supportsLinks = capabilityState(
+        sourceControl.capabilities,
+        "changeRequests.getByUrl",
+      ).supported;
+      if (
+        sourceControl.status !== "active" ||
+        !is.nonEmptyString(sourceControl.projectPath) ||
+        !supportsList ||
+        !supportsStatus ||
+        !supportsLinks
+      ) {
+        const reason = !supportsLinks
+          ? unsupportedCapabilityReason(
+              capabilityState(
+                sourceControl.capabilities,
+                "changeRequests.getByUrl",
+              ),
+            )
+          : !supportsStatus
+            ? unsupportedCapabilityReason(
+                capabilityState(
+                  sourceControl.capabilities,
+                  "changeRequests.status",
+                ),
+              )
+            : !supportsList
+              ? unsupportedCapabilityReason(
+                  capabilityState(
+                    sourceControl.capabilities,
+                    "changeRequests.list",
+                  ),
+                )
+              : sourceControl.unavailableReason?.message;
+        toast({
+          description:
+            reason ?? t("workspace.tools.pullRequest.shepherd.invalidUrl"),
+          title: t("workspace.tools.pullRequest.shepherd.actionFailed"),
+          variant: "destructive",
+        });
+        return;
+      }
+      const status = await api.sourceControl.currentChangeRequest(
+        sourceControl.projectPath,
+      );
+      if (status === null || status.changeRequest.state !== "open") {
         toast({
           title: t("workspace.tools.pullRequest.noOpen"),
           description: t("workspace.tools.pullRequest.noOpenDetail"),
@@ -129,8 +183,12 @@ export const WorkspaceCommandPalette: FC<WorkspaceCommandPaletteProps> = ({
         });
         return;
       }
-      const parsed = parseGitHubPullRequestUrl(status.url);
-      if (parsed === null) {
+      const target = await resolveShepherdTarget({
+        api,
+        projectPath: sourceControl.projectPath,
+        url: status.changeRequest.webUrl,
+      });
+      if (target === null) {
         toast({
           title: t("workspace.tools.pullRequest.shepherd.startFailed"),
           description: t("workspace.tools.pullRequest.shepherd.invalidUrl"),
@@ -140,12 +198,12 @@ export const WorkspaceCommandPalette: FC<WorkspaceCommandPaletteProps> = ({
       }
       await startMutation.mutateAsync({
         chatId,
-        owner: parsed.owner,
-        prNumber: parsed.prNumber,
-        repo: parsed.repo,
+        ...target,
       });
       void queryClient.invalidateQueries({
-        queryKey: queryKeys.github.pullRequest(root),
+        queryKey: queryKeys.sourceControl.currentChangeRequest(
+          sourceControl.providerIdentity,
+        ),
       });
       toast({
         title: t("workspace.tools.pullRequest.shepherd.started"),
@@ -167,7 +225,6 @@ export const WorkspaceCommandPalette: FC<WorkspaceCommandPaletteProps> = ({
         return;
       }
       toast({
-        description: error instanceof Error ? error.message : String(error),
         title: t("workspace.tools.pullRequest.shepherd.actionFailed"),
         variant: "destructive",
       });
@@ -178,6 +235,11 @@ export const WorkspaceCommandPalette: FC<WorkspaceCommandPaletteProps> = ({
     setRightSidebarOpen,
     startMutation,
     stopMutation,
+    sourceControl.capabilities,
+    sourceControl.projectPath,
+    sourceControl.providerIdentity,
+    sourceControl.status,
+    sourceControl.unavailableReason,
     t,
     toast,
     toolContext.chatId,
@@ -202,7 +264,7 @@ export const WorkspaceCommandPalette: FC<WorkspaceCommandPaletteProps> = ({
         onSelect: () => {
           void shepherdPr();
         },
-        title: t("ui.commandShepherdPr"),
+        title: t("ui.commandShepherdChangeRequest"),
       },
       // Import has no button anywhere in the chrome; the palette is where a
       // rarely-used verb belongs. Hidden when no project owns the destination.
@@ -327,3 +389,9 @@ const PaletteEntry: FC<{
     </CommandItem>
   );
 };
+
+function unsupportedCapabilityReason(
+  state: ReturnType<typeof capabilityState>,
+): string | null {
+  return state.supported ? null : state.reason.message;
+}
