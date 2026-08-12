@@ -425,6 +425,7 @@ export const zhTW = {
       noStandaloneChats: "沒有獨立聊天",
       openBranchChat: "開啟正在使用此分支的聊天",
       projects: "專案",
+      projectsLoadError: "載入專案失敗",
       powerWorktreeHome: "首頁",
       powerWorktreeHistoricalChat: "歷史聊天",
       refreshProjects: "重新整理專案",

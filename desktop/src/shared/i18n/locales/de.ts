@@ -436,6 +436,7 @@ export const de = {
       noStandaloneChats: "Keine eigenständigen Chats",
       openBranchChat: "Chat öffnen, der diesen Branch verwendet",
       projects: "Projekte",
+      projectsLoadError: "Projekte konnten nicht geladen werden",
       powerWorktreeHome: "Home",
       powerWorktreeHistoricalChat: "Historical Chat",
       refreshProjects: "Projekte aktualisieren",

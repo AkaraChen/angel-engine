@@ -13,6 +13,7 @@ import type {
 } from "./workspace-thread-types";
 import type { ChatComposerBeforeSubmitResult } from "@/features/chat/components/composer/chat-composer";
 import type { ChatOptionsContextValue } from "@/features/chat/runtime/chat-options-context";
+import type { ProjectsQueryStatus } from "@/app/workspace/project-requirement-notice";
 import is from "@sindresorhus/is";
 import { useLayoutEffect, useMemo } from "react";
 import { NewChatComposer } from "@/app/workspace/new-chat-composer";
@@ -53,6 +54,7 @@ interface NewChatThreadProps {
   projectName?: string;
   projectPath?: string;
   projects: Project[];
+  projectsStatus: ProjectsQueryStatus;
   reasoningEffort?: string;
   runOrigin: ChatRunOrigin;
   runtime: AgentRuntime;
@@ -83,6 +85,7 @@ export function NewChatThread({
   projectName,
   projectPath,
   projects,
+  projectsStatus,
   reasoningEffort,
   runOrigin,
   runtime,
@@ -158,6 +161,7 @@ export function NewChatThread({
             projectId={projectId}
             projectName={projectName}
             projects={projects}
+            projectsStatus={projectsStatus}
             reasoningEffort={reasoningEffort}
             runtime={runtime}
             slotKey={slotKey}

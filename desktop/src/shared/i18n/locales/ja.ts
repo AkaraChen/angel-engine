@@ -435,6 +435,7 @@ export const ja = {
       noStandaloneChats: "単独チャットはありません",
       openBranchChat: "このブランチを使用中のチャットを開く",
       projects: "プロジェクト",
+      projectsLoadError: "プロジェクトの読み込みに失敗しました",
       powerWorktreeHome: "ホーム",
       powerWorktreeHistoricalChat: "チャット履歴",
       refreshProjects: "プロジェクトを更新",

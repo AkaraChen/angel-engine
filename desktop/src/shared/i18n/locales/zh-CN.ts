@@ -425,6 +425,7 @@ export const zhCN = {
       noStandaloneChats: "没有独立聊天",
       openBranchChat: "打开正在使用此分支的聊天",
       projects: "项目",
+      projectsLoadError: "加载项目失败",
       powerWorktreeHome: "主页",
       powerWorktreeHistoricalChat: "历史聊天",
       refreshProjects: "刷新项目",

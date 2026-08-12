@@ -17,6 +17,10 @@ import { Trans, useTranslation } from "react-i18next";
 import { DraftProjectSelect } from "@/app/workspace/draft-project-select";
 import { NewChatRecentSection } from "@/app/workspace/new-chat-recent";
 import {
+  ProjectRequirementNotice,
+  type ProjectsQueryStatus,
+} from "@/app/workspace/project-requirement-notice";
+import {
   isProjectWorkspaceMode,
   useWorkspaceUiStore,
 } from "@/app/workspace/workspace-ui-store";
@@ -133,6 +137,7 @@ interface NewChatComposerProps {
   projectId?: string;
   projectName?: string;
   projects: Project[];
+  projectsStatus: ProjectsQueryStatus;
   reasoningEffort?: string;
   runtime: string;
   slotKey: string;
@@ -159,6 +164,7 @@ export function NewChatComposer({
   projectId,
   projectName,
   projects,
+  projectsStatus,
   reasoningEffort,
   runtime,
   slotKey,
@@ -309,17 +315,11 @@ export function NewChatComposer({
 
           {projectRequired ? (
             <div className="mt-8 flex flex-col items-center gap-3 rounded-xl px-6 py-8 text-center">
-              <p className="text-sm text-muted-foreground">
-                {t("sidebar.noProjects")}
-              </p>
-              <Button
-                onClick={() => void onCreateProject()}
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                {t("sidebar.addProject")}
-              </Button>
+              <ProjectRequirementNotice
+                onCreateProject={onCreateProject}
+                projectCount={projects.length}
+                projectsStatus={projectsStatus}
+              />
             </div>
           ) : (
             <div
