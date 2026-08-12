@@ -1,5 +1,7 @@
 import type {
   AuthStatusResult,
+  CloneRepositoryInput,
+  CloneRepositoryResult,
   ProbeContext,
   ProviderMatch,
   ProviderOperationContext,
@@ -7,6 +9,8 @@ import type {
   RemoteDescriptor,
   SourceControlProviderPlugin,
 } from "@angel-engine/daemon-api/source-control";
+import path from "node:path";
+import { executeGit, type LocalGitRunner } from "../../local-git/backend";
 
 import {
   extractProcessOutput,
@@ -23,7 +27,30 @@ import {
   getGitHubWorkItem,
   getGitHubWorkItemByUrl,
   parseGitHubRepositoryUrl,
+  parseGitHubUrl,
 } from "./internal/resolve";
+import {
+  commentOnGitHubChangeRequest,
+  createGitHubChangeRequest,
+  getGitHubChangeRequest,
+  getGitHubChangeRequestByUrl,
+  getGitHubChangeRequestStatus,
+  listGitHubChangeRequests,
+  mergeGitHubChangeRequest,
+  preflightGitHubChangeRequest,
+  publishGitHubBranch,
+  resolveGitHubChangeRequestHead,
+} from "./internal/change-requests";
+import {
+  buildGitHubChecksFixPrompt,
+  fetchGitHubCheckFailureLog,
+  listGitHubChecks,
+  snapshotGitHubChecks,
+} from "./internal/checks";
+import {
+  listGitHubReviewThreads,
+  resolveGitHubReviewThread,
+} from "./internal/reviews";
 
 const PROVIDER_ID = "github";
 const PUBLIC_HOSTS = new Set(["github.com", "www.github.com"]);
@@ -31,6 +58,7 @@ const PUBLIC_HOSTS = new Set(["github.com", "www.github.com"]);
 interface GitHubPluginDependencies {
   findGh?: () => Promise<string | null>;
   runGh?: GhRunner;
+  runGit?: LocalGitRunner;
 }
 
 function remoteHost(remoteUrl: string): string | null {
@@ -62,7 +90,9 @@ function matchSource(
   return { score: 100, source: "remote" };
 }
 
-function matchGitHub(context: ProbeContext): ProviderMatch | null {
+function matchGitHub(
+  context: ProbeContext,
+): ProviderMatch | readonly ProviderMatch[] | null {
   const candidates = context.remotes
     .filter((remote) => {
       const host = remoteHost(remote.url);
@@ -77,15 +107,15 @@ function matchGitHub(context: ProbeContext): ProviderMatch | null {
         right.score - left.score ||
         left.remote.name.localeCompare(right.remote.name),
     );
-  const selected = candidates[0];
-  if (!selected) return null;
-  return {
+  if (candidates.length === 0) return null;
+  const matches = candidates.map((candidate) => ({
     providerId: PROVIDER_ID,
-    remote: selected.remote,
-    repository: null,
-    score: selected.score,
-    source: selected.source,
-  };
+    remote: candidate.remote,
+    repository: parseGitHubRepositoryUrl(candidate.remote.url),
+    score: candidate.score,
+    source: candidate.source,
+  }));
+  return matches.length === 1 ? matches[0] : matches;
 }
 
 function diagnostic(
@@ -152,12 +182,48 @@ async function authenticationStatus(
   }
 }
 
+async function cloneGitHubRepository(
+  input: CloneRepositoryInput,
+  context: ProviderOperationContext,
+  dependencies: Required<GitHubPluginDependencies>,
+): Promise<CloneRepositoryResult> {
+  if (
+    input.repository.providerId !== PROVIDER_ID ||
+    input.repository.namespace.length !== 1
+  ) {
+    throw new TypeError("A GitHub repository is required.");
+  }
+  const timeoutMs = Math.max(1, context.deadline - Date.now());
+  if (await dependencies.findGh()) {
+    await dependencies.runGh(
+      [
+        "repo",
+        "clone",
+        input.repository.displayPath,
+        input.targetPath,
+        "--",
+        "--progress",
+      ],
+      { timeoutMs },
+    );
+  } else {
+    const cloneUrl = `${input.repository.webUrl ?? input.repository.displayPath}.git`;
+    await dependencies.runGit(
+      path.dirname(input.targetPath),
+      ["clone", "--progress", cloneUrl, input.targetPath],
+      { signal: context.signal, timeout: timeoutMs },
+    );
+  }
+  return { projectPath: input.targetPath };
+}
+
 export function createGitHubPlugin(
   dependencies: GitHubPluginDependencies = {},
 ): SourceControlProviderPlugin {
   const resolvedDependencies: Required<GitHubPluginDependencies> = {
     findGh: dependencies.findGh ?? findGhPath,
     runGh: dependencies.runGh ?? runGhCli,
+    runGit: dependencies.runGit ?? executeGit,
   };
   return {
     manifest: {
@@ -169,9 +235,26 @@ export function createGitHubPlugin(
         "discovery.listNamespaces",
         "discovery.listRepositories",
         "repositoryIdentity",
+        "changeRequests.get",
+        "changeRequests.getByUrl",
+        "changeRequests.list",
+        "changeRequests.status",
+        "changeRequests.resolveHead",
+        "changeRequests.create",
+        "changeRequests.comment",
+        "changeRequests.merge",
+        "changeRequests.preflight",
+        "branches.publish",
+        "checks.list",
+        "checks.snapshot",
+        "checks.failureLog",
+        "checks.fixPrompt",
+        "reviewThreads.list",
+        "reviewThreads.resolve",
         "workItems.get",
         "workItems.getByUrl",
         "workItems.list",
+        "provider.clone",
       ],
     },
     discovery: {
@@ -193,10 +276,57 @@ export function createGitHubPlugin(
     },
     git: {
       parseUrl: parseGitHubRepositoryUrl,
-      parseChangeRequestUrl: () => null,
+      parseChangeRequestUrl: (url) => {
+        const parsed = parseGitHubUrl(url);
+        if (parsed?.kind !== "pullRequest") return null;
+        const repository = parseGitHubRepositoryUrl(parsed.url);
+        return repository === null
+          ? null
+          : { repository, id: String(parsed.number) };
+      },
+      publishBranch: (input, context) =>
+        publishGitHubBranch(input, context, resolvedDependencies),
+      clone: (input, context) =>
+        cloneGitHubRepository(input, context, resolvedDependencies),
     },
     repositories: {
       parseUrl: parseGitHubRepositoryUrl,
+    },
+    changeRequests: {
+      create: (input, context) =>
+        createGitHubChangeRequest(input, context, resolvedDependencies),
+      get: (input, context) =>
+        getGitHubChangeRequest(input, context, resolvedDependencies),
+      getByUrl: (input, context) =>
+        getGitHubChangeRequestByUrl(input, context, resolvedDependencies),
+      list: (input, context) =>
+        listGitHubChangeRequests(input, context, resolvedDependencies),
+      status: (input, context) =>
+        getGitHubChangeRequestStatus(input, context, resolvedDependencies),
+      resolveHead: (input, context) =>
+        resolveGitHubChangeRequestHead(input, context, resolvedDependencies),
+      comment: (input, context) =>
+        commentOnGitHubChangeRequest(input, context, resolvedDependencies),
+      merge: (input, context) =>
+        mergeGitHubChangeRequest(input, context, resolvedDependencies),
+      preflight: (input, context) =>
+        preflightGitHubChangeRequest(input, context, resolvedDependencies),
+    },
+    checks: {
+      list: (input, context) =>
+        listGitHubChecks(input, context, resolvedDependencies),
+      snapshot: (input, context) =>
+        snapshotGitHubChecks(input, context, resolvedDependencies),
+      failureLog: (input, context) =>
+        fetchGitHubCheckFailureLog(input, context, resolvedDependencies),
+      fixPrompt: (input, context) =>
+        buildGitHubChecksFixPrompt(input, context, resolvedDependencies),
+    },
+    reviews: {
+      listThreads: (input, context) =>
+        listGitHubReviewThreads(input, context, resolvedDependencies),
+      resolveThread: (input, context) =>
+        resolveGitHubReviewThread(input, context, resolvedDependencies),
     },
     workItems: {
       get: (input, context) =>
@@ -205,6 +335,20 @@ export function createGitHubPlugin(
         getGitHubWorkItemByUrl(input, context, resolvedDependencies),
       list: (input, context) =>
         listGitHubWorkItems(input, context, resolvedDependencies),
+    },
+    links: {
+      matchUrl: (url) => (parseGitHubUrl(url) === null ? null : 100),
+      parseUrl: (url) => {
+        const parsed = parseGitHubUrl(url);
+        const repository = parseGitHubRepositoryUrl(url);
+        if (parsed === null || repository === null) return null;
+        return {
+          id: String(parsed.number),
+          kind: parsed.kind === "pullRequest" ? "change-request" : "work-item",
+          repository,
+          url: parsed.url,
+        };
+      },
     },
   };
 }

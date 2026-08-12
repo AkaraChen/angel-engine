@@ -6,6 +6,7 @@ import {
   type ProviderHostMapping,
   type ProviderMatch,
   type ProviderReadiness,
+  type ProviderLinkDescriptor,
   type SourceControlCapabilityId,
   type SourceControlProviderPlugin,
 } from "@angel-engine/daemon-api/source-control";
@@ -31,6 +32,25 @@ export type ActivationResult =
       status: "unresolved";
       reason: "no-match" | "configured-provider-missing";
     };
+
+export type LinkResolutionResult =
+  | {
+      status: "resolved";
+      providerId: string;
+      descriptor: ProviderLinkDescriptor;
+    }
+  | { status: "ambiguous"; providerIds: readonly string[] }
+  | { status: "unresolved" };
+
+export type RepositoryUrlResolution =
+  | {
+      status: "resolved";
+      cloneSupported: boolean;
+      providerId: string;
+      repository: NonNullable<ProviderMatch["repository"]>;
+    }
+  | { status: "ambiguous"; providerIds: readonly string[] }
+  | { status: "unresolved" };
 
 export class ProviderRegistryError extends Error {
   readonly code:
@@ -149,6 +169,146 @@ export class SourceControlRegistry {
     }
   }
 
+  parseLink(url: string): LinkResolutionResult {
+    const matches = [...this.#plugins.values()]
+      .flatMap((plugin) => {
+        const score = plugin.links?.matchUrl(url) ?? null;
+        const descriptor = score === null ? null : plugin.links?.parseUrl(url);
+        return score === null || descriptor == null
+          ? []
+          : [{ descriptor, plugin, score }];
+      })
+      .sort(
+        (left, right) =>
+          right.score - left.score ||
+          left.plugin.manifest.id.localeCompare(right.plugin.manifest.id),
+      );
+    const first = matches[0];
+    if (!first) return { status: "unresolved" };
+    const tied = matches.filter((match) => match.score === first.score);
+    if (tied.length > 1) {
+      return {
+        status: "ambiguous",
+        providerIds: tied.map((match) => match.plugin.manifest.id),
+      };
+    }
+    return {
+      status: "resolved",
+      descriptor: first.descriptor,
+      providerId: first.plugin.manifest.id,
+    };
+  }
+
+  parseRepositoryUrl(url: string): RepositoryUrlResolution {
+    const matches = [...this.#plugins.values()].flatMap((plugin) => {
+      const repository = plugin.repositories?.parseUrl(url) ?? null;
+      return repository === null ? [] : [{ plugin, repository }];
+    });
+    if (matches.length === 0) return { status: "unresolved" };
+    if (matches.length > 1) {
+      return {
+        status: "ambiguous",
+        providerIds: matches
+          .map((match) => match.plugin.manifest.id)
+          .sort((left, right) => left.localeCompare(right)),
+      };
+    }
+    return {
+      cloneSupported:
+        matches[0].plugin.manifest.capabilities.includes("provider.clone") &&
+        matches[0].plugin.git.clone !== undefined,
+      status: "resolved",
+      providerId: matches[0].plugin.manifest.id,
+      repository: matches[0].repository,
+    };
+  }
+
+  async resolveLink(url: string, signal?: AbortSignal) {
+    const resolution = this.parseLink(url);
+    if (resolution.status !== "resolved") return resolution;
+    const plugin = this.#plugins.get(resolution.providerId);
+    if (!plugin) return { status: "unresolved" as const };
+    const capability =
+      resolution.descriptor.kind === "change-request"
+        ? "changeRequests.getByUrl"
+        : "workItems.getByUrl";
+    if (!plugin.manifest.capabilities.includes(capability)) {
+      throw new ProviderRegistryError(
+        "source-control/capability-unsupported",
+        `${plugin.manifest.displayName} cannot resolve this link.`,
+      );
+    }
+    const common = {
+      log: this.#log,
+      providerId: plugin.manifest.id,
+      secrets: secretsFromUrl(url),
+      signal,
+      timeoutMs: this.#invocationTimeoutMs,
+    };
+    const item =
+      resolution.descriptor.kind === "change-request"
+        ? await invokeProvider({
+            ...common,
+            operation: capability,
+            run: (context) => {
+              const operation = plugin.changeRequests?.getByUrl;
+              if (!operation) {
+                throw new ProviderRegistryError(
+                  "source-control/capability-unsupported",
+                  `${plugin.manifest.displayName} cannot resolve change-request links.`,
+                );
+              }
+              return operation({ url }, context);
+            },
+          })
+        : await invokeProvider({
+            ...common,
+            operation: capability,
+            run: (context) => {
+              const operation = plugin.workItems?.getByUrl;
+              if (!operation) {
+                throw new ProviderRegistryError(
+                  "source-control/capability-unsupported",
+                  `${plugin.manifest.displayName} cannot resolve work-item links.`,
+                );
+              }
+              return operation({ url }, context);
+            },
+          });
+    return { ...resolution, item };
+  }
+
+  async cloneRepository(options: {
+    repository: NonNullable<ProviderMatch["repository"]>;
+    signal?: AbortSignal;
+    targetPath: string;
+  }) {
+    const plugin = this.#plugins.get(options.repository.providerId);
+    const operation = plugin?.git.clone;
+    if (
+      !plugin ||
+      !plugin.manifest.capabilities.includes("provider.clone") ||
+      !operation
+    ) {
+      throw new ProviderRegistryError(
+        "source-control/capability-unsupported",
+        "The selected provider does not support authenticated cloning.",
+      );
+    }
+    return invokeProvider({
+      log: this.#log,
+      operation: "provider.clone",
+      providerId: plugin.manifest.id,
+      run: (context) =>
+        operation(
+          { repository: options.repository, targetPath: options.targetPath },
+          context,
+        ),
+      signal: options.signal,
+      timeoutMs: this.#invocationTimeoutMs,
+    });
+  }
+
   invalidate(projectPath: string) {
     this.#generations.set(projectPath, this.generation(projectPath) + 1);
     for (const [key] of this.#activationSecrets) {
@@ -184,7 +344,11 @@ export class SourceControlRegistry {
     for (const plugin of this.#plugins.values()) {
       try {
         const match = plugin.discovery.match(context);
-        if (match !== null) matches.push(match);
+        if (match !== null) {
+          matches.push(
+            ...(Array.isArray(match) ? match : [match as ProviderMatch]),
+          );
+        }
       } catch (cause) {
         const secrets = context.remotes.flatMap((remote) =>
           secretsFromUrl(remote.url),
