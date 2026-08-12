@@ -863,6 +863,7 @@ export const ja = {
       taskLinkStateClosed: "クローズ",
       taskLinkStateMerged: "マージ済み",
       taskLinkStateOpen: "オープン",
+      terminalSelection: "ターミナル選択",
       toasts: {
         couldNotChangeMode: "モードを変更できませんでした",
         couldNotReadFile: "ファイルを読み取れませんでした",

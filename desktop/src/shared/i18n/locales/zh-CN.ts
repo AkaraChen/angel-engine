@@ -819,6 +819,7 @@ export const zhCN = {
       taskLinkStateClosed: "已关闭",
       taskLinkStateMerged: "已合并",
       taskLinkStateOpen: "打开",
+      terminalSelection: "终端选中内容",
       toasts: {
         couldNotChangeMode: "无法更改模式",
         couldNotReadFile: "无法读取文件",

@@ -5,12 +5,12 @@ import { subscribeToTerminalSelectionInserts } from "@/features/chat/components/
 export function useTerminalSelectionInsert(
   controller: ComposerEditorController,
 ) {
-  const { appendMarkdown } = controller;
+  const { addTerminalSelection } = controller;
   useEffect(
     () =>
-      subscribeToTerminalSelectionInserts((markdown) => {
-        appendMarkdown(markdown);
+      subscribeToTerminalSelectionInserts((selection) => {
+        addTerminalSelection(selection);
       }),
-    [appendMarkdown],
+    [addTerminalSelection],
   );
 }

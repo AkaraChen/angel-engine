@@ -4,6 +4,7 @@ import {
   GithubLogo,
   Globe,
   SpinnerGap as Loader2,
+  Terminal as TerminalIcon,
   WarningCircle,
 } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
@@ -25,6 +26,10 @@ import {
   githubAttachmentLabel,
   type ComposerGitHubAttachment,
 } from "@/features/chat/components/composer/github-attachments";
+import {
+  terminalSelectionLabel,
+  type ComposerTerminalSelection,
+} from "@/features/chat/components/composer/terminal-selection-to-composer";
 import { composerRichTextClassName } from "@/features/chat/components/composer/composer-rich-text";
 import { ComposerKeymapBridge } from "@/features/chat/components/composer/composer-keymap-bridge";
 import { useSettingsStore } from "@/features/settings/settings-store";
@@ -65,8 +70,10 @@ export function ComposerEditor({
     pasteSourceUrls,
     removeGitHubAttachment,
     removePasteSourceUrl,
+    removeTerminalSelection,
     setInteractions,
     setTextInput,
+    terminalSelections,
   } = controller;
 
   const handlePaste = useCallback(
@@ -141,7 +148,9 @@ export function ComposerEditor({
         headerLeading={headerLeading}
         onRemoveGitHubAttachment={removeGitHubAttachment}
         onRemovePasteSource={removePasteSourceUrl}
+        onRemoveTerminalSelection={removeTerminalSelection}
         pasteSourceUrls={pasteSourceUrls}
+        terminalSelections={terminalSelections}
       />
 
       <PromptInputBody>
@@ -160,14 +169,18 @@ function ComposerEditorHeader({
   headerLeading,
   onRemoveGitHubAttachment,
   onRemovePasteSource,
+  onRemoveTerminalSelection,
   pasteSourceUrls,
+  terminalSelections,
 }: {
   githubAttachments: ComposerGitHubAttachment[];
   headerClassName?: string;
   headerLeading?: ReactNode;
   onRemoveGitHubAttachment: (id: string) => void;
   onRemovePasteSource: (sourceUrl: string) => void;
+  onRemoveTerminalSelection: (id: string) => void;
   pasteSourceUrls: string[];
+  terminalSelections: ComposerTerminalSelection[];
 }) {
   const { t } = useTranslation();
   const attachments = usePromptInputAttachments();
@@ -178,6 +191,7 @@ function ComposerEditorHeader({
     !hasHeaderLeading &&
     attachments.files.length === 0 &&
     pasteSourceUrls.length === 0 &&
+    terminalSelections.length === 0 &&
     githubAttachments.length === 0
   ) {
     return null;
@@ -194,6 +208,23 @@ function ComposerEditorHeader({
           sourceUrl={sourceUrl}
         />
       ))}
+
+      {terminalSelections.map((item) => {
+        const name = terminalSelectionLabel(item.selection);
+        return (
+          <ChatAttachmentTile
+            className="max-w-72"
+            contentType={item.cwd}
+            fallbackIcon={<TerminalIcon className="size-4" weight="duotone" />}
+            key={item.id}
+            name={name}
+            onRemove={() => onRemoveTerminalSelection(item.id)}
+            previewText={item.selection}
+            removeLabel={t("composer.removeAttachment", { name })}
+            typeLabel={t("composer.terminalSelection")}
+          />
+        );
+      })}
 
       {githubAttachments.map((item) => {
         const name = githubAttachmentLabel(item);

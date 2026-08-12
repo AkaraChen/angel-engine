@@ -185,7 +185,8 @@ function AttachmentThumb({
     <span
       className="
         flex size-10 shrink-0 items-center justify-center overflow-hidden
-        rounded-md bg-surface-1
+        rounded-md bg-card
+        dark:bg-surface-3
       "
     >
       {hasPreviewUrl && !imageFailed ? (

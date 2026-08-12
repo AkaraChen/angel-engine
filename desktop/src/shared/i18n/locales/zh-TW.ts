@@ -820,6 +820,7 @@ export const zhTW = {
       taskLinkStateClosed: "已關閉",
       taskLinkStateMerged: "已合併",
       taskLinkStateOpen: "開啟",
+      terminalSelection: "終端機選取內容",
       toasts: {
         couldNotChangeMode: "無法變更模式",
         couldNotReadFile: "無法讀取檔案",
