@@ -13,6 +13,11 @@ vi.mock("electron", () => ({
     on: vi.fn(),
     removeListener: vi.fn(),
   },
+  nativeImage: {
+    createFromDataURL: vi.fn(() => ({
+      getSize: () => ({ width: 1, height: 1 }),
+    })),
+  },
 }));
 
 function createMockWebContents(url: string, id = 1) {
@@ -94,6 +99,14 @@ describe("WorkspaceBrowserDesignModeService", () => {
       "workspace-browser:design:guest-command",
       { outputDetail: "detailed", type: "setOutputDetail" },
     );
+  });
+
+  it("captureScreenshot reports instance-missing when view is gone", async () => {
+    const result = await service.captureScreenshot("missing-view");
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("instance-missing");
+    }
   });
 
   it("forwards selection events with trusted origin stamp", () => {

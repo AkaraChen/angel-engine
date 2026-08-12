@@ -5,6 +5,7 @@ import type {
   WorkspaceBrowserAttachInput,
   WorkspaceBrowserCommandInput,
   WorkspaceBrowserCreateInput,
+  WorkspaceBrowserDesignCaptureScreenshotInput,
   WorkspaceBrowserDesignSetAllowedOriginsInput,
   WorkspaceBrowserDesignStartInput,
   WorkspaceBrowserDesignStopInput,
@@ -21,6 +22,7 @@ import {
   WORKSPACE_BROWSER_CREATE_CHANNEL,
   WORKSPACE_BROWSER_DESTROY_CHANNEL,
   WORKSPACE_BROWSER_DETACH_CHANNEL,
+  WORKSPACE_BROWSER_DESIGN_CAPTURE_SCREENSHOT_CHANNEL,
   WORKSPACE_BROWSER_DESIGN_GET_STATE_CHANNEL,
   WORKSPACE_BROWSER_DESIGN_SET_ALLOWED_ORIGINS_CHANNEL,
   WORKSPACE_BROWSER_DESIGN_START_CHANNEL,
@@ -42,6 +44,14 @@ export function exposeWorkspaceBrowserBridge() {
         WORKSPACE_BROWSER_ATTACH_CHANNEL,
         input,
       ) as ReturnType<WorkspaceBrowserApi["attach"]>;
+    },
+    async captureDesignScreenshot(
+      input: WorkspaceBrowserDesignCaptureScreenshotInput,
+    ) {
+      return ipcRenderer.invoke(
+        WORKSPACE_BROWSER_DESIGN_CAPTURE_SCREENSHOT_CHANNEL,
+        input,
+      ) as ReturnType<WorkspaceBrowserApi["captureDesignScreenshot"]>;
     },
     async create(input: WorkspaceBrowserCreateInput) {
       return ipcRenderer.invoke(

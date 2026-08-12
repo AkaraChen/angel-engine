@@ -4,6 +4,7 @@ import type {
   DesignGuestEvent,
   DesignOutputDetail,
   DesignRuntimeEvent,
+  WorkspaceBrowserDesignCaptureScreenshotOutcome,
   WorkspaceBrowserDesignSetAllowedOriginsInput,
   WorkspaceBrowserDesignStartInput,
   WorkspaceBrowserDesignState,
@@ -12,7 +13,7 @@ import type {
 
 import is from "@sindresorhus/is";
 import { type } from "arktype";
-import { ipcMain } from "electron";
+import { ipcMain, nativeImage } from "electron";
 
 import { normalizeDesignOutputDetail } from "../../../shared/design-mode-capture";
 import {
@@ -255,6 +256,39 @@ export class WorkspaceBrowserDesignModeService {
     return state;
   }
 
+  /**
+   * Full-viewport PNG for Design Mode send.
+   * Prefer `capturePage()`; fall back to CDP `Page.captureScreenshot`.
+   */
+  async captureScreenshot(
+    browserViewId: string,
+  ): Promise<WorkspaceBrowserDesignCaptureScreenshotOutcome> {
+    const view = this.resolveView(browserViewId);
+    if (!view || view.webContents.isDestroyed()) {
+      return {
+        code: "instance-missing",
+        message: "Workspace browser instance was not created.",
+        ok: false,
+      };
+    }
+
+    this.rememberWebContents(browserViewId, view.webContents);
+    try {
+      const screenshot = await captureWebContentsScreenshot(view.webContents);
+      return { ok: true, screenshot };
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to capture Design Mode screenshot.";
+      return {
+        code: "unknown",
+        message,
+        ok: false,
+      };
+    }
+  }
+
   /** Stop design mode when the page navigates off the allowlist. */
   onNavigation(browserViewId: string) {
     const session = this.sessions.get(browserViewId);
@@ -456,4 +490,122 @@ function toHostDesignEvent(
     origin,
     type: "selection",
   };
+}
+
+interface CapturedScreenshot {
+  dataUrl: string;
+  height: number;
+  surfaceHeight: number;
+  surfaceWidth: number;
+  width: number;
+}
+
+export async function captureWebContentsScreenshot(
+  webContents: WebContents,
+): Promise<CapturedScreenshot> {
+  const surface = await readCssViewportSize(webContents);
+
+  try {
+    const image = await webContents.capturePage();
+    if (!image.isEmpty()) {
+      const size = image.getSize();
+      return {
+        dataUrl: image.toDataURL(),
+        height: size.height,
+        surfaceHeight: resolveSurfaceDimension(surface.height, size.height),
+        surfaceWidth: resolveSurfaceDimension(surface.width, size.width),
+        width: size.width,
+      };
+    }
+  } catch {
+    // Fall through to CDP.
+  }
+
+  return captureViaCdp(webContents, surface);
+}
+
+/** Prefer CSS viewport; if guest JS failed, treat bitmap px as CSS px (scale 1). */
+function resolveSurfaceDimension(cssSize: number, bitmapSize: number): number {
+  if (cssSize > 1) {
+    return cssSize;
+  }
+  return bitmapSize > 0 ? bitmapSize : 1;
+}
+
+async function captureViaCdp(
+  webContents: WebContents,
+  surface: { height: number; width: number },
+): Promise<CapturedScreenshot> {
+  const dbg = webContents.debugger;
+  let attachedHere = false;
+  try {
+    if (!dbg.isAttached()) {
+      dbg.attach("1.3");
+      attachedHere = true;
+    }
+    const result = (await dbg.sendCommand("Page.captureScreenshot", {
+      format: "png",
+      fromSurface: true,
+    })) as { data?: string };
+
+    if (!is.nonEmptyString(result.data)) {
+      throw new Error("CDP Page.captureScreenshot returned no image data.");
+    }
+
+    const dataUrl = `data:image/png;base64,${result.data}`;
+    const metrics = readBitmapSizeFromDataUrl(dataUrl);
+    return {
+      dataUrl,
+      height: metrics.height,
+      surfaceHeight: resolveSurfaceDimension(surface.height, metrics.height),
+      surfaceWidth: resolveSurfaceDimension(surface.width, metrics.width),
+      width: metrics.width,
+    };
+  } finally {
+    if (attachedHere && dbg.isAttached()) {
+      try {
+        dbg.detach();
+      } catch {
+        // Ignore detach races when the view is tearing down.
+      }
+    }
+  }
+}
+
+async function readCssViewportSize(
+  webContents: WebContents,
+): Promise<{ height: number; width: number }> {
+  try {
+    const size = (await webContents.executeJavaScript(
+      `({ width: window.innerWidth || 0, height: window.innerHeight || 0 })`,
+      true,
+    )) as { height?: unknown; width?: unknown };
+    const width =
+      typeof size?.width === "number" && Number.isFinite(size.width)
+        ? size.width
+        : 0;
+    const height =
+      typeof size?.height === "number" && Number.isFinite(size.height)
+        ? size.height
+        : 0;
+    if (width > 0 && height > 0) {
+      return { width, height };
+    }
+  } catch {
+    // Guest may be mid-navigation; caller falls back to 1×1 and crop degrades.
+  }
+
+  return { width: 1, height: 1 };
+}
+
+function readBitmapSizeFromDataUrl(dataUrl: string): {
+  height: number;
+  width: number;
+} {
+  const image = nativeImage.createFromDataURL(dataUrl);
+  const size = image.getSize();
+  if (size.width < 1 || size.height < 1) {
+    throw new Error("Screenshot bitmap was empty.");
+  }
+  return size;
 }
