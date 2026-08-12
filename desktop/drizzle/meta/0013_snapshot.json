@@ -74,17 +74,12 @@
       "indexes": {
         "automation_runs_automation_started_idx": {
           "name": "automation_runs_automation_started_idx",
-          "columns": [
-            "automation_id",
-            "started_at"
-          ],
+          "columns": ["automation_id", "started_at"],
           "isUnique": false
         },
         "automation_runs_chat_id_idx": {
           "name": "automation_runs_chat_id_idx",
-          "columns": [
-            "chat_id"
-          ],
+          "columns": ["chat_id"],
           "isUnique": false
         }
       },
@@ -93,12 +88,8 @@
           "name": "automation_runs_automation_id_automations_id_fk",
           "tableFrom": "automation_runs",
           "tableTo": "automations",
-          "columnsFrom": [
-            "automation_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["automation_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -106,12 +97,8 @@
           "name": "automation_runs_chat_id_chats_id_fk",
           "tableFrom": "automation_runs",
           "tableTo": "chats",
-          "columnsFrom": [
-            "chat_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["chat_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -214,17 +201,12 @@
       "indexes": {
         "automations_enabled_next_run_idx": {
           "name": "automations_enabled_next_run_idx",
-          "columns": [
-            "enabled",
-            "next_run_at"
-          ],
+          "columns": ["enabled", "next_run_at"],
           "isUnique": false
         },
         "automations_project_id_idx": {
           "name": "automations_project_id_idx",
-          "columns": [
-            "project_id"
-          ],
+          "columns": ["project_id"],
           "isUnique": false
         }
       },
@@ -233,12 +215,8 @@
           "name": "automations_project_id_projects_id_fk",
           "tableFrom": "automations",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -296,11 +274,7 @@
       "indexes": {
         "chat_diff_anchors_chat_kind_recorded_idx": {
           "name": "chat_diff_anchors_chat_kind_recorded_idx",
-          "columns": [
-            "chat_id",
-            "kind",
-            "recorded_at"
-          ],
+          "columns": ["chat_id", "kind", "recorded_at"],
           "isUnique": false
         }
       },
@@ -309,12 +283,8 @@
           "name": "chat_diff_anchors_chat_id_chats_id_fk",
           "tableFrom": "chat_diff_anchors",
           "tableTo": "chats",
-          "columnsFrom": [
-            "chat_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["chat_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -409,16 +379,12 @@
       "indexes": {
         "chats_project_id_idx": {
           "name": "chats_project_id_idx",
-          "columns": [
-            "project_id"
-          ],
+          "columns": ["project_id"],
           "isUnique": false
         },
         "chats_updated_at_idx": {
           "name": "chats_updated_at_idx",
-          "columns": [
-            "updated_at"
-          ],
+          "columns": ["updated_at"],
           "isUnique": false
         }
       },
@@ -427,12 +393,8 @@
           "name": "chats_project_id_projects_id_fk",
           "tableFrom": "chats",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -537,9 +499,7 @@
       "indexes": {
         "projects_path_unique": {
           "name": "projects_path_unique",
-          "columns": [
-            "path"
-          ],
+          "columns": ["path"],
           "isUnique": true
         }
       },
@@ -671,10 +631,7 @@
       "indexes": {
         "pull_requests_root_branch_idx": {
           "name": "pull_requests_root_branch_idx",
-          "columns": [
-            "root",
-            "branch"
-          ],
+          "columns": ["root", "branch"],
           "isUnique": true
         }
       },
@@ -683,12 +640,8 @@
           "name": "pull_requests_project_id_projects_id_fk",
           "tableFrom": "pull_requests",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -696,12 +649,8 @@
           "name": "pull_requests_chat_id_chats_id_fk",
           "tableFrom": "pull_requests",
           "tableTo": "chats",
-          "columnsFrom": [
-            "chat_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["chat_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -753,16 +702,12 @@
       "indexes": {
         "queued_chat_runs_chat_id_unique": {
           "name": "queued_chat_runs_chat_id_unique",
-          "columns": [
-            "chat_id"
-          ],
+          "columns": ["chat_id"],
           "isUnique": true
         },
         "queued_chat_runs_chat_id_idx": {
           "name": "queued_chat_runs_chat_id_idx",
-          "columns": [
-            "chat_id"
-          ],
+          "columns": ["chat_id"],
           "isUnique": false
         }
       },
@@ -771,12 +716,8 @@
           "name": "queued_chat_runs_chat_id_chats_id_fk",
           "tableFrom": "queued_chat_runs",
           "tableTo": "chats",
-          "columnsFrom": [
-            "chat_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["chat_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -921,9 +862,7 @@
       "indexes": {
         "shepherd_sessions_chat_id_unique": {
           "name": "shepherd_sessions_chat_id_unique",
-          "columns": [
-            "chat_id"
-          ],
+          "columns": ["chat_id"],
           "isUnique": true
         }
       },
@@ -932,12 +871,8 @@
           "name": "shepherd_sessions_chat_id_chats_id_fk",
           "tableFrom": "shepherd_sessions",
           "tableTo": "chats",
-          "columnsFrom": [
-            "chat_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["chat_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1026,12 +961,8 @@
           "name": "worktree_creation_jobs_chat_id_chats_id_fk",
           "tableFrom": "worktree_creation_jobs",
           "tableTo": "chats",
-          "columnsFrom": [
-            "chat_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["chat_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
