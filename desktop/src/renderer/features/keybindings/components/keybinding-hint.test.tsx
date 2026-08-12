@@ -23,17 +23,20 @@ afterEach(() => {
 });
 
 describe("KeybindingHint", () => {
-  it("renders one key cap for a single binding", () => {
+  it("splits mac modifiers into independent key caps", () => {
     render(<KeybindingHint binding="⌘K" />);
 
-    expect(screen.getByText("⌘K").dataset.slot).toBe("kbd");
+    expect(screen.getByText("⌘").dataset.slot).toBe("kbd");
+    expect(screen.getByText("K").dataset.slot).toBe("kbd");
   });
 
-  it("renders chord segments as separate key caps", () => {
-    render(<KeybindingHint binding="⌘K ⌘S" />);
+  it("keeps windows separators between independent key caps", () => {
+    render(<KeybindingHint binding="Ctrl+Shift+P" />);
 
-    expect(screen.getByText("⌘K")).toBeTruthy();
-    expect(screen.getByText("⌘S")).toBeTruthy();
+    expect(screen.getByText("Ctrl")).toBeTruthy();
+    expect(screen.getByText("Shift")).toBeTruthy();
+    expect(screen.getByText("P")).toBeTruthy();
+    expect(screen.getAllByText("+")).toHaveLength(2);
   });
 
   it("hides the hint without disabling its caller", () => {
@@ -49,6 +52,7 @@ describe("KeybindingHint", () => {
 
     render(<KeybindingHint binding="Ctrl+K" respectPreference={false} />);
 
-    expect(screen.getByText("Ctrl+K")).toBeTruthy();
+    expect(screen.getByText("Ctrl")).toBeTruthy();
+    expect(screen.getByText("K")).toBeTruthy();
   });
 });
