@@ -5,6 +5,7 @@ import {
   type ProviderActivation,
   type ProviderHostMapping,
   type ProviderMatch,
+  type ProviderReadiness,
   type SourceControlCapabilityId,
   type SourceControlProviderPlugin,
 } from "@angel-engine/daemon-api/source-control";
@@ -77,6 +78,7 @@ function capabilityMatrix(
 export interface SourceControlRegistryOptions {
   invocationTimeoutMs?: number;
   log?: (message: string) => void;
+  readinessTtlMs?: number;
 }
 
 export class SourceControlRegistry {
@@ -84,10 +86,16 @@ export class SourceControlRegistry {
   readonly #generations = new Map<string, number>();
   readonly #invocationTimeoutMs: number;
   readonly #log?: (message: string) => void;
+  readonly #readinessCache = new Map<
+    string,
+    { expiresAt: number; value: ProviderReadiness }
+  >();
+  readonly #readinessTtlMs: number;
 
   constructor(options: SourceControlRegistryOptions = {}) {
     this.#invocationTimeoutMs = options.invocationTimeoutMs ?? 30_000;
     this.#log = options.log;
+    this.#readinessTtlMs = options.readinessTtlMs ?? 30_000;
   }
 
   register(plugin: SourceControlProviderPlugin) {
@@ -106,6 +114,15 @@ export class SourceControlRegistry {
 
   invalidate(projectPath: string) {
     this.#generations.set(projectPath, this.generation(projectPath) + 1);
+    for (const key of this.#readinessCache.keys()) {
+      if (key.startsWith(`${projectPath}\0`)) this.#readinessCache.delete(key);
+    }
+  }
+
+  invalidateAll() {
+    for (const projectPath of this.#generations.keys()) {
+      this.invalidate(projectPath);
+    }
   }
 
   generation(projectPath: string) {
@@ -118,6 +135,9 @@ export class SourceControlRegistry {
     hostMappings?: readonly ProviderHostMapping[];
     signal?: AbortSignal;
   }): Promise<ActivationResult> {
+    if (!this.#generations.has(options.projectPath)) {
+      this.#generations.set(options.projectPath, 0);
+    }
     const context = await collectProbeContext(options);
     const matches: ProviderMatch[] = [];
     for (const plugin of this.#plugins.values()) {
@@ -145,16 +165,29 @@ export class SourceControlRegistry {
       return { status: "unresolved", reason: "no-match" };
     }
     const secrets = secretsFromUrl(match.remote.url);
-    const readiness = await invokeProvider({
-      log: this.#log,
-      operation: "discovery.checkReadiness",
-      providerId: plugin.manifest.id,
-      run: (operationContext) =>
-        plugin.discovery.checkReadiness(match, operationContext),
-      secrets,
-      signal: options.signal,
-      timeoutMs: this.#invocationTimeoutMs,
-    });
+    const readinessKey = `${options.projectPath}\0${this.generation(
+      options.projectPath,
+    )}\0${plugin.manifest.id}\0${match.remote.name}\0${match.remote.url}`;
+    const cachedReadiness = this.#readinessCache.get(readinessKey);
+    const readiness =
+      cachedReadiness && cachedReadiness.expiresAt > Date.now()
+        ? cachedReadiness.value
+        : await invokeProvider({
+            log: this.#log,
+            operation: "discovery.checkReadiness",
+            providerId: plugin.manifest.id,
+            run: (operationContext) =>
+              plugin.discovery.checkReadiness(match, operationContext),
+            secrets,
+            signal: options.signal,
+            timeoutMs: this.#invocationTimeoutMs,
+          });
+    if (!cachedReadiness || cachedReadiness.expiresAt <= Date.now()) {
+      this.#readinessCache.set(readinessKey, {
+        expiresAt: Date.now() + this.#readinessTtlMs,
+        value: readiness,
+      });
+    }
     const authenticated = readiness.authentication === "authenticated";
     return {
       status: "active",

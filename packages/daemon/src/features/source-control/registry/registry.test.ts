@@ -7,7 +7,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { executeGit } from "../local-git/backend";
 import { ProviderInvocationError, SourceControlRegistry } from "./registry";
@@ -120,6 +120,26 @@ describe("SourceControlRegistry", () => {
       },
       status: "active",
     });
+  });
+
+  it("caches readiness until its TTL or project generation changes", async () => {
+    const root = await repository();
+    const provider = fakePlugin({ host: "github.com", id: "fake-github" });
+    const checkReadiness = vi.fn(async () => ({
+      authentication: "authenticated" as const,
+      diagnostics: [],
+    }));
+    provider.discovery.checkReadiness = checkReadiness;
+    const registry = new SourceControlRegistry({ readinessTtlMs: 60_000 });
+    registry.register(provider);
+
+    await registry.activate({ projectPath: root });
+    await registry.activate({ projectPath: root });
+    expect(checkReadiness).toHaveBeenCalledOnce();
+
+    registry.invalidate(root);
+    await registry.activate({ projectPath: root });
+    expect(checkReadiness).toHaveBeenCalledTimes(2);
   });
 
   it("represents unauthenticated operations as unsupported", async () => {

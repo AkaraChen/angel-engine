@@ -77,6 +77,10 @@ import {
   shepherdStopInputSchema,
 } from "@angel-engine/daemon-api/shepherd";
 import {
+  providerHostMappingSchema,
+  sourceControlProjectConfigSchema,
+} from "@angel-engine/daemon-api/source-control";
+import {
   buildGitHubPrChecksFixPrompt,
   listGitHubPrChecks,
 } from "./features/github/checks";
@@ -158,6 +162,15 @@ import {
   removeManagedWorktree,
 } from "./features/source-control/local-git/projects";
 import { projectGitStatus } from "./features/source-control/local-git/projects";
+import {
+  deleteProviderHostMapping,
+  listProviderHostMappings,
+  readSourceControlProjectConfig,
+  setProviderHostMapping,
+  writeSourceControlProjectConfig,
+} from "./features/source-control/registry/config-store";
+import { SourceControlCoordinator } from "./features/source-control/registry/coordinator";
+import type { SourceControlRegistry } from "./features/source-control/registry/registry";
 import { projectSetupLifecycle } from "./features/projects/setup-lifecycle";
 import { readProjectLifecycleSnapshot } from "./features/projects/lifecycle";
 import {
@@ -201,6 +214,7 @@ export function registerApi(
   chatEvents: ChatEventsApi,
   options: {
     internalBridgeSecret?: string;
+    sourceControlRegistry?: SourceControlRegistry;
     startAutomationScheduler?: boolean;
   } = {},
 ) {
@@ -213,6 +227,9 @@ export function registerApi(
     ) => Effect.Effect<A, DaemonError, Db>,
   ) => Effect.flatMap(ChatEngine, use);
   let automationRuntime: AutomationRuntime | undefined;
+  const sourceControl = new SourceControlCoordinator(
+    options.sourceControlRegistry,
+  );
   // Late-bound so activity onChange can notify shepherd without a circular init.
   let shepherd: ShepherdService | undefined;
   const activity = new ChatActivityStore({
@@ -1138,6 +1155,60 @@ export function registerApi(
   app.get("/api/projects", async (context) =>
     context.json(await run(listProjects())),
   );
+  app.get("/api/source-control/activation", async (context) => {
+    const projectId = requireQuery(context.req.query("projectId"), "projectId");
+    const project = await run(getProject(projectId));
+    if (!project) throw DaemonError.projectNotFound();
+    const [config, hostMappings] = await Promise.all([
+      readSourceControlProjectConfig(project.path),
+      run(listProviderHostMappings()),
+    ]);
+    return context.json(
+      await sourceControl.activate({
+        hostMappings,
+        projectPath: project.path,
+        providerConfig: config.provider,
+        signal: context.req.raw.signal,
+      }),
+    );
+  });
+  app.get("/api/source-control/config", async (context) => {
+    const projectId = requireQuery(context.req.query("projectId"), "projectId");
+    const project = await run(getProject(projectId));
+    if (!project) throw DaemonError.projectNotFound();
+    return context.json(await readSourceControlProjectConfig(project.path));
+  });
+  app.put("/api/source-control/config", async (context) => {
+    const projectId = requireQuery(context.req.query("projectId"), "projectId");
+    const project = await run(getProject(projectId));
+    if (!project) throw DaemonError.projectNotFound();
+    const input = sourceControlProjectConfigSchema(await context.req.json());
+    if (input instanceof arkType.errors) {
+      throw DaemonError.invalidRequest(
+        "Source-control project configuration is invalid.",
+      );
+    }
+    const config = await writeSourceControlProjectConfig(project.path, input);
+    sourceControl.invalidate(project.path);
+    return context.json(config);
+  });
+  app.get("/api/source-control/host-mappings", async (context) =>
+    context.json(await run(listProviderHostMappings())),
+  );
+  app.put("/api/source-control/host-mappings", async (context) => {
+    const input = providerHostMappingSchema(await context.req.json());
+    if (input instanceof arkType.errors) {
+      throw DaemonError.invalidRequest("Provider host mapping is invalid.");
+    }
+    const mapping = await run(setProviderHostMapping(input));
+    sourceControl.invalidateAll();
+    return context.json(mapping);
+  });
+  app.delete("/api/source-control/host-mappings/:host", async (context) => {
+    await run(deleteProviderHostMapping(context.req.param("host")));
+    sourceControl.invalidateAll();
+    return context.json({ ok: true });
+  });
   app.post("/api/projects/clone", async (context) => {
     const input = projectCloneInputSchema(await context.req.json());
     if (input instanceof arkType.errors)
@@ -1485,7 +1556,10 @@ export function registerApi(
     return context.json({ resolved: true });
   });
 
-  return () => automationRuntime?.stop();
+  return () => {
+    automationRuntime?.stop();
+    sourceControl.close();
+  };
 }
 
 function observeChatRun(
