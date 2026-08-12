@@ -1,4 +1,6 @@
 import type {
+  ChangeRequestCapability,
+  GitWorkflowCapability,
   ProviderMatch,
   SourceControlProviderPlugin,
   WorkItemCapability,
@@ -37,7 +39,11 @@ const repository = {
 } as const;
 
 function provider(
-  options: { list?: WorkItemCapability } = {},
+  options: {
+    changeRequests?: ChangeRequestCapability;
+    git?: Pick<GitWorkflowCapability, "publishBranch">;
+    list?: WorkItemCapability;
+  } = {},
 ): SourceControlProviderPlugin {
   return {
     auth: {
@@ -66,11 +72,29 @@ function provider(
           : null;
       },
     },
-    git: { parseChangeRequestUrl: () => null, parseUrl: () => repository },
+    changeRequests: options.changeRequests,
+    git: {
+      parseChangeRequestUrl: () => null,
+      parseUrl: () => repository,
+      ...options.git,
+    },
     manifest: {
       capabilities: [
         "provider.auth",
         ...(options.list ? ["workItems.list" as const] : []),
+        ...(options.changeRequests?.preflight
+          ? ["changeRequests.preflight" as const]
+          : []),
+        ...(options.changeRequests?.list
+          ? ["changeRequests.list" as const]
+          : []),
+        ...(options.changeRequests?.create
+          ? ["changeRequests.create" as const]
+          : []),
+        ...(options.changeRequests?.merge
+          ? ["changeRequests.merge" as const]
+          : []),
+        ...(options.git?.publishBranch ? ["branches.publish" as const] : []),
       ],
       displayName: "GitLab",
       hosts: ["gitlab.test"],
@@ -122,6 +146,7 @@ describe("source-control HTTP contract", () => {
       ["GET", "/api/source-control/checks/summary?id=42"],
       ["GET", "/api/source-control/reviews/threads?id=42"],
       ["POST", "/api/source-control/links/resolve"],
+      ["POST", "/api/source-control/branches/publish"],
       ["POST", "/api/source-control/change-requests"],
       ["POST", "/api/source-control/change-requests/42/comments"],
       ["POST", "/api/source-control/change-requests/42/merge"],
@@ -191,5 +216,173 @@ describe("source-control HTTP contract", () => {
         retryable: false,
       },
     });
+  });
+
+  it("composes create preflight from provider and local Git state", async () => {
+    const existing = {
+      additions: null,
+      allowedMergeMethods: ["squash" as const],
+      author: null,
+      body: "",
+      changedFiles: null,
+      checksUrl: null,
+      closedAt: null,
+      commitCount: null,
+      createdAt: null,
+      defaultMergeMethod: "squash" as const,
+      deletions: null,
+      draft: false,
+      id: "7",
+      mergeRequirements: [],
+      mergedAt: null,
+      number: 7,
+      repository,
+      reviewDecision: "approved" as const,
+      source: { name: "feature", oid: null, repository },
+      state: "open" as const,
+      target: { name: "main", oid: null, repository },
+      title: "Feature",
+      updatedAt: null,
+      viewerCanMerge: true,
+      webUrl: `${repository.webUrl}/merge_requests/7`,
+    };
+    const preflight = vi.fn(async () => ({
+      requirements: [],
+      targetBranch: "main",
+    }));
+    const list = vi.fn(async () => [existing]);
+    const { app, root } = await fixture(
+      provider({ changeRequests: { list, preflight } }),
+    );
+    await executeGit(root, ["config", "user.email", "test@example.com"]);
+    await executeGit(root, ["config", "user.name", "Test"]);
+    await fs.writeFile(path.join(root, "base.txt"), "base");
+    await executeGit(root, ["add", "."]);
+    await executeGit(root, ["commit", "-m", "base"]);
+    await executeGit(root, ["branch", "-M", "main"]);
+    await executeGit(root, ["update-ref", "refs/remotes/origin/main", "HEAD"]);
+    await executeGit(root, ["checkout", "-b", "feature"]);
+    await fs.writeFile(path.join(root, "feature.txt"), "feature");
+    await executeGit(root, ["add", "."]);
+    await executeGit(root, ["commit", "-m", "feature"]);
+
+    const response = await app.request(
+      `/api/source-control/change-requests/preflight?projectPath=${encodeURIComponent(root)}`,
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      aheadCount: 1,
+      availableTargetBranches: ["main"],
+      existing: { id: "7" },
+      needsPush: true,
+      sourceBranch: "feature",
+      targetBranch: "main",
+    });
+  });
+
+  it("publishes before creating and forwards generic merge options", async () => {
+    const created = {
+      additions: null,
+      allowedMergeMethods: ["squash" as const],
+      author: null,
+      body: "Body",
+      changedFiles: null,
+      checksUrl: null,
+      closedAt: null,
+      commitCount: null,
+      createdAt: null,
+      defaultMergeMethod: "squash" as const,
+      deletions: null,
+      draft: false,
+      id: "8",
+      mergeRequirements: [],
+      mergedAt: null,
+      number: 8,
+      repository,
+      reviewDecision: "none" as const,
+      source: { name: "feature", oid: null, repository },
+      state: "open" as const,
+      target: { name: "main", oid: null, repository },
+      title: "Feature",
+      updatedAt: null,
+      viewerCanMerge: true,
+      webUrl: `${repository.webUrl}/merge_requests/8`,
+    };
+    const publishBranch = vi.fn(async () => ({
+      remoteName: "origin",
+      remoteRef: "feature",
+    }));
+    const create = vi.fn(async () => created);
+    const merge = vi.fn(async (input) => ({
+      ...created,
+      id: input.id,
+      state: "merged" as const,
+    }));
+    const { app, root } = await fixture(
+      provider({
+        changeRequests: { create, merge },
+        git: { publishBranch },
+      }),
+    );
+
+    const publishResponse = await app.request(
+      "/api/source-control/branches/publish",
+      {
+        body: JSON.stringify({ localBranch: "feature", projectPath: root }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      },
+    );
+    expect(publishResponse.status).toBe(200);
+    expect(publishBranch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        localBranch: "feature",
+        projectPath: root,
+        remoteName: "origin",
+      }),
+      expect.anything(),
+    );
+
+    const createResponse = await app.request(
+      "/api/source-control/change-requests",
+      {
+        body: JSON.stringify({
+          body: "Body",
+          draft: false,
+          projectPath: root,
+          publish: true,
+          sourceBranch: "feature",
+          targetBranch: "main",
+          title: "Feature",
+        }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      },
+    );
+    expect(createResponse.status).toBe(200);
+    expect(publishBranch).toHaveBeenCalledBefore(create);
+
+    const mergeResponse = await app.request(
+      "/api/source-control/change-requests/8/merge",
+      {
+        body: JSON.stringify({
+          deleteSourceBranch: true,
+          method: "squash",
+          projectPath: root,
+        }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      },
+    );
+    expect(mergeResponse.status).toBe(200);
+    expect(merge).toHaveBeenCalledWith(
+      expect.objectContaining({
+        deleteSourceBranch: true,
+        id: "8",
+        method: "squash",
+      }),
+      expect.anything(),
+    );
   });
 });

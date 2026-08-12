@@ -121,8 +121,8 @@ export interface ChatArchiveWorkspaceResult {
 }
 
 export interface ChatSourceLink {
-  kind: "issue" | "pullRequest";
-  provider: "github" | "linear";
+  kind: "changeRequest" | "issue" | "pullRequest" | "workItem";
+  provider: string;
   url: string;
 }
 export type ChatCreateInput = JsChatCreateInput &
@@ -621,8 +621,8 @@ export const chatCreateInputSchema = arkType({
   "remoteThreadId?": "string > 0 | undefined",
   "runtime?": "string > 0 | undefined",
   "sourceLink?": {
-    kind: "'issue' | 'pullRequest'",
-    provider: "'github' | 'linear'",
+    kind: "'changeRequest' | 'issue' | 'pullRequest' | 'workItem'",
+    provider: "string > 0",
     url: "string > 0",
   },
   "title?": "string > 0 | undefined",

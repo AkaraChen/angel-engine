@@ -1,11 +1,4 @@
 import type {
-  GitHubListRepositoriesInput,
-  GitHubListRepositoriesResult,
-  GitHubRepository,
-  GitHubRepositoryOwner,
-  GitHubRepositoryOwnersResult,
-} from "@angel-engine/daemon-api/github";
-import type {
   ListNamespacesInput,
   ListRepositoriesInput,
   ProviderOperationContext,
@@ -18,6 +11,13 @@ import { Effect } from "effect";
 
 import { DaemonError } from "../../../../../platform/errors";
 import { findGhPath, type GhRunner, mapGhFailure, runGhCli } from "./gh-cli";
+import type {
+  GitHubListRepositoriesInput,
+  GitHubListRepositoriesResult,
+  GitHubRepository,
+  GitHubRepositoryOwner,
+  GitHubRepositoryOwnersResult,
+} from "./types";
 
 const DEFAULT_LIMIT = 200;
 const MAX_LIMIT = 1000;
