@@ -1,6 +1,6 @@
-import type { LocaleResourceTranslationWorkspaceToolsPullRequest } from "./schema";
+import type { LocaleResourceTranslationWorkspaceToolsChangeRequest } from "./schema";
 
-export const pullRequestEn = {
+export const changeRequestEn = {
   archive: "Archive workspace",
   archiveDetail: "Archiving closes this chat and removes its managed worktree.",
   archiveFailed: "Could not archive workspace",
@@ -20,37 +20,58 @@ export const pullRequestEn = {
     checksPending_one: "{{count}} required check is still running: {{names}}.",
     checksPending_other:
       "{{count}} required checks are still running: {{names}}.",
-    conflict: "The pull request has merge conflicts.",
-    draft: "The pull request is still a draft.",
+    conflict: "The change request has merge conflicts.",
+    draft: "The change request is still a draft.",
     permissionDenied: "You do not have permission to merge this repository.",
     repositoryPolicy: "A repository rule is blocking this merge.",
     reviewRequired: "An approving review is required.",
     unresolvedThreads_one: "{{count}} review conversation is unresolved.",
     unresolvedThreads_other: "{{count}} review conversations are unresolved.",
   },
-  checking: "Checking the pull request for this branch…",
-  checkingMergeability: "GitHub is still calculating mergeability.",
+  checking: "Checking the change request for this branch…",
+  checkingMergeability:
+    "The source control provider is still calculating mergeability.",
   continue: "Continue working",
   deleteBranch: "Delete the remote branch after merging",
   description: "Description",
   errors: {
-    cliMissing: "GitHub CLI is required",
-    cliMissingDetail: "Install gh to merge pull requests inside Angel Engine.",
-    fetch: "Pull request unavailable",
+    cliMissing: "Source control CLI is required",
+    cliMissingDetail:
+      "Install the provider CLI to merge change requests inside Angel Engine.",
+    fetch: "Change request unavailable",
     fetchDetail:
-      "GitHub could not be reached. Check the repository and try again.",
-    permission: "Read-only GitHub access",
+      "The source control provider could not be reached. Check the repository and try again.",
+    permission: "Read-only source control access",
     permissionDetail:
-      "Open the pull request in GitHub to ask a maintainer to merge it.",
-    unauthenticated: "GitHub CLI is not signed in",
-    unauthenticatedDetail: "Run gh auth login, then refresh this panel.",
+      "Open the change request in source control to ask a maintainer to merge it.",
+    unauthenticated: "Source control is not signed in",
+    unauthenticatedDetail:
+      "Run the provider CLI auth login, then refresh this panel.",
   },
   generalComment: "General comment",
+  hostedFallback: {
+    ambiguousDetail:
+      "Choose which remote should provide hosted source control for this workspace.",
+    ambiguousTitle: "Multiple source control remotes detected",
+    apply: "Use remote",
+    configure: "Configure source control",
+    configuredProviderMissing:
+      "The configured source control provider is not available.",
+    errorDetail: "Source control provider detection failed. Try again.",
+    noProviderDetail:
+      "Local Git remains available. Configure a provider to use hosted change requests, checks, and reviews.",
+    remoteLabel: "Source control remote",
+    retry: "Detect again",
+    saving: "Configuring…",
+    title: "No Source control provider detected",
+    unavailableDetail:
+      "The source control provider is unavailable. Local Git remains available.",
+  },
   merge: "Merge",
-  mergeChanged: "The pull request changed before the merge completed.",
+  mergeChanged: "The change request changed before the merge completed.",
   mergeFailed: "Merge failed",
-  merged: "Pull request #{{number}} merged",
-  mergedDetail: "The pull request was merged successfully.",
+  merged: "Change request #{{number}} merged",
+  mergedDetail: "The change request was merged successfully.",
   mergedMethod: "Merged with {{method}}.",
   merging: "Merging…",
   method: "Merge method",
@@ -60,9 +81,9 @@ export const pullRequestEn = {
     rebase: "Rebase and merge",
     squash: "Squash and merge",
   },
-  noOpen: "No open pull request",
-  noOpenDetail: "Push this branch and open a pull request to merge it here.",
-  open: "Open on GitHub",
+  noOpen: "No open change request",
+  noOpenDetail: "Push this branch and open a change request to merge it here.",
+  open: "Open in source control",
   optionalChecksFailed_one:
     "{{count}} optional check failed: {{names}}. It does not block merging.",
   optionalChecksFailed_other:
@@ -77,7 +98,7 @@ export const pullRequestEn = {
       queuedRun: "Shepherd is waiting for a queued message to finish.",
       waitingForYou: "Shepherd is waiting for your input before continuing.",
     },
-    invalidUrl: "Could not parse the pull request URL.",
+    invalidUrl: "Could not parse the change request URL.",
     noChat: "Open a workspace chat before starting shepherd.",
     queued: "Waiting for the current reply to finish, then shepherd continues.",
     resume: "Resume",
@@ -86,7 +107,7 @@ export const pullRequestEn = {
     settled: {
       blocked: {
         detail:
-          "No progress after repeated attempts. Take over or adjust the PR.",
+          "No progress after repeated attempts. Take over or adjust the change request.",
         title: "Shepherd blocked",
       },
       budget: {
@@ -95,8 +116,8 @@ export const pullRequestEn = {
         title: "Round budget reached",
       },
       closed: {
-        detail: "The pull request was merged or closed.",
-        title: "Pull request closed",
+        detail: "The change request was merged or closed.",
+        title: "Change request closed",
       },
       green: {
         detail: "Required checks are green and review threads are clear.",
@@ -110,7 +131,7 @@ export const pullRequestEn = {
     shepherdingStop: "Shepherding… (click to stop)",
     sourceCollapse: "Collapse shepherd source",
     sourceExpand: "Expand shepherd source",
-    start: "Shepherd this PR",
+    start: "Shepherd this change request",
     startFailed: "Could not start shepherd",
     started: "Shepherd started",
     stopped: "Shepherd stopped",
@@ -118,14 +139,14 @@ export const pullRequestEn = {
     working: "Working…",
     yielded: "Shepherd paused — you took over the session.",
     yieldedDetail:
-      "Resume when you want shepherd to continue watching this PR.",
+      "Resume when you want shepherd to continue watching this change request.",
   },
-  title: "Pull request",
+  title: "Change request",
   unresolvedTitle: "Unresolved conversations ({{count}})",
-} satisfies LocaleResourceTranslationWorkspaceToolsPullRequest;
+} satisfies LocaleResourceTranslationWorkspaceToolsChangeRequest;
 
-export const pullRequestZhCN = {
-  ...pullRequestEn,
+export const changeRequestZhCN = {
+  ...changeRequestEn,
   archive: "归档此工作区",
   archiveDetail: "归档会关闭此聊天并移除其受管 worktree。",
   archiveFailed: "无法归档工作区",
@@ -143,35 +164,50 @@ export const pullRequestZhCN = {
     checksFailed_other: "{{count}} 项必需检查失败：{{names}}。",
     checksPending_one: "{{count}} 项必需检查仍在运行：{{names}}。",
     checksPending_other: "{{count}} 项必需检查仍在运行：{{names}}。",
-    conflict: "此拉取请求存在合并冲突。",
-    draft: "此拉取请求仍是草稿。",
+    conflict: "此变更请求存在合并冲突。",
+    draft: "此变更请求仍是草稿。",
     permissionDenied: "你没有合并此仓库的权限。",
     repositoryPolicy: "仓库规则阻止了此次合并。",
     reviewRequired: "仍需要批准审阅。",
     unresolvedThreads_one: "仍有 {{count}} 条审阅评论未解决。",
     unresolvedThreads_other: "仍有 {{count}} 条审阅评论未解决。",
   },
-  checking: "正在检查当前分支的拉取请求…",
-  checkingMergeability: "GitHub 仍在计算是否可合并。",
+  checking: "正在检查当前分支的变更请求…",
+  checkingMergeability: "源代码控制提供方仍在计算是否可合并。",
   continue: "继续在此工作",
   deleteBranch: "合并后删除远端分支",
   description: "描述",
   errors: {
-    cliMissing: "需要 GitHub CLI",
-    cliMissingDetail: "安装 gh 后即可在 Angel Engine 内合并拉取请求。",
-    fetch: "拉取请求不可用",
-    fetchDetail: "无法访问 GitHub，请检查仓库后重试。",
-    permission: "GitHub 只读权限",
-    permissionDetail: "请在 GitHub 打开此拉取请求并请维护者合并。",
-    unauthenticated: "GitHub CLI 未登录",
-    unauthenticatedDetail: "请运行 gh auth login，然后刷新此面板。",
+    cliMissing: "需要源代码控制 CLI",
+    cliMissingDetail: "安装提供方 CLI 后即可在 Angel Engine 内合并变更请求。",
+    fetch: "变更请求不可用",
+    fetchDetail: "无法访问源代码控制提供方，请检查仓库后重试。",
+    permission: "源代码控制只读权限",
+    permissionDetail: "请在源代码控制中打开此变更请求并请维护者合并。",
+    unauthenticated: "源代码控制未登录",
+    unauthenticatedDetail: "请通过提供方 CLI 登录，然后刷新此面板。",
   },
   generalComment: "一般评论",
+  hostedFallback: {
+    ambiguousDetail: "请选择用于此工作区托管源代码控制的远程仓库。",
+    ambiguousTitle: "检测到多个源代码控制远程仓库",
+    apply: "使用此远程仓库",
+    configure: "配置源代码控制",
+    configuredProviderMissing: "已配置的源代码控制提供方不可用。",
+    errorDetail: "检测源代码控制提供方失败，请重试。",
+    noProviderDetail:
+      "本地 Git 仍可使用。配置提供方后即可使用托管变更请求、检查和审阅。",
+    remoteLabel: "源代码控制远程仓库",
+    retry: "重新检测",
+    saving: "配置中…",
+    title: "未检测到源代码控制提供方",
+    unavailableDetail: "源代码控制提供方不可用。本地 Git 仍可使用。",
+  },
   merge: "合并",
-  mergeChanged: "合并完成前拉取请求状态已变化。",
+  mergeChanged: "合并完成前变更请求状态已变化。",
   mergeFailed: "合并失败",
-  merged: "已合并拉取请求 #{{number}}",
-  mergedDetail: "拉取请求已成功合并。",
+  merged: "已合并变更请求 #{{number}}",
+  mergedDetail: "变更请求已成功合并。",
   mergedMethod: "已使用“{{method}}”合并。",
   merging: "合并中…",
   method: "合并方式",
@@ -181,9 +217,9 @@ export const pullRequestZhCN = {
     rebase: "变基并合并",
     squash: "压缩并合并",
   },
-  noOpen: "没有开放的拉取请求",
-  noOpenDetail: "推送此分支并创建拉取请求后，即可在此合并。",
-  open: "在 GitHub 打开",
+  noOpen: "没有开放的变更请求",
+  noOpenDetail: "推送此分支并创建变更请求后，即可在此合并。",
+  open: "在源代码控制中打开",
   optionalChecksFailed_one:
     "{{count}} 项非必需检查失败：{{names}}。它们不会阻止合并。",
   optionalChecksFailed_other:
@@ -198,7 +234,7 @@ export const pullRequestZhCN = {
       queuedRun: "Shepherd 在等待队列中的消息完成。",
       waitingForYou: "Shepherd 在等待你的输入后再继续。",
     },
-    invalidUrl: "无法解析拉取请求链接。",
+    invalidUrl: "无法解析变更请求链接。",
     noChat: "请先打开工作区会话再启动 Shepherd。",
     queued: "等当前回复结束后继续。",
     resume: "恢复",
@@ -206,7 +242,7 @@ export const pullRequestZhCN = {
     rounds: "{{round}} / {{max}}",
     settled: {
       blocked: {
-        detail: "连续尝试后仍无进展，请接管或调整 PR。",
+        detail: "连续尝试后仍无进展，请接管或调整变更请求。",
         title: "Shepherd 已阻塞",
       },
       budget: {
@@ -214,8 +250,8 @@ export const pullRequestZhCN = {
         title: "轮次预算已用尽",
       },
       closed: {
-        detail: "拉取请求已合并或关闭。",
-        title: "拉取请求已关闭",
+        detail: "变更请求已合并或关闭。",
+        title: "变更请求已关闭",
       },
       green: {
         detail: "必需检查已通过，审阅对话已清空。",
@@ -229,21 +265,21 @@ export const pullRequestZhCN = {
     shepherdingStop: "Shepherding…（点击停止）",
     sourceCollapse: "收起来源卡片",
     sourceExpand: "展开来源卡片",
-    start: "Shepherd this PR",
+    start: "Shepherd 此变更请求",
     startFailed: "无法启动 Shepherd",
     started: "已启动 Shepherd",
     stopped: "已停止 Shepherd",
     title: "Shepherd",
     working: "处理中…",
     yielded: "Shepherd paused — 你接管了会话。",
-    yieldedDetail: "需要时点恢复，继续盯这个 PR。",
+    yieldedDetail: "需要时点恢复，继续盯这个变更请求。",
   },
-  title: "拉取请求",
+  title: "变更请求",
   unresolvedTitle: "未解决的评论（{{count}}）",
-} satisfies LocaleResourceTranslationWorkspaceToolsPullRequest;
+} satisfies LocaleResourceTranslationWorkspaceToolsChangeRequest;
 
-export const pullRequestZhTW = {
-  ...pullRequestEn,
+export const changeRequestZhTW = {
+  ...changeRequestEn,
   archive: "封存此工作區",
   archiveDetail: "封存會關閉此聊天並移除其受管 worktree。",
   archiveFailed: "無法封存工作區",
@@ -261,34 +297,49 @@ export const pullRequestZhTW = {
     checksFailed_other: "{{count}} 項必要檢查失敗：{{names}}。",
     checksPending_one: "{{count}} 項必要檢查仍在執行：{{names}}。",
     checksPending_other: "{{count}} 項必要檢查仍在執行：{{names}}。",
-    conflict: "此提取要求存在合併衝突。",
-    draft: "此提取要求仍是草稿。",
+    conflict: "此變更要求存在合併衝突。",
+    draft: "此變更要求仍是草稿。",
     permissionDenied: "你沒有合併此儲存庫的權限。",
     repositoryPolicy: "儲存庫規則阻止了此次合併。",
     reviewRequired: "仍需要核准審閱。",
     unresolvedThreads_one: "仍有 {{count}} 則審閱留言未解決。",
     unresolvedThreads_other: "仍有 {{count}} 則審閱留言未解決。",
   },
-  checking: "正在檢查目前分支的提取要求…",
-  checkingMergeability: "GitHub 仍在計算是否可以合併。",
+  checking: "正在檢查目前分支的變更要求…",
+  checkingMergeability: "原始碼控制提供者仍在計算是否可以合併。",
   continue: "繼續在此工作",
   deleteBranch: "合併後刪除遠端分支",
   errors: {
-    cliMissing: "需要 GitHub CLI",
-    cliMissingDetail: "安裝 gh 後即可在 Angel Engine 內合併提取要求。",
-    fetch: "無法取得提取要求",
-    fetchDetail: "無法存取 GitHub，請檢查儲存庫後再試一次。",
-    permission: "GitHub 唯讀權限",
-    permissionDetail: "請在 GitHub 開啟此提取要求，並請維護者合併。",
-    unauthenticated: "GitHub CLI 尚未登入",
-    unauthenticatedDetail: "請執行 gh auth login，然後重新整理此面板。",
+    cliMissing: "需要原始碼控制 CLI",
+    cliMissingDetail: "安裝提供者 CLI 後即可在 Angel Engine 內合併變更要求。",
+    fetch: "無法取得變更要求",
+    fetchDetail: "無法存取原始碼控制提供者，請檢查儲存庫後再試一次。",
+    permission: "原始碼控制唯讀權限",
+    permissionDetail: "請在原始碼控制中開啟此變更要求，並請維護者合併。",
+    unauthenticated: "原始碼控制尚未登入",
+    unauthenticatedDetail: "請透過提供者 CLI 登入，然後重新整理此面板。",
   },
   generalComment: "一般留言",
+  hostedFallback: {
+    ambiguousDetail: "請選擇要為此工作區提供託管原始碼控制的遠端儲存庫。",
+    ambiguousTitle: "偵測到多個原始碼控制遠端儲存庫",
+    apply: "使用此遠端儲存庫",
+    configure: "設定原始碼控制",
+    configuredProviderMissing: "已設定的原始碼控制提供者無法使用。",
+    errorDetail: "偵測原始碼控制提供者失敗，請再試一次。",
+    noProviderDetail:
+      "本機 Git 仍可使用。設定提供者後即可使用託管變更要求、檢查和審閱。",
+    remoteLabel: "原始碼控制遠端儲存庫",
+    retry: "重新偵測",
+    saving: "設定中…",
+    title: "未偵測到原始碼控制提供者",
+    unavailableDetail: "原始碼控制提供者無法使用。本機 Git 仍可使用。",
+  },
   merge: "合併",
-  mergeChanged: "合併完成前，提取要求的狀態已變更。",
+  mergeChanged: "合併完成前，變更要求的狀態已變更。",
   mergeFailed: "合併失敗",
-  merged: "已合併提取要求 #{{number}}",
-  mergedDetail: "提取要求已成功合併。",
+  merged: "已合併變更要求 #{{number}}",
+  mergedDetail: "變更要求已成功合併。",
   mergedMethod: "已使用「{{method}}」合併。",
   merging: "合併中…",
   method: "合併方式",
@@ -298,9 +349,9 @@ export const pullRequestZhTW = {
     rebase: "變基並合併",
     squash: "壓縮並合併",
   },
-  noOpen: "沒有開啟中的提取要求",
-  noOpenDetail: "推送此分支並建立提取要求後，即可在此合併。",
-  open: "在 GitHub 開啟",
+  noOpen: "沒有開啟中的變更要求",
+  noOpenDetail: "推送此分支並建立變更要求後，即可在此合併。",
+  open: "在原始碼控制中開啟",
   optionalChecksFailed_one:
     "{{count}} 項非必要檢查失敗：{{names}}。它們不會阻止合併。",
   optionalChecksFailed_other:
@@ -315,7 +366,7 @@ export const pullRequestZhTW = {
       queuedRun: "Shepherd 正在等待佇列中的訊息完成。",
       waitingForYou: "Shepherd 正在等待你的輸入後再繼續。",
     },
-    invalidUrl: "無法解析提取要求連結。",
+    invalidUrl: "無法解析變更要求連結。",
     noChat: "請先開啟工作區對話再啟動 Shepherd。",
     queued: "等目前回覆結束後繼續。",
     resume: "恢復",
@@ -323,7 +374,7 @@ export const pullRequestZhTW = {
     rounds: "{{round}} / {{max}}",
     settled: {
       blocked: {
-        detail: "連續嘗試後仍無進展，請接手或調整 PR。",
+        detail: "連續嘗試後仍無進展，請接手或調整變更要求。",
         title: "Shepherd 已阻塞",
       },
       budget: {
@@ -331,8 +382,8 @@ export const pullRequestZhTW = {
         title: "輪次預算已用盡",
       },
       closed: {
-        detail: "提取要求已合併或關閉。",
-        title: "提取要求已關閉",
+        detail: "變更要求已合併或關閉。",
+        title: "變更要求已關閉",
       },
       green: {
         detail: "必要檢查已通過，審閱對話已清空。",
@@ -346,21 +397,21 @@ export const pullRequestZhTW = {
     shepherdingStop: "Shepherding…（點擊停止）",
     sourceCollapse: "收起來源卡片",
     sourceExpand: "展開來源卡片",
-    start: "Shepherd this PR",
+    start: "Shepherd 此變更要求",
     startFailed: "無法啟動 Shepherd",
     started: "已啟動 Shepherd",
     stopped: "已停止 Shepherd",
     title: "Shepherd",
     working: "處理中…",
     yielded: "Shepherd paused — 你接管了對話。",
-    yieldedDetail: "需要時點恢復，繼續盯這個 PR。",
+    yieldedDetail: "需要時點恢復，繼續盯這個變更要求。",
   },
-  title: "提取要求",
+  title: "變更要求",
   unresolvedTitle: "未解決的留言（{{count}}）",
-} satisfies LocaleResourceTranslationWorkspaceToolsPullRequest;
+} satisfies LocaleResourceTranslationWorkspaceToolsChangeRequest;
 
-export const pullRequestFr = {
-  ...pullRequestEn,
+export const changeRequestFr = {
+  ...changeRequestEn,
   archive: "Archiver l’espace de travail",
   archiveDetail:
     "L’archivage ferme cette conversation et supprime son worktree géré.",
@@ -387,8 +438,8 @@ export const pullRequestFr = {
       "{{count}} vérification requise est toujours en cours : {{names}}.",
     checksPending_other:
       "{{count}} vérifications requises sont toujours en cours : {{names}}.",
-    conflict: "La pull request présente des conflits de fusion.",
-    draft: "La pull request est encore un brouillon.",
+    conflict: "La demande de changement présente des conflits de fusion.",
+    draft: "La demande de changement est encore un brouillon.",
     permissionDenied: "Vous n’avez pas l’autorisation de fusionner ce dépôt.",
     repositoryPolicy: "Une règle du dépôt bloque cette fusion.",
     reviewRequired: "Une revue d’approbation est requise.",
@@ -396,30 +447,51 @@ export const pullRequestFr = {
     unresolvedThreads_other:
       "{{count}} conversations de revue ne sont pas résolues.",
   },
-  checking: "Recherche de la pull request associée à cette branche…",
-  checkingMergeability: "GitHub calcule encore si la fusion est possible.",
+  checking: "Recherche de la demande de changement associée à cette branche…",
+  checkingMergeability:
+    "fournisseur de gestion de code source calcule encore si la fusion est possible.",
   continue: "Continuer à travailler",
   deleteBranch: "Supprimer la branche distante après la fusion",
   description: "Description",
   errors: {
-    cliMissing: "GitHub CLI est requis",
+    cliMissing: "CLI de gestion de code source est requis",
     cliMissingDetail:
-      "Installez gh pour fusionner des pull requests dans Angel Engine.",
-    fetch: "Pull request indisponible",
-    fetchDetail: "GitHub est inaccessible. Vérifiez le dépôt et réessayez.",
-    permission: "Accès GitHub en lecture seule",
+      "Installez le CLI du fournisseur pour fusionner des demandes de changement dans Angel Engine.",
+    fetch: "Demande de changement indisponible",
+    fetchDetail:
+      "fournisseur de gestion de code source est inaccessible. Vérifiez le dépôt et réessayez.",
+    permission: "Accès fournisseur de gestion de code source en lecture seule",
     permissionDetail:
-      "Ouvrez la pull request dans GitHub et demandez sa fusion à une personne responsable du dépôt.",
-    unauthenticated: "GitHub CLI n’est pas connecté",
+      "Ouvrez la demande de changement dans fournisseur de gestion de code source et demandez sa fusion à une personne responsable du dépôt.",
+    unauthenticated: "CLI de gestion de code source n’est pas connecté",
     unauthenticatedDetail:
-      "Exécutez gh auth login, puis actualisez ce panneau.",
+      "Exécutez le CLI du fournisseur auth login, puis actualisez ce panneau.",
   },
   generalComment: "Commentaire général",
+  hostedFallback: {
+    ambiguousDetail:
+      "Choisissez le dépôt distant qui fournira la gestion de code source hébergée pour cet espace de travail.",
+    ambiguousTitle: "Plusieurs dépôts distants de code source détectés",
+    apply: "Utiliser ce dépôt distant",
+    configure: "Configurer la gestion de code source",
+    configuredProviderMissing:
+      "Le fournisseur de gestion de code source configuré n’est pas disponible.",
+    errorDetail:
+      "La détection du fournisseur de gestion de code source a échoué. Réessayez.",
+    noProviderDetail:
+      "Git local reste disponible. Configurez un fournisseur pour utiliser les demandes de changement, vérifications et revues hébergées.",
+    remoteLabel: "Dépôt distant de code source",
+    retry: "Détecter à nouveau",
+    saving: "Configuration…",
+    title: "Aucun fournisseur de gestion de code source détecté",
+    unavailableDetail:
+      "Le fournisseur de gestion de code source est indisponible. Git local reste disponible.",
+  },
   merge: "Fusionner",
-  mergeChanged: "La pull request a changé avant la fin de la fusion.",
+  mergeChanged: "La demande de changement a changé avant la fin de la fusion.",
   mergeFailed: "Échec de la fusion",
-  merged: "Pull request nº {{number}} fusionnée",
-  mergedDetail: "La pull request a été fusionnée.",
+  merged: "Demande de changement nº {{number}} fusionnée",
+  mergedDetail: "La demande de changement a été fusionnée.",
   mergedMethod: "Fusionnée avec la méthode {{method}}.",
   merging: "Fusion en cours…",
   method: "Méthode de fusion",
@@ -429,10 +501,10 @@ export const pullRequestFr = {
     rebase: "Rebaser et fusionner",
     squash: "Compresser et fusionner",
   },
-  noOpen: "Aucune pull request ouverte",
+  noOpen: "Aucune demande de changement ouverte",
   noOpenDetail:
-    "Poussez cette branche et ouvrez une pull request pour la fusionner ici.",
-  open: "Ouvrir sur GitHub",
+    "Poussez cette branche et ouvrez une demande de changement pour la fusionner ici.",
+  open: "Ouvrir sur fournisseur de gestion de code source",
   optionalChecksFailed_one:
     "{{count}} vérification facultative a échoué : {{names}}. Elle ne bloque pas la fusion.",
   optionalChecksFailed_other:
@@ -447,7 +519,7 @@ export const pullRequestFr = {
       queuedRun: "Shepherd attend la fin d’un message en file d’attente.",
       waitingForYou: "Shepherd attend votre intervention avant de continuer.",
     },
-    invalidUrl: "Impossible d’analyser l’URL de la pull request.",
+    invalidUrl: "Impossible d’analyser l’URL de la demande de changement.",
     noChat:
       "Ouvrez une conversation d’espace de travail avant de lancer Shepherd.",
     queued: "Shepherd continuera une fois la réponse en cours terminée.",
@@ -457,7 +529,7 @@ export const pullRequestFr = {
     settled: {
       blocked: {
         detail:
-          "Aucune progression après plusieurs tentatives. Prenez la main ou modifiez la PR.",
+          "Aucune progression après plusieurs tentatives. Prenez la main ou modifiez la demande de changement.",
         title: "Shepherd est bloqué",
       },
       budget: {
@@ -466,8 +538,8 @@ export const pullRequestFr = {
         title: "Limite de tours atteinte",
       },
       closed: {
-        detail: "La pull request a été fusionnée ou fermée.",
-        title: "Pull request fermée",
+        detail: "La demande de changement a été fusionnée ou fermée.",
+        title: "Demande de changement fermée",
       },
       green: {
         detail:
@@ -483,7 +555,7 @@ export const pullRequestFr = {
     shepherdingStop: "Shepherd en cours… (cliquer pour arrêter)",
     sourceCollapse: "Réduire la source de Shepherd",
     sourceExpand: "Développer la source de Shepherd",
-    start: "Confier cette PR à Shepherd",
+    start: "Confier cette demande de changement à Shepherd",
     startFailed: "Impossible de lancer Shepherd",
     started: "Shepherd démarré",
     stopped: "Shepherd arrêté",
@@ -491,14 +563,14 @@ export const pullRequestFr = {
     working: "Traitement en cours…",
     yielded: "Shepherd est en pause — vous avez repris la session.",
     yieldedDetail:
-      "Reprenez lorsque vous souhaitez que Shepherd surveille de nouveau cette PR.",
+      "Reprenez lorsque vous souhaitez que Shepherd surveille de nouveau cette demande de changement.",
   },
-  title: "Pull request",
+  title: "Demande de changement",
   unresolvedTitle: "Conversations non résolues ({{count}})",
-} satisfies LocaleResourceTranslationWorkspaceToolsPullRequest;
+} satisfies LocaleResourceTranslationWorkspaceToolsChangeRequest;
 
-export const pullRequestDe = {
-  ...pullRequestEn,
+export const changeRequestDe = {
+  ...changeRequestEn,
   archive: "Arbeitsbereich archivieren",
   archiveDetail:
     "Beim Archivieren wird dieser Chat geschlossen und der verwaltete Worktree entfernt.",
@@ -523,39 +595,59 @@ export const pullRequestDe = {
       "{{count}} erforderliche Prüfung wird noch ausgeführt: {{names}}.",
     checksPending_other:
       "{{count}} erforderliche Prüfungen werden noch ausgeführt: {{names}}.",
-    conflict: "Der Pull Request enthält Merge-Konflikte.",
-    draft: "Der Pull Request ist noch ein Entwurf.",
+    conflict: "Der Änderungsanfrage enthält Merge-Konflikte.",
+    draft: "Der Änderungsanfrage ist noch ein Entwurf.",
     permissionDenied: "Du darfst dieses Repository nicht zusammenführen.",
     repositoryPolicy: "Eine Repository-Regel blockiert diesen Merge.",
     reviewRequired: "Eine genehmigende Überprüfung ist erforderlich.",
     unresolvedThreads_one: "{{count}} Review-Unterhaltung ist noch offen.",
     unresolvedThreads_other: "{{count}} Review-Unterhaltungen sind noch offen.",
   },
-  checking: "Pull Request für diesen Branch wird gesucht…",
-  checkingMergeability: "GitHub berechnet noch, ob der Merge möglich ist.",
+  checking: "Änderungsanfrage für diesen Branch wird gesucht…",
+  checkingMergeability:
+    "Quellcodeverwaltungsanbieter berechnet noch, ob der Merge möglich ist.",
   continue: "Weiterarbeiten",
   deleteBranch: "Remote-Branch nach dem Merge löschen",
   description: "Beschreibung",
   errors: {
-    cliMissing: "GitHub CLI ist erforderlich",
+    cliMissing: "Quellcodeverwaltungs-CLI ist erforderlich",
     cliMissingDetail:
-      "Installiere gh, um Pull Requests in Angel Engine zusammenzuführen.",
-    fetch: "Pull Request nicht verfügbar",
+      "Installiere die Anbieter-CLI, um Änderungsanfragen in Angel Engine zusammenzuführen.",
+    fetch: "Änderungsanfrage nicht verfügbar",
     fetchDetail:
-      "GitHub ist nicht erreichbar. Prüfe das Repository und versuche es erneut.",
-    permission: "Nur-Lese-Zugriff auf GitHub",
+      "Quellcodeverwaltungsanbieter ist nicht erreichbar. Prüfe das Repository und versuche es erneut.",
+    permission: "Nur-Lese-Zugriff auf Quellcodeverwaltungsanbieter",
     permissionDetail:
-      "Öffne den Pull Request in GitHub und bitte einen Maintainer um den Merge.",
-    unauthenticated: "GitHub CLI ist nicht angemeldet",
+      "Öffne den Änderungsanfrage in Quellcodeverwaltungsanbieter und bitte einen Maintainer um den Merge.",
+    unauthenticated: "Quellcodeverwaltungs-CLI ist nicht angemeldet",
     unauthenticatedDetail:
-      "Führe gh auth login aus und aktualisiere dann dieses Panel.",
+      "Führe die Anbieter-CLI auth login aus und aktualisiere dann dieses Panel.",
   },
   generalComment: "Allgemeiner Kommentar",
+  hostedFallback: {
+    ambiguousDetail:
+      "Wähle das Remote aus, das die gehostete Quellcodeverwaltung für diesen Arbeitsbereich bereitstellt.",
+    ambiguousTitle: "Mehrere Quellcodeverwaltungs-Remotes erkannt",
+    apply: "Remote verwenden",
+    configure: "Quellcodeverwaltung konfigurieren",
+    configuredProviderMissing:
+      "Der konfigurierte Quellcodeverwaltungsanbieter ist nicht verfügbar.",
+    errorDetail:
+      "Der Quellcodeverwaltungsanbieter konnte nicht erkannt werden. Versuche es erneut.",
+    noProviderDetail:
+      "Lokales Git bleibt verfügbar. Konfiguriere einen Anbieter für gehostete Änderungsanfragen, Prüfungen und Reviews.",
+    remoteLabel: "Quellcodeverwaltungs-Remote",
+    retry: "Erneut erkennen",
+    saving: "Wird konfiguriert…",
+    title: "Kein Quellcodeverwaltungsanbieter erkannt",
+    unavailableDetail:
+      "Der Quellcodeverwaltungsanbieter ist nicht verfügbar. Lokales Git bleibt verfügbar.",
+  },
   merge: "Zusammenführen",
-  mergeChanged: "Der Pull Request wurde vor Abschluss des Merges geändert.",
+  mergeChanged: "Der Änderungsanfrage wurde vor Abschluss des Merges geändert.",
   mergeFailed: "Merge fehlgeschlagen",
-  merged: "Pull Request Nr. {{number}} zusammengeführt",
-  mergedDetail: "Der Pull Request wurde erfolgreich zusammengeführt.",
+  merged: "Änderungsanfrage Nr. {{number}} zusammengeführt",
+  mergedDetail: "Der Änderungsanfrage wurde erfolgreich zusammengeführt.",
   mergedMethod: "Mit {{method}} zusammengeführt.",
   merging: "Wird zusammengeführt…",
   method: "Merge-Methode",
@@ -565,10 +657,10 @@ export const pullRequestDe = {
     rebase: "Rebase und Merge",
     squash: "Squash und Merge",
   },
-  noOpen: "Kein offener Pull Request",
+  noOpen: "Kein offener Änderungsanfrage",
   noOpenDetail:
-    "Pushe diesen Branch und öffne einen Pull Request, um ihn hier zusammenzuführen.",
-  open: "Auf GitHub öffnen",
+    "Pushe diesen Branch und öffne einen Änderungsanfrage, um ihn hier zusammenzuführen.",
+  open: "Auf Quellcodeverwaltungsanbieter öffnen",
   optionalChecksFailed_one:
     "{{count}} optionale Prüfung fehlgeschlagen: {{names}}. Sie blockiert den Merge nicht.",
   optionalChecksFailed_other:
@@ -584,7 +676,7 @@ export const pullRequestDe = {
         "Shepherd wartet auf den Abschluss einer Nachricht in der Warteschlange.",
       waitingForYou: "Shepherd wartet vor dem Fortfahren auf deine Eingabe.",
     },
-    invalidUrl: "Die Pull-Request-URL konnte nicht verarbeitet werden.",
+    invalidUrl: "Die Änderungsanfrage-URL konnte nicht verarbeitet werden.",
     noChat: "Öffne einen Arbeitsbereich-Chat, bevor du Shepherd startest.",
     queued:
       "Shepherd fährt fort, sobald die aktuelle Antwort abgeschlossen ist.",
@@ -594,7 +686,7 @@ export const pullRequestDe = {
     settled: {
       blocked: {
         detail:
-          "Nach mehreren Versuchen gibt es keinen Fortschritt. Übernimm oder passe den PR an.",
+          "Nach mehreren Versuchen gibt es keinen Fortschritt. Übernimm oder passe den Änderungsanfrage an.",
         title: "Shepherd blockiert",
       },
       budget: {
@@ -603,8 +695,8 @@ export const pullRequestDe = {
         title: "Rundenlimit erreicht",
       },
       closed: {
-        detail: "Der Pull Request wurde zusammengeführt oder geschlossen.",
-        title: "Pull Request geschlossen",
+        detail: "Der Änderungsanfrage wurde zusammengeführt oder geschlossen.",
+        title: "Änderungsanfrage geschlossen",
       },
       green: {
         detail:
@@ -620,7 +712,7 @@ export const pullRequestDe = {
     shepherdingStop: "Shepherd arbeitet… (zum Anhalten klicken)",
     sourceCollapse: "Shepherd-Quelle einklappen",
     sourceExpand: "Shepherd-Quelle ausklappen",
-    start: "Diesen PR mit Shepherd betreuen",
+    start: "Diesen Änderungsanfrage mit Shepherd betreuen",
     startFailed: "Shepherd konnte nicht gestartet werden",
     started: "Shepherd gestartet",
     stopped: "Shepherd angehalten",
@@ -628,14 +720,14 @@ export const pullRequestDe = {
     working: "In Arbeit…",
     yielded: "Shepherd pausiert — du hast die Sitzung übernommen.",
     yieldedDetail:
-      "Setze fort, wenn Shepherd diesen PR wieder überwachen soll.",
+      "Setze fort, wenn Shepherd diesen Änderungsanfrage wieder überwachen soll.",
   },
-  title: "Pull Request",
+  title: "Änderungsanfrage",
   unresolvedTitle: "Offene Unterhaltungen ({{count}})",
-} satisfies LocaleResourceTranslationWorkspaceToolsPullRequest;
+} satisfies LocaleResourceTranslationWorkspaceToolsChangeRequest;
 
-export const pullRequestJa = {
-  ...pullRequestEn,
+export const changeRequestJa = {
+  ...changeRequestEn,
   archive: "ワークスペースをアーカイブ",
   archiveDetail:
     "アーカイブすると、このチャットが閉じられ、管理対象の worktree が削除されます。",
@@ -657,8 +749,8 @@ export const pullRequestJa = {
     checksFailed_other: "必須チェック {{count}} 件が失敗しました：{{names}}。",
     checksPending_one: "必須チェック {{count}} 件を実行中です：{{names}}。",
     checksPending_other: "必須チェック {{count}} 件を実行中です：{{names}}。",
-    conflict: "プルリクエストにマージ競合があります。",
-    draft: "プルリクエストはまだ下書きです。",
+    conflict: "変更リクエストにマージ競合があります。",
+    draft: "変更リクエストはまだ下書きです。",
     permissionDenied: "このリポジトリをマージする権限がありません。",
     repositoryPolicy:
       "リポジトリのルールによってマージがブロックされています。",
@@ -666,31 +758,51 @@ export const pullRequestJa = {
     unresolvedThreads_one: "未解決のレビュー会話が {{count}} 件あります。",
     unresolvedThreads_other: "未解決のレビュー会話が {{count}} 件あります。",
   },
-  checking: "このブランチのプルリクエストを確認中…",
-  checkingMergeability: "GitHub がマージ可能かどうかを計算しています。",
+  checking: "このブランチの変更リクエストを確認中…",
+  checkingMergeability:
+    "ソース管理プロバイダー がマージ可能かどうかを計算しています。",
   continue: "作業を続ける",
   deleteBranch: "マージ後にリモートブランチを削除",
   description: "説明",
   errors: {
-    cliMissing: "GitHub CLI が必要です",
+    cliMissing: "ソース管理 CLI が必要です",
     cliMissingDetail:
-      "Angel Engine 内でプルリクエストをマージするには gh をインストールしてください。",
-    fetch: "プルリクエストを利用できません",
+      "Angel Engine 内で変更リクエストをマージするには プロバイダー CLI をインストールしてください。",
+    fetch: "変更リクエストを利用できません",
     fetchDetail:
-      "GitHub に接続できませんでした。リポジトリを確認して再試行してください。",
-    permission: "GitHub は読み取り専用です",
+      "ソース管理プロバイダー に接続できませんでした。リポジトリを確認して再試行してください。",
+    permission: "ソース管理プロバイダー は読み取り専用です",
     permissionDetail:
-      "GitHub でプルリクエストを開き、メンテナーにマージを依頼してください。",
-    unauthenticated: "GitHub CLI にサインインしていません",
+      "ソース管理プロバイダー で変更リクエストを開き、メンテナーにマージを依頼してください。",
+    unauthenticated: "ソース管理 CLI にサインインしていません",
     unauthenticatedDetail:
-      "gh auth login を実行してから、このパネルを更新してください。",
+      "プロバイダー CLI auth login を実行してから、このパネルを更新してください。",
   },
   generalComment: "全体へのコメント",
+  hostedFallback: {
+    ambiguousDetail:
+      "このワークスペースのホスト型ソース管理に使用するリモートを選択してください。",
+    ambiguousTitle: "複数のソース管理リモートを検出しました",
+    apply: "このリモートを使用",
+    configure: "ソース管理を設定",
+    configuredProviderMissing:
+      "設定されたソース管理プロバイダーを利用できません。",
+    errorDetail:
+      "ソース管理プロバイダーを検出できませんでした。再試行してください。",
+    noProviderDetail:
+      "ローカル Git は引き続き利用できます。ホスト型の変更リクエスト、チェック、レビューを使うにはプロバイダーを設定してください。",
+    remoteLabel: "ソース管理リモート",
+    retry: "再検出",
+    saving: "設定中…",
+    title: "ソース管理プロバイダーが検出されませんでした",
+    unavailableDetail:
+      "ソース管理プロバイダーを利用できません。ローカル Git は引き続き利用できます。",
+  },
   merge: "マージ",
-  mergeChanged: "マージの完了前にプルリクエストが変更されました。",
+  mergeChanged: "マージの完了前に変更リクエストが変更されました。",
   mergeFailed: "マージに失敗しました",
-  merged: "プルリクエスト #{{number}} をマージしました",
-  mergedDetail: "プルリクエストを正常にマージしました。",
+  merged: "変更リクエスト #{{number}} をマージしました",
+  mergedDetail: "変更リクエストを正常にマージしました。",
   mergedMethod: "{{method}} でマージしました。",
   merging: "マージ中…",
   method: "マージ方法",
@@ -700,10 +812,10 @@ export const pullRequestJa = {
     rebase: "リベースしてマージ",
     squash: "スカッシュしてマージ",
   },
-  noOpen: "開いているプルリクエストはありません",
+  noOpen: "開いている変更リクエストはありません",
   noOpenDetail:
-    "このブランチをプッシュしてプルリクエストを作成すると、ここでマージできます。",
-  open: "GitHub で開く",
+    "このブランチをプッシュして変更リクエストを作成すると、ここでマージできます。",
+  open: "ソース管理プロバイダー で開く",
   optionalChecksFailed_one:
     "任意チェック {{count}} 件が失敗しました：{{names}}。マージはブロックされません。",
   optionalChecksFailed_other:
@@ -719,7 +831,7 @@ export const pullRequestJa = {
         "Shepherd はキュー内のメッセージが完了するまで待機しています。",
       waitingForYou: "Shepherd は続行する前に入力を待っています。",
     },
-    invalidUrl: "プルリクエストの URL を解析できませんでした。",
+    invalidUrl: "変更リクエストの URL を解析できませんでした。",
     noChat: "Shepherd を開始する前にワークスペースのチャットを開いてください。",
     queued: "現在の返信が完了すると Shepherd が続行します。",
     resume: "再開",
@@ -728,7 +840,7 @@ export const pullRequestJa = {
     settled: {
       blocked: {
         detail:
-          "繰り返し試行しても進展がありません。引き継ぐか PR を調整してください。",
+          "繰り返し試行しても進展がありません。引き継ぐか 変更リクエスト を調整してください。",
         title: "Shepherd がブロックされました",
       },
       budget: {
@@ -737,8 +849,8 @@ export const pullRequestJa = {
         title: "ラウンド上限に達しました",
       },
       closed: {
-        detail: "プルリクエストはマージまたはクローズされました。",
-        title: "プルリクエストはクローズ済みです",
+        detail: "変更リクエストはマージまたはクローズされました。",
+        title: "変更リクエストはクローズ済みです",
       },
       green: {
         detail: "必須チェックが成功し、レビュー会話もすべて解決されています。",
@@ -752,7 +864,7 @@ export const pullRequestJa = {
     shepherdingStop: "Shepherd が対応中…（クリックして停止）",
     sourceCollapse: "Shepherd のソースを折りたたむ",
     sourceExpand: "Shepherd のソースを展開",
-    start: "この PR を Shepherd に任せる",
+    start: "この 変更リクエスト を Shepherd に任せる",
     startFailed: "Shepherd を開始できませんでした",
     started: "Shepherd を開始しました",
     stopped: "Shepherd を停止しました",
@@ -760,14 +872,14 @@ export const pullRequestJa = {
     working: "処理中…",
     yielded: "Shepherd は一時停止しました — セッションを引き継ぎました。",
     yieldedDetail:
-      "Shepherd にこの PR の監視を続けさせる場合は再開してください。",
+      "Shepherd にこの 変更リクエスト の監視を続けさせる場合は再開してください。",
   },
-  title: "プルリクエスト",
+  title: "変更リクエスト",
   unresolvedTitle: "未解決の会話（{{count}}）",
-} satisfies LocaleResourceTranslationWorkspaceToolsPullRequest;
+} satisfies LocaleResourceTranslationWorkspaceToolsChangeRequest;
 
-export const pullRequestKo = {
-  ...pullRequestEn,
+export const changeRequestKo = {
+  ...changeRequestEn,
   archive: "작업 공간 보관",
   archiveDetail: "보관하면 이 채팅이 닫히고 관리되는 worktree가 제거됩니다.",
   archiveFailed: "작업 공간을 보관할 수 없습니다",
@@ -788,38 +900,57 @@ export const pullRequestKo = {
     checksFailed_other: "필수 검사 {{count}}개 실패: {{names}}.",
     checksPending_one: "필수 검사 {{count}}개 실행 중: {{names}}.",
     checksPending_other: "필수 검사 {{count}}개 실행 중: {{names}}.",
-    conflict: "풀 리퀘스트에 병합 충돌이 있습니다.",
-    draft: "풀 리퀘스트가 아직 초안입니다.",
+    conflict: "변경 요청에 병합 충돌이 있습니다.",
+    draft: "변경 요청가 아직 초안입니다.",
     permissionDenied: "이 저장소를 병합할 권한이 없습니다.",
     repositoryPolicy: "저장소 규칙이 병합을 차단하고 있습니다.",
     reviewRequired: "승인 검토가 필요합니다.",
     unresolvedThreads_one: "해결되지 않은 검토 대화가 {{count}}개 있습니다.",
     unresolvedThreads_other: "해결되지 않은 검토 대화가 {{count}}개 있습니다.",
   },
-  checking: "이 브랜치의 풀 리퀘스트 확인 중…",
-  checkingMergeability: "GitHub에서 병합 가능 여부를 계산하고 있습니다.",
+  checking: "이 브랜치의 변경 요청 확인 중…",
+  checkingMergeability:
+    "소스 제어 공급자에서 병합 가능 여부를 계산하고 있습니다.",
   continue: "계속 작업",
   deleteBranch: "병합 후 원격 브랜치 삭제",
   description: "설명",
   errors: {
-    cliMissing: "GitHub CLI가 필요합니다",
+    cliMissing: "소스 제어 CLI가 필요합니다",
     cliMissingDetail:
-      "Angel Engine에서 풀 리퀘스트를 병합하려면 gh를 설치하세요.",
-    fetch: "풀 리퀘스트를 사용할 수 없음",
+      "Angel Engine에서 변경 요청를 병합하려면 공급자 CLI를 설치하세요.",
+    fetch: "변경 요청를 사용할 수 없음",
     fetchDetail:
-      "GitHub에 연결할 수 없습니다. 저장소를 확인하고 다시 시도하세요.",
-    permission: "GitHub 읽기 전용 액세스",
+      "소스 제어 공급자에 연결할 수 없습니다. 저장소를 확인하고 다시 시도하세요.",
+    permission: "소스 제어 공급자 읽기 전용 액세스",
     permissionDetail:
-      "GitHub에서 풀 리퀘스트를 열고 관리자에게 병합을 요청하세요.",
-    unauthenticated: "GitHub CLI에 로그인하지 않았습니다",
-    unauthenticatedDetail: "gh auth login을 실행한 후 이 패널을 새로 고치세요.",
+      "소스 제어 공급자에서 변경 요청를 열고 관리자에게 병합을 요청하세요.",
+    unauthenticated: "소스 제어 CLI에 로그인하지 않았습니다",
+    unauthenticatedDetail:
+      "공급자 CLI auth login을 실행한 후 이 패널을 새로 고치세요.",
   },
   generalComment: "일반 댓글",
+  hostedFallback: {
+    ambiguousDetail:
+      "이 작업 공간의 호스팅 소스 제어에 사용할 원격을 선택하세요.",
+    ambiguousTitle: "여러 소스 제어 원격이 감지됨",
+    apply: "이 원격 사용",
+    configure: "소스 제어 구성",
+    configuredProviderMissing: "구성된 소스 제어 공급자를 사용할 수 없습니다.",
+    errorDetail: "소스 제어 공급자를 감지하지 못했습니다. 다시 시도하세요.",
+    noProviderDetail:
+      "로컬 Git은 계속 사용할 수 있습니다. 호스팅 변경 요청, 검사 및 리뷰를 사용하려면 공급자를 구성하세요.",
+    remoteLabel: "소스 제어 원격",
+    retry: "다시 감지",
+    saving: "구성 중…",
+    title: "소스 제어 공급자가 감지되지 않음",
+    unavailableDetail:
+      "소스 제어 공급자를 사용할 수 없습니다. 로컬 Git은 계속 사용할 수 있습니다.",
+  },
   merge: "병합",
-  mergeChanged: "병합이 완료되기 전에 풀 리퀘스트가 변경되었습니다.",
+  mergeChanged: "병합이 완료되기 전에 변경 요청가 변경되었습니다.",
   mergeFailed: "병합 실패",
-  merged: "풀 리퀘스트 #{{number}} 병합됨",
-  mergedDetail: "풀 리퀘스트가 성공적으로 병합되었습니다.",
+  merged: "변경 요청 #{{number}} 병합됨",
+  mergedDetail: "변경 요청가 성공적으로 병합되었습니다.",
   mergedMethod: "{{method}} 방식으로 병합되었습니다.",
   merging: "병합 중…",
   method: "병합 방식",
@@ -829,10 +960,10 @@ export const pullRequestKo = {
     rebase: "리베이스 후 병합",
     squash: "스쿼시 후 병합",
   },
-  noOpen: "열린 풀 리퀘스트 없음",
+  noOpen: "열린 변경 요청 없음",
   noOpenDetail:
-    "이 브랜치를 푸시하고 풀 리퀘스트를 만들면 여기에서 병합할 수 있습니다.",
-  open: "GitHub에서 열기",
+    "이 브랜치를 푸시하고 변경 요청를 만들면 여기에서 병합할 수 있습니다.",
+  open: "소스 제어 공급자에서 열기",
   optionalChecksFailed_one:
     "선택 검사 {{count}}개 실패: {{names}}. 병합은 차단되지 않습니다.",
   optionalChecksFailed_other:
@@ -847,7 +978,7 @@ export const pullRequestKo = {
       queuedRun: "Shepherd가 대기열 메시지가 완료될 때까지 기다리고 있습니다.",
       waitingForYou: "Shepherd가 계속하기 전에 입력을 기다리고 있습니다.",
     },
-    invalidUrl: "풀 리퀘스트 URL을 분석할 수 없습니다.",
+    invalidUrl: "변경 요청 URL을 분석할 수 없습니다.",
     noChat: "Shepherd를 시작하기 전에 작업 공간 채팅을 여세요.",
     queued: "현재 응답이 끝나면 Shepherd가 계속 진행합니다.",
     resume: "다시 시작",
@@ -856,7 +987,7 @@ export const pullRequestKo = {
     settled: {
       blocked: {
         detail:
-          "반복해서 시도했지만 진전이 없습니다. 직접 처리하거나 PR을 조정하세요.",
+          "반복해서 시도했지만 진전이 없습니다. 직접 처리하거나 변경 요청을 조정하세요.",
         title: "Shepherd 차단됨",
       },
       budget: {
@@ -865,8 +996,8 @@ export const pullRequestKo = {
         title: "라운드 한도 도달",
       },
       closed: {
-        detail: "풀 리퀘스트가 병합되었거나 닫혔습니다.",
-        title: "풀 리퀘스트 닫힘",
+        detail: "변경 요청가 병합되었거나 닫혔습니다.",
+        title: "변경 요청 닫힘",
       },
       green: {
         detail: "필수 검사가 통과했고 검토 대화가 모두 해결되었습니다.",
@@ -880,21 +1011,21 @@ export const pullRequestKo = {
     shepherdingStop: "Shepherd 작업 중… (클릭하여 중지)",
     sourceCollapse: "Shepherd 소스 접기",
     sourceExpand: "Shepherd 소스 펼치기",
-    start: "Shepherd에게 이 PR 맡기기",
+    start: "Shepherd에게 이 변경 요청 맡기기",
     startFailed: "Shepherd를 시작할 수 없습니다",
     started: "Shepherd 시작됨",
     stopped: "Shepherd 중지됨",
     title: "Shepherd",
     working: "작업 중…",
     yielded: "Shepherd 일시 중지 — 세션을 직접 처리하고 있습니다.",
-    yieldedDetail: "Shepherd가 이 PR을 다시 감시하게 하려면 재개하세요.",
+    yieldedDetail: "Shepherd가 이 변경 요청을 다시 감시하게 하려면 재개하세요.",
   },
-  title: "풀 리퀘스트",
+  title: "변경 요청",
   unresolvedTitle: "해결되지 않은 대화 ({{count}})",
-} satisfies LocaleResourceTranslationWorkspaceToolsPullRequest;
+} satisfies LocaleResourceTranslationWorkspaceToolsChangeRequest;
 
-export const pullRequestEs = {
-  ...pullRequestEn,
+export const changeRequestEs = {
+  ...changeRequestEn,
   archive: "Archivar espacio de trabajo",
   archiveDetail:
     "Al archivar se cierra este chat y se elimina su worktree administrado.",
@@ -918,8 +1049,8 @@ export const pullRequestEs = {
       "{{count}} comprobación obligatoria sigue en ejecución: {{names}}.",
     checksPending_other:
       "{{count}} comprobaciones obligatorias siguen en ejecución: {{names}}.",
-    conflict: "La pull request tiene conflictos de fusión.",
-    draft: "La pull request todavía es un borrador.",
+    conflict: "La solicitud de cambio tiene conflictos de fusión.",
+    draft: "La solicitud de cambio todavía es un borrador.",
     permissionDenied: "No tienes permiso para fusionar este repositorio.",
     repositoryPolicy: "Una regla del repositorio bloquea esta fusión.",
     reviewRequired: "Se necesita una revisión aprobatoria.",
@@ -928,31 +1059,53 @@ export const pullRequestEs = {
     unresolvedThreads_other:
       "Hay {{count}} conversaciones de revisión sin resolver.",
   },
-  checking: "Comprobando la pull request de esta rama…",
-  checkingMergeability: "GitHub todavía está calculando si se puede fusionar.",
+  checking: "Comprobando la solicitud de cambio de esta rama…",
+  checkingMergeability:
+    "proveedor de control de código fuente todavía está calculando si se puede fusionar.",
   continue: "Seguir trabajando",
   deleteBranch: "Eliminar la rama remota después de fusionar",
   description: "Descripción",
   errors: {
-    cliMissing: "Se necesita GitHub CLI",
+    cliMissing: "Se necesita CLI de control de código fuente",
     cliMissingDetail:
-      "Instala gh para fusionar pull requests dentro de Angel Engine.",
-    fetch: "Pull request no disponible",
+      "Instala el CLI del proveedor para fusionar solicitudes de cambio dentro de Angel Engine.",
+    fetch: "Solicitud de cambio no disponible",
     fetchDetail:
-      "No se pudo acceder a GitHub. Comprueba el repositorio e inténtalo de nuevo.",
-    permission: "Acceso de solo lectura a GitHub",
+      "No se pudo acceder a proveedor de control de código fuente. Comprueba el repositorio e inténtalo de nuevo.",
+    permission:
+      "Acceso de solo lectura a proveedor de control de código fuente",
     permissionDetail:
-      "Abre la pull request en GitHub y pide a una persona responsable que la fusione.",
-    unauthenticated: "GitHub CLI no ha iniciado sesión",
+      "Abre la solicitud de cambio en proveedor de control de código fuente y pide a una persona responsable que la fusione.",
+    unauthenticated: "CLI de control de código fuente no ha iniciado sesión",
     unauthenticatedDetail:
-      "Ejecuta gh auth login y después actualiza este panel.",
+      "Ejecuta el CLI del proveedor auth login y después actualiza este panel.",
   },
   generalComment: "Comentario general",
+  hostedFallback: {
+    ambiguousDetail:
+      "Elige el remoto que proporcionará el control de código fuente alojado para este espacio de trabajo.",
+    ambiguousTitle: "Se detectaron varios remotos de control de código fuente",
+    apply: "Usar este remoto",
+    configure: "Configurar control de código fuente",
+    configuredProviderMissing:
+      "El proveedor de control de código fuente configurado no está disponible.",
+    errorDetail:
+      "No se pudo detectar el proveedor de control de código fuente. Inténtalo de nuevo.",
+    noProviderDetail:
+      "Git local sigue disponible. Configura un proveedor para usar solicitudes de cambio, comprobaciones y revisiones alojadas.",
+    remoteLabel: "Remoto de control de código fuente",
+    retry: "Detectar de nuevo",
+    saving: "Configurando…",
+    title: "No se detectó ningún proveedor de control de código fuente",
+    unavailableDetail:
+      "El proveedor de control de código fuente no está disponible. Git local sigue disponible.",
+  },
   merge: "Fusionar",
-  mergeChanged: "La pull request cambió antes de que terminara la fusión.",
+  mergeChanged:
+    "La solicitud de cambio cambió antes de que terminara la fusión.",
   mergeFailed: "Error al fusionar",
-  merged: "Pull request n.º {{number}} fusionada",
-  mergedDetail: "La pull request se fusionó correctamente.",
+  merged: "Solicitud de cambio n.º {{number}} fusionada",
+  mergedDetail: "La solicitud de cambio se fusionó correctamente.",
   mergedMethod: "Fusionada mediante {{method}}.",
   merging: "Fusionando…",
   method: "Método de fusión",
@@ -962,9 +1115,10 @@ export const pullRequestEs = {
     rebase: "Rebase y fusión",
     squash: "Squash y fusión",
   },
-  noOpen: "No hay ninguna pull request abierta",
-  noOpenDetail: "Sube esta rama y abre una pull request para fusionarla aquí.",
-  open: "Abrir en GitHub",
+  noOpen: "No hay ninguna solicitud de cambio abierta",
+  noOpenDetail:
+    "Sube esta rama y abre una solicitud de cambio para fusionarla aquí.",
+  open: "Abrir en proveedor de control de código fuente",
   optionalChecksFailed_one:
     "Falló {{count}} comprobación opcional: {{names}}. No bloquea la fusión.",
   optionalChecksFailed_other:
@@ -979,7 +1133,7 @@ export const pullRequestEs = {
       queuedRun: "Shepherd espera a que termine un mensaje en cola.",
       waitingForYou: "Shepherd espera tu intervención antes de continuar.",
     },
-    invalidUrl: "No se pudo interpretar la URL de la pull request.",
+    invalidUrl: "No se pudo interpretar la URL de la solicitud de cambio.",
     noChat: "Abre un chat del espacio de trabajo antes de iniciar Shepherd.",
     queued: "Shepherd continuará cuando termine la respuesta actual.",
     resume: "Reanudar",
@@ -988,7 +1142,7 @@ export const pullRequestEs = {
     settled: {
       blocked: {
         detail:
-          "No hubo avances tras varios intentos. Toma el control o ajusta la PR.",
+          "No hubo avances tras varios intentos. Toma el control o ajusta la solicitud de cambio.",
         title: "Shepherd está bloqueado",
       },
       budget: {
@@ -997,8 +1151,8 @@ export const pullRequestEs = {
         title: "Límite de rondas alcanzado",
       },
       closed: {
-        detail: "La pull request se fusionó o cerró.",
-        title: "Pull request cerrada",
+        detail: "La solicitud de cambio se fusionó o cerró.",
+        title: "Solicitud de cambio cerrada",
       },
       green: {
         detail:
@@ -1014,7 +1168,7 @@ export const pullRequestEs = {
     shepherdingStop: "Shepherd trabajando… (haz clic para detener)",
     sourceCollapse: "Contraer la fuente de Shepherd",
     sourceExpand: "Expandir la fuente de Shepherd",
-    start: "Encargar esta PR a Shepherd",
+    start: "Encargar esta solicitud de cambio a Shepherd",
     startFailed: "No se pudo iniciar Shepherd",
     started: "Shepherd iniciado",
     stopped: "Shepherd detenido",
@@ -1022,8 +1176,8 @@ export const pullRequestEs = {
     working: "Trabajando…",
     yielded: "Shepherd está en pausa: has tomado el control de la sesión.",
     yieldedDetail:
-      "Reanúdalo cuando quieras que Shepherd vuelva a supervisar esta PR.",
+      "Reanúdalo cuando quieras que Shepherd vuelva a supervisar esta solicitud de cambio.",
   },
-  title: "Pull request",
+  title: "Solicitud de cambio",
   unresolvedTitle: "Conversaciones sin resolver ({{count}})",
-} satisfies LocaleResourceTranslationWorkspaceToolsPullRequest;
+} satisfies LocaleResourceTranslationWorkspaceToolsChangeRequest;

@@ -165,7 +165,7 @@ function activationView(status: "active" | "unresolved") {
     capabilities,
     projectPath: status === "active" ? "/repo" : null,
     providerIdentity:
-      status === "active" ? "github:github.com/acme/widgets:1" : null,
+      status === "active" ? "forge:forge.com/acme/widgets:1" : null,
     refetch: refetchActivation,
     status,
   };

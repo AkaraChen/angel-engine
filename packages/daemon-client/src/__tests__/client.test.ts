@@ -50,6 +50,30 @@ describe("createDaemonClient", () => {
     );
   });
 
+  it("reads and updates project source-control configuration", async () => {
+    const fetchMock = vi.fn().mockImplementation(async () => jsonResponse({}));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createDaemonClient({ baseUrl: "", token: null });
+    await client.sourceControl.config("project 1");
+    await client.sourceControl.updateConfig("project 1", {
+      provider: { providerId: "forge-a", remote: "upstream" },
+    });
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "/api/source-control/config?projectId=project+1",
+    );
+    expect(fetchMock.mock.calls[1]).toEqual([
+      "/api/source-control/config?projectId=project+1",
+      expect.objectContaining({
+        body: JSON.stringify({
+          provider: { providerId: "forge-a", remote: "upstream" },
+        }),
+        method: "PUT",
+      }),
+    ]);
+  });
+
   it("uses generic source-control attachment list routes", async () => {
     const fetchMock = vi.fn().mockImplementation(async () => jsonResponse([]));
     vi.stubGlobal("fetch", fetchMock);
@@ -90,6 +114,27 @@ describe("createDaemonClient", () => {
         method: "POST",
       }),
     ]);
+  });
+
+  it("uses generic source-control repository discovery routes", async () => {
+    const fetchMock = vi.fn().mockImplementation(async () => jsonResponse([]));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createDaemonClient({ baseUrl: "", token: null });
+    await client.sourceControl.listNamespaces("/repo with spaces", "acme", 20);
+    await client.sourceControl.listRepositories(
+      "/repo with spaces",
+      ["group", "team"],
+      "widgets",
+      30,
+    );
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "/api/source-control/namespaces?limit=20&projectPath=%2Frepo+with+spaces&query=acme",
+    );
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(
+      "/api/source-control/repositories?limit=30&namespace=group%2Fteam&projectPath=%2Frepo+with+spaces&query=widgets",
+    );
   });
 
   it("uses generic source-control checks and review routes", async () => {

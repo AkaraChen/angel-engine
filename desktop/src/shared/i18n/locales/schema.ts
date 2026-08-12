@@ -129,7 +129,7 @@ export interface LocaleResourceTranslationWorkspaceToolsDiffBase {
   worktree: string;
 }
 
-export interface LocaleResourceTranslationWorkspaceToolsPullRequestPreview {
+export interface LocaleResourceTranslationWorkspaceToolsChangeRequestPreview {
   additions: string;
   body: string;
   commits: string;
@@ -157,7 +157,7 @@ export interface LocaleResourceTranslationWorkspaceToolsCreatePullRequest {
   openInBrowser: string;
   pushedRetry: string;
   pushing: string;
-  preview: LocaleResourceTranslationWorkspaceToolsPullRequestPreview;
+  preview: LocaleResourceTranslationWorkspaceToolsChangeRequestPreview;
   retry: string;
   short: string;
   title: string;
@@ -231,7 +231,7 @@ export interface LocaleResourceTranslationWorkspaceToolsComments {
   title: string;
 }
 
-export interface LocaleResourceTranslationWorkspaceToolsPullRequest {
+export interface LocaleResourceTranslationWorkspaceToolsChangeRequest {
   archive: string;
   archiveDetail: string;
   archiveFailed: string;
@@ -272,6 +272,20 @@ export interface LocaleResourceTranslationWorkspaceToolsPullRequest {
     unauthenticatedDetail: string;
   };
   generalComment: string;
+  hostedFallback: {
+    ambiguousDetail: string;
+    ambiguousTitle: string;
+    apply: string;
+    configure: string;
+    configuredProviderMissing: string;
+    errorDetail: string;
+    noProviderDetail: string;
+    remoteLabel: string;
+    retry: string;
+    saving: string;
+    title: string;
+    unavailableDetail: string;
+  };
   merge: string;
   mergeChanged: string;
   mergeFailed: string;
@@ -338,7 +352,7 @@ export interface LocaleResourceTranslationWorkspaceTools {
   empty: LocaleResourceTranslationWorkspaceToolsEmpty;
   git: LocaleResourceTranslationWorkspaceToolsGit;
   listeningPorts: string;
-  pullRequest: LocaleResourceTranslationWorkspaceToolsPullRequest;
+  pullRequest: LocaleResourceTranslationWorkspaceToolsChangeRequest;
   resizeFileTree: string;
   resizeGitList: string;
   subprocesses: string;
@@ -1046,13 +1060,13 @@ export interface LocaleResourceTranslationComposer {
   agentMode: string;
   agentSettings: string;
   attachFiles: string;
-  attachGitHub: string;
-  attachGitHubConfirm: string;
-  attachGitHubEmpty: string;
-  attachGitHubLoading: string;
-  attachGitHubPlaceholder: string;
-  attachGitHubTitle: string;
-  attachGitHubUpdated: string;
+  attachChangeRequest: string;
+  attachChangeRequestConfirm: string;
+  attachChangeRequestEmpty: string;
+  attachChangeRequestLoading: string;
+  attachChangeRequestPlaceholder: string;
+  attachChangeRequestTitle: string;
+  attachChangeRequestUpdated: string;
   attachmentErrors: LocaleResourceTranslationComposerAttachmentErrors;
   commands: string;
   couldNotReadAttachment: string;
@@ -1066,8 +1080,8 @@ export interface LocaleResourceTranslationComposer {
   fromLinkPlaceholder: string;
   sourceControlUnavailable: string;
   sourceControlErrors: LocaleResourceTranslationComposerSourceControlErrors;
-  githubIssue: string;
-  githubPullRequest: string;
+  workItem: string;
+  changeRequest: string;
   linearConnectAction: string;
   linearConnectDescription: string;
   linearIssue: string;
@@ -1098,7 +1112,7 @@ export interface LocaleResourceTranslationComposer {
   switchToPlan: string;
   taskLinkErrors: LocaleResourceTranslationComposerTaskLinkErrors;
   taskLinkHintComplete: string;
-  taskLinkHintGitHubPath: string;
+  taskLinkHintSourceControlPath: string;
   taskLinkHintLinearPath: string;
   taskLinkHintSupported: string;
   taskLinkStateClosed: string;
@@ -1262,6 +1276,7 @@ export interface LocaleResourceTranslationProjectImport {
   clone: string;
   cloneTo: string;
   description: string;
+  discoveryUnavailable: string;
   failedTitle: string;
   forkBadge: string;
   loadingOwners: string;
@@ -1282,7 +1297,7 @@ export interface LocaleResourceTranslationProjectImport {
   stageCompleted: string;
   stagePreparing: string;
   stageRegistering: string;
-  tabGitHub: string;
+  tabSourceControl: string;
   tabUrl: string;
   title: string;
   urlHint: string;
@@ -1325,7 +1340,7 @@ export interface LocaleResourceTranslationUi {
   commandPalette: string;
   commandSessions: string;
   commandImportSession: string;
-  commandShepherdPr: string;
+  commandShepherdChangeRequest: string;
 }
 
 export interface LocaleResourceTranslationPromptInput {

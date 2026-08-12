@@ -328,12 +328,12 @@ export const PromptSourceControlAttachButton: FC<
             ) : null}
             {showLoading && !is.nonEmptyString(errorMessage) ? (
               <p className="px-3 py-6 text-center text-sm text-muted-foreground">
-                {t("composer.attachGitHubLoading")}
+                {t("composer.attachChangeRequestLoading")}
               </p>
             ) : null}
             {showEmpty ? (
               <CommandEmpty className="text-muted-foreground">
-                {t("composer.attachGitHubEmpty")}
+                {t("composer.attachChangeRequestEmpty")}
               </CommandEmpty>
             ) : null}
             {changeRequests.map((item) => (
@@ -452,7 +452,7 @@ function PastedUrlPreview({
         size="sm"
         type="button"
       >
-        {t("composer.attachGitHubConfirm")}
+        {t("composer.attachChangeRequestConfirm")}
       </Button>
     </div>
   );
@@ -518,7 +518,7 @@ function sourceControlItemMeta(
     parts.push(`@${item.author.login}`);
   if (is.nonEmptyString(item.updatedAt)) {
     parts.push(
-      t("composer.attachGitHubUpdated", {
+      t("composer.attachChangeRequestUpdated", {
         time: formatRelativeTime(item.updatedAt),
       }),
     );

@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
-import type { GitHubPullRequestStatus } from "@angel-engine/daemon-api/github";
 import type {
   CapabilityMatrix,
+  MergeMethod,
   ReviewThread,
 } from "@angel-engine/daemon-api/source-control";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -26,7 +26,26 @@ import {
 import { defaultCollapsedTextMaxHeight } from "@/components/ui/collapsible-text";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-const pullRequestStatus = vi.fn<() => Promise<GitHubPullRequestStatus>>();
+interface PanelStatusFixture {
+  allowedMergeMethods: MergeMethod[];
+  author: string | null;
+  baseRefName: string;
+  body: string;
+  defaultMergeMethod: MergeMethod;
+  deleteBranchOnMerge: boolean;
+  headRefName: string;
+  isDraft: boolean;
+  mergedAt: string | null;
+  number: number;
+  reviewDecision: "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED" | null;
+  state: "CLOSED" | "MERGED" | "OPEN";
+  title: string;
+  url: string;
+  viewerCanMerge: boolean;
+  worktreeDirty: boolean;
+}
+
+const pullRequestStatus = vi.fn<() => Promise<PanelStatusFixture>>();
 const currentChangeRequest = vi.fn<
   () => Promise<ReturnType<typeof toChangeRequestStatus> | null>
 >(async () => toChangeRequestStatus(await pullRequestStatus()));
@@ -73,7 +92,7 @@ vi.mock("@/features/source-control/api/use-activation", () => ({
   useSourceControlActivation: () => ({
     capabilities,
     projectPath: "/repo",
-    providerIdentity: "github:github.com/acme/widgets:1",
+    providerIdentity: "forge:code.example/acme/widgets:1",
     refetch: vi.fn(),
     status: "active",
   }),
@@ -83,9 +102,6 @@ vi.mock("@/app/workspace/workspace-tool-surface-model", () => ({
   useWorkspaceToolSurface: () => ({
     active: true,
     api: {
-      github: {
-        pullRequestStatus,
-      },
       sourceControl: {
         checksSummary,
         currentChangeRequest,
@@ -118,63 +134,36 @@ class StubResizeObserver {
 const originalResizeObserver = window.ResizeObserver;
 window.ResizeObserver = StubResizeObserver as unknown as typeof ResizeObserver;
 
-import { PullRequestPanel } from "./pull-request-panel";
+import { ChangeRequestPanel } from "./change-request-panel";
 
-const longThreadBody = Array.from(
-  { length: 30 },
-  (_, index) => `Review note line ${index + 1}`,
-).join("\n");
-
-const openStatus: GitHubPullRequestStatus = {
+const openStatus: PanelStatusFixture = {
   allowedMergeMethods: ["squash", "merge", "rebase"],
   author: "alice",
   baseRefName: "main",
-  behindBy: 0,
   body: "PR description body",
-  checks: [
-    {
-      name: "typecheck",
-      required: true,
-      state: "success",
-      url: null,
-    },
-  ],
   defaultMergeMethod: "squash",
   deleteBranchOnMerge: false,
   headRefName: "feature",
   isDraft: false,
-  mergeable: "MERGEABLE",
-  mergeStateStatus: "CLEAN",
   mergedAt: null,
   number: 42,
   reviewDecision: "APPROVED",
   state: "OPEN",
   title: "Feature",
-  unresolvedThreads: [
-    {
-      author: "bob",
-      body: longThreadBody,
-      id: "thread-1",
-      isOutdated: false,
-      line: 12,
-      path: "src/example.ts",
-      url: "https://github.com/acme/widgets/pull/42#discussion_r1",
-    },
-  ],
-  url: "https://github.com/acme/widgets/pull/42",
+  url: "https://code.example/acme/widgets/changes/42",
   viewerCanMerge: true,
   worktreeDirty: false,
 };
 
-function toChangeRequestStatus(status: GitHubPullRequestStatus) {
+function toChangeRequestStatus(status: PanelStatusFixture) {
   const repository = {
     displayPath: "acme/widgets",
-    host: "github.com",
+    host: "code.example",
     name: "widgets",
     namespace: ["acme"],
-    providerId: "github",
+    providerId: "forge",
     remoteId: null,
-    webUrl: "https://github.com/acme/widgets",
+    webUrl: "https://code.example/acme/widgets",
   };
   return {
     changeRequest: {
@@ -196,12 +185,6 @@ function toChangeRequestStatus(status: GitHubPullRequestStatus) {
       defaultMergeMethod: status.defaultMergeMethod,
       deletions: 1,
       draft: status.isDraft,
-      extensions: {
-        github: {
-          mergeable: status.mergeable,
-          mergeStateStatus: status.mergeStateStatus,
-        },
-      },
       id: String(status.number),
       mergeRequirements: [],
       mergedAt: status.mergedAt,
@@ -231,7 +214,7 @@ function renderPanel() {
   return render(
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <PullRequestPanel projectId="project-1" root="/repo" />
+        <ChangeRequestPanel projectId="project-1" root="/repo" />
       </TooltipProvider>
     </QueryClientProvider>,
   );
@@ -288,13 +271,13 @@ afterAll(() => {
   }
 });
 
-describe("PullRequestPanel", () => {
+describe("ChangeRequestPanel", () => {
   it("keeps checks focus parked while PR status is loading", async () => {
     focusChecksSection = true;
-    let resolveStatus: (value: GitHubPullRequestStatus) => void = () => {};
+    let resolveStatus: (value: PanelStatusFixture) => void = () => {};
     pullRequestStatus.mockImplementation(
       () =>
-        new Promise<GitHubPullRequestStatus>((resolve) => {
+        new Promise<PanelStatusFixture>((resolve) => {
           resolveStatus = resolve;
         }),
     );
