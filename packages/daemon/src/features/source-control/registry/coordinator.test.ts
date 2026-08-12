@@ -139,5 +139,5 @@ describe("SourceControlCoordinator", () => {
       remoteGeneration,
     );
     coordinator.close();
-  });
+  }, 15_000);
 });

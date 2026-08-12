@@ -27,32 +27,41 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
-import { pullRequestDetailQueryOptions } from "@/features/pull-requests/api/queries";
+import { pullRequestDetailQueryOptions } from "@/features/change-requests/api/queries";
+import { useSourceControlActivation } from "@/features/source-control/api/use-activation";
+import { capabilityState } from "@/features/source-control/model";
 
 export function WorkspacePullRequestPreviewDialog({
   api,
   open,
-  root,
+  projectId,
   target,
   onOpenExternal,
   onOpenChange,
 }: {
   api: ApiClient;
   open: boolean;
-  root: string;
+  projectId: string | null;
   target: ExistingPullRequestTarget | null;
   onOpenExternal: (url: string) => void;
   onOpenChange: (open: boolean) => void;
 }) {
   const { t } = useTranslation();
+  const sourceControl = useSourceControlActivation(projectId);
+  const supported = capabilityState(
+    sourceControl.capabilities,
+    "changeRequests.get",
+  ).supported;
   const [copied, setCopied] = useState(false);
   const detailQuery = useQuery(
     pullRequestDetailQueryOptions({
       api,
-      cwd: root,
       enabled: open && target !== null,
       number: target?.number ?? null,
+      projectPath: sourceControl.projectPath,
+      providerIdentity: sourceControl.providerIdentity,
       staleTime: 15_000,
+      supported,
     }),
   );
 
@@ -106,14 +115,14 @@ export function WorkspacePullRequestPreviewDialog({
               <div className="grid gap-2">
                 <div className="flex flex-wrap items-center gap-2 text-xs">
                   <span className="rounded-full bg-muted px-2 py-0.5 font-medium text-muted-foreground">
-                    {detail.isDraft
+                    {detail.draft
                       ? t("common.draft")
-                      : detail.state.toLocaleLowerCase() === "open"
+                      : detail.state === "open"
                         ? t("workspace.tools.createPullRequest.preview.open")
                         : detail.state.toLocaleLowerCase()}
                   </span>
                   <span className="font-mono text-muted-foreground">
-                    {detail.baseRefName} ← {detail.headRefName}
+                    {detail.target.name} ← {detail.source.name}
                   </span>
                 </div>
                 <h2 className="text-lg font-semibold leading-snug">
@@ -125,27 +134,27 @@ export function WorkspacePullRequestPreviewDialog({
                 <PreviewStat
                   icon={<GitCommit />}
                   label={t("workspace.tools.createPullRequest.preview.commits")}
-                  value={detail.commitCount}
+                  value={detail.commitCount ?? 0}
                 />
                 <PreviewStat
                   icon={<FileText />}
                   label={t(
                     "workspace.tools.createPullRequest.preview.filesChanged",
                   )}
-                  value={detail.changedFiles}
+                  value={detail.changedFiles ?? 0}
                 />
                 <PreviewStat
                   label={t(
                     "workspace.tools.createPullRequest.preview.additions",
                   )}
-                  value={`+${detail.additions}`}
+                  value={`+${detail.additions ?? 0}`}
                   valueClassName="text-emerald-500"
                 />
                 <PreviewStat
                   label={t(
                     "workspace.tools.createPullRequest.preview.deletions",
                   )}
-                  value={`−${detail.deletions}`}
+                  value={`−${detail.deletions ?? 0}`}
                   valueClassName="text-destructive"
                 />
               </div>
