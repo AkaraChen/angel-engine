@@ -1,5 +1,6 @@
 import type {
   ProbeContext,
+  ProviderMatch,
   RemoteDescriptor,
 } from "@angel-engine/daemon-api/source-control";
 import { describe, expect, it, vi } from "vitest";
@@ -31,6 +32,15 @@ const operationContext = () => ({
   deadline: Date.now() + 30_000,
   signal: new AbortController().signal,
 });
+
+function singleMatch(
+  match: ProviderMatch | readonly ProviderMatch[] | null,
+): ProviderMatch {
+  if (match === null || Array.isArray(match)) {
+    throw new Error("Expected one provider match.");
+  }
+  return match as ProviderMatch;
+}
 
 const repository = {
   providerId: "github",
@@ -118,10 +128,11 @@ describe("GitHub source-control provider", () => {
       findGh: async () => "/usr/bin/gh",
       runGh,
     });
-    const match = plugin.discovery.match(
-      context([remote("https://github.com/acme/widgets.git")]),
+    const match = singleMatch(
+      plugin.discovery.match(
+        context([remote("https://github.com/acme/widgets.git")]),
+      ),
     );
-    if (match === null) throw new Error("Expected GitHub match.");
 
     await expect(
       plugin.discovery.checkReadiness(match, operationContext()),
@@ -133,10 +144,11 @@ describe("GitHub source-control provider", () => {
   });
 
   it("reports missing and unauthenticated gh without throwing", async () => {
-    const match = createGitHubPlugin().discovery.match(
-      context([remote("https://github.com/acme/widgets.git")]),
+    const match = singleMatch(
+      createGitHubPlugin().discovery.match(
+        context([remote("https://github.com/acme/widgets.git")]),
+      ),
     );
-    if (match === null) throw new Error("Expected GitHub match.");
 
     const missing = createGitHubPlugin({ findGh: async () => null });
     await expect(
@@ -353,6 +365,36 @@ describe("GitHub source-control provider", () => {
     expect(calls).toContainEqual(
       expect.arrayContaining(["--repo", "acme/widgets"]),
     );
+  });
+
+  it("accepts the real gh headRepository shape without a url", async () => {
+    const ghPullRequest = {
+      ...pullRequest,
+      headRepository: {
+        id: "R_kgDOSToePQ",
+        name: "widgets",
+        nameWithOwner: "alice/widgets",
+      },
+    };
+    const plugin = createGitHubPlugin({
+      findGh: async () => "/usr/bin/gh",
+      runGh: async () => ({
+        stderr: "",
+        stdout: JSON.stringify([ghPullRequest]),
+      }),
+    });
+
+    await expect(
+      plugin.changeRequests?.list?.(
+        { limit: 2, query: "", repository },
+        operationContext(),
+      ),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        id: "7",
+        source: expect.objectContaining({ repository }),
+      }),
+    ]);
   });
 
   it("parses GitHub pull request URLs through the git capability", () => {

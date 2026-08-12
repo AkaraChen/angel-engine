@@ -184,7 +184,11 @@ export class SourceControlRegistry {
     for (const plugin of this.#plugins.values()) {
       try {
         const match = plugin.discovery.match(context);
-        if (match !== null) matches.push(match);
+        if (match !== null) {
+          matches.push(
+            ...(Array.isArray(match) ? match : [match as ProviderMatch]),
+          );
+        }
       } catch (cause) {
         const secrets = context.remotes.flatMap((remote) =>
           secretsFromUrl(remote.url),

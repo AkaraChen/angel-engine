@@ -51,7 +51,7 @@ const changeRequestPayloadSchema = arkType({
   "headRepository?": arkType({
     "+": "ignore",
     nameWithOwner: /^([^/]+)\/([^/]+)$/,
-    url: "string > 0",
+    "url?": "string > 0",
   }).or("null"),
   isDraft: "boolean",
   mergeable: "'CONFLICTING' | 'MERGEABLE' | 'UNKNOWN'",
@@ -269,7 +269,7 @@ function toChangeRequest(
   }
   const repository = parseGitHubRepositoryUrl(payload.url);
   if (repository === null) throw unexpectedPayload(payload.url);
-  const sourceRepository = payload.headRepository
+  const sourceRepository = payload.headRepository?.url
     ? (parseGitHubRepositoryUrl(payload.headRepository.url) ?? repository)
     : repository;
   return {
