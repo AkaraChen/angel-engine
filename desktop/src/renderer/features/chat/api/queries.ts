@@ -32,6 +32,13 @@ interface ChatLoadQueryParams {
   staleTime?: number;
 }
 
+interface ChatMetadataQueryParams {
+  api: ApiClient;
+  chatId: string;
+  enabled?: boolean;
+  staleTime?: number;
+}
+
 interface ChatAmbiguousRunQueryParams {
   api: ApiClient;
   chatId: string;
@@ -210,6 +217,20 @@ export function chatLoadSuspenseQueryOptions({
     queryFn: async (): Promise<ChatLoadResult> => api.chats.load(chatId),
     queryKey: queryKeys.chats.detail(chatId),
     retry: false,
+    staleTime,
+  });
+}
+
+export function chatMetadataQueryOptions({
+  api,
+  chatId,
+  enabled = true,
+  staleTime = 30_000,
+}: ChatMetadataQueryParams) {
+  return queryOptions({
+    enabled,
+    queryFn: async () => api.chats.get(chatId),
+    queryKey: queryKeys.chats.metadata(chatId),
     staleTime,
   });
 }
