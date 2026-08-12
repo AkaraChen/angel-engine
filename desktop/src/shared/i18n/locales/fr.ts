@@ -1,5 +1,5 @@
 import type { LocaleResource } from "./schema";
-import { scheduleTranslation } from "./schedule";
+import { scheduleFr } from "./schedule";
 import { pullRequestEn } from "./pull-request";
 
 export const fr = {
@@ -371,7 +371,7 @@ export const fr = {
         list: "Vue en liste",
       },
     },
-    schedule: scheduleTranslation,
+    schedule: scheduleFr,
     sidebar: {
       addProject: "Ajouter un projet",
       archiveChat: "Archiver la discussion",

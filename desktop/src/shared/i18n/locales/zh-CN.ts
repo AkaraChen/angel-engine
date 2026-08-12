@@ -1,5 +1,5 @@
 import type { LocaleResource } from "./schema";
-import { scheduleTranslation } from "./schedule";
+import { scheduleZhCN } from "./schedule";
 import { pullRequestZhCN } from "./pull-request";
 
 export const zhCN = {
@@ -360,7 +360,7 @@ export const zhCN = {
         list: "列表视图",
       },
     },
-    schedule: scheduleTranslation,
+    schedule: scheduleZhCN,
     sidebar: {
       addProject: "添加项目",
       archiveChat: "归档聊天",
