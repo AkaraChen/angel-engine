@@ -563,24 +563,37 @@ export const de = {
         general: "Allgemein",
       },
       keyboard: {
+        addChord: "Tastenfolge hinzufügen",
         addShortcut: "Tastenkürzel hinzufügen",
         bindEscape: "Escape zuweisen",
+        clearSearch: "Suche löschen",
         conflictAmbiguous:
           "Mehrdeutiger Konflikt — die letzte Registrierung gewinnt",
         conflictChordPrefix: "Akkord-Präfix-Konflikt",
         conflictShadowed: "Von einer höher priorisierten Bindung überschattet",
+        conflictWith: "Konflikt mit „{{command}}“",
         emptySearch: "Keine Befehle entsprechen dieser Suche.",
         filterAll: "Alle",
         filterConflicts: "Konflikte",
         filterModified: "Geändert",
+        filterUnbound: "Nicht zugewiesen",
         hintsLink:
           "Die Sichtbarkeit von Tastenkürzel-Hinweisen findest du unter Darstellung.",
         loadFailedDescription:
           "Es werden die Standard-Tastenkürzel verwendet, bis die Datei repariert oder zurückgesetzt wird.",
         loadFailedTitle: "keybindings.json konnte nicht geladen werden",
+        jumpToConflict: "Zum Konfliktbefehl springen",
+        modifyShortcut: "Tastenkürzel ändern",
+        modifyShortcutLabel:
+          "Tastenkürzel für {{command}} ändern, aktuell {{shortcut}}",
         openConfig: "Konfigurationsdatei öffnen",
         recordingChordThen: "dann…",
         recordingHint: "Neues Tastenkürzel drücken · Esc zum Abbrechen",
+        recordingCandidate: "Vorgeschlagenes Tastenkürzel",
+        recordingCandidateAnnouncement:
+          "Vorgeschlagenes Tastenkürzel {{shortcut}}",
+        recordingConflictAnnouncement:
+          "Tastenkürzel {{shortcut}} steht im Konflikt mit {{command}}",
         remove: "Entfernen",
         resetAll: "Alles auf Standard zurücksetzen…",
         resetAllConfirm:
@@ -588,11 +601,15 @@ export const de = {
         resetBroken: "Beschädigte Konfiguration zurücksetzen",
         resetCategory: "Kategorie-Standards zurücksetzen",
         resetCommand: "Befehl zurücksetzen",
+        resultSummary: "{{count}} Befehle · {{modified}} geändert",
+        saveAnyway: "Trotzdem speichern",
+        saveShortcut: "Tastenkürzel speichern",
         searchPlaceholder: "Befehle oder Tasten suchen…",
         sourceConflict: "Konflikt",
         sourceDefault: "Standard",
         sourceUser: "Benutzer",
         sourceUserOverride: "Benutzer · überschrieben",
+        unbound: "Nicht zugewiesen",
         warningsCount: "{{count}} Warnung(en) beim Laden der Tastenkürzel",
       },
       linear: {

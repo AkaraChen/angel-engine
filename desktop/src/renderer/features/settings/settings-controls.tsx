@@ -45,11 +45,13 @@ const sectionLabelClassName = `
  * border + danger label) instead of a saturated block.
  */
 function SettingsGroup({
+  after,
   children,
   description,
   title,
   tone = "default",
 }: {
+  after?: ReactNode;
   children: ReactNode;
   description?: string;
   title?: string;
@@ -60,24 +62,27 @@ function SettingsGroup({
   return (
     <section className="space-y-2.5">
       {hasHeader ? (
-        <div className="space-y-1.5 px-0.5">
-          {is.nonEmptyString(title) ? (
-            <h3
-              className={cn(
-                sectionLabelClassName,
-                tone === "danger"
-                  ? "text-status-danger"
-                  : "text-muted-foreground",
-              )}
-            >
-              {title}
-            </h3>
-          ) : null}
-          {is.nonEmptyString(description) ? (
-            <p className="text-xs leading-[1.55] text-muted-foreground">
-              {description}
-            </p>
-          ) : null}
+        <div className="flex items-start justify-between gap-3 px-0.5">
+          <div className="space-y-1.5">
+            {is.nonEmptyString(title) ? (
+              <h3
+                className={cn(
+                  sectionLabelClassName,
+                  tone === "danger"
+                    ? "text-status-danger"
+                    : "text-muted-foreground",
+                )}
+              >
+                {title}
+              </h3>
+            ) : null}
+            {is.nonEmptyString(description) ? (
+              <p className="text-xs leading-[1.55] text-muted-foreground">
+                {description}
+              </p>
+            ) : null}
+          </div>
+          {!is.falsy(after) ? <div className="shrink-0">{after}</div> : null}
         </div>
       ) : null}
       <div

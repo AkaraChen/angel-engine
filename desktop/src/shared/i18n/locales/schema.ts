@@ -825,32 +825,46 @@ export interface LocaleResourceTranslationSettingsMobile {
 }
 
 export interface LocaleResourceTranslationSettingsKeyboard {
+  addChord: string;
   addShortcut: string;
   bindEscape: string;
+  clearSearch: string;
   conflictAmbiguous: string;
   conflictChordPrefix: string;
   conflictShadowed: string;
+  conflictWith: string;
   emptySearch: string;
   filterAll: string;
   filterConflicts: string;
   filterModified: string;
+  filterUnbound: string;
   hintsLink: string;
   loadFailedDescription: string;
   loadFailedTitle: string;
+  jumpToConflict: string;
+  modifyShortcut: string;
+  modifyShortcutLabel: string;
   openConfig: string;
   recordingChordThen: string;
   recordingHint: string;
+  recordingCandidate: string;
+  recordingCandidateAnnouncement: string;
+  recordingConflictAnnouncement: string;
   remove: string;
   resetAll: string;
   resetAllConfirm: string;
   resetBroken: string;
   resetCategory: string;
   resetCommand: string;
+  resultSummary: string;
+  saveAnyway: string;
+  saveShortcut: string;
   searchPlaceholder: string;
   sourceConflict: string;
   sourceDefault: string;
   sourceUser: string;
   sourceUserOverride: string;
+  unbound: string;
   warningsCount: string;
 }
 
