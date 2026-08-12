@@ -8,8 +8,8 @@ import type {
   ComposerMentionedSkill,
 } from "@/features/chat/components/composer/composer-attachments";
 import type { AttachmentInputError } from "@/features/chat/components/composer/composer-helpers";
-import type { ComposerGitHubAttachment } from "@/features/chat/components/composer/github-attachments";
 import type { ComposerTerminalSelection } from "@/features/chat/components/composer/terminal-selection-to-composer";
+import type { ComposerSourceControlAttachment } from "@/features/chat/components/composer/source-control-attachments";
 import type { ComposerEditorController } from "@/features/chat/components/composer/use-composer-editor";
 import is from "@sindresorhus/is";
 import { useCallback } from "react";
@@ -25,12 +25,12 @@ import {
   attachmentErrorMessage,
   attachmentErrorTitle,
 } from "@/features/chat/components/composer/composer-helpers";
-import { appendGitHubContexts } from "@/features/chat/components/composer/github-attachments";
 import { appendTerminalSelections } from "@/features/chat/components/composer/terminal-selection-to-composer";
+import { appendSourceControlContexts } from "@/features/chat/components/composer/source-control-attachments";
 
 export interface ChatComposerSubmission {
   files: PromptInputFile[];
-  githubAttachments: ComposerGitHubAttachment[];
+  sourceControlAttachments: ComposerSourceControlAttachment[];
   mentionedFiles: ComposerMentionedFile[];
   selectedSkills: ComposerMentionedSkill[];
   terminalSelections: ComposerTerminalSelection[];
@@ -78,7 +78,7 @@ export function ChatComposer({
   const { t } = useTranslation();
   const toast = useToast();
   const {
-    githubAttachments,
+    sourceControlAttachments,
     mentionedFiles,
     pasteSourceUrls,
     reset,
@@ -93,7 +93,7 @@ export function ChatComposer({
         message.files.length > 0 ||
         mentionedFiles.length > 0 ||
         selectedSkills.length > 0 ||
-        githubAttachments.length > 0 ||
+        sourceControlAttachments.length > 0 ||
         terminalSelections.length > 0;
       if (!hasMessage) return;
       const beforeSubmitResult = onBeforeSubmit ? await onBeforeSubmit() : true;
@@ -102,18 +102,18 @@ export function ChatComposer({
       // Capture the submission, then clear right away: awaiting the whole
       // turn first would run reset() against an editor that may have been
       // unmounted mid-turn (draft composers navigate to the created chat).
-      const githubSnapshot = [...githubAttachments];
       const terminalSnapshot = [...terminalSelections];
+      const sourceControlSnapshot = [...sourceControlAttachments];
       const submission: ChatComposerSubmission = {
         files: message.files as PromptInputFile[],
-        githubAttachments: githubSnapshot,
+        sourceControlAttachments: sourceControlSnapshot,
         mentionedFiles: [...mentionedFiles],
         selectedSkills: [...selectedSkills],
         terminalSelections: terminalSnapshot,
         text: appendTerminalSelections(
-          appendGitHubContexts(
+          appendSourceControlContexts(
             appendPasteSourceUrls(message.text, pasteSourceUrls),
-            githubSnapshot,
+            sourceControlSnapshot,
           ),
           terminalSnapshot,
         ),
@@ -126,7 +126,7 @@ export function ChatComposer({
       await send(submission);
     },
     [
-      githubAttachments,
+      sourceControlAttachments,
       mentionedFiles,
       onBeforeSubmit,
       pasteSourceUrls,

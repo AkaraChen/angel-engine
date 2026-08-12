@@ -295,23 +295,94 @@ export function registerSourceControlHttpApi(
     const sourceBranch =
       context.req.query("sourceBranch") ||
       (await localGitBackend.currentBranch(projectPath));
-    return context.json(
-      await invoke({
+    const providerPreflight = await invoke({
+      activation,
+      capability: "changeRequests.preflight",
+      operation: "http.changeRequests.preflight",
+      signal: context.req.raw.signal,
+      run: (plugin, providerContext) =>
+        plugin.changeRequests!.preflight!(
+          {
+            repository: repository(activation),
+            sourceBranch,
+            targetBranch: context.req.query("targetBranch") ?? null,
+          },
+          providerContext,
+        ),
+    });
+    const targetBranch = providerPreflight.targetBranch;
+    const remoteName = activation.remote.name;
+    const localTarget = await localGitBackend.resolveRef(
+      projectPath,
+      targetBranch,
+    );
+    const remoteTarget = await localGitBackend.resolveRef(
+      projectPath,
+      `${remoteName}/${targetBranch}`,
+    );
+    const targetRef =
+      localTarget !== null
+        ? targetBranch
+        : remoteTarget !== null
+          ? `${remoteName}/${targetBranch}`
+          : null;
+    if (targetRef === null) {
+      throw DaemonError.gitFailed(
+        new Error(`Target branch ${targetBranch} was not found.`),
+      );
+    }
+    const [
+      aheadCount,
+      remoteBranches,
+      existingChangeRequests,
+      localHead,
+      remoteHead,
+    ] = await Promise.all([
+      localGitBackend.aheadCount(projectPath, targetRef, sourceBranch),
+      localGitBackend.remoteBranches(projectPath, remoteName).catch(() => []),
+      invoke({
         activation,
-        capability: "changeRequests.preflight",
-        operation: "http.changeRequests.preflight",
+        capability: "changeRequests.list",
+        operation: "http.changeRequests.preflightExisting",
         signal: context.req.raw.signal,
         run: (plugin, providerContext) =>
-          plugin.changeRequests!.preflight!(
+          plugin.changeRequests!.list!(
             {
               repository: repository(activation),
-              sourceBranch,
-              targetBranch: context.req.query("targetBranch") ?? null,
+              query: `head:${sourceBranch} is:open`,
+              limit: 20,
             },
             providerContext,
           ),
       }),
+      localGitBackend.resolveRef(projectPath, sourceBranch),
+      localGitBackend.resolveRef(projectPath, `${remoteName}/${sourceBranch}`),
+    ]);
+    const availableTargetBranches = Array.from(
+      new Set([
+        targetBranch,
+        ...remoteBranches
+          .map((branch) => branch.replace(`${remoteName}/`, ""))
+          .filter(
+            (branch) =>
+              branch.length > 0 &&
+              branch !== "HEAD" &&
+              branch !== remoteName &&
+              branch !== sourceBranch,
+          ),
+      ]),
     );
+    return context.json({
+      ...providerPreflight,
+      aheadCount,
+      availableTargetBranches,
+      existing:
+        existingChangeRequests.find(
+          (changeRequest) => changeRequest.source.name === sourceBranch,
+        ) ?? null,
+      needsPush: localHead !== remoteHead,
+      sourceBranch,
+    });
   });
 
   app.get("/api/source-control/change-requests/template", async (context) => {
@@ -364,6 +435,25 @@ export function registerSourceControlHttpApi(
       typeof input.targetBranch !== "string"
     )
       throw DaemonError.invalidRequest("Change request input is invalid.");
+    if (input.publish === true) {
+      await invoke({
+        activation,
+        capability: "branches.publish",
+        operation: "http.branches.publish",
+        signal: context.req.raw.signal,
+        run: (plugin, providerContext) =>
+          plugin.git.publishBranch!(
+            {
+              forceWithLease: false,
+              localBranch: input.sourceBranch as string,
+              projectPath,
+              remoteName: activation.remote.name,
+              repository: repository(activation),
+            },
+            providerContext,
+          ),
+      });
+    }
     return context.json(
       await invoke({
         activation,
@@ -379,6 +469,34 @@ export function registerSourceControlHttpApi(
               sourceBranch: input.sourceBranch as string,
               targetBranch: input.targetBranch as string,
               draft: input.draft === true,
+            },
+            providerContext,
+          ),
+      }),
+    );
+  });
+
+  app.post("/api/source-control/branches/publish", async (context) => {
+    const input = await body(context);
+    const projectPath = projectPathFromBody(input.projectPath);
+    if (typeof input.localBranch !== "string" || !input.localBranch.trim()) {
+      throw DaemonError.invalidRequest("localBranch is required.");
+    }
+    const activation = await activate(projectPath, context.req.raw.signal);
+    return context.json(
+      await invoke({
+        activation,
+        capability: "branches.publish",
+        operation: "http.branches.publish",
+        signal: context.req.raw.signal,
+        run: (plugin, providerContext) =>
+          plugin.git.publishBranch!(
+            {
+              forceWithLease: false,
+              localBranch: input.localBranch as string,
+              projectPath,
+              remoteName: activation.remote.name,
+              repository: repository(activation),
             },
             providerContext,
           ),
@@ -436,6 +554,7 @@ export function registerSourceControlHttpApi(
             {
               repository: repository(activation),
               id: idFromPath(context.req.param("id")),
+              deleteSourceBranch: input.deleteSourceBranch === true,
               method,
             },
             providerContext,

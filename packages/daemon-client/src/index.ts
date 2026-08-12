@@ -68,45 +68,6 @@ import type {
   ProcessRegistrySnapshotEntry,
 } from "@angel-engine/daemon-api/daemon";
 import type {
-  GitHubAddPullRequestCommentInput,
-  GitHubAddPullRequestCommentResult,
-  GitHubCreatePullRequestInput,
-  GitHubCreatePullRequestResult,
-  GitHubCreateWorkspaceFromPullRequestInput,
-  GitHubCreateWorkspaceFromPullRequestResult,
-  GitHubListItemsInput,
-  GitHubListItemsResult,
-  GitHubPrChecksFixPromptInput,
-  GitHubPrChecksFixPromptResult,
-  GitHubPrChecksInput,
-  GitHubPrChecksResult,
-  GitHubListPullRequestsInput,
-  GitHubListPullRequestsResult,
-  GitHubListRepositoriesInput,
-  GitHubListRepositoriesResult,
-  GitHubMergeInput,
-  GitHubMergeResult,
-  GitHubPullRequestDetail,
-  GitHubPullRequestStatus,
-  GitHubPullRequestStatusInput,
-  GitHubPullRequestTemplateInput,
-  GitHubPullRequestTemplateResult,
-  GitHubRepositoryOwnersResult,
-  GitHubResolveUrlInput,
-  GitHubResolveThreadInput,
-  GitHubResolveThreadResult,
-  GitHubResolvedItem,
-  GitHubViewPullRequestInput,
-  PullRequestCreateInput,
-  PullRequestCreateResult,
-  PullRequestPreflight,
-  PullRequestRecord,
-} from "@angel-engine/daemon-api/github";
-import type {
-  ResolvedTaskLink,
-  TaskLinkResolveInput,
-} from "@angel-engine/daemon-api/links";
-import type {
   ShepherdResumeInput,
   ShepherdSession,
   ShepherdStartInput,
@@ -132,12 +93,22 @@ import type {
 } from "@angel-engine/daemon-api/projects";
 import type {
   ChangeRequest,
+  ChangeRequestCreatePreflightResult,
   ChangeRequestStatusResult,
+  ChangeRequestTemplateResult,
   CheckRun,
   CheckSummary,
   ChecksFixPromptResult,
+  CreateChangeRequestWorkspaceResult,
+  MergeMethod,
+  PublishBranchResult,
+  RepositoryIdentity,
+  RepositoryNamespace,
   ReviewThread,
+  ResolvedSourceControlLink,
   SourceControlActivationResult,
+  SourceControlProjectConfig,
+  WorkItem,
 } from "@angel-engine/daemon-api/source-control";
 import { isProjectCloneEvent } from "@angel-engine/daemon-api/projects";
 import type {
@@ -181,6 +152,29 @@ export interface DaemonClientOptions {
   onUnauthorized?: () => void;
   /** Bearer token; omit when the transport injects authorization itself. */
   token?: string | null;
+}
+
+export interface SourceControlCreateChangeRequestInput {
+  body: string;
+  draft: boolean;
+  projectPath: string;
+  publish: boolean;
+  sourceBranch: string;
+  targetBranch: string;
+  title: string;
+}
+
+export interface SourceControlCreateWorkspaceInput {
+  projectPath: string;
+  runtime?: string;
+  setupApproval?: string;
+  title?: string;
+}
+
+export interface SourceControlMergeChangeRequestInput {
+  deleteSourceBranch: boolean;
+  method: MergeMethod;
+  projectPath: string;
 }
 
 export interface DaemonEventHandlers {
@@ -618,81 +612,6 @@ export function createDaemonClient(options: DaemonClientOptions) {
           json("PUT", { runtime: input.runtime }),
         ),
     },
-    github: {
-      addPullRequestComment: (input: GitHubAddPullRequestCommentInput) =>
-        request<GitHubAddPullRequestCommentResult>(
-          `/api/github/pull-requests/${encodeURIComponent(String(input.number))}/comments`,
-          json("POST", { body: input.body, cwd: input.cwd }),
-        ),
-      createPullRequest: (input: GitHubCreatePullRequestInput) =>
-        request<GitHubCreatePullRequestResult>(
-          "/api/github/pull-requests",
-          json("POST", input),
-        ),
-      createWorkspaceFromPullRequest: (
-        input: GitHubCreateWorkspaceFromPullRequestInput,
-      ) =>
-        request<GitHubCreateWorkspaceFromPullRequestResult>(
-          "/api/github/pull-requests/workspace",
-          json("POST", input),
-        ),
-      createWorkspacePullRequest: (input: PullRequestCreateInput) =>
-        request<PullRequestCreateResult>(
-          "/api/github/pull-request",
-          json("POST", input),
-        ),
-      getWorkspacePullRequest: (root: string) =>
-        request<PullRequestRecord | null>(
-          `/api/github/pull-request?${query({ root })}`,
-        ),
-      listItems: (input: GitHubListItemsInput) =>
-        request<GitHubListItemsResult>(`/api/github/items?${query(input)}`),
-      listPrChecks: (input: GitHubPrChecksInput) =>
-        request<GitHubPrChecksResult>(`/api/github/pr-checks?${query(input)}`),
-      prChecksFixPrompt: (input: GitHubPrChecksFixPromptInput) =>
-        request<GitHubPrChecksFixPromptResult>(
-          "/api/github/pr-checks/fix-prompt",
-          json("POST", input),
-        ),
-      listPullRequests: (input: GitHubListPullRequestsInput) =>
-        request<GitHubListPullRequestsResult>(
-          `/api/github/pull-requests?${query(input)}`,
-        ),
-      pullRequestTemplate: (input: GitHubPullRequestTemplateInput) =>
-        request<GitHubPullRequestTemplateResult>(
-          `/api/github/pull-request-template?${query(input)}`,
-        ),
-      listRepositories: (input: GitHubListRepositoriesInput) =>
-        request<GitHubListRepositoriesResult>(
-          `/api/github/repos?${query(input)}`,
-        ),
-      listRepositoryOwners: () =>
-        request<GitHubRepositoryOwnersResult>("/api/github/repo-owners"),
-      resolveUrl: (input: GitHubResolveUrlInput) =>
-        request<GitHubResolvedItem>("/api/github/resolve", json("POST", input)),
-      pullRequestStatus: (input: GitHubPullRequestStatusInput) =>
-        request<GitHubPullRequestStatus>(
-          `/api/github/pull-request?${query(input)}`,
-        ),
-      mergePullRequest: (input: GitHubMergeInput) =>
-        request<GitHubMergeResult>(
-          "/api/github/pull-request/merge",
-          json("POST", input),
-        ),
-      resolveReviewThread: (input: GitHubResolveThreadInput) =>
-        request<GitHubResolveThreadResult>(
-          "/api/github/pull-request/resolve-thread",
-          json("POST", input),
-        ),
-      workspacePullRequestPreflight: (root: string, base?: string) =>
-        request<PullRequestPreflight>(
-          `/api/github/pull-request/preflight?${query({ base, root })}`,
-        ),
-      viewPullRequest: (input: GitHubViewPullRequestInput) =>
-        request<GitHubPullRequestDetail>(
-          `/api/github/pull-requests/${encodeURIComponent(String(input.number))}?${query({ cwd: input.cwd })}`,
-        ),
-    },
     shepherd: {
       get: (chatId: string) =>
         request<{ session: ShepherdSession | null }>(
@@ -716,6 +635,15 @@ export function createDaemonClient(options: DaemonClientOptions) {
         request<SourceControlActivationResult>(
           `/api/source-control/activation?${query({ projectId })}`,
         ),
+      config: (projectId: string) =>
+        request<SourceControlProjectConfig>(
+          `/api/source-control/config?${query({ projectId })}`,
+        ),
+      updateConfig: (projectId: string, input: SourceControlProjectConfig) =>
+        request<SourceControlProjectConfig>(
+          `/api/source-control/config?${query({ projectId })}`,
+          json("PUT", input),
+        ),
       currentChangeRequest: (projectPath: string) =>
         request<ChangeRequestStatusResult | null>(
           `/api/source-control/change-requests/current?${query({ projectPath })}`,
@@ -723,6 +651,95 @@ export function createDaemonClient(options: DaemonClientOptions) {
       getChangeRequest: (projectPath: string, id: string) =>
         request<ChangeRequest>(
           `/api/source-control/change-requests/${encodeURIComponent(id)}?${query({ projectPath })}`,
+        ),
+      listWorkItems: (
+        projectPath: string,
+        queryText?: string,
+        limit?: number,
+      ) =>
+        request<WorkItem[]>(
+          `/api/source-control/work-items?${query({
+            limit,
+            projectPath,
+            query: queryText,
+          })}`,
+        ),
+      listChangeRequests: (
+        projectPath: string,
+        queryText?: string,
+        limit?: number,
+      ) =>
+        request<ChangeRequest[]>(
+          `/api/source-control/change-requests?${query({
+            limit,
+            projectPath,
+            query: queryText,
+          })}`,
+        ),
+      resolveLink: (projectPath: string, url: string) =>
+        request<ResolvedSourceControlLink>(
+          "/api/source-control/links/resolve",
+          json("POST", { projectPath, url }),
+        ),
+      listNamespaces: (
+        projectPath: string,
+        queryText?: string,
+        limit?: number,
+      ) =>
+        request<readonly RepositoryNamespace[]>(
+          `/api/source-control/namespaces?${query({
+            limit,
+            projectPath,
+            query: queryText,
+          })}`,
+        ),
+      listRepositories: (
+        projectPath: string,
+        namespace: readonly string[],
+        queryText?: string,
+        limit?: number,
+      ) =>
+        request<readonly RepositoryIdentity[]>(
+          `/api/source-control/repositories?${query({
+            limit,
+            namespace: namespace.join("/"),
+            projectPath,
+            query: queryText,
+          })}`,
+        ),
+      changeRequestPreflight: (projectPath: string, targetBranch?: string) =>
+        request<ChangeRequestCreatePreflightResult>(
+          `/api/source-control/change-requests/preflight?${query({ projectPath, targetBranch })}`,
+        ),
+      changeRequestTemplate: (projectPath: string) =>
+        request<ChangeRequestTemplateResult>(
+          `/api/source-control/change-requests/template?${query({ projectPath })}`,
+        ),
+      createChangeRequest: (input: SourceControlCreateChangeRequestInput) =>
+        request<ChangeRequest>(
+          "/api/source-control/change-requests",
+          json("POST", input),
+        ),
+      mergeChangeRequest: (
+        id: string,
+        input: SourceControlMergeChangeRequestInput,
+      ) =>
+        request<ChangeRequest>(
+          `/api/source-control/change-requests/${encodeURIComponent(id)}/merge`,
+          json("POST", input),
+        ),
+      createChangeRequestWorkspace: (
+        id: string,
+        input: SourceControlCreateWorkspaceInput,
+      ) =>
+        request<CreateChangeRequestWorkspaceResult>(
+          `/api/source-control/change-requests/${encodeURIComponent(id)}/workspace`,
+          json("POST", input),
+        ),
+      publishBranch: (input: { localBranch: string; projectPath: string }) =>
+        request<PublishBranchResult>(
+          "/api/source-control/branches/publish",
+          json("POST", input),
         ),
       checks: (projectPath: string, id: string) =>
         request<CheckRun[]>(
@@ -746,10 +763,6 @@ export function createDaemonClient(options: DaemonClientOptions) {
           `/api/source-control/reviews/threads/${encodeURIComponent(threadId)}/resolve`,
           json("POST", { projectPath }),
         ),
-    },
-    links: {
-      resolve: (input: TaskLinkResolveInput) =>
-        request<ResolvedTaskLink>("/api/links/resolve", json("POST", input)),
     },
     health: () => request<DaemonHealth>("/api/health"),
     events: {

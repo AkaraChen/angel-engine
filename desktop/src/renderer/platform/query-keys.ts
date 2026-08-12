@@ -23,18 +23,6 @@ export const queryKeys = {
     runtimeConfig: (runtime: string | null, cwd: string | null) =>
       ["chats", "runtime-config", runtime, cwd] as const,
   },
-  github: {
-    items: (cwd: string | null, query: string) =>
-      ["github", "items", cwd, query] as const,
-    pullRequest: (cwd: string | null) =>
-      ["github", "pull-request-status", cwd] as const,
-    repositories: (owner: string | null) =>
-      ["github", "repositories", owner] as const,
-    repositoryOwners: () => ["github", "repository-owners"] as const,
-    resolve: (url: string | null) => ["github", "resolve", url] as const,
-    pullRequestPreflight: (root: string | null, base?: string) =>
-      ["github", "pull-request", "preflight", root, base] as const,
-  },
   sourceControl: {
     all: () => ["source-control"] as const,
     activation: (projectId: string | null) =>

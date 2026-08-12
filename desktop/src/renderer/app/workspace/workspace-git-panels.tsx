@@ -8,7 +8,6 @@ import type { WorkspaceToolPanelLayout } from "@/app/workspace/workspace-files-p
 import type { WorkspaceToolPatchFile } from "@/app/workspace/workspace-tool-patch-model";
 
 import {
-  ArrowDown,
   ArrowUp,
   CaretDown,
   Check,
@@ -67,6 +66,7 @@ import {
 import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
 import { useWorkspaceGitBasePreference } from "@/app/workspace/use-workspace-git-base-preference";
 import { Button } from "@/components/ui/button";
+import { CapabilityGate } from "@/features/source-control/components/capability-gate";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -85,7 +85,7 @@ export function WorkspaceGitPanel({
   layout: WorkspaceToolPanelLayout;
   root: string;
 }) {
-  const { api, chatId } = useWorkspaceToolSurface();
+  const { api, chatId, projectId } = useWorkspaceToolSurface();
   const { t } = useTranslation();
   const { baseKind, setBaseKind } = useWorkspaceGitBasePreference(root);
   const {
@@ -96,19 +96,21 @@ export function WorkspaceGitPanel({
     commitSummary,
     gitQuery,
     handleFileSelectedChange,
-    pullMutation,
+    publishCapabilities,
+    publishProviderActive,
+    refetchActivation,
     pushMutation,
     selectedFileKeys,
     setCommitDescription,
     setCommitSummary,
-  } = useWorkspaceGitPanelState(api, root, chatId, baseKind);
+  } = useWorkspaceGitPanelState(api, root, chatId, baseKind, projectId);
   const [activeFileKey, setActiveFileKey] = useState<string | null>(null);
   const [gitListWidth, setGitListWidth] = useState(
     initialWorkspaceToolGitListWidth,
   );
   const [panelView, setPanelView] = useState<WorkspaceGitPanelView>("changes");
   const [activeCommitHash, setActiveCommitHash] = useState<string | null>(null);
-  const pullRequestQuery = useWorkspaceGitPullRequestPreflight(api, root);
+  const pullRequestQuery = useWorkspaceGitPullRequestPreflight(api, projectId);
   const updateGitListWidth = useCallback((width: number) => {
     setGitListWidth(width);
     window.localStorage.setItem(
@@ -166,15 +168,27 @@ export function WorkspaceGitPanel({
       }
       pushError={pushMutation.isError ? pushMutation.error : undefined}
       pushPending={pushMutation.isPending}
+      publishCapabilities={publishCapabilities}
+      publishProviderActive={publishProviderActive}
+      onPublishRemediate={() => void refetchActivation()}
       pullRequestAction={
-        <WorkspaceGitPullRequestAction preflight={pullRequestQuery.data} />
+        <WorkspaceGitPullRequestAction
+          capabilities={pullRequestQuery.capabilities}
+          preflight={pullRequestQuery.data}
+          providerActive={pullRequestQuery.providerActive}
+          onRemediate={() => void pullRequestQuery.refetchActivation()}
+        />
       }
       statusLabel={
         pullRequestQuery.data?.reason === "pull-request-no-commits"
           ? t("workspace.tools.git.noCommitsToPropose")
           : undefined
       }
-      onPush={() => pushMutation.mutate()}
+      onPush={() => {
+        if (is.nonEmptyString(data.branchStatus.branch)) {
+          pushMutation.mutate(data.branchStatus.branch);
+        }
+      }}
     />
   );
   const changeColumn = (
@@ -258,14 +272,16 @@ export function WorkspaceGitPanel({
     );
   }
 
-  // Window mode: GitHub Desktop-like toolbar + Changes/History.
+  // Window mode: Forge Desktop-like toolbar + Changes/History.
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
       <WorkspaceGitWindowToolbar
         branchStatus={data.branchStatus}
         checkoutMutation={checkoutMutation}
-        pullMutation={pullMutation}
         pushMutation={pushMutation}
+        publishCapabilities={publishCapabilities}
+        publishProviderActive={publishProviderActive}
+        onPublishRemediate={() => void refetchActivation()}
         root={root}
       />
       <div className="flex min-h-0 flex-1">
@@ -376,14 +392,18 @@ function WorkspaceGitViewTab({
 function WorkspaceGitWindowToolbar({
   branchStatus,
   checkoutMutation,
-  pullMutation,
   pushMutation,
+  publishCapabilities,
+  publishProviderActive,
+  onPublishRemediate,
   root,
 }: {
   branchStatus: WorkspaceGitBranchStatus;
   checkoutMutation: UseMutationResult<unknown, Error, string, unknown>;
-  pullMutation: UseMutationResult<unknown, Error, void, unknown>;
-  pushMutation: UseMutationResult<unknown, Error, void, unknown>;
+  pushMutation: UseMutationResult<unknown, Error, string, unknown>;
+  publishCapabilities: import("@angel-engine/daemon-api/source-control").CapabilityMatrix;
+  publishProviderActive: boolean;
+  onPublishRemediate: () => void;
   root: string;
 }) {
   const { api } = useWorkspaceToolSurface();
@@ -394,17 +414,13 @@ function WorkspaceGitWindowToolbar({
     staleTime: 5_000,
   });
 
-  const { ahead, behind, branch, detached, unborn, upstream } = branchStatus;
+  const { ahead, branch, detached, unborn, upstream } = branchStatus;
   const hasBranch = is.nonEmptyString(branch);
   const hasUpstream = is.nonEmptyString(upstream);
   const remote = workspaceGitRemoteFromUpstream(upstream);
   const canPush =
     hasBranch && !detached && !unborn && (!hasUpstream || ahead > 0);
-  const canPull = hasUpstream && behind > 0 && !detached && !unborn;
-  const busy =
-    checkoutMutation.isPending ||
-    pullMutation.isPending ||
-    pushMutation.isPending;
+  const busy = checkoutMutation.isPending || pushMutation.isPending;
   const branchLabel = unborn
     ? t("workspace.tools.git.noCommits")
     : detached
@@ -416,8 +432,7 @@ function WorkspaceGitWindowToolbar({
     () => (branchesQuery.data?.branches ?? []).filter((item) => !item.isRemote),
     [branchesQuery.data?.branches],
   );
-  const actionError =
-    checkoutMutation.error ?? pullMutation.error ?? pushMutation.error;
+  const actionError = checkoutMutation.error ?? pushMutation.error;
 
   return (
     <div className="shrink-0 border-b border-border-subtle">
@@ -470,42 +485,34 @@ function WorkspaceGitWindowToolbar({
         </DropdownMenu>
 
         <div className="ml-auto flex items-center gap-1.5">
-          <Button
-            disabled={busy || !canPull}
-            size="xs"
-            type="button"
-            variant="outline"
-            onClick={() => pullMutation.mutate()}
+          <CapabilityGate
+            capabilities={publishCapabilities}
+            capability="branches.publish"
+            onRemediate={onPublishRemediate}
+            remediationLabel={t("common.retry")}
           >
-            <ArrowDown className="size-3.5" />
-            {pullMutation.isPending
-              ? t("workspace.tools.git.pulling")
-              : behind > 0
-                ? t("workspace.tools.git.pullCount", {
-                    count: behind,
-                    remote,
-                  })
-                : t("workspace.tools.git.pull", { remote })}
-          </Button>
-          <Button
-            disabled={busy || !canPush}
-            size="xs"
-            type="button"
-            variant="outline"
-            onClick={() => pushMutation.mutate()}
-          >
-            <ArrowUp className="size-3.5" />
-            {pushMutation.isPending
-              ? t("workspace.tools.git.pushing")
-              : hasUpstream
-                ? ahead > 0
-                  ? t("workspace.tools.git.pushCount", {
-                      count: ahead,
-                      remote,
-                    })
-                  : t("workspace.tools.git.push")
-                : t("workspace.tools.git.publish")}
-          </Button>
+            <Button
+              disabled={busy || !canPush || !publishProviderActive}
+              size="xs"
+              type="button"
+              variant="outline"
+              onClick={() => {
+                if (is.nonEmptyString(branch)) pushMutation.mutate(branch);
+              }}
+            >
+              <ArrowUp className="size-3.5" />
+              {pushMutation.isPending
+                ? t("workspace.tools.git.pushing")
+                : hasUpstream
+                  ? ahead > 0
+                    ? t("workspace.tools.git.pushCount", {
+                        count: ahead,
+                        remote,
+                      })
+                    : t("workspace.tools.git.push")
+                  : t("workspace.tools.git.publish")}
+            </Button>
+          </CapabilityGate>
         </div>
       </div>
       {actionError ? (

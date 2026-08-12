@@ -47,6 +47,12 @@ describe("useSourceControlActivation", () => {
     expect(result.current.error).toBeNull();
     expect(result.current.projectPath).toBe(response.projectPath);
     expect(result.current.providerIdentity).toBeNull();
+    expect(result.current.candidates).toEqual(
+      response.status === "ambiguous" ? response.candidates : [],
+    );
+    expect(result.current.unresolvedReason).toBe(
+      response.status === "unresolved" ? response.reason : null,
+    );
     expect(mocks.activation).toHaveBeenCalledWith("project-1");
   });
 });
