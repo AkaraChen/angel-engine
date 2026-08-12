@@ -95,6 +95,10 @@ describe("createDaemonClient", () => {
     const client = createDaemonClient({ baseUrl: "", token: null });
     await client.sourceControl.changeRequestPreflight("/repo", "release/v1");
     await client.sourceControl.changeRequestTemplate("/repo");
+    await client.sourceControl.publishBranch({
+      localBranch: "feature",
+      projectPath: "/repo",
+    });
     await client.sourceControl.createChangeRequest({
       body: "Body",
       draft: true,
@@ -121,14 +125,24 @@ describe("createDaemonClient", () => {
       "/api/source-control/change-requests/template?projectPath=%2Frepo",
     );
     expect(fetchMock.mock.calls[2]).toEqual([
+      "/api/source-control/branches/publish",
+      expect.objectContaining({
+        body: JSON.stringify({
+          localBranch: "feature",
+          projectPath: "/repo",
+        }),
+        method: "POST",
+      }),
+    ]);
+    expect(fetchMock.mock.calls[3]).toEqual([
       "/api/source-control/change-requests",
       expect.objectContaining({ method: "POST" }),
     ]);
-    expect(fetchMock.mock.calls[3]).toEqual([
+    expect(fetchMock.mock.calls[4]).toEqual([
       "/api/source-control/change-requests/42%2Fpart/merge",
       expect.objectContaining({ method: "POST" }),
     ]);
-    expect(fetchMock.mock.calls[4]).toEqual([
+    expect(fetchMock.mock.calls[5]).toEqual([
       "/api/source-control/change-requests/42%2Fpart/workspace",
       expect.objectContaining({ method: "POST" }),
     ]);

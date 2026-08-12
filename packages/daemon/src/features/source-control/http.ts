@@ -476,6 +476,34 @@ export function registerSourceControlHttpApi(
     );
   });
 
+  app.post("/api/source-control/branches/publish", async (context) => {
+    const input = await body(context);
+    const projectPath = projectPathFromBody(input.projectPath);
+    if (typeof input.localBranch !== "string" || !input.localBranch.trim()) {
+      throw DaemonError.invalidRequest("localBranch is required.");
+    }
+    const activation = await activate(projectPath, context.req.raw.signal);
+    return context.json(
+      await invoke({
+        activation,
+        capability: "branches.publish",
+        operation: "http.branches.publish",
+        signal: context.req.raw.signal,
+        run: (plugin, providerContext) =>
+          plugin.git.publishBranch!(
+            {
+              forceWithLease: false,
+              localBranch: input.localBranch as string,
+              projectPath,
+              remoteName: activation.remote.name,
+              repository: repository(activation),
+            },
+            providerContext,
+          ),
+      }),
+    );
+  });
+
   app.post(
     "/api/source-control/change-requests/:id/comments",
     async (context) => {

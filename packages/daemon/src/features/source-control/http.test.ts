@@ -146,6 +146,7 @@ describe("source-control HTTP contract", () => {
       ["GET", "/api/source-control/checks/summary?id=42"],
       ["GET", "/api/source-control/reviews/threads?id=42"],
       ["POST", "/api/source-control/links/resolve"],
+      ["POST", "/api/source-control/branches/publish"],
       ["POST", "/api/source-control/change-requests"],
       ["POST", "/api/source-control/change-requests/42/comments"],
       ["POST", "/api/source-control/change-requests/42/merge"],
@@ -323,6 +324,24 @@ describe("source-control HTTP contract", () => {
         changeRequests: { create, merge },
         git: { publishBranch },
       }),
+    );
+
+    const publishResponse = await app.request(
+      "/api/source-control/branches/publish",
+      {
+        body: JSON.stringify({ localBranch: "feature", projectPath: root }),
+        headers: { "content-type": "application/json" },
+        method: "POST",
+      },
+    );
+    expect(publishResponse.status).toBe(200);
+    expect(publishBranch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        localBranch: "feature",
+        projectPath: root,
+        remoteName: "origin",
+      }),
+      expect.anything(),
     );
 
     const createResponse = await app.request(

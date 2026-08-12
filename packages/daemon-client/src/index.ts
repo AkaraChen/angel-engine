@@ -140,6 +140,7 @@ import type {
   ChecksFixPromptResult,
   CreateChangeRequestWorkspaceResult,
   MergeMethod,
+  PublishBranchResult,
   ReviewThread,
   SourceControlActivationResult,
 } from "@angel-engine/daemon-api/source-control";
@@ -778,6 +779,11 @@ export function createDaemonClient(options: DaemonClientOptions) {
       ) =>
         request<CreateChangeRequestWorkspaceResult>(
           `/api/source-control/change-requests/${encodeURIComponent(id)}/workspace`,
+          json("POST", input),
+        ),
+      publishBranch: (input: { localBranch: string; projectPath: string }) =>
+        request<PublishBranchResult>(
+          "/api/source-control/branches/publish",
           json("POST", input),
         ),
       checks: (projectPath: string, id: string) =>
