@@ -212,6 +212,33 @@ describe("configureAutoUpdates", () => {
     expect(mocks.auxiliarySend).not.toHaveBeenCalled();
   });
 
+  it("keeps downloaded state readable when no main window exists", async () => {
+    const download = deferred<string[]>();
+    mocks.getMainWindow.mockReturnValue(null);
+    mocks.autoUpdater.checkForUpdates.mockResolvedValue({
+      isUpdateAvailable: true,
+      updateInfo: { version: "1.3.0" },
+    });
+    mocks.autoUpdater.downloadUpdate.mockReturnValue(download.promise);
+
+    configureAutoUpdates();
+    const current = invokeIpc(DESKTOP_UPDATE_STATUS_GET_CHANNEL);
+    setChannel(current.channel === "beta" ? "stable" : "beta");
+
+    await vi.waitFor(() => {
+      expect(mocks.autoUpdater.downloadUpdate).toHaveBeenCalled();
+    });
+    mocks.autoUpdater.emit("update-downloaded", { version: "1.3.0" });
+
+    expect(invokeIpc(DESKTOP_UPDATE_STATUS_GET_CHANNEL)).toMatchObject({
+      availableVersion: "1.3.0",
+      state: "downloaded",
+    });
+    expect(mocks.send).not.toHaveBeenCalled();
+
+    download.resolve([]);
+  });
+
   it("keeps allowDowngrade off after switching channels", async () => {
     configureAutoUpdates();
 

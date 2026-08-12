@@ -13,7 +13,8 @@ const mocks = vi.hoisted(() => {
   return {
     activityList: vi.fn(),
     chatsGet: vi.fn(),
-    createMainWindow: vi.fn(() => ({
+    auxiliaryWindow: { isDestroyed: () => false },
+    ensureMainWindow: vi.fn(() => ({
       focus: vi.fn(),
       isDestroyed: () => false,
       isMinimized: () => false,
@@ -37,7 +38,7 @@ vi.mock("electron", () => {
       getPath: () => "/tmp/angel-engine-user-data",
     },
     BrowserWindow: {
-      getAllWindows: () => [],
+      getAllWindows: () => [mocks.auxiliaryWindow],
     },
     Menu: {
       buildFromTemplate: (template: unknown) => template,
@@ -91,7 +92,7 @@ vi.mock("../../platform/i18n", () => ({
 }));
 
 vi.mock("../../windows/main-window", () => ({
-  createMainWindow: mocks.createMainWindow,
+  ensureMainWindow: mocks.ensureMainWindow,
 }));
 
 vi.mock("../../windows/notifications", () => ({
@@ -125,7 +126,7 @@ describe("tray service smoke", () => {
     mocks.chatsGet.mockReset();
     mocks.openChatInMainWindow.mockReset();
     mocks.writeTrayPreferences.mockReset();
-    mocks.createMainWindow.mockClear();
+    mocks.ensureMainWindow.mockClear();
     mocks.readTrayPreferences.mockReturnValue({ enabled: true });
     mocks.activityList.mockResolvedValue({ items: [] });
     mocks.chatsGet.mockResolvedValue(null);
@@ -225,6 +226,21 @@ describe("tray service smoke", () => {
       { id: "chat-focus", projectId: "proj-9" },
       expect.anything(),
     );
+  });
+
+  it("creates the main window when only an auxiliary window remains", async () => {
+    startTray();
+    scheduleTrayRefresh();
+    await flushTrayRefresh();
+
+    const tray = mocks.trayInstances.at(-1);
+    const menu = tray?.setContextMenu.mock.calls.at(-1)?.[0] as Array<{
+      click?: () => void;
+      label?: string;
+    }>;
+    menu.find((item) => item.label === "tray.openApp")?.click?.();
+
+    expect(mocks.ensureMainWindow).toHaveBeenCalledOnce();
   });
 
   it("removes the tray when the feature is disabled", () => {

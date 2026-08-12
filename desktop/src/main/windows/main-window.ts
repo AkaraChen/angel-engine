@@ -24,3 +24,7 @@ export function getMainWindow() {
   if (mainWindow?.isDestroyed()) mainWindow = null;
   return mainWindow;
 }
+
+export function ensureMainWindow() {
+  return getMainWindow() ?? createMainWindow();
+}
