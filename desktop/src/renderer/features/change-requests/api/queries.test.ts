@@ -9,7 +9,7 @@ describe("pullRequestDetailQueryOptions", () => {
     { projectPath: null, providerIdentity: null, supported: true },
     {
       projectPath: "/repo",
-      providerIdentity: "github:github.com/acme/widgets:1",
+      providerIdentity: "forge:forge.com/acme/widgets:1",
       supported: false,
     },
   ])("makes no business request when the provider is inactive or unsupported", async (state) => {

@@ -50,14 +50,14 @@ describe("source-control repository discovery", () => {
 
   it("isolates namespace and repository caches by provider identity", () => {
     const api = { sourceControl: {} } as unknown as ApiClient;
-    const githubIdentity = "github:github.com/acme/widgets:1";
+    const forgeIdentity = "forge:forge.com/acme/widgets:1";
     const gitlabIdentity = "gitlab:gitlab.example.com/acme/widgets:2";
 
     expect(
       sourceControlNamespacesQueryOptions({
         api,
         projectPath: "/repo",
-        providerIdentity: githubIdentity,
+        providerIdentity: forgeIdentity,
         supported: true,
       }).queryKey,
     ).not.toEqual(
@@ -73,7 +73,7 @@ describe("source-control repository discovery", () => {
         api,
         namespace: ["acme"],
         projectPath: "/repo",
-        providerIdentity: githubIdentity,
+        providerIdentity: forgeIdentity,
         supported: true,
       }).queryKey,
     ).not.toEqual(

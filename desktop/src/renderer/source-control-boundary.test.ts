@@ -3,23 +3,20 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 const rendererRoot = path.resolve(import.meta.dirname);
-const remoteWorkspaceToolCall = /workspaceTools\.(gitPush|gitPull)\s*\(/g;
-const auditMarker = "source-control-boundary-audit:";
+const remoteWorkspaceToolCall = new RegExp(
+  `workspaceTools\\.git(?:${["Push", "Pull"].join("|")})\\s*\\(`,
+  "g",
+);
 
 describe("renderer source-control boundary", () => {
-  it("rejects unaudited legacy push and pull calls", () => {
+  it("rejects renderer push and pull calls", () => {
     const violations = sourceFiles(rendererRoot).flatMap((file) => {
       const source = fs.readFileSync(file, "utf8");
       const lines = source.split("\n");
       return lines.flatMap((line, index) => {
         remoteWorkspaceToolCall.lastIndex = 0;
         if (!remoteWorkspaceToolCall.test(line)) return [];
-        const auditContext = lines
-          .slice(Math.max(0, index - 2), index)
-          .join("\n");
-        return auditContext.includes(auditMarker)
-          ? []
-          : [`${path.relative(rendererRoot, file)}:${index + 1}`];
+        return [`${path.relative(rendererRoot, file)}:${index + 1}`];
       });
     });
 
