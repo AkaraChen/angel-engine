@@ -70,8 +70,10 @@ const mocks = vi.hoisted(() => {
   }
 
   return {
+    auxiliarySend: vi.fn(),
     autoUpdater: new FakeAutoUpdater(),
     cancellationTokens: [] as FakeCancellationToken[],
+    getMainWindow: vi.fn(),
     getVersion: vi.fn(() => "1.0.1-beta.1"),
     ipcHandlers: new Map<string, (event: unknown, input: unknown) => unknown>(),
     send: vi.fn(),
@@ -92,7 +94,7 @@ vi.mock("electron", () => ({
         webContents: {
           isLoading: () => false,
           once: vi.fn(),
-          send: mocks.send,
+          send: mocks.auxiliarySend,
         },
       },
     ],
@@ -106,6 +108,10 @@ vi.mock("electron", () => ({
       mocks.ipcHandlers.set(channel, handler);
     },
   },
+}));
+
+vi.mock("./windows/main-window", () => ({
+  getMainWindow: mocks.getMainWindow,
 }));
 
 vi.mock("electron-updater", () => ({
@@ -166,9 +172,19 @@ function broadcastStatuses() {
 
 describe("configureAutoUpdates", () => {
   beforeEach(() => {
+    mocks.auxiliarySend.mockReset();
     mocks.autoUpdater.checkForUpdates.mockReset();
     mocks.autoUpdater.downloadUpdate.mockReset();
     mocks.send.mockReset();
+    mocks.getMainWindow.mockReset();
+    mocks.getMainWindow.mockReturnValue({
+      isDestroyed: () => false,
+      webContents: {
+        isLoading: () => false,
+        once: vi.fn(),
+        send: mocks.send,
+      },
+    });
     mocks.cancellationTokens.length = 0;
     mocks.autoUpdater.checkForUpdates.mockResolvedValue(null);
     mocks.autoUpdater.downloadUpdate.mockResolvedValue([]);
@@ -180,6 +196,20 @@ describe("configureAutoUpdates", () => {
     expect(mocks.autoUpdater.channel).toBe("beta");
     expect(mocks.autoUpdater.allowPrerelease).toBe(true);
     expect(mocks.autoUpdater.allowDowngrade).toBe(false);
+  });
+
+  it("routes update status events only to the explicit main window", () => {
+    configureAutoUpdates();
+    mocks.send.mockClear();
+
+    const current = invokeIpc(DESKTOP_UPDATE_STATUS_GET_CHANNEL);
+    setChannel(current.channel === "beta" ? "stable" : "beta");
+
+    expect(mocks.send).toHaveBeenCalledWith(
+      DESKTOP_UPDATE_STATUS_CHANGED_CHANNEL,
+      expect.objectContaining({ state: "checking" }),
+    );
+    expect(mocks.auxiliarySend).not.toHaveBeenCalled();
   });
 
   it("keeps allowDowngrade off after switching channels", async () => {

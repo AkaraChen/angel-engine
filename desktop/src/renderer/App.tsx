@@ -32,8 +32,12 @@ function AppProviders({ children }: PropsWithChildren) {
                     <ToastProvider>
                       <TooltipProvider>
                         {children}
-                        <UpdateStatusBanner />
-                        <UpdateMessageDialog />
+                        {window.desktopWindow.role === "main" ? (
+                          <>
+                            <UpdateStatusBanner />
+                            <UpdateMessageDialog />
+                          </>
+                        ) : null}
                         <ConfirmDialogHost />
                       </TooltipProvider>
                     </ToastProvider>

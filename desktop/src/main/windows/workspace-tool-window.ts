@@ -232,6 +232,7 @@ function ensureWorkspaceToolWindow(sourceWindow?: BrowserWindow) {
       title: workspaceToolWindowTitle(),
       width: defaultBounds.width,
     },
+    role: "workspace-tool",
     stateFileName: workspaceToolWindowStateFileName,
   });
 
