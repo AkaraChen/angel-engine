@@ -15,6 +15,7 @@ export const queryKeys = {
     detail: (id: string | null) => ["chats", "detail", id] as const,
     details: () => ["chats", "detail"] as const,
     list: () => ["chats", "list"] as const,
+    metadata: (id: string | null) => ["chats", "metadata", id] as const,
     prewarm: (
       runtime: string | null,
       projectId: string | null,

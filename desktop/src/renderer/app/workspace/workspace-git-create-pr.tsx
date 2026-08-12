@@ -30,6 +30,7 @@ import {
 import { WorkspacePullRequestPreviewDialog } from "@/app/workspace/workspace-pull-request-preview";
 import { WorkspaceToolBanner } from "@/app/workspace/workspace-tool-layout";
 import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
+import { chatMetadataQueryOptions } from "@/features/chat/api/queries";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -224,10 +225,11 @@ function WorkspaceCreatePullRequestDialog({
     ? contextKey.slice("chat:".length)
     : null;
   const chatQuery = useQuery({
-    enabled: open && chatId !== null,
-    queryFn: () => api.chats.get(chatId ?? ""),
-    queryKey: queryKeys.chats.detail(chatId),
-    staleTime: 30_000,
+    ...chatMetadataQueryOptions({
+      api,
+      chatId: chatId ?? "",
+      enabled: open && chatId !== null,
+    }),
   });
   const preflightQuery = useQuery({
     enabled: open,
