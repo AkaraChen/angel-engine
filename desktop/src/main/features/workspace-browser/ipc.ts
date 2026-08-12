@@ -22,6 +22,8 @@ import {
   WORKSPACE_BROWSER_DESIGN_CAPTURE_SCREENSHOT_CHANNEL,
   WORKSPACE_BROWSER_DESIGN_GET_STATE_CHANNEL,
   WORKSPACE_BROWSER_DESIGN_SET_ALLOWED_ORIGINS_CHANNEL,
+  WORKSPACE_BROWSER_DESIGN_SET_DRAFT_CHANNEL,
+  WORKSPACE_BROWSER_DESIGN_SET_FROZEN_CHANNEL,
   WORKSPACE_BROWSER_DESIGN_START_CHANNEL,
   WORKSPACE_BROWSER_DESIGN_STOP_CHANNEL,
   WORKSPACE_BROWSER_GET_STATE_CHANNEL,
@@ -227,6 +229,22 @@ export function registerWorkspaceBrowserIpc() {
     async (_event, input: unknown) => {
       const request = designModeService.parseCommandInput(input);
       return designModeService.captureScreenshot(request.browserViewId);
+    },
+  );
+
+  ipcMain.handle(
+    WORKSPACE_BROWSER_DESIGN_SET_DRAFT_CHANNEL,
+    (_event, input: unknown) => {
+      const request = designModeService.parseSetDraftInput(input);
+      return designModeService.setDraft(request);
+    },
+  );
+
+  ipcMain.handle(
+    WORKSPACE_BROWSER_DESIGN_SET_FROZEN_CHANNEL,
+    (_event, input: unknown) => {
+      const request = designModeService.parseSetFrozenInput(input);
+      return designModeService.setFrozen(request);
     },
   );
 

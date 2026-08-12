@@ -35,6 +35,8 @@ export const DESIGN_COMPUTED_STYLE_PROPS = [
   "border-right-width",
   "border-bottom-width",
   "border-left-width",
+  "border-color",
+  "border-style",
   "border-radius",
   "box-sizing",
   "overflow",
@@ -47,6 +49,13 @@ export const DESIGN_COMPUTED_STYLE_PROPS = [
   "font-weight",
   "line-height",
   "color",
+  "text-align",
+  "background-color",
+  "opacity",
+  "box-shadow",
+  "filter",
+  "transform",
+  "transition",
 ] as const;
 
 /** Layout-focused subset used by the standard tier. */

@@ -1,11 +1,16 @@
 import type { WebContents } from "electron";
 import type {
+  DesignChange,
   DesignGuestCommand,
   DesignGuestEvent,
   DesignOutputDetail,
   DesignRuntimeEvent,
   WorkspaceBrowserDesignCaptureScreenshotOutcome,
   WorkspaceBrowserDesignSetAllowedOriginsInput,
+  WorkspaceBrowserDesignSetDraftInput,
+  WorkspaceBrowserDesignSetDraftOutcome,
+  WorkspaceBrowserDesignSetFrozenInput,
+  WorkspaceBrowserDesignSetFrozenOutcome,
   WorkspaceBrowserDesignStartInput,
   WorkspaceBrowserDesignState,
   WorkspaceBrowserDesignStartOutcome,
@@ -16,6 +21,7 @@ import { type } from "arktype";
 import { ipcMain, nativeImage } from "electron";
 
 import { normalizeDesignOutputDetail } from "../../../shared/design-mode-capture";
+import { sanitizeDesignChanges } from "../../../shared/design-mode-css";
 import {
   WORKSPACE_BROWSER_DESIGN_GUEST_COMMAND_CHANNEL,
   WORKSPACE_BROWSER_DESIGN_GUEST_EVENT_CHANNEL,
@@ -51,6 +57,21 @@ const designModeSetAllowedOriginsInput = type({
   "+": "ignore",
   browserViewId: nonEmptyTrimmedString,
   origins: type("string[]"),
+});
+
+const designModeSetDraftInput = type({
+  "+": "ignore",
+  browserViewId: nonEmptyTrimmedString,
+  changes: type({
+    property: "string",
+    value: "string",
+  }).array(),
+});
+
+const designModeSetFrozenInput = type({
+  "+": "ignore",
+  browserViewId: nonEmptyTrimmedString,
+  frozen: "boolean",
 });
 
 /**
@@ -257,6 +278,80 @@ export class WorkspaceBrowserDesignModeService {
   }
 
   /**
+   * Push sanitized CSS draft changes into the guest for live preview.
+   * No-op (with error) when Design Mode is not active.
+   */
+  setDraft(
+    input: WorkspaceBrowserDesignSetDraftInput,
+  ): WorkspaceBrowserDesignSetDraftOutcome {
+    const view = this.resolveView(input.browserViewId);
+    if (!view || view.webContents.isDestroyed()) {
+      return {
+        code: "instance-missing",
+        message: "Workspace browser instance was not created.",
+        ok: false,
+      };
+    }
+
+    const session = this.ensureSession(input.browserViewId);
+    if (!session.active) {
+      return {
+        code: "not-active",
+        message: "Design Mode is not active on this browser view.",
+        ok: false,
+      };
+    }
+
+    this.rememberWebContents(input.browserViewId, view.webContents);
+    const pageUrl = view.webContents.getURL();
+    if (!isDesignModeAllowedOrigin(pageUrl, session.allowedOrigins)) {
+      return {
+        code: "origin-not-allowed",
+        message:
+          "Design Mode is only available on localhost and registered preview origins.",
+        ok: false,
+      };
+    }
+
+    const changes = sanitizeDesignChanges(input.changes);
+    this.sendGuestCommand(view.webContents, { changes, type: "setDraft" });
+    return { changes, ok: true };
+  }
+
+  /**
+   * Freeze or unfreeze guest timers/animations while Design Mode is active.
+   * Start freezes by default; stop always unfreezes in the guest runtime.
+   */
+  setFrozen(
+    input: WorkspaceBrowserDesignSetFrozenInput,
+  ): WorkspaceBrowserDesignSetFrozenOutcome {
+    const view = this.resolveView(input.browserViewId);
+    if (!view || view.webContents.isDestroyed()) {
+      return {
+        code: "instance-missing",
+        message: "Workspace browser instance was not created.",
+        ok: false,
+      };
+    }
+
+    const session = this.ensureSession(input.browserViewId);
+    if (!session.active) {
+      return {
+        code: "not-active",
+        message: "Design Mode is not active on this browser view.",
+        ok: false,
+      };
+    }
+
+    this.rememberWebContents(input.browserViewId, view.webContents);
+    this.sendGuestCommand(view.webContents, {
+      frozen: input.frozen,
+      type: "setFrozen",
+    });
+    return { frozen: input.frozen, ok: true };
+  }
+
+  /**
    * Full-viewport PNG for Design Mode send.
    * Prefer `capturePage()`; fall back to CDP `Page.captureScreenshot`.
    */
@@ -340,6 +435,32 @@ export class WorkspaceBrowserDesignModeService {
     return {
       browserViewId: value.browserViewId,
       origins: value.origins,
+    };
+  }
+
+  parseSetDraftInput(input: unknown): WorkspaceBrowserDesignSetDraftInput {
+    const value = designModeSetDraftInput(input);
+    if (value instanceof type.errors) {
+      throw new TypeError(value.summary);
+    }
+    const changes: DesignChange[] = value.changes.map((change) => ({
+      property: change.property,
+      value: change.value,
+    }));
+    return {
+      browserViewId: value.browserViewId,
+      changes,
+    };
+  }
+
+  parseSetFrozenInput(input: unknown): WorkspaceBrowserDesignSetFrozenInput {
+    const value = designModeSetFrozenInput(input);
+    if (value instanceof type.errors) {
+      throw new TypeError(value.summary);
+    }
+    return {
+      browserViewId: value.browserViewId,
+      frozen: value.frozen,
     };
   }
 

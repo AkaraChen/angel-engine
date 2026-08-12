@@ -5,6 +5,9 @@
  * - No `contextBridge.exposeInMainWorld` — page scripts get zero Design Mode API.
  * - Runtime is dormant until main sends `start`; `stop` fully tears down.
  * - Sensitive form values never enter selection payloads (see design-mode-capture).
+ * - Draft CSS is attribute-selector + !important only; values are re-sanitized here.
+ * - Page freeze runs in the **page main world** (script injection + DOM attr),
+ *   not the isolated preload window — see design-mode-freeze.ts.
  * - Stage 2 anchors: `element` (click) + `region` (drag). No text/point yet.
  */
 import { ipcRenderer } from "electron";
@@ -15,7 +18,20 @@ import {
   pickTargetElementAtPoint,
   rectFromDomRect,
 } from "../shared/design-mode-capture";
+import {
+  DESIGN_DRAFT_STYLE_ID,
+  DESIGN_TARGET_ATTR,
+  DESIGN_TARGET_ATTR_VALUE,
+  buildDraftStyleSheet,
+  sanitizeDesignChanges,
+} from "../shared/design-mode-css";
+import {
+  PAGE_FREEZE_READY_ATTR,
+  buildMainWorldFreezeInstallScript,
+  setPageFreezeAttribute,
+} from "../shared/design-mode-freeze";
 import type {
+  DesignChange,
   DesignGuestCommand,
   DesignGuestEvent,
   DesignOutputDetail,
@@ -36,6 +52,8 @@ const DRAG_THRESHOLD_PX = 6;
 let active = false;
 let cleanup: (() => void) | undefined;
 let outputDetail: DesignOutputDetail = "standard";
+let draftChanges: DesignChange[] = [];
+let targetElement: Element | null = null;
 
 ipcRenderer.on(
   WORKSPACE_BROWSER_DESIGN_GUEST_COMMAND_CHANNEL,
@@ -55,6 +73,20 @@ ipcRenderer.on(
       outputDetail = normalizeDesignOutputDetail(command.outputDetail);
       return;
     }
+    if (command.type === "setDraft") {
+      if (!active) {
+        return;
+      }
+      applyDraftChanges(command.changes);
+      return;
+    }
+    if (command.type === "setFrozen") {
+      if (!active) {
+        return;
+      }
+      setMainWorldFrozen(command.frozen);
+      return;
+    }
     stopDesignModeRuntime();
   },
 );
@@ -64,6 +96,10 @@ function startDesignModeRuntime() {
     return;
   }
   active = true;
+  draftChanges = [];
+  targetElement = null;
+  // Freeze page timers/rAF in the **main world** (not this isolated window).
+  setMainWorldFrozen(true);
   cleanup = mountInteractiveOverlay();
   emitGuestEvent({ type: "started" });
 }
@@ -76,8 +112,80 @@ function stopDesignModeRuntime() {
   active = false;
   cleanup?.();
   cleanup = undefined;
+  clearDraftInjection();
+  clearTargetAttribute();
+  draftChanges = [];
+  targetElement = null;
+  setMainWorldFrozen(false);
   removeOverlayNodes();
   emitGuestEvent({ type: "stopped" });
+}
+
+/**
+ * Install main-world freezer once (script tag → page world), then toggle via
+ * a shared DOM attribute. No `window.*` Design Mode API is exposed to page JS.
+ */
+function setMainWorldFrozen(frozen: boolean) {
+  ensureMainWorldFreezeInstalled();
+  setPageFreezeAttribute(document.documentElement, frozen);
+}
+
+function ensureMainWorldFreezeInstalled() {
+  if (document.documentElement.hasAttribute(PAGE_FREEZE_READY_ATTR)) {
+    return;
+  }
+  const script = document.createElement("script");
+  script.textContent = buildMainWorldFreezeInstallScript();
+  // Inline classic script runs in the page main world under contextIsolation.
+  const parent = document.documentElement;
+  parent.appendChild(script);
+  script.remove();
+}
+
+function applyDraftChanges(changes: DesignChange[]) {
+  draftChanges = sanitizeDesignChanges(changes);
+  injectDraftStyleSheet(buildDraftStyleSheet(draftChanges));
+}
+
+function injectDraftStyleSheet(cssText: string) {
+  let style = document.getElementById(
+    DESIGN_DRAFT_STYLE_ID,
+  ) as HTMLStyleElement | null;
+  if (!cssText) {
+    style?.remove();
+    return;
+  }
+  if (!style) {
+    style = document.createElement("style");
+    style.id = DESIGN_DRAFT_STYLE_ID;
+    document.documentElement.append(style);
+  }
+  style.textContent = cssText;
+}
+
+function clearDraftInjection() {
+  document.getElementById(DESIGN_DRAFT_STYLE_ID)?.remove();
+}
+
+function markTargetElement(element: Element | null) {
+  clearTargetAttribute();
+  targetElement = element;
+  if (element) {
+    element.setAttribute(DESIGN_TARGET_ATTR, DESIGN_TARGET_ATTR_VALUE);
+  }
+}
+
+function clearTargetAttribute() {
+  if (targetElement?.isConnected) {
+    targetElement.removeAttribute(DESIGN_TARGET_ATTR);
+  }
+  // Also clear any stale markers left by navigation mid-session.
+  for (const node of document.querySelectorAll(
+    `[${DESIGN_TARGET_ATTR}="${DESIGN_TARGET_ATTR_VALUE}"]`,
+  )) {
+    node.removeAttribute(DESIGN_TARGET_ATTR);
+  }
+  targetElement = null;
 }
 
 /**
@@ -162,7 +270,7 @@ function mountInteractiveOverlay(): () => void {
 
   const badge = document.createElement("div");
   badge.setAttribute("data-angel-design-badge", "");
-  badge.textContent = "Design Mode · click element · drag region";
+  badge.textContent = "Design Mode · click element · drag region · page frozen";
 
   const hit = document.createElement("div");
   hit.setAttribute(HIT_ATTR, "");
@@ -184,6 +292,13 @@ function mountInteractiveOverlay(): () => void {
     }
     if (!document.documentElement.contains(root)) {
       document.documentElement.append(root);
+    }
+    // Keep draft style node attached after mutations.
+    if (
+      draftChanges.length > 0 &&
+      !document.getElementById(DESIGN_DRAFT_STYLE_ID)
+    ) {
+      injectDraftStyleSheet(buildDraftStyleSheet(draftChanges));
     }
   };
   attach();
@@ -269,6 +384,10 @@ function mountInteractiveOverlay(): () => void {
         event.clientY,
       );
       if (rect.width >= 2 && rect.height >= 2) {
+        // Region selections have no single target element for CSS draft.
+        markTargetElement(null);
+        draftChanges = [];
+        clearDraftInjection();
         emitGuestEvent({
           anchor: { kind: "region", rect },
           type: "selection",
@@ -281,6 +400,10 @@ function mountInteractiveOverlay(): () => void {
       hit.style.pointerEvents = "auto";
       if (target) {
         const element = captureDesignElement(target, outputDetail);
+        // Reset draft on each pick so the inspector matches the new element.
+        draftChanges = [];
+        clearDraftInjection();
+        markTargetElement(target);
         emitGuestEvent({
           anchor: {
             kind: "element",
@@ -431,6 +554,34 @@ function parseGuestCommand(payload: unknown): DesignGuestCommand | null {
       type: "setOutputDetail",
       outputDetail: normalizeDesignOutputDetail(detail),
     };
+  }
+  if (type === "setDraft") {
+    const changes = (payload as { changes?: unknown }).changes;
+    if (!Array.isArray(changes)) {
+      return null;
+    }
+    const parsed: DesignChange[] = [];
+    for (const entry of changes) {
+      if (
+        typeof entry === "object" &&
+        entry !== null &&
+        typeof (entry as { property?: unknown }).property === "string" &&
+        typeof (entry as { value?: unknown }).value === "string"
+      ) {
+        parsed.push({
+          property: (entry as DesignChange).property,
+          value: (entry as DesignChange).value,
+        });
+      }
+    }
+    return { type: "setDraft", changes: parsed };
+  }
+  if (type === "setFrozen") {
+    const frozen = (payload as { frozen?: unknown }).frozen;
+    if (typeof frozen !== "boolean") {
+      return null;
+    }
+    return { type: "setFrozen", frozen };
   }
   return null;
 }

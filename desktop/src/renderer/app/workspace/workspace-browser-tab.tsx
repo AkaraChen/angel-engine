@@ -22,6 +22,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { DesignModeCssInspector } from "@/app/workspace/design-mode-css-inspector";
 import { buildDesignSendPackage } from "@/app/workspace/design-mode-send";
 import { DesignModeSendPanel } from "@/app/workspace/design-mode-send-panel";
 import {
@@ -387,7 +388,53 @@ export function WorkspaceBrowserTabContent({
     setSelectionDraft(null);
     setSendError(null);
     setCapturingSelection(false);
-  }, []);
+    // Clear guest draft stylesheet so the page no longer shows preview overrides.
+    void window.workspaceBrowser
+      .setDesignDraft({
+        browserViewId: tab.browserViewId,
+        changes: [],
+      })
+      .catch(() => {
+        // Best-effort: Design Mode may already be stopped.
+      });
+  }, [tab.browserViewId]);
+
+  const handleDraftChanges = useCallback(
+    (changes: NonNullable<DesignSelectionDraft["changes"]>) => {
+      setSelectionDraft((current) => {
+        if (!current) {
+          return current;
+        }
+        return { ...current, changes };
+      });
+      void window.workspaceBrowser
+        .setDesignDraft({
+          browserViewId: tab.browserViewId,
+          changes,
+        })
+        .then((result) => {
+          if (!result.ok) {
+            setSendError(result.message);
+            return;
+          }
+          // Keep host draft aligned with sanitized list applied by main.
+          setSelectionDraft((current) => {
+            if (!current) {
+              return current;
+            }
+            return { ...current, changes: result.changes };
+          });
+        })
+        .catch((error: unknown) => {
+          setSendError(
+            error instanceof Error
+              ? error.message
+              : "Failed to apply design draft preview.",
+          );
+        });
+    },
+    [tab.browserViewId],
+  );
 
   const handleDesignSend = useCallback(
     async ({
@@ -611,6 +658,14 @@ export function WorkspaceBrowserTabContent({
           />
         )}
       </form>
+      {selectionDraft?.element ? (
+        <DesignModeCssInspector
+          changes={selectionDraft.changes ?? []}
+          computedStyles={selectionDraft.element.computedStyles}
+          disabled={sending}
+          onChangesChange={handleDraftChanges}
+        />
+      ) : null}
       {selectionDraft ? (
         <DesignModeSendPanel
           busy={sending || capturingSelection}

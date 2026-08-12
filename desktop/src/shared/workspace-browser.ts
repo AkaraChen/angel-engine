@@ -30,6 +30,18 @@ export const WORKSPACE_BROWSER_DESIGN_GET_STATE_CHANNEL =
  */
 export const WORKSPACE_BROWSER_DESIGN_CAPTURE_SCREENSHOT_CHANNEL =
   "workspace-browser:design:capture-screenshot";
+/**
+ * Host → main: push CSS draft changes into the guest page for live preview.
+ * Draft only — never written to disk; cleared when Design Mode stops.
+ */
+export const WORKSPACE_BROWSER_DESIGN_SET_DRAFT_CHANNEL =
+  "workspace-browser:design:set-draft";
+/**
+ * Host → main: freeze or unfreeze the guest page (timers + animations).
+ * Design Mode start freezes by default; stop always unfreezes.
+ */
+export const WORKSPACE_BROWSER_DESIGN_SET_FROZEN_CHANNEL =
+  "workspace-browser:design:set-frozen";
 
 /**
  * Main → guest preload: start/stop commands for the design-mode runtime.
@@ -239,7 +251,11 @@ export type DesignGuestEvent =
 export type DesignGuestCommand =
   | { outputDetail?: DesignOutputDetail; type: "start" }
   | { type: "stop" }
-  | { outputDetail: DesignOutputDetail; type: "setOutputDetail" };
+  | { outputDetail: DesignOutputDetail; type: "setOutputDetail" }
+  /** Replace the draft stylesheet (empty list clears injection). */
+  | { changes: DesignChange[]; type: "setDraft" }
+  /** Freeze or unfreeze page timers/animations while Design Mode is active. */
+  | { frozen: boolean; type: "setFrozen" };
 
 export interface WorkspaceBrowserDesignStartInput
   extends WorkspaceBrowserCommandInput {
@@ -252,6 +268,25 @@ export interface WorkspaceBrowserDesignStopInput
 
 export interface WorkspaceBrowserDesignCaptureScreenshotInput
   extends WorkspaceBrowserCommandInput {}
+
+export interface WorkspaceBrowserDesignSetDraftInput
+  extends WorkspaceBrowserCommandInput {
+  /** Draft CSS changes for live preview (sanitized in main + guest). */
+  changes: DesignChange[];
+}
+
+export interface WorkspaceBrowserDesignSetFrozenInput
+  extends WorkspaceBrowserCommandInput {
+  frozen: boolean;
+}
+
+export type WorkspaceBrowserDesignSetDraftOutcome =
+  | { changes: DesignChange[]; ok: true }
+  | { code: DesignModeErrorCode; message: string; ok: false };
+
+export type WorkspaceBrowserDesignSetFrozenOutcome =
+  | { frozen: boolean; ok: true }
+  | { code: DesignModeErrorCode; message: string; ok: false };
 
 /**
  * Full-viewport screenshot for Design Mode send.
@@ -347,6 +382,17 @@ export interface WorkspaceBrowserApi {
   setDesignAllowedOrigins: (
     input: WorkspaceBrowserDesignSetAllowedOriginsInput,
   ) => Promise<WorkspaceBrowserDesignState>;
+  /**
+   * Push CSS draft changes into the guest for live preview.
+   * Returns the sanitized change list actually applied.
+   */
+  setDesignDraft: (
+    input: WorkspaceBrowserDesignSetDraftInput,
+  ) => Promise<WorkspaceBrowserDesignSetDraftOutcome>;
+  /** Freeze/unfreeze guest timers and animations while Design Mode is active. */
+  setDesignFrozen: (
+    input: WorkspaceBrowserDesignSetFrozenInput,
+  ) => Promise<WorkspaceBrowserDesignSetFrozenOutcome>;
   startDesignMode: (
     input: WorkspaceBrowserDesignStartInput,
   ) => Promise<WorkspaceBrowserDesignStartOutcome>;

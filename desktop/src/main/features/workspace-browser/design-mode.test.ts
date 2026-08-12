@@ -64,6 +64,53 @@ describe("WorkspaceBrowserDesignModeService", () => {
     );
   });
 
+  it("sanitizes draft CSS and forwards setDraft only while active", () => {
+    const webContents = createMockWebContents("http://localhost:5173/");
+    views.set("view-1", { browserViewId: "view-1", webContents });
+
+    const inactive = service.setDraft({
+      browserViewId: "view-1",
+      changes: [{ property: "color", value: "red" }],
+    });
+    expect(inactive.ok).toBe(false);
+    if (!inactive.ok) {
+      expect(inactive.code).toBe("not-active");
+    }
+
+    expect(service.start("view-1").ok).toBe(true);
+    webContents.send.mockClear();
+
+    const applied = service.setDraft({
+      browserViewId: "view-1",
+      changes: [
+        { property: "color", value: "red" },
+        { property: "background-color", value: "url(https://evil.example)" },
+      ],
+    });
+    expect(applied.ok).toBe(true);
+    if (applied.ok) {
+      expect(applied.changes).toEqual([{ property: "color", value: "red" }]);
+    }
+    expect(webContents.send).toHaveBeenCalledWith(
+      "workspace-browser:design:guest-command",
+      {
+        changes: [{ property: "color", value: "red" }],
+        type: "setDraft",
+      },
+    );
+
+    webContents.send.mockClear();
+    const frozen = service.setFrozen({
+      browserViewId: "view-1",
+      frozen: false,
+    });
+    expect(frozen.ok).toBe(true);
+    expect(webContents.send).toHaveBeenCalledWith(
+      "workspace-browser:design:guest-command",
+      { frozen: false, type: "setFrozen" },
+    );
+  });
+
   it("starts and stops on localhost and tears down guest on stop", () => {
     const webContents = createMockWebContents("http://localhost:5173/");
     views.set("view-1", { browserViewId: "view-1", webContents });
