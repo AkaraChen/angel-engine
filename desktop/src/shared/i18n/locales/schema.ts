@@ -1262,6 +1262,7 @@ export interface LocaleResourceTranslationProjectImport {
   clone: string;
   cloneTo: string;
   description: string;
+  discoveryUnavailable: string;
   failedTitle: string;
   forkBadge: string;
   loadingOwners: string;

@@ -1009,6 +1009,7 @@ export const zhTW = {
       clone: "複製",
       cloneTo: "正在複製到 {{path}}",
       description: "從 GitHub 選擇儲存庫，或貼上 git 網址。",
+      discoveryUnavailable: "瀏覽儲存庫需要已啟用的原始碼控制提供者。",
       failedTitle: "複製失敗",
       forkBadge: "分支複製",
       loadingOwners: "正在載入帳戶…",

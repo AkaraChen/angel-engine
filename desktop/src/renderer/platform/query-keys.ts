@@ -26,9 +26,6 @@ export const queryKeys = {
   github: {
     pullRequest: (cwd: string | null) =>
       ["github", "pull-request-status", cwd] as const,
-    repositories: (owner: string | null) =>
-      ["github", "repositories", owner] as const,
-    repositoryOwners: () => ["github", "repository-owners"] as const,
   },
   sourceControl: {
     all: () => ["source-control"] as const,

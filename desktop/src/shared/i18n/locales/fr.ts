@@ -1070,6 +1070,8 @@ export const fr = {
       clone: "Cloner",
       cloneTo: "Clonage vers {{path}}",
       description: "Choisissez un dépôt GitHub ou collez une URL git.",
+      discoveryUnavailable:
+        "La navigation des dépôts nécessite un fournisseur de gestion de code source actif.",
       failedTitle: "Échec du clonage",
       forkBadge: "Fork",
       loadingOwners: "Chargement des comptes…",

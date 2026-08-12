@@ -1061,6 +1061,8 @@ export const ja = {
       clone: "クローン",
       cloneTo: "{{path}} にクローンしています",
       description: "GitHub からリポジトリを選ぶか、git URL を貼り付けます。",
+      discoveryUnavailable:
+        "リポジトリを参照するには、有効なソース管理プロバイダーが必要です。",
       failedTitle: "クローンに失敗しました",
       forkBadge: "フォーク",
       loadingOwners: "アカウントを読み込んでいます…",

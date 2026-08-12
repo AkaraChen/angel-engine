@@ -244,7 +244,6 @@ export const WorkspaceCommandPalette: FC<WorkspaceCommandPaletteProps> = ({
     toast,
     toolContext.chatId,
     toolContext.contextKey,
-    toolContext.projectId,
     toolContext.root,
     updateWorkspaceToolSnapshot,
   ]);

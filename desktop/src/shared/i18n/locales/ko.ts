@@ -1045,6 +1045,8 @@ export const ko = {
       clone: "클론",
       cloneTo: "{{path}} 에 클론하는 중",
       description: "GitHub에서 저장소를 고르거나 git URL을 붙여 넣으세요.",
+      discoveryUnavailable:
+        "저장소를 탐색하려면 활성 소스 제어 공급자가 필요합니다.",
       failedTitle: "클론 실패",
       forkBadge: "포크",
       loadingOwners: "계정을 불러오는 중…",

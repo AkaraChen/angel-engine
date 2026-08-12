@@ -1061,6 +1061,8 @@ export const es = {
       clone: "Clonar",
       cloneTo: "Clonando en {{path}}",
       description: "Elige un repositorio de GitHub o pega una URL de git.",
+      discoveryUnavailable:
+        "Para explorar repositorios se necesita un proveedor de control de código fuente activo.",
       failedTitle: "Error al clonar",
       forkBadge: "Bifurcación",
       loadingOwners: "Cargando cuentas…",

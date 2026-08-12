@@ -1008,6 +1008,7 @@ export const zhCN = {
       clone: "克隆",
       cloneTo: "正在克隆到 {{path}}",
       description: "从 GitHub 选择仓库，或粘贴 git 地址。",
+      discoveryUnavailable: "浏览仓库需要已激活的源码控制提供方。",
       failedTitle: "克隆失败",
       forkBadge: "复刻",
       loadingOwners: "正在加载账户…",

@@ -1053,6 +1053,8 @@ export const en = {
       clone: "Clone",
       cloneTo: "Cloning into {{path}}",
       description: "Pick a repository from GitHub, or paste a git URL.",
+      discoveryUnavailable:
+        "Repository browsing requires an active source control provider.",
       failedTitle: "Clone failed",
       forkBadge: "Fork",
       loadingOwners: "Loading accounts…",

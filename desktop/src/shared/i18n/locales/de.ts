@@ -1069,6 +1069,8 @@ export const de = {
       cloneTo: "Klonen nach {{path}}",
       description:
         "Wähle ein Repository auf GitHub oder füge eine Git-URL ein.",
+      discoveryUnavailable:
+        "Zum Durchsuchen von Repositories ist ein aktiver Quellcodeverwaltungsanbieter erforderlich.",
       failedTitle: "Klonen fehlgeschlagen",
       forkBadge: "Fork",
       loadingOwners: "Konten werden geladen…",

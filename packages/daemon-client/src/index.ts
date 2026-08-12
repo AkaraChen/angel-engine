@@ -141,6 +141,8 @@ import type {
   CreateChangeRequestWorkspaceResult,
   MergeMethod,
   PublishBranchResult,
+  RepositoryIdentity,
+  RepositoryNamespace,
   ReviewThread,
   ResolvedSourceControlLink,
   SourceControlActivationResult,
@@ -782,6 +784,32 @@ export function createDaemonClient(options: DaemonClientOptions) {
         request<ResolvedSourceControlLink>(
           "/api/source-control/links/resolve",
           json("POST", { projectPath, url }),
+        ),
+      listNamespaces: (
+        projectPath: string,
+        queryText?: string,
+        limit?: number,
+      ) =>
+        request<readonly RepositoryNamespace[]>(
+          `/api/source-control/namespaces?${query({
+            limit,
+            projectPath,
+            query: queryText,
+          })}`,
+        ),
+      listRepositories: (
+        projectPath: string,
+        namespace: readonly string[],
+        queryText?: string,
+        limit?: number,
+      ) =>
+        request<readonly RepositoryIdentity[]>(
+          `/api/source-control/repositories?${query({
+            limit,
+            namespace: namespace.join("/"),
+            projectPath,
+            query: queryText,
+          })}`,
         ),
       changeRequestPreflight: (projectPath: string, targetBranch?: string) =>
         request<ChangeRequestCreatePreflightResult>(
