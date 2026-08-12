@@ -4,7 +4,7 @@ import path from "node:path";
 import { Effect } from "effect";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { discoverPullRequestTemplates } from "./pr-template";
+import { discoverPullRequestTemplates } from "./change-request-templates";
 
 const tempDirs: string[] = [];
 

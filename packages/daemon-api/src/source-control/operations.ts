@@ -165,6 +165,7 @@ export interface ResolveReviewThreadInput extends RepositoryOperationInput {
 }
 
 export interface PublishBranchInput extends RepositoryOperationInput {
+  projectPath: string;
   localBranch: string;
   remoteName: string;
   forceWithLease: boolean;
@@ -442,6 +443,7 @@ export const sourceControlOperationSchemas = {
     input: arkType({
       "+": "reject",
       repository: repositoryIdentitySchema,
+      projectPath: "string > 0",
       localBranch: "string > 0",
       remoteName: "string > 0",
       forceWithLease: "boolean",

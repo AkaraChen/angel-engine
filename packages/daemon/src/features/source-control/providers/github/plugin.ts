@@ -7,6 +7,7 @@ import type {
   RemoteDescriptor,
   SourceControlProviderPlugin,
 } from "@angel-engine/daemon-api/source-control";
+import { executeGit, type LocalGitRunner } from "../../local-git/backend";
 
 import {
   extractProcessOutput,
@@ -26,10 +27,15 @@ import {
   parseGitHubUrl,
 } from "./internal/resolve";
 import {
+  commentOnGitHubChangeRequest,
+  createGitHubChangeRequest,
   getGitHubChangeRequest,
   getGitHubChangeRequestByUrl,
   getGitHubChangeRequestStatus,
   listGitHubChangeRequests,
+  mergeGitHubChangeRequest,
+  preflightGitHubChangeRequest,
+  publishGitHubBranch,
   resolveGitHubChangeRequestHead,
 } from "./internal/change-requests";
 
@@ -39,6 +45,7 @@ const PUBLIC_HOSTS = new Set(["github.com", "www.github.com"]);
 interface GitHubPluginDependencies {
   findGh?: () => Promise<string | null>;
   runGh?: GhRunner;
+  runGit?: LocalGitRunner;
 }
 
 function remoteHost(remoteUrl: string): string | null {
@@ -166,6 +173,7 @@ export function createGitHubPlugin(
   const resolvedDependencies: Required<GitHubPluginDependencies> = {
     findGh: dependencies.findGh ?? findGhPath,
     runGh: dependencies.runGh ?? runGhCli,
+    runGit: dependencies.runGit ?? executeGit,
   };
   return {
     manifest: {
@@ -182,6 +190,11 @@ export function createGitHubPlugin(
         "changeRequests.list",
         "changeRequests.status",
         "changeRequests.resolveHead",
+        "changeRequests.create",
+        "changeRequests.comment",
+        "changeRequests.merge",
+        "changeRequests.preflight",
+        "branches.publish",
         "workItems.get",
         "workItems.getByUrl",
         "workItems.list",
@@ -214,11 +227,15 @@ export function createGitHubPlugin(
           ? null
           : { repository, id: String(parsed.number) };
       },
+      publishBranch: (input, context) =>
+        publishGitHubBranch(input, context, resolvedDependencies),
     },
     repositories: {
       parseUrl: parseGitHubRepositoryUrl,
     },
     changeRequests: {
+      create: (input, context) =>
+        createGitHubChangeRequest(input, context, resolvedDependencies),
       get: (input, context) =>
         getGitHubChangeRequest(input, context, resolvedDependencies),
       getByUrl: (input, context) =>
@@ -229,6 +246,12 @@ export function createGitHubPlugin(
         getGitHubChangeRequestStatus(input, context, resolvedDependencies),
       resolveHead: (input, context) =>
         resolveGitHubChangeRequestHead(input, context, resolvedDependencies),
+      comment: (input, context) =>
+        commentOnGitHubChangeRequest(input, context, resolvedDependencies),
+      merge: (input, context) =>
+        mergeGitHubChangeRequest(input, context, resolvedDependencies),
+      preflight: (input, context) =>
+        preflightGitHubChangeRequest(input, context, resolvedDependencies),
     },
     workItems: {
       get: (input, context) =>

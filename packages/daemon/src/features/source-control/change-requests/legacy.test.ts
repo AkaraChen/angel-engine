@@ -1,14 +1,14 @@
 import { Effect } from "effect";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { Db } from "../../platform/db";
-import { createGhRunner, type GhExecutor } from "./gh-cli";
+import { Db } from "../../../platform/db";
+import { createGhRunner, type GhExecutor } from "../../github/gh-cli";
 import {
   createPullRequest,
   type GitRunner,
   pullRequestPreflight,
   pullRequestTitleFromBranch,
-} from "./pull-request-create";
+} from "./legacy";
 
 const testDb = new Db({ database: Effect.die("Database must not be used.") });
 const ansi = (value: string) => `\u001B[1;37m${value}\u001B[0m`;
@@ -55,11 +55,26 @@ function gitRunner(calls: string[][] = []): GitRunner {
 }
 
 const pr = {
+  additions: 12,
+  author: { login: "alice" },
   baseRefName: "main",
+  body: "Body",
+  changedFiles: 2,
+  commits: [{ oid: "abc" }],
   createdAt: "2026-08-09T00:00:00Z",
+  deletions: 3,
   headRefName: "feature/create-pr",
+  headRefOid: "abc",
+  headRepository: {
+    nameWithOwner: "acme/widgets",
+    url: "https://github.com/acme/widgets",
+  },
   isDraft: false,
+  mergeable: "MERGEABLE",
+  mergeStateStatus: "CLEAN",
+  mergedAt: null,
   number: 42,
+  reviewDecision: "APPROVED",
   state: "OPEN",
   title: "Create pull requests",
   updatedAt: "2026-08-09T00:00:00Z",

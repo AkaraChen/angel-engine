@@ -405,4 +405,108 @@ describe("GitHub source-control provider", () => {
       createGitHubPlugin().git.parseChangeRequestUrl(issue.url),
     ).toBeNull();
   });
+
+  it("creates, comments, merges, preflights, and publishes through generic capabilities", async () => {
+    const ghCalls: string[][] = [];
+    const gitCalls: { args: readonly string[]; cwd: string }[] = [];
+    const plugin = createGitHubPlugin({
+      findGh: async () => "/usr/bin/gh",
+      runGh: async (args) => {
+        ghCalls.push(args);
+        if (args[0] === "repo") {
+          return {
+            stderr: "",
+            stdout: JSON.stringify({ defaultBranchRef: { name: "main" } }),
+          };
+        }
+        if (args[1] === "create") {
+          return {
+            stderr: "",
+            stdout: JSON.stringify({ number: 7, url: pullRequest.url }),
+          };
+        }
+        if (args[1] === "comment" || args[1] === "merge") {
+          return { stderr: "", stdout: "" };
+        }
+        if (args.includes("comments")) {
+          return {
+            stderr: "",
+            stdout: JSON.stringify({
+              comments: [
+                {
+                  author: { login: "alice" },
+                  body: "Looks good",
+                  createdAt: "2026-07-20T11:00:00Z",
+                  id: "comment-1",
+                  url: `${pullRequest.url}#issuecomment-1`,
+                },
+              ],
+            }),
+          };
+        }
+        return { stderr: "", stdout: JSON.stringify(pullRequest) };
+      },
+      runGit: async (cwd, args) => {
+        gitCalls.push({ args, cwd });
+        return { stderr: "", stdout: "" };
+      },
+    });
+
+    await expect(
+      plugin.changeRequests?.create?.(
+        {
+          body: "Body",
+          draft: true,
+          repository,
+          sourceBranch: "feature",
+          targetBranch: "main",
+          title: "Improve widgets",
+        },
+        operationContext(),
+      ),
+    ).resolves.toMatchObject({ id: "7", source: { name: "feature" } });
+    await expect(
+      plugin.changeRequests?.comment?.(
+        { body: "Looks good", id: "7", repository },
+        operationContext(),
+      ),
+    ).resolves.toMatchObject({ body: "Looks good", id: "comment-1" });
+    await expect(
+      plugin.changeRequests?.merge?.(
+        { id: "7", method: "squash", repository },
+        operationContext(),
+      ),
+    ).resolves.toMatchObject({ id: "7" });
+    await expect(
+      plugin.changeRequests?.preflight?.(
+        { repository, sourceBranch: "feature", targetBranch: null },
+        operationContext(),
+      ),
+    ).resolves.toMatchObject({ targetBranch: "main" });
+    await expect(
+      plugin.git.publishBranch?.(
+        {
+          forceWithLease: false,
+          localBranch: "feature",
+          projectPath: "/repos/widgets",
+          remoteName: "origin",
+          repository,
+        },
+        operationContext(),
+      ),
+    ).resolves.toEqual({ remoteName: "origin", remoteRef: "feature" });
+
+    expect(ghCalls).toEqual(
+      expect.arrayContaining([
+        expect.arrayContaining(["pr", "create", "--repo", "acme/widgets"]),
+        ["pr", "merge", "7", "--repo", "acme/widgets", "--squash"],
+      ]),
+    );
+    expect(gitCalls).toEqual([
+      {
+        args: ["push", "-u", "origin", "feature"],
+        cwd: "/repos/widgets",
+      },
+    ]);
+  });
 });

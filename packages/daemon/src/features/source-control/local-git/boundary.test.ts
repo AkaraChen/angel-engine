@@ -23,7 +23,6 @@ describe("LocalGitBackend boundary", () => {
       .sort();
 
     expect(matches).toEqual([
-      "features/github/pull-request-create.ts",
       "features/projects/clone.ts",
       "features/source-control/local-git/backend.ts",
     ]);
