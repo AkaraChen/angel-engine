@@ -65,7 +65,11 @@ export function HostedSourceControlPanel({
         <WorkspaceToolEmpty
           detail={detail}
           icon={GitPullRequest}
-          title={t("workspace.tools.pullRequest.hostedFallback.title")}
+          title={t(
+            sourceControl.status === "ambiguous"
+              ? "workspace.tools.pullRequest.hostedFallback.ambiguousTitle"
+              : "workspace.tools.pullRequest.hostedFallback.title",
+          )}
         />
         {sourceControl.status === "ambiguous" ? (
           <div className="flex w-full flex-col gap-2 text-left">

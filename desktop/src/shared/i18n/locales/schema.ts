@@ -274,6 +274,7 @@ export interface LocaleResourceTranslationWorkspaceToolsChangeRequest {
   generalComment: string;
   hostedFallback: {
     ambiguousDetail: string;
+    ambiguousTitle: string;
     apply: string;
     configure: string;
     configuredProviderMissing: string;

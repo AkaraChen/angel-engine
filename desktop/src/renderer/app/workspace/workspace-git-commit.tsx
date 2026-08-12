@@ -98,6 +98,8 @@ export function useWorkspaceGitPanelState(
     onSuccess: invalidateGit,
   });
   const pullMutation = useMutation({
+    // source-control-boundary-audit: syncs an already-selected upstream only;
+    // remote selection and first publication stay provider-owned.
     mutationFn: async () => api.workspaceTools.gitPull({ root }),
     onSuccess: invalidateGit,
   });

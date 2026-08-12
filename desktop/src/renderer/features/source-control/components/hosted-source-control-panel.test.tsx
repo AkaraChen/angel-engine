@@ -115,6 +115,11 @@ describe("HostedSourceControlPanel", () => {
     });
 
     renderPanel(<BusinessContent onRequest={businessRequest} />);
+    expect(
+      screen.getByText(
+        "workspace.tools.pullRequest.hostedFallback.ambiguousTitle",
+      ),
+    ).toBeDefined();
     fireEvent.change(
       screen.getByLabelText(
         "workspace.tools.pullRequest.hostedFallback.remoteLabel",
