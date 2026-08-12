@@ -2,13 +2,13 @@ import { createInstance } from "i18next";
 import { describe, expect, it } from "vitest";
 
 import {
-  pullRequestEn,
-  pullRequestJa,
-  pullRequestKo,
-  pullRequestZhTW,
-} from "./pull-request";
+  changeRequestEn,
+  changeRequestJa,
+  changeRequestKo,
+  changeRequestZhTW,
+} from "./change-request";
 
-describe("pull request translations", () => {
+describe("change request translations", () => {
   it.each([
     {
       count: 1,
@@ -34,32 +34,34 @@ describe("pull request translations", () => {
     const i18n = createInstance();
     await i18n.init({
       lng: "en",
-      resources: { en: { translation: { pullRequest: pullRequestEn } } },
+      resources: { en: { translation: { changeRequest: changeRequestEn } } },
     });
 
     expect(
-      i18n.t(`pullRequest.${testCase.key}`, {
+      i18n.t(`changeRequest.${testCase.key}`, {
         count: testCase.count,
         names: testCase.count === 1 ? "build" : "build, test",
       }),
     ).toBe(testCase.expected);
   });
 
-  it("keeps Traditional Chinese pull request copy independent", () => {
-    expect(pullRequestZhTW.archive).toBe("封存此工作區");
-    expect(pullRequestZhTW.blockers.conflict).toBe("此提取要求存在合併衝突。");
+  it("keeps Traditional Chinese change request copy independent", () => {
+    expect(changeRequestZhTW.archive).toBe("封存此工作區");
+    expect(changeRequestZhTW.blockers.conflict).toBe(
+      "此變更要求存在合併衝突。",
+    );
   });
 
   it.each([
     {
       expected: "必須チェック 1 件が失敗しました：build。",
       language: "ja",
-      resource: pullRequestJa,
+      resource: changeRequestJa,
     },
     {
       expected: "필수 검사 1개 실패: build.",
       language: "ko",
-      resource: pullRequestKo,
+      resource: changeRequestKo,
     },
   ])("uses the CLDR other branch for $language", async (testCase) => {
     const i18n = createInstance();
@@ -67,13 +69,13 @@ describe("pull request translations", () => {
       lng: testCase.language,
       resources: {
         [testCase.language]: {
-          translation: { pullRequest: testCase.resource },
+          translation: { changeRequest: testCase.resource },
         },
       },
     });
 
     expect(
-      i18n.t("pullRequest.blockers.checksFailed", {
+      i18n.t("changeRequest.blockers.checksFailed", {
         count: 1,
         names: "build",
       }),

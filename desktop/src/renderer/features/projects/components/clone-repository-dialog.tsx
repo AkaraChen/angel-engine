@@ -104,7 +104,7 @@ export function CloneRepositoryDialog({
               active={activeTab === "provider"}
               label={
                 sourceControl.providerDisplayName ??
-                t("projectImport.tabGitHub")
+                t("projectImport.tabSourceControl")
               }
               onSelect={() => setTab("provider")}
             />

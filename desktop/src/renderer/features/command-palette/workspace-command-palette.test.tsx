@@ -89,7 +89,7 @@ const activation = {
     },
   },
   projectPath: "/tmp/repo-1",
-  providerIdentity: "github:github.com/acme/widgets:1",
+  providerIdentity: "forge:forge.com/acme/widgets:1",
   status: "active" as "active" | "unresolved",
 };
 
@@ -223,7 +223,7 @@ beforeEach(() => {
     repository: { name: "widgets", namespace: ["acme"] },
     source: { name: "feature" },
     state: "open",
-    webUrl: "https://github.com/acme/widgets/pull/1",
+    webUrl: "https://forge.com/acme/widgets/pull/1",
   };
   currentChangeRequest.mockResolvedValue({
     changeRequest,
@@ -318,7 +318,7 @@ describe("WorkspaceCommandPalette", () => {
 
     await openPaletteViaCommand();
     await act(async () => {
-      fireEvent.click(screen.getByText("ui.commandShepherdPr"));
+      fireEvent.click(screen.getByText("ui.commandShepherdChangeRequest"));
     });
 
     await waitFor(() => {
@@ -332,7 +332,7 @@ describe("WorkspaceCommandPalette", () => {
     expect(currentChangeRequest).toHaveBeenCalledWith("/tmp/repo-1");
     expect(resolveLink).toHaveBeenCalledWith(
       "/tmp/repo-1",
-      "https://github.com/acme/widgets/pull/1",
+      "https://forge.com/acme/widgets/pull/1",
     );
     expect(updateWorkspaceToolSnapshot).toHaveBeenCalled();
   });
@@ -350,7 +350,7 @@ describe("WorkspaceCommandPalette", () => {
 
     await openPaletteViaCommand();
     await act(async () => {
-      fireEvent.click(screen.getByText("ui.commandShepherdPr"));
+      fireEvent.click(screen.getByText("ui.commandShepherdChangeRequest"));
     });
     await waitFor(() => {
       expect(startShepherd).toHaveBeenCalledWith(
@@ -393,7 +393,7 @@ describe("WorkspaceCommandPalette", () => {
 
     await openPaletteViaCommand();
     await act(async () => {
-      fireEvent.click(screen.getByText("ui.commandShepherdPr"));
+      fireEvent.click(screen.getByText("ui.commandShepherdChangeRequest"));
     });
 
     await waitFor(() => {
@@ -422,7 +422,7 @@ describe("WorkspaceCommandPalette", () => {
 
     await openPaletteViaCommand();
     await act(async () => {
-      fireEvent.click(screen.getByText("ui.commandShepherdPr"));
+      fireEvent.click(screen.getByText("ui.commandShepherdChangeRequest"));
     });
 
     await waitFor(() => expect(toast).toHaveBeenCalled());

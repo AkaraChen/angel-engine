@@ -23,10 +23,6 @@ export const queryKeys = {
     runtimeConfig: (runtime: string | null, cwd: string | null) =>
       ["chats", "runtime-config", runtime, cwd] as const,
   },
-  github: {
-    pullRequest: (cwd: string | null) =>
-      ["github", "pull-request-status", cwd] as const,
-  },
   sourceControl: {
     all: () => ["source-control"] as const,
     activation: (projectId: string | null) =>

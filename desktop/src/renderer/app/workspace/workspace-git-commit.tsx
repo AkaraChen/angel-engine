@@ -97,10 +97,6 @@ export function useWorkspaceGitPanelState(
     },
     onSuccess: invalidateGit,
   });
-  const pullMutation = useMutation({
-    mutationFn: async () => api.workspaceTools.gitPull({ root }),
-    onSuccess: invalidateGit,
-  });
   const checkoutMutation = useMutation({
     mutationFn: async (branch: string) =>
       api.workspaceTools.gitCheckout({ branch, root }),
@@ -141,7 +137,6 @@ export function useWorkspaceGitPanelState(
     commitSummary,
     gitQuery,
     handleFileSelectedChange,
-    pullMutation,
     publishCapabilities: activation.capabilities,
     publishProviderActive: activation.status === "active",
     refetchActivation: activation.refetch,

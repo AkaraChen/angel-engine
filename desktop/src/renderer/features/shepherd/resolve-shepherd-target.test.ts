@@ -43,7 +43,7 @@ const changeRequest = {
 } satisfies ChangeRequest;
 
 describe("resolveShepherdTarget", () => {
-  it("resolves a non-GitHub change-request URL through source control", async () => {
+  it("resolves a non-Forge change-request URL through source control", async () => {
     const resolveLink = vi.fn().mockResolvedValue(changeRequest);
     const result = await resolveShepherdTarget({
       api: { sourceControl: { resolveLink } } as never,

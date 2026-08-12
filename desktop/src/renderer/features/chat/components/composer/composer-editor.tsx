@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import type { ComposerEditorController } from "@/features/chat/components/composer/use-composer-editor";
 import {
-  GithubLogo,
   Globe,
+  LinkSimple,
   SpinnerGap as Loader2,
   Terminal as TerminalIcon,
   WarningCircle,
@@ -231,7 +231,7 @@ function ComposerEditorHeader({
         return (
           <ChatAttachmentTile
             className="max-w-64"
-            fallbackIcon={<GithubLogo className="size-4" weight="duotone" />}
+            fallbackIcon={<LinkSimple className="size-4" weight="duotone" />}
             key={item.id}
             name={name}
             onRemove={() => onRemoveSourceControlAttachment(item.id)}
@@ -241,8 +241,8 @@ function ComposerEditorHeader({
               item.providerId === "linear"
                 ? t("composer.linearIssue")
                 : item.kind === "workItem"
-                  ? t("composer.githubIssue")
-                  : t("composer.githubPullRequest")
+                  ? t("composer.workItem")
+                  : t("composer.changeRequest")
             }
           />
         );

@@ -1,20 +1,14 @@
 import type {
   ChangeRequest,
   ChangeRequestStatusResult,
+  CheckSummary,
   MergeMethod,
 } from "@angel-engine/daemon-api/source-control";
-import type {
-  GitHubPullRequestCheck,
-  GitHubPullRequestStatus,
-} from "@angel-engine/daemon-api/github";
 import type { QueryClient } from "@tanstack/react-query";
 import type { ApiClient } from "@/platform/api-client";
 import is from "@sindresorhus/is";
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
 import { queryKeys } from "@/platform/query-keys";
-
-const UNKNOWN_MERGEABILITY_RETRY_DELAY_MS = 2_000;
-const UNKNOWN_MERGEABILITY_RETRY_LIMIT = 3;
 
 interface ChangeRequestQueryContext {
   active: boolean;
@@ -24,27 +18,21 @@ interface ChangeRequestQueryContext {
   supportsStatus: boolean;
 }
 
-export type PullRequestStatusView = GitHubPullRequestStatus & {
+export interface ChangeRequestStatusView {
+  allowedMergeMethods: readonly MergeMethod[];
+  author: string | null;
+  baseRefName: string;
+  body: string;
   changeRequest: ChangeRequest;
-};
-
-export async function retryUnknownMergeability<
-  T extends GitHubPullRequestStatus,
->(
-  fetchStatus: () => Promise<T>,
-  pause: (delayMs: number) => Promise<void> = delay,
-): Promise<T> {
-  let status = await fetchStatus();
-  for (
-    let attempt = 0;
-    status.mergeable === "UNKNOWN" &&
-    attempt < UNKNOWN_MERGEABILITY_RETRY_LIMIT;
-    attempt += 1
-  ) {
-    await pause(UNKNOWN_MERGEABILITY_RETRY_DELAY_MS);
-    status = await fetchStatus();
-  }
-  return status;
+  checks: CheckSummary | null;
+  defaultMergeMethod: MergeMethod;
+  deleteBranchOnMerge: boolean;
+  headRefName: string;
+  number: number;
+  state: "CLOSED" | "MERGED" | "OPEN";
+  title: string;
+  url: string;
+  worktreeDirty: boolean;
 }
 
 export function pullRequestStatusQueryOptions({
@@ -64,19 +52,11 @@ export function pullRequestStatusQueryOptions({
   return queryOptions({
     enabled,
     queryFn: async () =>
-      retryUnknownMergeability(async () =>
-        toLegacyStatus(
-          await api.sourceControl.currentChangeRequest(projectPath ?? ""),
-        ),
-      ),
+      toStatus(await api.sourceControl.currentChangeRequest(projectPath ?? "")),
     queryKey: queryKeys.sourceControl.currentChangeRequest(providerIdentity),
     refetchInterval: enabled ? 30_000 : false,
     refetchOnWindowFocus: true,
   });
-}
-
-async function delay(delayMs: number) {
-  await new Promise((resolve) => setTimeout(resolve, delayMs));
 }
 
 export function mergePullRequestMutationOptions({
@@ -199,88 +179,30 @@ export function reviewThreadsQueryOptions({
   });
 }
 
-function toLegacyStatus(
+function toStatus(
   result: ChangeRequestStatusResult | null,
-): PullRequestStatusView {
-  if (result === null) return emptyLegacyStatus();
+): ChangeRequestStatusView {
+  if (result === null) return emptyStatus();
   const changeRequest = result.changeRequest;
-  const github = githubExtension(changeRequest);
   return {
     allowedMergeMethods: [...changeRequest.allowedMergeMethods],
     author: changeRequest.author?.login ?? null,
     baseRefName: changeRequest.target.name,
-    behindBy: 0,
     body: changeRequest.body,
-    checks: result.checks?.checks.map(toLegacyCheck) ?? [],
+    checks: result.checks,
     defaultMergeMethod: changeRequest.defaultMergeMethod ?? "merge",
     deleteBranchOnMerge: false,
     headRefName: changeRequest.source.name,
-    isDraft: changeRequest.draft,
-    mergeable: readMergeable(github.mergeable),
-    mergeStateStatus: readMergeStateStatus(github.mergeStateStatus),
-    mergedAt: changeRequest.mergedAt,
     number: changeRequest.number ?? Number(changeRequest.id),
-    reviewDecision:
-      changeRequest.reviewDecision === "none"
-        ? null
-        : (changeRequest.reviewDecision.replace("-", "_").toUpperCase() as
-            | "APPROVED"
-            | "CHANGES_REQUESTED"
-            | "REVIEW_REQUIRED"),
     state: changeRequest.state.toUpperCase() as "CLOSED" | "MERGED" | "OPEN",
     title: changeRequest.title,
-    unresolvedThreads: [],
     url: changeRequest.webUrl,
-    viewerCanMerge: changeRequest.viewerCanMerge ?? false,
     worktreeDirty: false,
     changeRequest,
   };
 }
 
-function toLegacyCheck(
-  check: NonNullable<ChangeRequestStatusResult["checks"]>["checks"][number],
-): GitHubPullRequestCheck {
-  return {
-    name: check.name,
-    required: check.requiredness === "required",
-    state:
-      check.status !== "completed"
-        ? "pending"
-        : check.conclusion === "success"
-          ? "success"
-          : check.conclusion === "skipped" || check.conclusion === "neutral"
-            ? "skipped"
-            : "failure",
-    url: check.detailsUrl,
-  };
-}
-
-function githubExtension(
-  changeRequest: ChangeRequest,
-): Record<string, unknown> {
-  const github = changeRequest.extensions?.github;
-  return typeof github === "object" && github !== null
-    ? (github as Record<string, unknown>)
-    : {};
-}
-
-function readMergeable(value: unknown) {
-  return value === "CONFLICTING" || value === "MERGEABLE" ? value : "UNKNOWN";
-}
-
-function readMergeStateStatus(value: unknown) {
-  return value === "BEHIND" ||
-    value === "BLOCKED" ||
-    value === "CLEAN" ||
-    value === "DIRTY" ||
-    value === "DRAFT" ||
-    value === "HAS_HOOKS" ||
-    value === "UNSTABLE"
-    ? value
-    : "UNKNOWN";
-}
-
-function emptyLegacyStatus(): PullRequestStatusView {
+function emptyStatus(): ChangeRequestStatusView {
   const repository = {
     displayPath: "",
     host: "",
@@ -294,23 +216,15 @@ function emptyLegacyStatus(): PullRequestStatusView {
     allowedMergeMethods: [],
     author: null,
     baseRefName: "",
-    behindBy: 0,
     body: "",
-    checks: [],
+    checks: null,
     defaultMergeMethod: "merge",
     deleteBranchOnMerge: false,
     headRefName: "",
-    isDraft: false,
-    mergeable: "MERGEABLE",
-    mergeStateStatus: "UNKNOWN",
-    mergedAt: null,
     number: 0,
-    reviewDecision: null,
     state: "CLOSED",
     title: "",
-    unresolvedThreads: [],
     url: "",
-    viewerCanMerge: false,
     worktreeDirty: false,
     changeRequest: {
       additions: null,

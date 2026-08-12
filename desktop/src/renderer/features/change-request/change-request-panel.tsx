@@ -1,4 +1,3 @@
-import type { GitHubPullRequestStatus } from "@angel-engine/daemon-api/github";
 import type {
   CapabilityMatrix,
   CheckRun,
@@ -46,18 +45,19 @@ import {
   pullRequestStatusQueryOptions,
   reviewThreadsQueryOptions,
   resolveReviewThreadMutationOptions,
-} from "@/features/pull-request/api/queries";
+  type ChangeRequestStatusView,
+} from "@/features/change-request/api/queries";
 import {
   deriveMergeBlockers,
   optionalFailedChecks,
   type MergeBlocker,
-} from "@/features/pull-request/derive-merge-blockers";
+} from "@/features/change-request/derive-merge-blockers";
 import { ShepherdSection } from "@/features/shepherd/shepherd-section";
 import { cn } from "@/platform/utils";
 
 const mergeMethods: MergeMethod[] = ["squash", "merge", "rebase"];
 
-export const PullRequestPanel: FC<{
+export const ChangeRequestPanel: FC<{
   projectId: string | null;
   root: string;
 }> = ({ projectId, root }) => {
@@ -735,7 +735,7 @@ const MergedPrompt: FC<{
   method: MergeMethod | null;
   onArchive: () => Promise<void>;
   onContinue: () => void;
-  status: GitHubPullRequestStatus;
+  status: ChangeRequestStatusView;
 }> = ({ chatId, method, onArchive, onContinue, status }) => {
   const { t } = useTranslation();
   return (

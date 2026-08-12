@@ -29,7 +29,7 @@ import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-
 import { Button } from "@/components/ui/button";
 import { CapabilityGate } from "@/features/source-control/components/capability-gate";
 import { capabilityState } from "@/features/source-control/model";
-import { checksSummaryQueryOptions } from "@/features/pull-request/api/queries";
+import { checksSummaryQueryOptions } from "@/features/change-request/api/queries";
 import { useChatRunStore } from "@/features/chat/state/chat-run-store";
 import { queryKeys } from "@/platform/query-keys";
 import { cn } from "@/platform/utils";
