@@ -1,5 +1,5 @@
 import type { LocaleResource } from "./schema";
-import { scheduleTranslation } from "./schedule";
+import { scheduleKo } from "./schedule";
 import { pullRequestEn } from "./pull-request";
 
 export const ko = {
@@ -366,7 +366,7 @@ export const ko = {
         list: "목록 보기",
       },
     },
-    schedule: scheduleTranslation,
+    schedule: scheduleKo,
     sidebar: {
       addProject: "프로젝트 추가",
       archiveChat: "채팅 보관",
