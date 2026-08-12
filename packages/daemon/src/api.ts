@@ -171,6 +171,7 @@ import {
 } from "./features/source-control/registry/config-store";
 import { SourceControlCoordinator } from "./features/source-control/registry/coordinator";
 import type { SourceControlRegistry } from "./features/source-control/registry/registry";
+import { registerSourceControlHttpApi } from "./features/source-control/http";
 import { projectSetupLifecycle } from "./features/projects/setup-lifecycle";
 import { readProjectLifecycleSnapshot } from "./features/projects/lifecycle";
 import {
@@ -1156,6 +1157,11 @@ export function registerApi(
   app.get("/api/projects", async (context) =>
     context.json(await run(listProjects())),
   );
+  registerSourceControlHttpApi(app, {
+    coordinator: sourceControl,
+    onWorkspaceCreated: (chatId) => chatEvents.metadataChanged([chatId]),
+    runDb: runEffect,
+  });
   app.get("/api/source-control/activation", async (context) => {
     const projectId = requireQuery(context.req.query("projectId"), "projectId");
     const project = await run(getProject(projectId));

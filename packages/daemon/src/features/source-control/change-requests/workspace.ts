@@ -83,6 +83,24 @@ export function createWorkspaceFromPullRequest(
         ),
     });
 
+    return yield* createWorkspaceFromResolvedChangeRequest(
+      input,
+      resolved,
+      signal,
+    );
+  });
+}
+
+/** Compose local worktree/chat services after a provider head was resolved. */
+export function createWorkspaceFromResolvedChangeRequest(
+  input: CreateChangeRequestWorkspaceInput,
+  resolved: ChangeRequestHeadResult,
+  signal?: AbortSignal,
+): Effect.Effect<CreateChangeRequestWorkspaceResult, DaemonError, Db> {
+  return Effect.gen(function* () {
+    const project = yield* getProject(input.projectId);
+    if (!project) return yield* Effect.fail(DaemonError.projectNotFound());
+
     // Fetch PR head into a local tracking ref, then create a managed worktree.
     const remoteRef = `refs/remotes/origin/pr/${resolved.changeRequest.number}`;
     const branchName = `angel/pr-${resolved.changeRequest.number}`;
