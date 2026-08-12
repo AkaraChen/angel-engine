@@ -143,6 +143,7 @@ import type {
   PublishBranchResult,
   ReviewThread,
   SourceControlActivationResult,
+  WorkItem,
 } from "@angel-engine/daemon-api/source-control";
 import { isProjectCloneEvent } from "@angel-engine/daemon-api/projects";
 import type {
@@ -751,6 +752,30 @@ export function createDaemonClient(options: DaemonClientOptions) {
       getChangeRequest: (projectPath: string, id: string) =>
         request<ChangeRequest>(
           `/api/source-control/change-requests/${encodeURIComponent(id)}?${query({ projectPath })}`,
+        ),
+      listWorkItems: (
+        projectPath: string,
+        queryText?: string,
+        limit?: number,
+      ) =>
+        request<WorkItem[]>(
+          `/api/source-control/work-items?${query({
+            limit,
+            projectPath,
+            query: queryText,
+          })}`,
+        ),
+      listChangeRequests: (
+        projectPath: string,
+        queryText?: string,
+        limit?: number,
+      ) =>
+        request<ChangeRequest[]>(
+          `/api/source-control/change-requests?${query({
+            limit,
+            projectPath,
+            query: queryText,
+          })}`,
         ),
       changeRequestPreflight: (projectPath: string, targetBranch?: string) =>
         request<ChangeRequestCreatePreflightResult>(

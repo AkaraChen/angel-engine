@@ -50,6 +50,26 @@ describe("createDaemonClient", () => {
     );
   });
 
+  it("uses generic source-control attachment list routes", async () => {
+    const fetchMock = vi.fn().mockImplementation(async () => jsonResponse([]));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createDaemonClient({ baseUrl: "", token: null });
+    await client.sourceControl.listWorkItems("/repo with spaces", "bug", 30);
+    await client.sourceControl.listChangeRequests(
+      "/repo with spaces",
+      "feature",
+      30,
+    );
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "/api/source-control/work-items?limit=30&projectPath=%2Frepo+with+spaces&query=bug",
+    );
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(
+      "/api/source-control/change-requests?limit=30&projectPath=%2Frepo+with+spaces&query=feature",
+    );
+  });
+
   it("uses generic source-control checks and review routes", async () => {
     const fetchMock = vi.fn().mockImplementation(async () => jsonResponse({}));
     vi.stubGlobal("fetch", fetchMock);

@@ -23,9 +23,9 @@ import { ChatAttachmentTile } from "@/features/chat/components/attachment-tile";
 import { urlPreviewQueryOptions } from "@/features/chat/api/url-preview-query";
 import { pasteSourceUrlPath } from "@/features/chat/components/composer/composer-helpers";
 import {
-  githubAttachmentLabel,
-  type ComposerGitHubAttachment,
-} from "@/features/chat/components/composer/github-attachments";
+  sourceControlAttachmentLabel,
+  type ComposerSourceControlAttachment,
+} from "@/features/chat/components/composer/source-control-attachments";
 import {
   terminalSelectionLabel,
   type ComposerTerminalSelection,
@@ -66,9 +66,9 @@ export function ComposerEditor({
   const {
     addPasteSourceUrl,
     editor,
-    githubAttachments,
+    sourceControlAttachments,
     pasteSourceUrls,
-    removeGitHubAttachment,
+    removeSourceControlAttachment,
     removePasteSourceUrl,
     removeTerminalSelection,
     setInteractions,
@@ -143,10 +143,10 @@ export function ComposerEditor({
     >
       <WorkspaceFileTreeIconSprite />
       <ComposerEditorHeader
-        githubAttachments={githubAttachments}
+        sourceControlAttachments={sourceControlAttachments}
         headerClassName={headerClassName}
         headerLeading={headerLeading}
-        onRemoveGitHubAttachment={removeGitHubAttachment}
+        onRemoveSourceControlAttachment={removeSourceControlAttachment}
         onRemovePasteSource={removePasteSourceUrl}
         onRemoveTerminalSelection={removeTerminalSelection}
         pasteSourceUrls={pasteSourceUrls}
@@ -164,19 +164,19 @@ export function ComposerEditor({
 }
 
 function ComposerEditorHeader({
-  githubAttachments,
+  sourceControlAttachments,
   headerClassName,
   headerLeading,
-  onRemoveGitHubAttachment,
+  onRemoveSourceControlAttachment,
   onRemovePasteSource,
   onRemoveTerminalSelection,
   pasteSourceUrls,
   terminalSelections,
 }: {
-  githubAttachments: ComposerGitHubAttachment[];
+  sourceControlAttachments: ComposerSourceControlAttachment[];
   headerClassName?: string;
   headerLeading?: ReactNode;
-  onRemoveGitHubAttachment: (id: string) => void;
+  onRemoveSourceControlAttachment: (id: string) => void;
   onRemovePasteSource: (sourceUrl: string) => void;
   onRemoveTerminalSelection: (id: string) => void;
   pasteSourceUrls: string[];
@@ -192,7 +192,7 @@ function ComposerEditorHeader({
     attachments.files.length === 0 &&
     pasteSourceUrls.length === 0 &&
     terminalSelections.length === 0 &&
-    githubAttachments.length === 0
+    sourceControlAttachments.length === 0
   ) {
     return null;
   }
@@ -226,21 +226,21 @@ function ComposerEditorHeader({
         );
       })}
 
-      {githubAttachments.map((item) => {
-        const name = githubAttachmentLabel(item);
+      {sourceControlAttachments.map((item) => {
+        const name = sourceControlAttachmentLabel(item);
         return (
           <ChatAttachmentTile
             className="max-w-64"
             fallbackIcon={<GithubLogo className="size-4" weight="duotone" />}
             key={item.id}
             name={name}
-            onRemove={() => onRemoveGitHubAttachment(item.id)}
+            onRemove={() => onRemoveSourceControlAttachment(item.id)}
             previewText={item.contextText}
             removeLabel={t("composer.removeAttachment", { name })}
             typeLabel={
-              item.provider === "linear"
+              item.providerId === "linear"
                 ? t("composer.linearIssue")
-                : item.kind === "issue"
+                : item.kind === "workItem"
                   ? t("composer.githubIssue")
                   : t("composer.githubPullRequest")
             }

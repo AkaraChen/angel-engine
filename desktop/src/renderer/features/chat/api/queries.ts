@@ -61,11 +61,12 @@ interface AgentSkillsQueryParams {
   staleTime?: number;
 }
 
-interface GitHubItemsQueryParams {
+interface SourceControlItemsQueryParams {
   api: ApiClient;
-  cwd?: string;
   enabled?: boolean;
   limit?: number;
+  projectPath: string | null;
+  providerIdentity: string | null;
   query: string;
   staleTime?: number;
 }
@@ -284,24 +285,59 @@ export function agentSkillsQueryOptions({
   });
 }
 
-export function githubItemsQueryOptions({
+export function sourceControlWorkItemsQueryOptions({
   api,
-  cwd,
   enabled = true,
   limit,
+  projectPath,
+  providerIdentity,
   query,
   staleTime = 15_000,
-}: GitHubItemsQueryParams) {
+}: SourceControlItemsQueryParams) {
   return queryOptions({
-    enabled: enabled && is.nonEmptyString(cwd),
+    enabled:
+      enabled &&
+      is.nonEmptyString(projectPath) &&
+      is.nonEmptyString(providerIdentity),
     placeholderData: (previous) => previous,
     queryFn: async () =>
-      api.github.listItems({
-        cwd: cwd ?? "",
+      api.sourceControl.listWorkItems(
+        projectPath ?? "",
+        is.nonEmptyString(query) ? query : undefined,
         limit,
-        query: is.nonEmptyString(query) ? query : undefined,
-      }),
-    queryKey: queryKeys.github.items(cwd ?? null, query),
+      ),
+    queryKey: queryKeys.sourceControl.workItems(providerIdentity, query, limit),
+    retry: false,
+    staleTime,
+  });
+}
+
+export function sourceControlChangeRequestsQueryOptions({
+  api,
+  enabled = true,
+  limit,
+  projectPath,
+  providerIdentity,
+  query,
+  staleTime = 15_000,
+}: SourceControlItemsQueryParams) {
+  return queryOptions({
+    enabled:
+      enabled &&
+      is.nonEmptyString(projectPath) &&
+      is.nonEmptyString(providerIdentity),
+    placeholderData: (previous) => previous,
+    queryFn: async () =>
+      api.sourceControl.listChangeRequests(
+        projectPath ?? "",
+        is.nonEmptyString(query) ? query : undefined,
+        limit,
+      ),
+    queryKey: queryKeys.sourceControl.changeRequests(
+      providerIdentity,
+      query,
+      limit,
+    ),
     retry: false,
     staleTime,
   });

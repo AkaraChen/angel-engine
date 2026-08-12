@@ -24,8 +24,6 @@ export const queryKeys = {
       ["chats", "runtime-config", runtime, cwd] as const,
   },
   github: {
-    items: (cwd: string | null, query: string) =>
-      ["github", "items", cwd, query] as const,
     pullRequest: (cwd: string | null) =>
       ["github", "pull-request-status", cwd] as const,
     repositories: (owner: string | null) =>

@@ -1,11 +1,14 @@
 import type { DaemonErrorCode } from "@angel-engine/daemon-api/daemon";
-import type { GitHubItemKind } from "@angel-engine/daemon-api/github";
 import type { ResolvedTaskLink } from "@angel-engine/daemon-api/links";
+import type {
+  ChangeRequest,
+  WorkItem,
+} from "@angel-engine/daemon-api/source-control";
 import type { FC } from "react";
 import { DaemonRequestError } from "@angel-engine/daemon-client";
 import {
   GitPullRequest,
-  GithubLogo,
+  GitBranch,
   Record as RecordIcon,
   SpinnerGap,
 } from "@phosphor-icons/react";
@@ -28,18 +31,27 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  githubItemsQueryOptions,
+  sourceControlChangeRequestsQueryOptions,
+  sourceControlWorkItemsQueryOptions,
   taskLinkResolveQueryOptions,
 } from "@/features/chat/api/queries";
-import type { ComposerGitHubAttachment } from "@/features/chat/components/composer/github-attachments";
+import type { ComposerSourceControlAttachment } from "@/features/chat/components/composer/source-control-attachments";
+import {
+  changeRequestAttachment,
+  resolvedTaskLinkAttachment,
+  workItemAttachment,
+} from "@/features/chat/components/composer/source-control-attachments";
 import { useChatEnvironment } from "@/features/chat/runtime/chat-environment-context";
+import { useSourceControlActivation } from "@/features/source-control/api/use-activation";
+import { CapabilityGate } from "@/features/source-control/components/capability-gate";
+import { capabilityState } from "@/features/source-control/model";
 import { appLocale } from "@/platform/format-time";
 import { useApi } from "@/platform/use-api";
 import { cn } from "@/platform/utils";
 
-type PromptGitHubAttachButtonProps = {
+type PromptSourceControlAttachButtonProps = {
   disabled?: boolean;
-  onAttached: (attachment: ComposerGitHubAttachment) => void;
+  onAttached: (attachment: ComposerSourceControlAttachment) => void;
 };
 
 const SEARCH_DEBOUNCE_MS = 250;
@@ -47,14 +59,13 @@ const ITEM_LIMIT = 30;
 const TASK_LINK_URL_PATTERN =
   /^https:\/\/(?:(?:www\.)?github\.com\/[^/\s]+\/[^/\s]+\/(?:issues|pull)\/\d+|linear\.app\/[^/\s]+\/issue\/[A-Za-z][A-Za-z0-9]*-\d+(?:\/[^\s]*)?)/;
 
-export const PromptGitHubAttachButton: FC<PromptGitHubAttachButtonProps> = ({
-  disabled = false,
-  onAttached,
-}) => {
+export const PromptSourceControlAttachButton: FC<
+  PromptSourceControlAttachButtonProps
+> = ({ disabled = false, onAttached }) => {
   const { t } = useTranslation();
   const api = useApi();
   const environment = useChatEnvironment();
-  const cwd = environment.projectPath ?? environment.cwd;
+  const activation = useSourceControlActivation(environment.projectId);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [attachError, setAttachError] = useState<{
@@ -79,17 +90,52 @@ export const PromptGitHubAttachButton: FC<PromptGitHubAttachButtonProps> = ({
   const localHint =
     directUrl === null ? taskLinkLocalHint(debouncedSearch, t) : null;
   const isUrlLike = /^https?:\/\//i.test(debouncedSearch.trim());
-  const itemsQuery = useQuery(
-    githubItemsQueryOptions({
+  const workItemsCapability = capabilityState(
+    activation.capabilities,
+    "workItems.list",
+  );
+  const changeRequestsCapability = capabilityState(
+    activation.capabilities,
+    "changeRequests.list",
+  );
+  const providerActive =
+    activation.status === "active" &&
+    is.nonEmptyString(activation.projectPath) &&
+    is.nonEmptyString(activation.providerIdentity);
+  const canBrowse =
+    providerActive &&
+    (workItemsCapability.supported || changeRequestsCapability.supported);
+  const workItemsQuery = useQuery(
+    sourceControlWorkItemsQueryOptions({
       api,
-      cwd,
-      enabled: open && !isUrlLike,
+      enabled:
+        open && !isUrlLike && providerActive && workItemsCapability.supported,
       limit: ITEM_LIMIT,
+      projectPath: activation.projectPath,
+      providerIdentity: activation.providerIdentity,
+      query: directUrl === null ? debouncedSearch : "",
+    }),
+  );
+  const changeRequestsQuery = useQuery(
+    sourceControlChangeRequestsQueryOptions({
+      api,
+      enabled:
+        open &&
+        !isUrlLike &&
+        providerActive &&
+        changeRequestsCapability.supported,
+      limit: ITEM_LIMIT,
+      projectPath: activation.projectPath,
+      providerIdentity: activation.providerIdentity,
       query: directUrl === null ? debouncedSearch : "",
     }),
   );
   const directItemQuery = useQuery(
-    taskLinkResolveQueryOptions({ api, enabled: open, url: directUrl }),
+    taskLinkResolveQueryOptions({
+      api,
+      enabled: open && canBrowse,
+      url: directUrl,
+    }),
   );
 
   const handleOpenChange = (next: boolean) => {
@@ -107,15 +153,12 @@ export const PromptGitHubAttachButton: FC<PromptGitHubAttachButtonProps> = ({
   };
 
   const attachResolved = (resolved: ResolvedTaskLink) => {
-    onAttached({
-      ...resolved,
-      id: `task-link-${resolved.provider}-${resolved.kind}-${crypto.randomUUID()}`,
-    });
+    onAttached(resolvedTaskLinkAttachment(resolved));
     handleOpenChange(false);
   };
 
   const attachUrl = async (url: string) => {
-    if (is.nonEmptyString(pendingUrl)) return;
+    if (!canBrowse || is.nonEmptyString(pendingUrl)) return;
 
     const requestId = activeRequestId.current + 1;
     activeRequestId.current = requestId;
@@ -134,9 +177,19 @@ export const PromptGitHubAttachButton: FC<PromptGitHubAttachButtonProps> = ({
     }
   };
 
-  const items = itemsQuery.data?.items ?? [];
+  const workItems =
+    canBrowse && workItemsCapability.supported
+      ? (workItemsQuery.data ?? [])
+      : [];
+  const changeRequests =
+    canBrowse && changeRequestsCapability.supported
+      ? (changeRequestsQuery.data ?? [])
+      : [];
   const queryError =
-    directUrl === null ? itemsQuery.error : directItemQuery.error;
+    directUrl === null
+      ? ((workItemsCapability.supported ? workItemsQuery.error : null) ??
+        (changeRequestsCapability.supported ? changeRequestsQuery.error : null))
+      : directItemQuery.error;
   const needsLinearAuth =
     queryError instanceof DaemonRequestError &&
     queryError.code === "linear-token-missing";
@@ -148,36 +201,60 @@ export const PromptGitHubAttachButton: FC<PromptGitHubAttachButtonProps> = ({
       ? null
       : taskLinkErrorMessage(visibleQueryError, t));
   const directItem =
-    directUrl === null || directItemQuery.data?.url !== directUrl
+    !canBrowse || directUrl === null || directItemQuery.data?.url !== directUrl
       ? null
       : directItemQuery.data;
-  const showLoading = itemsQuery.isFetching && itemsQuery.data === undefined;
-  const hasRepository = is.nonEmptyString(cwd);
+  const showLoading =
+    (workItemsCapability.supported &&
+      workItemsQuery.isFetching &&
+      workItemsQuery.data === undefined) ||
+    (changeRequestsCapability.supported &&
+      changeRequestsQuery.isFetching &&
+      changeRequestsQuery.data === undefined);
+  const hasProject = is.nonEmptyString(environment.projectId);
   const showEmpty =
-    !itemsQuery.isFetching &&
-    items.length === 0 &&
+    !workItemsQuery.isFetching &&
+    !changeRequestsQuery.isFetching &&
+    workItems.length === 0 &&
+    changeRequests.length === 0 &&
     directUrl === null &&
     localHint === null &&
     !is.nonEmptyString(errorMessage);
 
-  // The picker needs a repository to browse, so the composer hides the button
-  // entirely outside project chats.
-  if (!hasRepository) return null;
+  if (!hasProject) return null;
+
+  const gateCapability = changeRequestsCapability.supported
+    ? "changeRequests.list"
+    : "workItems.list";
+  const trigger = (
+    <Button
+      className="focus-visible:ring-0!"
+      disabled={disabled}
+      onClick={() => handleOpenChange(true)}
+      size="icon-sm"
+      title={t("composer.fromLink")}
+      type="button"
+      variant="ghost"
+    >
+      <GitBranch weight="duotone" />
+      <span className="sr-only">{t("composer.fromLink")}</span>
+    </Button>
+  );
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <Button
-        className="focus-visible:ring-0!"
-        disabled={disabled}
-        onClick={() => handleOpenChange(true)}
-        size="icon-sm"
-        title={t("composer.fromLink")}
-        type="button"
-        variant="ghost"
-      >
-        <GithubLogo weight="duotone" />
-        <span className="sr-only">{t("composer.fromLink")}</span>
-      </Button>
+      {canBrowse ? (
+        trigger
+      ) : (
+        <CapabilityGate
+          capabilities={activation.capabilities}
+          capability={gateCapability}
+          onRemediate={() => void activation.refetch()}
+          remediationLabel={t("common.retry")}
+        >
+          {trigger}
+        </CapabilityGate>
+      )}
       <DialogContent
         aria-describedby={undefined}
         className="gap-3 overflow-hidden rounded-2xl p-0 sm:max-w-lg"
@@ -242,12 +319,20 @@ export const PromptGitHubAttachButton: FC<PromptGitHubAttachButtonProps> = ({
                 {attachError === null && visibleQueryError === null ? null : (
                   <Button
                     onClick={() => {
+                      if (!canBrowse) return;
                       if (attachError !== null) {
                         void attachUrl(attachError.url);
                         return;
                       }
                       void (directUrl === null
-                        ? itemsQuery.refetch()
+                        ? Promise.all([
+                            workItemsCapability.supported
+                              ? workItemsQuery.refetch()
+                              : Promise.resolve(),
+                            changeRequestsCapability.supported
+                              ? changeRequestsQuery.refetch()
+                              : Promise.resolve(),
+                          ])
                         : directItemQuery.refetch());
                     }}
                     size="sm"
@@ -269,12 +354,38 @@ export const PromptGitHubAttachButton: FC<PromptGitHubAttachButtonProps> = ({
                 {t("composer.attachGitHubEmpty")}
               </CommandEmpty>
             ) : null}
-            {items.map((item) => (
-              <GitHubItemRow
+            {changeRequests.map((item) => (
+              <SourceControlItemRow
                 item={item}
-                key={item.url}
-                onSelect={() => void attachUrl(item.url)}
-                pending={pendingUrl === item.url}
+                key={`change-request-${item.id}`}
+                onSelect={() => {
+                  onAttached(
+                    changeRequestAttachment(
+                      item,
+                      activation.providerDisplayName ??
+                        activation.providerId ??
+                        "Source control",
+                    ),
+                  );
+                  handleOpenChange(false);
+                }}
+              />
+            ))}
+            {workItems.map((item) => (
+              <SourceControlItemRow
+                item={item}
+                key={`work-item-${item.id}`}
+                onSelect={() => {
+                  onAttached(
+                    workItemAttachment(
+                      item,
+                      activation.providerDisplayName ??
+                        activation.providerId ??
+                        "Source control",
+                    ),
+                  );
+                  handleOpenChange(false);
+                }}
               />
             ))}
           </CommandList>
@@ -307,18 +418,7 @@ function taskLinkLocalHint(
   return t("composer.taskLinkHintSupported");
 }
 
-type GitHubRowItem = {
-  author: string | null;
-  isDraft?: boolean;
-  kind: GitHubItemKind;
-  number: number;
-  owner: string;
-  repo: string;
-  state: string;
-  title: string;
-  updatedAt?: string;
-  url: string;
-};
+type SourceControlRowItem = ChangeRequest | WorkItem;
 
 const previewCardClassName =
   "mx-2 mt-2 flex items-center gap-2.5 rounded-lg border border-border-subtle bg-muted/40 px-3 py-2";
@@ -341,7 +441,7 @@ function PastedUrlPreview({
       <div
         className={cn(previewCardClassName, "text-sm text-muted-foreground")}
       >
-        <GithubLogo className="size-4 shrink-0" weight="duotone" />
+        <GitBranch className="size-4 shrink-0" weight="duotone" />
         <span className="min-w-0 flex-1 truncate">{url}</span>
         {loading ? (
           <SpinnerGap className="size-4 shrink-0 animate-spin" />
@@ -353,7 +453,11 @@ function PastedUrlPreview({
   return (
     <div className={previewCardClassName}>
       {item.provider === "github" ? (
-        <GitHubItemIcon className="size-4 shrink-0" item={item} />
+        item.kind === "pullRequest" ? (
+          <GitPullRequest className="size-4 shrink-0" weight="duotone" />
+        ) : (
+          <RecordIcon className="size-4 shrink-0" weight="duotone" />
+        )
       ) : (
         <RecordIcon
           className="size-4 shrink-0 text-violet-500"
@@ -364,7 +468,7 @@ function PastedUrlPreview({
         <span className="truncate text-sm font-medium">{item.title}</span>
         <span className="truncate text-xs text-muted-foreground">
           {item.provider === "github"
-            ? gitHubItemMeta(item, t)
+            ? legacyGitHubItemMeta(item, t)
             : t("composer.linearItemMeta", {
                 identifier: item.identifier,
                 state: item.state,
@@ -383,59 +487,64 @@ function PastedUrlPreview({
   );
 }
 
-function GitHubItemRow({
+function SourceControlItemRow({
   item,
   onSelect,
-  pending,
 }: {
-  item: GitHubRowItem;
+  item: SourceControlRowItem;
   onSelect: () => void;
-  pending: boolean;
 }) {
   const { t } = useTranslation();
+  const changeRequest = "source" in item;
 
   return (
     <CommandItem
       className="items-start gap-2.5 py-2"
       onSelect={onSelect}
-      value={item.url}
+      value={item.webUrl}
     >
-      <GitHubItemIcon className="mt-0.5" item={item} />
+      <SourceControlItemIcon className="mt-0.5" item={item} />
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="truncate">{item.title}</span>
         <span className="truncate text-xs font-normal text-muted-foreground">
-          {gitHubItemMeta(item, t)}
+          {sourceControlItemMeta(item, t)}
         </span>
       </span>
-      {pending ? <SpinnerGap className="mt-0.5 animate-spin" /> : null}
+      {changeRequest && item.draft ? (
+        <span className="text-xs text-muted-foreground">
+          {t("common.draft")}
+        </span>
+      ) : null}
     </CommandItem>
   );
 }
 
-function GitHubItemIcon({
+function SourceControlItemIcon({
   className,
   item,
 }: {
   className?: string;
-  item: GitHubRowItem;
+  item: SourceControlRowItem;
 }) {
-  const Icon = item.kind === "issue" ? RecordIcon : GitPullRequest;
+  const Icon = "source" in item ? GitPullRequest : RecordIcon;
   return (
     <Icon
-      className={cn(className, gitHubStateClassName(item))}
+      className={cn(className, sourceControlStateClassName(item))}
       weight="duotone"
     />
   );
 }
 
-function gitHubItemMeta(
-  item: GitHubRowItem,
+function sourceControlItemMeta(
+  item: SourceControlRowItem,
   t: (key: string, options?: Record<string, string>) => string,
 ) {
-  const parts = [`#${item.number} · ${item.owner}/${item.repo}`];
+  const identifier = item.number === null ? item.id : `#${item.number}`;
+  const parts = [`${identifier} · ${item.repository.displayPath}`];
   parts.push(gitHubStateLabel(item.state, t));
-  if (item.isDraft === true) parts.push(t("common.draft"));
-  if (is.nonEmptyString(item.author)) parts.push(`@${item.author}`);
+  if ("draft" in item && item.draft) parts.push(t("common.draft"));
+  if (is.nonEmptyString(item.author?.login))
+    parts.push(`@${item.author.login}`);
   if (is.nonEmptyString(item.updatedAt)) {
     parts.push(
       t("composer.attachGitHubUpdated", {
@@ -443,6 +552,17 @@ function gitHubItemMeta(
       }),
     );
   }
+  return parts.join(" · ");
+}
+
+function legacyGitHubItemMeta(
+  item: Extract<ResolvedTaskLink, { provider: "github" }>,
+  t: (key: string, options?: Record<string, string>) => string,
+) {
+  const parts = [`#${item.number} · ${item.owner}/${item.repo}`];
+  parts.push(gitHubStateLabel(item.state, t));
+  if (item.isDraft === true) parts.push(t("common.draft"));
+  if (is.nonEmptyString(item.author)) parts.push(`@${item.author}`);
   return parts.join(" · ");
 }
 
@@ -457,8 +577,8 @@ function gitHubStateLabel(state: string, t: (key: string) => string) {
   }
 }
 
-function gitHubStateClassName(item: GitHubRowItem) {
-  if (item.isDraft === true) return "text-muted-foreground";
+function sourceControlStateClassName(item: SourceControlRowItem) {
+  if ("draft" in item && item.draft) return "text-muted-foreground";
   switch (item.state.toUpperCase()) {
     case "MERGED":
       return "text-violet-500";
@@ -505,7 +625,7 @@ function formatRelativeTime(value: string) {
   return formatter.format(Math.round(elapsedSeconds / 31_536_000), "year");
 }
 
-const GITHUB_ERROR_TRANSLATION_KEYS = {
+const SOURCE_CONTROL_ERROR_TRANSLATION_KEYS = {
   "source-control/cli-missing": "composer.sourceControlErrors.cliMissing",
   "source-control/unauthenticated":
     "composer.sourceControlErrors.cliUnauthenticated",
@@ -515,14 +635,18 @@ const GITHUB_ERROR_TRANSLATION_KEYS = {
     "composer.sourceControlErrors.urlUnsupported",
 } as const satisfies Partial<Record<DaemonErrorCode, string>>;
 
-type GitHubErrorCode = keyof typeof GITHUB_ERROR_TRANSLATION_KEYS;
+type SourceControlErrorCode =
+  keyof typeof SOURCE_CONTROL_ERROR_TRANSLATION_KEYS;
 
 function taskLinkErrorMessage(
   cause: unknown,
   t: (key: string, options?: Record<string, string>) => string,
 ): string {
-  if (cause instanceof DaemonRequestError && isGitHubErrorCode(cause.code)) {
-    return t(GITHUB_ERROR_TRANSLATION_KEYS[cause.code]);
+  if (
+    cause instanceof DaemonRequestError &&
+    isSourceControlErrorCode(cause.code)
+  ) {
+    return t(SOURCE_CONTROL_ERROR_TRANSLATION_KEYS[cause.code]);
   }
   if (cause instanceof DaemonRequestError && isTaskLinkErrorCode(cause.code)) {
     return t(TASK_LINK_ERROR_TRANSLATION_KEYS[cause.code]);
@@ -551,10 +675,11 @@ function isTaskLinkErrorCode(
   );
 }
 
-function isGitHubErrorCode(
+function isSourceControlErrorCode(
   code: DaemonErrorCode | undefined,
-): code is GitHubErrorCode {
+): code is SourceControlErrorCode {
   return (
-    code !== undefined && Object.hasOwn(GITHUB_ERROR_TRANSLATION_KEYS, code)
+    code !== undefined &&
+    Object.hasOwn(SOURCE_CONTROL_ERROR_TRANSLATION_KEYS, code)
   );
 }
