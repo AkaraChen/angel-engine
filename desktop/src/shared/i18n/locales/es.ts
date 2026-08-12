@@ -434,6 +434,7 @@ export const es = {
       noStandaloneChats: "No hay chats independientes",
       openBranchChat: "Abrir el chat que usa esta rama",
       projects: "Proyectos",
+      projectsLoadError: "No se pudieron cargar los proyectos",
       powerWorktreeHome: "Inicio",
       powerWorktreeHistoricalChat: "Historial de chats",
       refreshProjects: "Actualizar proyectos",

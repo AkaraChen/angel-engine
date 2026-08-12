@@ -436,6 +436,7 @@ export const fr = {
       noStandaloneChats: "Aucune discussion autonome",
       openBranchChat: "Ouvrir la discussion utilisant cette branche",
       projects: "Projets",
+      projectsLoadError: "Échec du chargement des projets",
       powerWorktreeHome: "Accueil",
       powerWorktreeHistoricalChat: "Historique des discussions",
       refreshProjects: "Actualiser les projets",

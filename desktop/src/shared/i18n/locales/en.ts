@@ -433,6 +433,7 @@ export const en = {
       noStandaloneChats: "No standalone chats",
       openBranchChat: "Open chat using this branch",
       projects: "Projects",
+      projectsLoadError: "Failed to load projects",
       powerWorktreeHome: "Home",
       powerWorktreeHistoricalChat: "Historical Chat",
       refreshProjects: "Refresh projects",

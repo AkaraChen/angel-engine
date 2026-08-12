@@ -431,6 +431,7 @@ export const ko = {
       noStandaloneChats: "독립 채팅이 없습니다",
       openBranchChat: "이 브랜치를 사용 중인 채팅 열기",
       projects: "프로젝트",
+      projectsLoadError: "프로젝트를 불러오지 못했습니다",
       powerWorktreeHome: "홈",
       powerWorktreeHistoricalChat: "채팅 기록",
       refreshProjects: "프로젝트 새로고침",
