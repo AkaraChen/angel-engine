@@ -8,6 +8,7 @@ import type {
 } from "@angel-engine/daemon-api/github";
 import type { QueryClient } from "@tanstack/react-query";
 import type { ApiClient } from "@/platform/api-client";
+import is from "@sindresorhus/is";
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
 import { queryKeys } from "@/platform/query-keys";
 
@@ -22,10 +23,16 @@ interface ChangeRequestQueryContext {
   supportsStatus: boolean;
 }
 
-export async function retryUnknownMergeability(
-  fetchStatus: () => Promise<GitHubPullRequestStatus>,
+export type PullRequestStatusView = GitHubPullRequestStatus & {
+  changeRequest: ChangeRequest;
+};
+
+export async function retryUnknownMergeability<
+  T extends GitHubPullRequestStatus,
+>(
+  fetchStatus: () => Promise<T>,
   pause: (delayMs: number) => Promise<void> = delay,
-) {
+): Promise<T> {
   let status = await fetchStatus();
   for (
     let attempt = 0;
@@ -98,32 +105,96 @@ export function mergePullRequestMutationOptions({
 
 export function resolveReviewThreadMutationOptions({
   api,
+  projectPath,
   providerIdentity,
   queryClient,
-  root,
 }: {
   api: ApiClient;
+  projectPath: string | null;
   providerIdentity: string | null;
   queryClient: QueryClient;
-  root: string;
 }) {
   return mutationOptions({
-    mutationFn: api.github.resolveReviewThread,
+    mutationFn: (threadId: string) =>
+      api.sourceControl.resolveReviewThread(projectPath ?? "", threadId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey:
-          queryKeys.sourceControl.currentChangeRequest(providerIdentity),
-      });
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.github.pullRequest(root),
+        queryKey: queryKeys.sourceControl.reviewThreadsRoot(providerIdentity),
       });
     },
   });
 }
 
+export function checksSummaryQueryOptions({
+  active,
+  api,
+  changeRequestId,
+  projectPath,
+  providerIdentity,
+  supported,
+}: {
+  active: boolean;
+  api: ApiClient;
+  changeRequestId: string | null;
+  projectPath: string | null;
+  providerIdentity: string | null;
+  supported: boolean;
+}) {
+  return queryOptions({
+    enabled:
+      active &&
+      supported &&
+      is.nonEmptyString(changeRequestId) &&
+      projectPath !== null &&
+      providerIdentity !== null,
+    queryFn: () =>
+      api.sourceControl.checksSummary(projectPath ?? "", changeRequestId ?? ""),
+    queryKey: queryKeys.sourceControl.checksSummary(
+      providerIdentity,
+      changeRequestId,
+    ),
+    refetchInterval: (query) => (query.state.data?.hasPending ? 15_000 : false),
+    retry: false,
+    staleTime: 5_000,
+  });
+}
+
+export function reviewThreadsQueryOptions({
+  active,
+  api,
+  changeRequestId,
+  projectPath,
+  providerIdentity,
+  supported,
+}: {
+  active: boolean;
+  api: ApiClient;
+  changeRequestId: string | null;
+  projectPath: string | null;
+  providerIdentity: string | null;
+  supported: boolean;
+}) {
+  return queryOptions({
+    enabled:
+      active &&
+      supported &&
+      is.nonEmptyString(changeRequestId) &&
+      projectPath !== null &&
+      providerIdentity !== null,
+    queryFn: () =>
+      api.sourceControl.reviewThreads(projectPath ?? "", changeRequestId ?? ""),
+    queryKey: queryKeys.sourceControl.reviewThreads(
+      providerIdentity,
+      changeRequestId,
+    ),
+    retry: false,
+    staleTime: 5_000,
+  });
+}
+
 function toLegacyStatus(
   result: ChangeRequestStatusResult | null,
-): GitHubPullRequestStatus {
+): PullRequestStatusView {
   if (result === null) return emptyLegacyStatus();
   const changeRequest = result.changeRequest;
   const github = githubExtension(changeRequest);
@@ -155,6 +226,7 @@ function toLegacyStatus(
     url: changeRequest.webUrl,
     viewerCanMerge: changeRequest.viewerCanMerge ?? false,
     worktreeDirty: false,
+    changeRequest,
   };
 }
 
@@ -201,7 +273,16 @@ function readMergeStateStatus(value: unknown) {
     : "UNKNOWN";
 }
 
-function emptyLegacyStatus(): GitHubPullRequestStatus {
+function emptyLegacyStatus(): PullRequestStatusView {
+  const repository = {
+    displayPath: "",
+    host: "",
+    name: "",
+    namespace: [],
+    providerId: "",
+    remoteId: null,
+    webUrl: null,
+  };
   return {
     allowedMergeMethods: [],
     author: null,
@@ -224,5 +305,30 @@ function emptyLegacyStatus(): GitHubPullRequestStatus {
     url: "",
     viewerCanMerge: false,
     worktreeDirty: false,
+    changeRequest: {
+      additions: null,
+      allowedMergeMethods: [],
+      author: null,
+      body: "",
+      changedFiles: null,
+      commitCount: null,
+      createdAt: null,
+      defaultMergeMethod: null,
+      deletions: null,
+      draft: false,
+      id: "",
+      mergeRequirements: [],
+      mergedAt: null,
+      number: null,
+      repository,
+      reviewDecision: "none",
+      source: { name: "", oid: null, repository },
+      state: "closed",
+      target: { name: "", oid: null, repository },
+      title: "",
+      updatedAt: null,
+      viewerCanMerge: false,
+      webUrl: "",
+    },
   };
 }

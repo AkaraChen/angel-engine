@@ -1,159 +1,146 @@
-import type { GitHubPullRequestStatus } from "@angel-engine/daemon-api/github";
+import type {
+  CheckRun,
+  CheckSummary,
+  MergeRequirement,
+} from "@angel-engine/daemon-api/source-control";
 import { describe, expect, it } from "vitest";
 
 import {
   deriveMergeBlockers,
   optionalFailedChecks,
-  type MergeBlocker,
 } from "./derive-merge-blockers";
 
-const readyStatus: GitHubPullRequestStatus = {
-  allowedMergeMethods: ["squash", "merge", "rebase"],
-  author: "alice",
-  baseRefName: "main",
-  behindBy: 0,
-  body: "",
-  checks: [],
-  defaultMergeMethod: "squash",
-  deleteBranchOnMerge: false,
-  headRefName: "feature",
-  isDraft: false,
-  mergeable: "MERGEABLE",
-  mergeStateStatus: "CLEAN",
-  mergedAt: null,
-  number: 42,
-  reviewDecision: "APPROVED",
-  state: "OPEN",
-  title: "Feature",
-  unresolvedThreads: [],
-  url: "https://github.com/acme/widgets/pull/42",
-  viewerCanMerge: true,
-  worktreeDirty: false,
-};
+function check(name: string, overrides: Partial<CheckRun> = {}): CheckRun {
+  return {
+    allowFailure: false,
+    attempt: 1,
+    blocking: true,
+    completedAt: null,
+    conclusion: null,
+    detailsUrl: null,
+    group: null,
+    id: name,
+    logRef: null,
+    manual: false,
+    name,
+    requiredness: "required",
+    retryOf: null,
+    startedAt: null,
+    status: "running",
+    ...overrides,
+  };
+}
+
+function summary(checks: readonly CheckRun[]): CheckSummary {
+  const failed = checks.filter(
+    (item) => item.status === "completed" && item.conclusion === "failure",
+  );
+  return {
+    checks,
+    failed,
+    failedBlocking: failed.filter((item) => item.blocking),
+    hasPending: checks.some((item) => item.status !== "completed"),
+    headOid: "head",
+    requiredAllGreen: false,
+  };
+}
+
+function requirement(
+  kind: MergeRequirement["kind"],
+  overrides: Partial<MergeRequirement> = {},
+): MergeRequirement {
+  return {
+    blocking: true,
+    detailsUrl: null,
+    id: kind,
+    kind,
+    label: kind,
+    state: "unsatisfied",
+    ...overrides,
+  };
+}
 
 describe("deriveMergeBlockers", () => {
-  it.each([
-    {
-      expected: [],
-      label: "ready pull request",
-      patch: {},
-    },
-    {
-      expected: [],
-      label: "branch behind a base that does not require freshness",
-      patch: { behindBy: 2 },
-    },
-    {
-      expected: [{ count: 2, kind: "behind-base" }],
-      label: "branch blocked by an up-to-date policy",
-      patch: { behindBy: 2, mergeStateStatus: "BEHIND" },
-    },
-    {
-      expected: [
-        {
-          checks: [
-            {
-              name: "build",
-              required: true,
-              state: "pending",
-              url: "https://example.test/build",
-            },
-          ],
-          kind: "required-checks-pending",
-        },
-      ],
-      label: "required check still running",
-      patch: {
-        checks: [
-          {
-            name: "build",
-            required: true,
-            state: "pending",
-            url: "https://example.test/build",
-          },
-        ],
-      },
-    },
-    {
-      expected: [{ kind: "repository-policy" }],
-      label: "otherwise unexplained repository policy",
-      patch: { mergeStateStatus: "BLOCKED" },
-    },
-  ] satisfies {
-    expected: MergeBlocker[];
-    label: string;
-    patch: Partial<GitHubPullRequestStatus>;
-  }[])("returns readable blockers for $label", ({ expected, patch }) => {
-    expect(deriveMergeBlockers({ ...readyStatus, ...patch })).toEqual(expected);
-  });
-
-  it("returns every readable blocker in severity order", () => {
-    const blockers = deriveMergeBlockers({
-      ...readyStatus,
-      behindBy: 4,
-      checks: [
-        {
-          name: "typecheck",
-          required: true,
-          state: "failure",
-          url: null,
-        },
-        { name: "build", required: true, state: "pending", url: null },
-      ],
-      isDraft: true,
-      mergeable: "CONFLICTING",
-      reviewDecision: "CHANGES_REQUESTED",
-      unresolvedThreads: [
-        {
-          author: "bob",
-          body: "Handle this",
-          id: "thread-1",
-          isOutdated: false,
-          line: 7,
-          path: "src/api.ts",
-          url: "https://github.com/acme/widgets/pull/42#discussion_r1",
-        },
-      ],
-      viewerCanMerge: false,
+  it("derives blockers from generic merge requirements and check impact", () => {
+    const failed = check("typecheck", {
+      conclusion: "failure",
+      status: "completed",
     });
 
-    expect(blockers).toEqual([
+    expect(
+      deriveMergeBlockers({
+        checks: summary([failed]),
+        requirements: [
+          requirement("conflict"),
+          requirement("draft"),
+          requirement("checks"),
+          requirement("review-approval"),
+          requirement("unresolved-discussions"),
+          requirement("branch-up-to-date"),
+          requirement("other"),
+        ],
+        reviewDecision: "changes-requested",
+        unresolvedThreadCount: 2,
+        viewerCanMerge: false,
+      }),
+    ).toEqual([
       { kind: "conflict" },
       { kind: "draft" },
-      {
-        checks: [
-          {
-            name: "typecheck",
-            required: true,
-            state: "failure",
-            url: null,
-          },
-        ],
-        kind: "required-checks-failed",
-      },
-      {
-        checks: [
-          { name: "build", required: true, state: "pending", url: null },
-        ],
-        kind: "required-checks-pending",
-      },
+      { checks: [failed], kind: "required-checks-failed" },
       { kind: "changes-requested" },
-      { count: 1, kind: "unresolved-threads" },
+      { count: 2, kind: "unresolved-threads" },
+      { kind: "behind-base" },
+      { kind: "repository-policy" },
       { kind: "permission-denied" },
     ]);
   });
 
-  it("keeps optional check failures informational", () => {
-    const status = {
-      ...readyStatus,
-      checks: [
-        { name: "preview", required: false, state: "failure", url: null },
-      ],
-    } satisfies GitHubPullRequestStatus;
+  it("uses pending blocking checks when no blocking check failed", () => {
+    const pending = check("build");
+    expect(
+      deriveMergeBlockers({
+        checks: summary([pending]),
+        requirements: [requirement("checks")],
+        reviewDecision: "approved",
+        unresolvedThreadCount: 0,
+        viewerCanMerge: true,
+      }),
+    ).toEqual([{ checks: [pending], kind: "required-checks-pending" }]);
+  });
 
-    expect(deriveMergeBlockers(status)).toEqual([]);
-    expect(optionalFailedChecks(status).map((check) => check.name)).toEqual([
-      "preview",
-    ]);
+  it("ignores satisfied and non-blocking requirements", () => {
+    expect(
+      deriveMergeBlockers({
+        checks: null,
+        requirements: [
+          requirement("draft", { state: "satisfied" }),
+          requirement("other", { blocking: false }),
+        ],
+        reviewDecision: "none",
+        unresolvedThreadCount: 0,
+        viewerCanMerge: true,
+      }),
+    ).toEqual([]);
+  });
+
+  it("keeps optional check failures informational", () => {
+    const optional = check("preview", {
+      blocking: false,
+      conclusion: "failure",
+      requiredness: "optional",
+      status: "completed",
+    });
+    const checks = summary([optional]);
+
+    expect(
+      deriveMergeBlockers({
+        checks,
+        requirements: [],
+        reviewDecision: "none",
+        unresolvedThreadCount: 0,
+        viewerCanMerge: true,
+      }),
+    ).toEqual([]);
+    expect(optionalFailedChecks(checks)).toEqual([optional]);
   });
 });

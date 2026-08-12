@@ -133,6 +133,10 @@ import type {
 import type {
   ChangeRequest,
   ChangeRequestStatusResult,
+  CheckRun,
+  CheckSummary,
+  ChecksFixPromptResult,
+  ReviewThread,
   SourceControlActivationResult,
 } from "@angel-engine/daemon-api/source-control";
 import { isProjectCloneEvent } from "@angel-engine/daemon-api/projects";
@@ -719,6 +723,28 @@ export function createDaemonClient(options: DaemonClientOptions) {
       getChangeRequest: (projectPath: string, id: string) =>
         request<ChangeRequest>(
           `/api/source-control/change-requests/${encodeURIComponent(id)}?${query({ projectPath })}`,
+        ),
+      checks: (projectPath: string, id: string) =>
+        request<CheckRun[]>(
+          `/api/source-control/checks?${query({ id, projectPath })}`,
+        ),
+      checksSummary: (projectPath: string, id: string) =>
+        request<CheckSummary>(
+          `/api/source-control/checks/summary?${query({ id, projectPath })}`,
+        ),
+      checksFixPrompt: (projectPath: string, id: string) =>
+        request<ChecksFixPromptResult>(
+          "/api/source-control/checks/fix-prompt",
+          json("POST", { id, projectPath }),
+        ),
+      reviewThreads: (projectPath: string, id: string) =>
+        request<ReviewThread[]>(
+          `/api/source-control/reviews/threads?${query({ id, projectPath })}`,
+        ),
+      resolveReviewThread: (projectPath: string, threadId: string) =>
+        request<{ resolved: boolean }>(
+          `/api/source-control/reviews/threads/${encodeURIComponent(threadId)}/resolve`,
+          json("POST", { projectPath }),
         ),
     },
     links: {

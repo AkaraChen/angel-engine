@@ -1,9 +1,10 @@
+import type { GitHubPullRequestStatus } from "@angel-engine/daemon-api/github";
 import type {
-  GitHubMergeMethod,
-  GitHubPullRequestCheck,
-  GitHubPullRequestReviewThread,
-  GitHubPullRequestStatus,
-} from "@angel-engine/daemon-api/github";
+  CapabilityMatrix,
+  CheckRun,
+  MergeMethod,
+  ReviewThread,
+} from "@angel-engine/daemon-api/source-control";
 import type { FC } from "react";
 import { DaemonRequestError } from "@angel-engine/daemon-client";
 import {
@@ -28,6 +29,7 @@ import { WorkspaceChecksSection } from "@/app/workspace/workspace-checks-panel";
 import { clearPullRequestChecksFocus } from "@/app/workspace/workspace-tool-checks-focus";
 import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
 import { Button } from "@/components/ui/button";
+import { CapabilityGate } from "@/features/source-control/components/capability-gate";
 import { CollapsibleText } from "@/components/ui/collapsible-text";
 import { confirmAction } from "@/components/ui/confirm-dialog";
 import {
@@ -39,8 +41,10 @@ import { archiveWorkspaceMutationOptions } from "@/features/chat/api/queries";
 import { useSourceControlActivation } from "@/features/source-control/api/use-activation";
 import { capabilityState } from "@/features/source-control/model";
 import {
+  checksSummaryQueryOptions,
   mergePullRequestMutationOptions,
   pullRequestStatusQueryOptions,
+  reviewThreadsQueryOptions,
   resolveReviewThreadMutationOptions,
 } from "@/features/pull-request/api/queries";
 import {
@@ -51,7 +55,7 @@ import {
 import { ShepherdSection } from "@/features/shepherd/shepherd-section";
 import { cn } from "@/platform/utils";
 
-const mergeMethods: GitHubMergeMethod[] = ["squash", "merge", "rebase"];
+const mergeMethods: MergeMethod[] = ["squash", "merge", "rebase"];
 
 export const PullRequestPanel: FC<{
   projectId: string | null;
@@ -75,6 +79,18 @@ export const PullRequestPanel: FC<{
     sourceControl.capabilities,
     "changeRequests.status",
   ).supported;
+  const checksCapability = capabilityState(
+    sourceControl.capabilities,
+    "checks.snapshot",
+  );
+  const reviewsCapability = capabilityState(
+    sourceControl.capabilities,
+    "reviewThreads.list",
+  );
+  const resolveReviewCapability = capabilityState(
+    sourceControl.capabilities,
+    "reviewThreads.resolve",
+  );
   const { t } = useTranslation();
   const toast = useToast();
   const statusQuery = useQuery(
@@ -98,16 +114,37 @@ export const PullRequestPanel: FC<{
   const resolveMutation = useMutation(
     resolveReviewThreadMutationOptions({
       api,
+      projectPath: sourceControl.projectPath,
       providerIdentity: sourceControl.providerIdentity,
       queryClient,
-      root,
     }),
   );
   const archiveMutation = useMutation(
     archiveWorkspaceMutationOptions({ api, queryClient }),
   );
   const status = statusQuery.data;
-  const [selectedMethod, setSelectedMethod] = useState<GitHubMergeMethod>(() =>
+  const changeRequestId = status?.changeRequest.id ?? null;
+  const checksQuery = useQuery(
+    checksSummaryQueryOptions({
+      active,
+      api,
+      changeRequestId,
+      projectPath: sourceControl.projectPath,
+      providerIdentity: sourceControl.providerIdentity,
+      supported: checksCapability.supported,
+    }),
+  );
+  const reviewThreadsQuery = useQuery(
+    reviewThreadsQueryOptions({
+      active,
+      api,
+      changeRequestId,
+      projectPath: sourceControl.projectPath,
+      providerIdentity: sourceControl.providerIdentity,
+      supported: reviewsCapability.supported,
+    }),
+  );
+  const [selectedMethod, setSelectedMethod] = useState<MergeMethod>(() =>
     readMergeMethod(root),
   );
   const [deleteBranch, setDeleteBranch] = useState<boolean | null>(null);
@@ -254,9 +291,22 @@ export const PullRequestPanel: FC<{
   const method = status.allowedMergeMethods.includes(selectedMethod)
     ? selectedMethod
     : status.defaultMergeMethod;
-  const blockers = deriveMergeBlockers(status);
-  const optionalChecks = optionalFailedChecks(status);
-  const checkingMergeability = status.mergeable === "UNKNOWN";
+  const reviewThreads = (reviewThreadsQuery.data ?? []).filter(
+    (thread) => thread.state === "unresolved",
+  );
+  const unresolvedThreadCount = reviewThreads.length;
+  const blockers = deriveMergeBlockers({
+    checks: checksQuery.data ?? null,
+    requirements: status.changeRequest.mergeRequirements,
+    reviewDecision: status.changeRequest.reviewDecision,
+    unresolvedThreadCount,
+    viewerCanMerge: status.changeRequest.viewerCanMerge,
+  });
+  const optionalChecks = optionalFailedChecks(checksQuery.data ?? null);
+  const checkingMergeability = status.changeRequest.mergeRequirements.some(
+    (requirement) =>
+      requirement.kind === "conflict" && requirement.state === "pending",
+  );
   const effectiveDeleteBranch = deleteBranch ?? status.deleteBranchOnMerge;
   const canMerge =
     blockers.length === 0 &&
@@ -363,22 +413,6 @@ export const PullRequestPanel: FC<{
             </div>
           )}
 
-          {status.behindBy > 0 && status.mergeStateStatus !== "BEHIND" ? (
-            <WorkspaceToolBanner tone="attention">
-              <div className="flex items-start gap-1.5">
-                <WarningCircle
-                  className="mt-0.5 size-4 shrink-0 text-status-attention"
-                  weight="fill"
-                />
-                <span>
-                  {t("workspace.tools.pullRequest.blockers.behindBase", {
-                    count: status.behindBy,
-                  })}
-                </span>
-              </div>
-            </WorkspaceToolBanner>
-          ) : null}
-
           {optionalChecks.length > 0 ? (
             <WorkspaceToolBanner tone="attention">
               {t("workspace.tools.pullRequest.optionalChecksFailed", {
@@ -397,7 +431,7 @@ export const PullRequestPanel: FC<{
               aria-label={t("workspace.tools.pullRequest.method")}
               className="min-w-0 flex-1"
               onChange={(event) => {
-                const next = event.target.value as GitHubMergeMethod;
+                const next = event.target.value as MergeMethod;
                 setSelectedMethod(next);
                 writeMergeMethod(root, next);
               }}
@@ -446,29 +480,66 @@ export const PullRequestPanel: FC<{
           )}
           ref={checksSectionRef}
         >
-          <WorkspaceChecksSection root={root} />
+          <WorkspaceChecksSection
+            capabilities={sourceControl.capabilities}
+            changeRequestId={changeRequestId}
+            projectPath={sourceControl.projectPath}
+            providerIdentity={sourceControl.providerIdentity}
+          />
         </div>
 
-        {status.unresolvedThreads.length > 0 ? (
+        {!reviewsCapability.supported ? (
+          <section
+            className="space-y-2 border-t border-border-subtle pt-3"
+            data-testid="workspace-reviews-unsupported"
+          >
+            <h3 className="text-xs font-medium">
+              {t("workspace.tools.pullRequest.unresolvedTitle", { count: 0 })}
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              {reviewsCapability.reason.message}
+            </p>
+            <CapabilityGate
+              capabilities={sourceControl.capabilities}
+              capability="reviewThreads.list"
+            >
+              <Button size="sm" variant="outline">
+                {t("workspace.tools.pullRequest.resolve")}
+              </Button>
+            </CapabilityGate>
+          </section>
+        ) : reviewThreadsQuery.isError ? (
+          <section className="space-y-2 border-t border-border-subtle pt-3">
+            <WorkspaceToolBanner tone="danger">
+              {reviewThreadsQuery.error instanceof Error
+                ? reviewThreadsQuery.error.message
+                : String(reviewThreadsQuery.error)}
+            </WorkspaceToolBanner>
+          </section>
+        ) : reviewThreads.length > 0 ? (
           <section className="space-y-2 border-t border-border-subtle pt-3">
             <h3 className="text-xs font-medium">
               {t("workspace.tools.pullRequest.unresolvedTitle", {
-                count: status.unresolvedThreads.length,
+                count: unresolvedThreadCount,
               })}
             </h3>
-            {status.unresolvedThreads.map((thread) => (
+            {!resolveReviewCapability.supported ? (
+              <p
+                className="text-xs text-muted-foreground"
+                data-testid="workspace-review-resolve-unsupported"
+              >
+                {resolveReviewCapability.reason.message}
+              </p>
+            ) : null}
+            {reviewThreads.map((thread) => (
               <ReviewThreadRow
+                capabilities={sourceControl.capabilities}
                 key={thread.id}
                 pending={resolveMutation.isPending}
                 pullRequestNumber={status.number}
                 thread={thread}
-                onOpen={() => openBrowserTab(thread.url)}
-                onResolve={() =>
-                  resolveMutation.mutateAsync({
-                    cwd: root,
-                    threadId: thread.id,
-                  })
-                }
+                onOpen={(url) => openBrowserTab(url)}
+                onResolve={() => resolveMutation.mutateAsync(thread.id)}
               />
             ))}
           </section>
@@ -560,13 +631,13 @@ const BlockerRow: FC<{
 };
 
 const CheckLinks: FC<{
-  checks: GitHubPullRequestCheck[];
+  checks: readonly CheckRun[];
   onOpen: (url: string) => void;
 }> = ({ checks, onOpen }) => {
   const { t } = useTranslation();
   const linkedChecks = checks.filter(
-    (check): check is GitHubPullRequestCheck & { url: string } =>
-      is.nonEmptyString(check.url),
+    (check): check is CheckRun & { detailsUrl: string } =>
+      is.nonEmptyString(check.detailsUrl),
   );
   if (linkedChecks.length === 0) return null;
   return (
@@ -574,8 +645,8 @@ const CheckLinks: FC<{
       {linkedChecks.map((check) => (
         <Button
           aria-label={`${t("workspace.tools.pullRequest.open")}: ${check.name}`}
-          key={`${check.name}:${check.url}`}
-          onClick={() => onOpen(check.url)}
+          key={`${check.id}:${check.detailsUrl}`}
+          onClick={() => onOpen(check.detailsUrl)}
           size="xs"
           variant="link"
         >
@@ -588,32 +659,58 @@ const CheckLinks: FC<{
 };
 
 const ReviewThreadRow: FC<{
-  onOpen: () => void;
+  capabilities: CapabilityMatrix;
+  onOpen: (url: string) => void;
   onResolve: () => Promise<unknown>;
   pending: boolean;
   pullRequestNumber: number;
-  thread: GitHubPullRequestReviewThread;
-}> = ({ onOpen, onResolve, pending, pullRequestNumber, thread }) => {
+  thread: ReviewThread;
+}> = ({
+  capabilities,
+  onOpen,
+  onResolve,
+  pending,
+  pullRequestNumber,
+  thread,
+}) => {
   const { t } = useTranslation();
+  const firstComment = thread.comments[0] ?? null;
+  const author = firstComment?.author?.login ?? null;
+  const webUrl = firstComment?.webUrl ?? null;
+  const body = thread.comments.map((comment) => comment.body).join("\n\n");
   return (
     <article className="space-y-2 rounded-md border border-border-subtle p-2.5 text-xs">
       <div className="font-mono text-muted-foreground">
-        {thread.path ?? t("workspace.tools.pullRequest.generalComment")}
-        {thread.line === null ? "" : `:${thread.line}`}
-        {thread.author === null ? "" : ` · @${thread.author}`}
+        {thread.location?.path ??
+          t("workspace.tools.pullRequest.generalComment")}
+        {thread.location?.endLine == null ? "" : `:${thread.location.endLine}`}
+        {author === null ? "" : ` · @${author}`}
       </div>
       <CollapsibleText
         className="wrap-break-word whitespace-pre-wrap select-text"
         resetKey={`${pullRequestNumber}:${thread.id}`}
-        text={thread.body}
+        text={body}
       />
       <div className="flex justify-end gap-1">
-        <Button onClick={onOpen} size="sm" variant="ghost">
-          {t("workspace.tools.pullRequest.open")}
-        </Button>
-        <Button disabled={pending} onClick={() => void onResolve()} size="sm">
-          {t("workspace.tools.pullRequest.resolve")}
-        </Button>
+        {webUrl === null ? null : (
+          <Button onClick={() => onOpen(webUrl)} size="sm" variant="ghost">
+            {t("workspace.tools.pullRequest.open")}
+          </Button>
+        )}
+        {thread.resolvable ? (
+          <CapabilityGate
+            capabilities={capabilities}
+            capability="reviewThreads.resolve"
+          >
+            <Button
+              disabled={pending}
+              onClick={() => void onResolve()}
+              size="sm"
+            >
+              {t("workspace.tools.pullRequest.resolve")}
+            </Button>
+          </CapabilityGate>
+        ) : null}
       </div>
     </article>
   );
@@ -621,7 +718,7 @@ const ReviewThreadRow: FC<{
 
 const MergedPrompt: FC<{
   chatId: string | null;
-  method: GitHubMergeMethod | null;
+  method: MergeMethod | null;
   onArchive: () => Promise<void>;
   onContinue: () => void;
   status: GitHubPullRequestStatus;
@@ -707,30 +804,23 @@ function mergeDismissedKey(root: string, number: number) {
   return `angel-engine.pull-request.dismissed:${root}:${number}`;
 }
 
-function readMergeMethod(root: string): GitHubMergeMethod {
+function readMergeMethod(root: string): MergeMethod {
   const value = window.localStorage.getItem(mergeMethodKey(root));
   return value === "merge" || value === "rebase" || value === "squash"
     ? value
     : "squash";
 }
 
-function writeMergeMethod(root: string, method: GitHubMergeMethod) {
+function writeMergeMethod(root: string, method: MergeMethod) {
   window.localStorage.setItem(mergeMethodKey(root), method);
 }
 
-function rememberMerge(
-  root: string,
-  number: number,
-  method: GitHubMergeMethod,
-) {
+function rememberMerge(root: string, number: number, method: MergeMethod) {
   window.localStorage.setItem(mergeResultKey(root, number), method);
   window.localStorage.removeItem(mergeDismissedKey(root, number));
 }
 
-function readMergedMethod(
-  root: string,
-  number: number,
-): GitHubMergeMethod | null {
+function readMergedMethod(root: string, number: number): MergeMethod | null {
   const value = window.localStorage.getItem(mergeResultKey(root, number));
   return value === "merge" || value === "rebase" || value === "squash"
     ? value

@@ -50,6 +50,44 @@ describe("createDaemonClient", () => {
     );
   });
 
+  it("uses generic source-control checks and review routes", async () => {
+    const fetchMock = vi.fn().mockImplementation(async () => jsonResponse({}));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createDaemonClient({ baseUrl: "", token: null });
+    await client.sourceControl.checksSummary("/repo with spaces", "42/part");
+    await client.sourceControl.checksFixPrompt("/repo with spaces", "42/part");
+    await client.sourceControl.reviewThreads("/repo with spaces", "42/part");
+    await client.sourceControl.resolveReviewThread(
+      "/repo with spaces",
+      "thread/1",
+    );
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "/api/source-control/checks/summary?id=42%2Fpart&projectPath=%2Frepo+with+spaces",
+    );
+    expect(fetchMock.mock.calls[1]).toEqual([
+      "/api/source-control/checks/fix-prompt",
+      expect.objectContaining({
+        body: JSON.stringify({
+          id: "42/part",
+          projectPath: "/repo with spaces",
+        }),
+        method: "POST",
+      }),
+    ]);
+    expect(fetchMock.mock.calls[2]?.[0]).toBe(
+      "/api/source-control/reviews/threads?id=42%2Fpart&projectPath=%2Frepo+with+spaces",
+    );
+    expect(fetchMock.mock.calls[3]).toEqual([
+      "/api/source-control/reviews/threads/thread%2F1/resolve",
+      expect.objectContaining({
+        body: JSON.stringify({ projectPath: "/repo with spaces" }),
+        method: "POST",
+      }),
+    ]);
+  });
+
   it("injects a bearer token when one is configured", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ version: "1" }));
     vi.stubGlobal("fetch", fetchMock);

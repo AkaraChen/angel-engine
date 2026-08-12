@@ -1,8 +1,18 @@
 // @vitest-environment jsdom
 
 import type { GitHubPullRequestStatus } from "@angel-engine/daemon-api/github";
+import type {
+  CapabilityMatrix,
+  ReviewThread,
+} from "@angel-engine/daemon-api/source-control";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import {
   afterAll,
   afterEach,
@@ -14,14 +24,29 @@ import {
 } from "vitest";
 
 import { defaultCollapsedTextMaxHeight } from "@/components/ui/collapsible-text";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
-const pullRequestStatus = vi.fn();
-const currentChangeRequest = vi.fn(async () =>
-  toChangeRequestStatus(await pullRequestStatus()),
-);
+const pullRequestStatus = vi.fn<() => Promise<GitHubPullRequestStatus>>();
+const currentChangeRequest = vi.fn<
+  () => Promise<ReturnType<typeof toChangeRequestStatus> | null>
+>(async () => toChangeRequestStatus(await pullRequestStatus()));
+const checksSummary = vi.fn();
+const reviewThreads = vi.fn<
+  (projectPath: string, id: string) => Promise<ReviewThread[]>
+>(async () => []);
+const resolveReviewThread = vi.fn();
 const openBrowserTab = vi.fn();
 const updateSnapshot = vi.fn();
 let focusChecksSection = false;
+let capabilities: CapabilityMatrix = {
+  entries: {
+    "changeRequests.list": { supported: true as const },
+    "changeRequests.status": { supported: true as const },
+    "checks.snapshot": { supported: true as const },
+    "reviewThreads.list": { supported: true as const },
+    "reviewThreads.resolve": { supported: true as const },
+  },
+};
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -45,12 +70,7 @@ vi.mock("@/features/shepherd/shepherd-section", () => ({
 
 vi.mock("@/features/source-control/api/use-activation", () => ({
   useSourceControlActivation: () => ({
-    capabilities: {
-      entries: {
-        "changeRequests.list": { supported: true },
-        "changeRequests.status": { supported: true },
-      },
-    },
+    capabilities,
     projectPath: "/repo",
     providerIdentity: "github:github.com/acme/widgets:1",
     status: "active",
@@ -64,7 +84,12 @@ vi.mock("@/app/workspace/workspace-tool-surface-model", () => ({
       github: {
         pullRequestStatus,
       },
-      sourceControl: { currentChangeRequest },
+      sourceControl: {
+        checksSummary,
+        currentChangeRequest,
+        resolveReviewThread,
+        reviewThreads,
+      },
     },
     chatId: "chat-1",
     focusChecksSection,
@@ -203,7 +228,9 @@ function renderPanel() {
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <PullRequestPanel projectId="project-1" root="/repo" />
+      <TooltipProvider>
+        <PullRequestPanel projectId="project-1" root="/repo" />
+      </TooltipProvider>
     </QueryClientProvider>,
   );
 }
@@ -212,7 +239,26 @@ beforeEach(() => {
   scrollHeight = defaultCollapsedTextMaxHeight + 80;
   focusChecksSection = false;
   pullRequestStatus.mockReset();
+  capabilities = {
+    entries: {
+      "changeRequests.list": { supported: true },
+      "changeRequests.status": { supported: true },
+      "checks.snapshot": { supported: true },
+      "reviewThreads.list": { supported: true },
+      "reviewThreads.resolve": { supported: true },
+    },
+  };
   currentChangeRequest.mockClear();
+  checksSummary.mockReset().mockResolvedValue({
+    checks: [],
+    failed: [],
+    failedBlocking: [],
+    hasPending: false,
+    headOid: "head",
+    requiredAllGreen: true,
+  });
+  reviewThreads.mockClear();
+  resolveReviewThread.mockReset();
   openBrowserTab.mockReset();
   updateSnapshot.mockReset();
   window.localStorage.clear();
@@ -286,6 +332,19 @@ describe("PullRequestPanel", () => {
     expect(currentChangeRequest).toHaveBeenCalledWith("/repo");
   });
 
+  it("makes no checks or review request without a current change request", async () => {
+    currentChangeRequest.mockResolvedValueOnce(null);
+
+    renderPanel();
+
+    await waitFor(() => {
+      expect(currentChangeRequest).toHaveBeenCalledWith("/repo");
+    });
+    await Promise.resolve();
+    expect(checksSummary).not.toHaveBeenCalled();
+    expect(reviewThreads).not.toHaveBeenCalled();
+  });
+
   it("places Checks before Shepherd", async () => {
     pullRequestStatus.mockResolvedValue(openStatus);
     renderPanel();
@@ -300,5 +359,74 @@ describe("PullRequestPanel", () => {
       checks.compareDocumentPosition(shepherd) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+
+  it("renders and resolves generic review threads", async () => {
+    pullRequestStatus.mockResolvedValue(openStatus);
+    reviewThreads.mockResolvedValueOnce([
+      {
+        comments: [
+          {
+            author: {
+              avatarUrl: null,
+              displayName: null,
+              id: "bob",
+              login: "bob",
+              webUrl: null,
+            },
+            body: "Please handle this edge case",
+            createdAt: "2026-08-12T00:00:00Z",
+            id: "comment-1",
+            updatedAt: null,
+            webUrl: "https://example.test/review/1",
+          },
+        ],
+        id: "thread-1",
+        location: {
+          endLine: 12,
+          path: "src/example.ts",
+          side: "right",
+          startLine: 12,
+        },
+        resolvable: true,
+        state: "unresolved",
+      },
+    ]);
+    resolveReviewThread.mockResolvedValue({ resolved: true });
+
+    renderPanel();
+
+    expect(
+      await screen.findByText("Please handle this edge case"),
+    ).toBeDefined();
+    expect(reviewThreads).toHaveBeenCalledWith("/repo", "42");
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "workspace.tools.pullRequest.resolve",
+      }),
+    );
+    await waitFor(() => {
+      expect(resolveReviewThread).toHaveBeenCalledWith("/repo", "thread-1");
+    });
+  });
+
+  it("shows an explicit disabled state and makes no review request when the capability is missing", async () => {
+    capabilities = {
+      entries: {
+        "changeRequests.list": { supported: true },
+        "changeRequests.status": { supported: true },
+        "checks.snapshot": { supported: true },
+      },
+    };
+    pullRequestStatus.mockResolvedValue(openStatus);
+
+    renderPanel();
+
+    expect(
+      (await screen.findByTestId("workspace-reviews-unsupported")).textContent,
+    ).toContain(
+      "Capability reviewThreads.list was not declared by the provider.",
+    );
+    expect(reviewThreads).not.toHaveBeenCalled();
   });
 });

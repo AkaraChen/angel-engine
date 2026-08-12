@@ -26,7 +26,6 @@ export const queryKeys = {
   github: {
     items: (cwd: string | null, query: string) =>
       ["github", "items", cwd, query] as const,
-    prChecks: (cwd: string | null) => ["github", "pr-checks", cwd] as const,
     pullRequest: (cwd: string | null) =>
       ["github", "pull-request-status", cwd] as const,
     repositories: (owner: string | null) =>
@@ -113,6 +112,8 @@ export const queryKeys = {
       ["source-control", providerIdentity, "checks", id] as const,
     checksSummary: (providerIdentity: string | null, id: string | null) =>
       ["source-control", providerIdentity, "checks", id, "summary"] as const,
+    reviewThreadsRoot: (providerIdentity: string | null) =>
+      ["source-control", providerIdentity, "reviews"] as const,
     reviewThreads: (providerIdentity: string | null, id: string | null) =>
       ["source-control", providerIdentity, "reviews", id, "threads"] as const,
   },
