@@ -23,12 +23,12 @@ import { PromptSourceControlAttachButton } from "./source-control-attach-button"
 const repository = {
   displayPath: "acme/widgets",
   extensions: {},
-  host: "github.com",
+  host: "forge.com",
   name: "widgets",
   namespace: ["acme"],
-  providerId: "github",
+  providerId: "forge",
   remoteId: "1",
-  webUrl: "https://github.com/acme/widgets",
+  webUrl: "https://forge.com/acme/widgets",
 } as const;
 const actor = {
   avatarUrl: null,
@@ -53,7 +53,7 @@ const workItem: WorkItem = {
   state: "open",
   title: "First issue",
   updatedAt: "2026-08-02T00:00:00Z",
-  webUrl: "https://github.com/acme/widgets/issues/1",
+  webUrl: "https://forge.com/acme/widgets/issues/1",
 };
 const changeRequest: ChangeRequest = {
   additions: null,
@@ -79,11 +79,13 @@ const changeRequest: ChangeRequest = {
   title: "Add widget spinner",
   updatedAt: "2026-08-03T00:00:00Z",
   viewerCanMerge: true,
-  webUrl: "https://github.com/acme/widgets/pull/7",
+  webUrl: "https://forge.com/acme/widgets/pull/7",
 };
 const supportedCapabilities: CapabilityMatrix = {
   entries: {
+    "changeRequests.getByUrl": { supported: true },
     "changeRequests.list": { supported: true },
+    "workItems.getByUrl": { supported: true },
     "workItems.list": { supported: true },
   },
 };
@@ -100,10 +102,10 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/platform/use-api", () => ({
   useApi: () => ({
-    links: { resolve: mocks.resolveUrl },
     sourceControl: {
       listChangeRequests: mocks.listChangeRequests,
       listWorkItems: mocks.listWorkItems,
+      resolveLink: mocks.resolveUrl,
     },
   }),
 }));
@@ -123,10 +125,10 @@ vi.mock("@/features/source-control/api/use-activation", () => ({
   useSourceControlActivation: () => ({
     capabilities: mocks.capabilities,
     projectPath: mocks.status === "active" ? "/repos/widgets" : null,
-    providerDisplayName: mocks.status === "active" ? "GitHub" : null,
-    providerId: mocks.status === "active" ? "github" : null,
+    providerDisplayName: mocks.status === "active" ? "Forge" : null,
+    providerId: mocks.status === "active" ? "forge" : null,
     providerIdentity:
-      mocks.status === "active" ? "github:github.com/acme/widgets:4" : null,
+      mocks.status === "active" ? "forge:forge.com/acme/widgets:4" : null,
     refetch: mocks.refetchActivation,
     status: mocks.status,
   }),
@@ -138,6 +140,9 @@ vi.mock("react-i18next", () => ({
       ({
         "composer.fromLink": "From link",
         "composer.fromLinkPlaceholder": "Search or paste a link",
+        "composer.configureSourceControl": "Configure source control",
+        "composer.sourceControlUnavailable":
+          "No source control provider is active for this project.",
       })[key] ?? key,
   }),
 }));
@@ -217,7 +222,7 @@ describe("PromptSourceControlAttachButton", () => {
       expect.objectContaining({
         itemId: "7",
         kind: "changeRequest",
-        providerId: "github",
+        providerId: "forge",
         sourceBranch: "feature/spinner",
         targetBranch: "main",
       }),
@@ -264,16 +269,58 @@ describe("PromptSourceControlAttachButton", () => {
     expect(screen.queryByText("provider details must not leak")).toBeNull();
   });
 
-  it("fails closed with a disabled reason and zero business requests", () => {
+  it("resolves a non-Forge URL through the active provider", async () => {
+    const gitlabRepository = {
+      ...repository,
+      displayPath: "group/widgets",
+      host: "gitlab.example.com",
+      namespace: ["group"],
+      providerId: "gitlab",
+      webUrl: "https://gitlab.example.com/group/widgets",
+    };
+    const url = "https://gitlab.example.com/group/widgets/-/merge_requests/7";
+    const resolved = {
+      ...changeRequest,
+      repository: gitlabRepository,
+      source: { ...changeRequest.source, repository: gitlabRepository },
+      target: { ...changeRequest.target, repository: gitlabRepository },
+      webUrl: url,
+    };
+    mocks.resolveUrl.mockResolvedValue(resolved);
+    const onAttached = vi.fn();
+    renderButton(onAttached);
+    openDialog();
+
+    fireEvent.change(screen.getByPlaceholderText("Search or paste a link"), {
+      target: { value: url },
+    });
+
+    await waitFor(() =>
+      expect(mocks.resolveUrl).toHaveBeenCalledWith("/repos/widgets", url),
+    );
+    expect(await screen.findByText("Add widget spinner")).toBeDefined();
+    fireEvent.click(screen.getByText("composer.attachChangeRequestConfirm"));
+    expect(onAttached).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: "changeRequest",
+        providerId: "gitlab",
+        repositoryPath: "group/widgets",
+      }),
+    );
+  });
+
+  it("fails closed with a configuration reason and zero business requests", () => {
     mocks.status = "unresolved";
     mocks.capabilities = { entries: {} };
     renderButton(vi.fn());
 
-    const trigger = screen.getByTitle("From link");
+    const trigger = screen.getByTitle(
+      "No source control provider is active for this project.",
+    );
     expect(trigger.getAttribute("disabled")).not.toBeNull();
     expect(
       trigger.closest("[data-capability]")?.getAttribute("data-capability"),
-    ).toBe("workItems.list");
+    ).toBe("workItems.getByUrl");
     fireEvent.click(trigger);
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(mocks.listWorkItems).not.toHaveBeenCalled();

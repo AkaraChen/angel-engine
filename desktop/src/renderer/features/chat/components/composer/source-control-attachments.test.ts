@@ -8,19 +8,19 @@ import {
 const sample: ComposerSourceControlAttachment = {
   author: "alice",
   body: "body",
-  contextText: "GitHub Issue #1 — title\n\nBody:\nbody",
+  contextText: "Forge Issue #1 — title\n\nBody:\nbody",
   draft: false,
   id: "gh-1",
   itemId: "1",
   kind: "workItem",
   number: 1,
-  providerId: "github",
+  providerId: "forge",
   repositoryPath: "acme/widgets",
   sourceBranch: null,
   state: "OPEN",
   targetBranch: null,
   title: "title",
-  url: "https://github.com/acme/widgets/issues/1",
+  url: "https://forge.com/acme/widgets/issues/1",
 };
 
 describe("appendSourceControlContexts", () => {
@@ -30,7 +30,7 @@ describe("appendSourceControlContexts", () => {
 
   it("appends context after user text", () => {
     expect(appendSourceControlContexts("please fix the bug", [sample])).toBe(
-      "please fix the bug\n\n---\nGitHub Issue #1 — title\n\nBody:\nbody",
+      "please fix the bug\n\n---\nForge Issue #1 — title\n\nBody:\nbody",
     );
   });
 

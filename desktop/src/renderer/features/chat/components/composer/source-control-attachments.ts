@@ -1,4 +1,3 @@
-import type { ResolvedTaskLink } from "@angel-engine/daemon-api/links";
 import type {
   ChangeRequest,
   WorkItem,
@@ -64,50 +63,6 @@ export function changeRequestAttachment(
     title: item.title,
     url: item.webUrl,
   });
-}
-
-/** Temporary link bridge until the generic links migration in R6. */
-export function resolvedTaskLinkAttachment(
-  item: ResolvedTaskLink,
-): ComposerSourceControlAttachment {
-  if (item.provider === "linear") {
-    return {
-      author: null,
-      body: item.body,
-      contextText: item.contextText,
-      draft: false,
-      id: attachmentId("linear", "workItem"),
-      itemId: item.identifier,
-      kind: "workItem",
-      number: null,
-      providerId: "linear",
-      repositoryPath: item.team,
-      sourceBranch: null,
-      state: item.state,
-      targetBranch: null,
-      title: item.title,
-      url: item.url,
-    };
-  }
-  return {
-    author: item.author,
-    body: item.body,
-    contextText: item.contextText,
-    draft: item.isDraft ?? false,
-    id: attachmentId("github", item.kind),
-    itemId: String(item.number),
-    kind: item.kind === "pullRequest" ? "changeRequest" : "workItem",
-    number: item.number,
-    providerId: "github",
-    repositoryPath: `${item.owner}/${item.repo}`,
-    sourceBranch:
-      item.kind === "pullRequest" ? (item.headRefName ?? null) : null,
-    state: item.state.toLowerCase(),
-    targetBranch:
-      item.kind === "pullRequest" ? (item.baseRefName ?? null) : null,
-    title: item.title,
-    url: item.url,
-  };
 }
 
 export function appendSourceControlContexts(

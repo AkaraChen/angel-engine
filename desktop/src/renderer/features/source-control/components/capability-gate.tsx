@@ -18,6 +18,8 @@ interface CapabilityGateProps {
   capability: SourceControlCapabilityId;
   children: ReactElement<{ disabled?: boolean }>;
   onRemediate?: (reason: UnsupportedReason) => void;
+  reasonOverride?: UnsupportedReason;
+  remediationAvailable?: boolean;
   remediationLabel?: ReactNode;
 }
 
@@ -26,15 +28,20 @@ export function CapabilityGate({
   capability,
   children,
   onRemediate,
+  reasonOverride,
+  remediationAvailable,
   remediationLabel,
 }: CapabilityGateProps) {
-  const state = capabilityState(capabilities, capability);
+  const state = reasonOverride
+    ? { reason: reasonOverride, supported: false as const }
+    : capabilityState(capabilities, capability);
   if (state.supported) return children;
 
   const disabledChild = cloneElement(children, { disabled: true });
   const canRemediate =
-    state.reason.kind === "unauthenticated" ||
-    state.reason.kind === "cli-missing";
+    remediationAvailable ??
+    (state.reason.kind === "unauthenticated" ||
+      state.reason.kind === "cli-missing");
 
   return (
     <Tooltip>

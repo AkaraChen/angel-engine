@@ -50,6 +50,30 @@ describe("createDaemonClient", () => {
     );
   });
 
+  it("reads and updates project source-control configuration", async () => {
+    const fetchMock = vi.fn().mockImplementation(async () => jsonResponse({}));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createDaemonClient({ baseUrl: "", token: null });
+    await client.sourceControl.config("project 1");
+    await client.sourceControl.updateConfig("project 1", {
+      provider: { providerId: "forge-a", remote: "upstream" },
+    });
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "/api/source-control/config?projectId=project+1",
+    );
+    expect(fetchMock.mock.calls[1]).toEqual([
+      "/api/source-control/config?projectId=project+1",
+      expect.objectContaining({
+        body: JSON.stringify({
+          provider: { providerId: "forge-a", remote: "upstream" },
+        }),
+        method: "PUT",
+      }),
+    ]);
+  });
+
   it("uses generic source-control attachment list routes", async () => {
     const fetchMock = vi.fn().mockImplementation(async () => jsonResponse([]));
     vi.stubGlobal("fetch", fetchMock);
@@ -67,6 +91,49 @@ describe("createDaemonClient", () => {
     );
     expect(fetchMock.mock.calls[1]?.[0]).toBe(
       "/api/source-control/change-requests?limit=30&projectPath=%2Frepo+with+spaces&query=feature",
+    );
+  });
+
+  it("resolves links through the activated source-control project", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ id: "42" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createDaemonClient({ baseUrl: "", token: null });
+    await client.sourceControl.resolveLink(
+      "/repo with spaces",
+      "https://gitlab.example.com/group/repo/-/merge_requests/42",
+    );
+
+    expect(fetchMock.mock.calls[0]).toEqual([
+      "/api/source-control/links/resolve",
+      expect.objectContaining({
+        body: JSON.stringify({
+          projectPath: "/repo with spaces",
+          url: "https://gitlab.example.com/group/repo/-/merge_requests/42",
+        }),
+        method: "POST",
+      }),
+    ]);
+  });
+
+  it("uses generic source-control repository discovery routes", async () => {
+    const fetchMock = vi.fn().mockImplementation(async () => jsonResponse([]));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createDaemonClient({ baseUrl: "", token: null });
+    await client.sourceControl.listNamespaces("/repo with spaces", "acme", 20);
+    await client.sourceControl.listRepositories(
+      "/repo with spaces",
+      ["group", "team"],
+      "widgets",
+      30,
+    );
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "/api/source-control/namespaces?limit=20&projectPath=%2Frepo+with+spaces&query=acme",
+    );
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(
+      "/api/source-control/repositories?limit=30&namespace=group%2Fteam&projectPath=%2Frepo+with+spaces&query=widgets",
     );
   });
 

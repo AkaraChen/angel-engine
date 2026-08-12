@@ -1,6 +1,7 @@
 import type {
   CapabilityMatrix,
   ProviderActivation,
+  ProviderActivationCandidate,
   ProviderAuthenticationState,
   ProviderDiagnostic,
   RepositoryIdentity,
@@ -28,6 +29,7 @@ export type SourceControlActivationStatus =
 export interface SourceControlActivationView {
   activation: ProviderActivation | null;
   authentication: ProviderAuthenticationState | null;
+  candidates: readonly ProviderActivationCandidate[];
   capabilities: CapabilityMatrix;
   diagnostics: readonly ProviderDiagnostic[];
   error: Error | null;
@@ -36,6 +38,7 @@ export interface SourceControlActivationView {
   providerId: string | null;
   providerIdentity: string | null;
   repository: RepositoryIdentity | null;
+  unresolvedReason: "no-match" | "configured-provider-missing" | null;
   status: SourceControlActivationStatus;
   unavailableReason: UnsupportedReason | null;
   refetch(): Promise<unknown>;
@@ -89,6 +92,8 @@ function activationView(input: {
   return {
     activation: active,
     authentication: active?.authentication ?? null,
+    candidates:
+      input.result?.status === "ambiguous" ? input.result.candidates : [],
     capabilities: active?.capabilities ?? EMPTY_CAPABILITIES,
     diagnostics: active?.diagnostics ?? EMPTY_DIAGNOSTICS,
     error: input.error,
@@ -107,6 +112,8 @@ function activationView(input: {
             ? "loading"
             : "unresolved",
     unavailableReason: active?.unavailableReason ?? null,
-    refetch: input.refetch,
+    unresolvedReason:
+      input.result?.status === "unresolved" ? input.result.reason : null,
+    refetch: () => input.refetch(),
   };
 }
