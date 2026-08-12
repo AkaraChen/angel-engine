@@ -77,6 +77,9 @@ export interface WorkItem {
   extensions?: SourceControlExtensions;
 }
 
+/** Provider-neutral result returned by the source-control link resolver. */
+export type ResolvedSourceControlLink = ChangeRequest | WorkItem;
+
 export type CheckGroupKind = "workflow-run" | "pipeline" | "policy-set";
 
 export interface CheckGroup {
@@ -204,20 +207,26 @@ export interface MergeRequirement {
 
 export type SourceControlCapabilityId =
   | "provider.auth"
-  | "discovery"
+  | "discovery.listNamespaces"
+  | "discovery.listRepositories"
   | "repositoryIdentity"
   | "changeRequests.create"
   | "changeRequests.get"
+  | "changeRequests.getByUrl"
   | "changeRequests.list"
   | "changeRequests.status"
   | "changeRequests.comment"
   | "changeRequests.merge"
+  | "changeRequests.preflight"
+  | "changeRequests.resolveHead"
   | "checks.list"
   | "checks.snapshot"
   | "checks.failureLog"
+  | "checks.fixPrompt"
   | "reviewThreads.list"
   | "reviewThreads.resolve"
   | "workItems.get"
+  | "workItems.getByUrl"
   | "workItems.list"
   | "branches.publish"
   | "provider.clone";
@@ -268,14 +277,49 @@ export interface ProviderDiagnostic {
 }
 
 export interface ProviderActivation {
+  generation: number;
   provider: ProviderManifest;
-  remote: string;
+  projectPath: string;
+  remote: {
+    name: string;
+    url: string;
+  };
   repository: RepositoryIdentity | null;
   authentication: ProviderAuthenticationState;
   capabilities: CapabilityMatrix;
   unavailableReason: UnsupportedReason | null;
   diagnostics: readonly ProviderDiagnostic[];
 }
+
+export interface ProviderActivationCandidate {
+  providerId: string;
+  remote: {
+    name: string;
+    url: string;
+    fetchUrl: string;
+    pushUrl: string | null;
+  };
+  repository: RepositoryIdentity | null;
+  score: number;
+  source: "explicit" | "upstream" | "default-remote" | "remote";
+}
+
+export type SourceControlActivationResult =
+  | {
+      status: "active";
+      projectPath: string;
+      activation: ProviderActivation;
+    }
+  | {
+      status: "ambiguous";
+      projectPath: string;
+      candidates: readonly ProviderActivationCandidate[];
+    }
+  | {
+      status: "unresolved";
+      projectPath: string;
+      reason: "no-match" | "configured-provider-missing";
+    };
 
 export interface SourceControlErrorDetails {
   providerId: string;

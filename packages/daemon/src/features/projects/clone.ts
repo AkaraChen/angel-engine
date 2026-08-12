@@ -3,6 +3,7 @@ import type {
   ProjectCloneInput,
   ProjectCloneProgressEvent,
 } from "@angel-engine/daemon-api/projects";
+import type { RepositoryIdentity } from "@angel-engine/daemon-api/source-control";
 import type { Db } from "../../platform/db";
 import { execFile, spawn } from "node:child_process";
 import fs from "node:fs";
@@ -11,9 +12,10 @@ import path from "node:path";
 import { promisify } from "node:util";
 import is from "@sindresorhus/is";
 import { Effect } from "effect";
-import which from "which";
 
 import { DaemonError } from "../../platform/errors";
+import { createSourceControlRegistry } from "../source-control/providers";
+import type { SourceControlRegistry } from "../source-control/registry/registry";
 import { createProject, listProjects } from "./repository";
 
 const execFileAsync = promisify(execFile);
@@ -26,11 +28,10 @@ export interface ProjectCloneResult {
 }
 
 interface CloneSource {
-  /** What we hand to git/gh; already normalized to a clonable remote. */
+  /** What we hand to the generic git fallback. */
   cloneUrl: string;
-  /** github.com `owner/repo`, set only when gh can clone it with its own auth. */
-  gitHubSlug: string | null;
   namespace: string[];
+  repository: RepositoryIdentity | null;
   repo: string;
 }
 
@@ -57,10 +58,11 @@ export function cloneProject(
   input: ProjectCloneInput,
   onProgress: (event: ProjectCloneProgressEvent) => void,
   signal?: AbortSignal,
+  registry: SourceControlRegistry = createSourceControlRegistry(),
 ): Effect.Effect<ProjectCloneResult, DaemonError, Db> {
   return Effect.gen(function* () {
     yield* rejectIfAborted(signal);
-    const source = yield* parseCloneSource(input.url);
+    const source = yield* parseCloneSource(input.url, registry);
     const cloneRoot = projectCloneRoot();
     const targetPath = path.resolve(
       cloneRoot,
@@ -85,6 +87,7 @@ export function cloneProject(
         cloneRoot,
         targetPath,
         signal,
+        registry,
         (detail, percent) => {
           emit({ detail, percent, stage: "cloning" });
         },
@@ -115,6 +118,7 @@ function rejectIfAborted(
 
 function parseCloneSource(
   rawUrl: string,
+  registry: SourceControlRegistry,
 ): Effect.Effect<CloneSource, DaemonError> {
   const url = rawUrl.trim();
   if (!is.nonEmptyString(url)) {
@@ -122,18 +126,40 @@ function parseCloneSource(
   }
 
   if (OWNER_REPO_SHORTHAND.test(url)) {
-    const [owner, repo] = url.split("/");
-    const normalizedRepo = stripGitSuffix(repo);
-    if (!isSafePathSegment(owner) || !isSafePathSegment(normalizedRepo)) {
+    const resolution = registry.parseRepositoryUrl(url);
+    if (resolution.status === "ambiguous") {
       return Effect.fail(
-        DaemonError.invalidRequest("Repository owner or name is invalid."),
+        DaemonError.invalidRequest(
+          "The repository matches multiple source-control providers.",
+        ),
       );
     }
+    if (resolution.status === "resolved") {
+      const repository = resolution.repository;
+      return Effect.succeed({
+        cloneUrl: repository.webUrl ?? url,
+        namespace: [...repository.namespace],
+        repository: resolution.cloneSupported ? repository : null,
+        repo: repository.name,
+      });
+    }
+  }
+
+  const providerResolution = registry.parseRepositoryUrl(url);
+  if (providerResolution.status === "ambiguous") {
+    return Effect.fail(
+      DaemonError.invalidRequest(
+        "The repository matches multiple source-control providers.",
+      ),
+    );
+  }
+  if (providerResolution.status === "resolved") {
+    const repository = providerResolution.repository;
     return Effect.succeed({
-      cloneUrl: `https://github.com/${owner}/${normalizedRepo}.git`,
-      gitHubSlug: `${owner}/${normalizedRepo}`,
-      namespace: [owner],
-      repo: normalizedRepo,
+      cloneUrl: url,
+      namespace: [...repository.namespace],
+      repository: providerResolution.cloneSupported ? repository : null,
+      repo: repository.name,
     });
   }
 
@@ -146,14 +172,10 @@ function parseCloneSource(
     );
   }
 
-  const isGitHub = location.host === "github.com";
   return Effect.succeed({
     cloneUrl: url,
-    gitHubSlug:
-      isGitHub && location.namespace.length === 1
-        ? `${location.namespace[0]}/${location.repo}`
-        : null,
     namespace: location.namespace,
+    repository: null,
     repo: location.repo,
   });
 }
@@ -331,9 +353,7 @@ function sameRemote(left: string, right: string): boolean {
     const location = parseRemoteLocation(value);
     if (location === null) return value.toLowerCase();
     const remotePath = [...location.namespace, location.repo].join("/");
-    return `${location.host}/${
-      location.host === "github.com" ? remotePath.toLowerCase() : remotePath
-    }`;
+    return `${location.host}/${remotePath}`;
   };
   return normalize(left) === normalize(right);
 }
@@ -343,43 +363,33 @@ function runClone(
   cloneRoot: string,
   targetPath: string,
   signal: AbortSignal | undefined,
+  registry: SourceControlRegistry,
   onProgress: (detail: string, percent: number | null) => void,
 ): Effect.Effect<void, DaemonError> {
   return Effect.gen(function* () {
-    const ghPath = is.nonEmptyString(source.gitHubSlug)
-      ? yield* Effect.tryPromise({
-          catch: () => DaemonError.gitFailed(undefined),
-          try: () => which("gh", { nothrow: true }),
-        })
-      : null;
-
     yield* assertManagedTarget(cloneRoot, targetPath);
     fs.mkdirSync(path.dirname(targetPath), { recursive: true });
-
-    // `gh repo clone` reuses the CLI's credentials, which is the only way a
-    // private repository clones without a preconfigured git credential helper.
-    const [command, args] =
-      is.nonEmptyString(ghPath) && is.nonEmptyString(source.gitHubSlug)
-        ? ([
-            "gh",
-            [
-              "repo",
-              "clone",
-              source.gitHubSlug,
-              targetPath,
-              "--",
-              "--progress",
-            ],
-          ] as const)
-        : ([
-            "git",
-            ["clone", "--progress", source.cloneUrl, targetPath],
-          ] as const);
 
     yield* Effect.tryPromise({
       catch: (cause) =>
         DaemonError.gitFailed(cause, "Could not clone the repository."),
-      try: () => spawnClone(command, [...args], signal, onProgress),
+      try: async () => {
+        if (source.repository !== null) {
+          onProgress(source.repository.displayPath, null);
+          await registry.cloneRepository({
+            repository: source.repository,
+            signal,
+            targetPath,
+          });
+          return;
+        }
+        await spawnClone(
+          "git",
+          ["clone", "--progress", source.cloneUrl, targetPath],
+          signal,
+          onProgress,
+        );
+      },
     });
   });
 }

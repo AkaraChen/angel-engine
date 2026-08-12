@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import type { ShepherdSession } from "@angel-engine/daemon-api/shepherd";
-import type { GitHubPullRequestStatus } from "@angel-engine/daemon-api/github";
+import type { ChangeRequest } from "@angel-engine/daemon-api/source-control";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   act,
@@ -18,6 +18,7 @@ const getShepherd = vi.fn();
 const startShepherd = vi.fn();
 const stopShepherd = vi.fn();
 const resumeShepherd = vi.fn();
+const resolveLink = vi.fn();
 
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
@@ -38,6 +39,7 @@ vi.mock("@/app/workspace/workspace-tool-surface-model", () => ({
   useWorkspaceToolSurface: () => ({
     active: true,
     api: {
+      sourceControl: { resolveLink },
       shepherd: {
         get: getShepherd,
         start: startShepherd,
@@ -49,13 +51,53 @@ vi.mock("@/app/workspace/workspace-tool-surface-model", () => ({
   }),
 }));
 
+vi.mock("@/features/source-control/api/use-activation", () => ({
+  useSourceControlActivation: () => ({
+    capabilities: {
+      entries: { "changeRequests.getByUrl": { supported: true } },
+    },
+    projectPath: "/workspace/widgets",
+    refetch: vi.fn(),
+    status: "active",
+  }),
+}));
+
 import { ShepherdSection } from "./shepherd-section";
 
-const prStatus = {
-  state: "OPEN",
-  url: "https://github.com/acme/widgets/pull/42",
+const repository = {
+  displayPath: "acme/widgets",
+  host: "forge.com",
+  name: "widgets",
+  namespace: ["acme"],
+  providerId: "forge",
+  remoteId: "1",
+  webUrl: "https://forge.com/acme/widgets",
+} as const;
+const changeRequest = {
+  additions: null,
+  allowedMergeMethods: ["squash"],
+  author: null,
+  body: "",
+  changedFiles: null,
+  commitCount: null,
+  createdAt: null,
+  defaultMergeMethod: "squash",
+  deletions: null,
+  draft: false,
+  id: "42",
+  mergeRequirements: [],
+  mergedAt: null,
   number: 42,
-} as GitHubPullRequestStatus;
+  repository,
+  reviewDecision: "none",
+  source: { name: "feature", oid: "sha", repository },
+  state: "open",
+  target: { name: "main", oid: null, repository },
+  title: "Feature",
+  updatedAt: null,
+  viewerCanMerge: true,
+  webUrl: "https://forge.com/acme/widgets/pull/42",
+} satisfies ChangeRequest;
 
 function session(overrides: Partial<ShepherdSession> = {}): ShepherdSession {
   return {
@@ -91,7 +133,7 @@ function renderSection(next: ShepherdSession | null) {
     queryClient,
     ...render(
       <QueryClientProvider client={queryClient}>
-        <ShepherdSection status={prStatus} />
+        <ShepherdSection changeRequest={changeRequest} projectId="project-1" />
       </QueryClientProvider>,
     ),
   };
@@ -103,6 +145,7 @@ beforeEach(() => {
   startShepherd.mockReset();
   stopShepherd.mockReset();
   resumeShepherd.mockReset();
+  resolveLink.mockReset().mockResolvedValue(changeRequest);
   stopShepherd.mockImplementation(async ({ id }: { id: string }) =>
     session({ id, state: "settled", settledReason: "stopped" }),
   );
@@ -117,6 +160,54 @@ afterEach(() => {
 });
 
 describe("ShepherdSection", () => {
+  it("stacks the header and full-width action in a narrow panel", async () => {
+    const view = renderSection(null);
+    view.container.style.width = "246px";
+
+    await waitFor(() => {
+      expect(screen.getByTestId("shepherd-toggle")).toBeDefined();
+    });
+
+    expect(screen.getByTestId("shepherd-section").classList).toContain(
+      "@container",
+    );
+    expect(screen.getByTestId("shepherd-header").className).toContain(
+      "flex-col",
+    );
+    expect(screen.getByTestId("shepherd-header").className).toContain(
+      "@[360px]:flex-row",
+    );
+    expect(screen.getByTestId("shepherd-toggle").className).toContain("w-full");
+    expect(screen.getByTestId("shepherd-toggle").className).toContain(
+      "@[360px]:w-auto",
+    );
+    expect(view.container.style.width).toBe("246px");
+  });
+
+  it("resolves the change-request URL before starting shepherd", async () => {
+    renderSection(null);
+    await waitFor(() => {
+      expect(screen.getByTestId("shepherd-toggle")).toBeDefined();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("shepherd-toggle"));
+    });
+
+    await waitFor(() => {
+      expect(resolveLink).toHaveBeenCalledWith(
+        "/workspace/widgets",
+        changeRequest.webUrl,
+      );
+      expect(startShepherd).toHaveBeenCalledWith({
+        chatId: "chat-1",
+        owner: "acme",
+        prNumber: 42,
+        repo: "widgets",
+      });
+    });
+  });
+
   it("renders off, watching, queued, and settled states", async () => {
     renderSection(null);
     await waitFor(() => {
@@ -188,7 +279,7 @@ describe("ShepherdSection", () => {
     });
     render(
       <QueryClientProvider client={queryClient}>
-        <ShepherdSection status={prStatus} />
+        <ShepherdSection changeRequest={changeRequest} projectId="project-1" />
       </QueryClientProvider>,
     );
 
@@ -232,7 +323,7 @@ describe("ShepherdSection", () => {
 
     const view = render(
       <QueryClientProvider client={queryClient}>
-        <ShepherdSection status={prStatus} />
+        <ShepherdSection changeRequest={changeRequest} projectId="project-1" />
       </QueryClientProvider>,
     );
 
@@ -246,7 +337,7 @@ describe("ShepherdSection", () => {
     });
     view.rerender(
       <QueryClientProvider client={queryClient}>
-        <ShepherdSection status={prStatus} />
+        <ShepherdSection changeRequest={changeRequest} projectId="project-1" />
       </QueryClientProvider>,
     );
 

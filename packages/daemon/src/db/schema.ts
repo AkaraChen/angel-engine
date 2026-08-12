@@ -16,6 +16,13 @@ export const projects = sqliteTable("projects", {
   path: text("path").notNull().unique(),
 });
 
+export const providerHostMappings = sqliteTable("provider_host_mappings", {
+  host: text("host").primaryKey(),
+  providerId: text("provider_id").notNull(),
+});
+
+export type ProviderHostMappingRow = typeof providerHostMappings.$inferSelect;
+
 export const customAgents = sqliteTable("custom_agents", {
   id: text("id").primaryKey(),
   label: text("label").notNull(),

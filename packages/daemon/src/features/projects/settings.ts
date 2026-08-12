@@ -14,7 +14,7 @@ import {
   projectConfigPath,
   saveProjectLifecycleConfig,
 } from "./config";
-import { projectGitStatus } from "./git";
+import { projectGitStatus } from "../source-control/local-git/projects";
 
 /**
  * Read/write side of the per-project `2code.json`. File parsing and the setup
