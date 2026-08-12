@@ -272,6 +272,19 @@ export interface LocaleResourceTranslationWorkspaceToolsChangeRequest {
     unauthenticatedDetail: string;
   };
   generalComment: string;
+  hostedFallback: {
+    ambiguousDetail: string;
+    apply: string;
+    configure: string;
+    configuredProviderMissing: string;
+    errorDetail: string;
+    noProviderDetail: string;
+    remoteLabel: string;
+    retry: string;
+    saving: string;
+    title: string;
+    unavailableDetail: string;
+  };
   merge: string;
   mergeChanged: string;
   mergeFailed: string;

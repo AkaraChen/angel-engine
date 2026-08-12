@@ -146,6 +146,7 @@ import type {
   ReviewThread,
   ResolvedSourceControlLink,
   SourceControlActivationResult,
+  SourceControlProjectConfig,
   WorkItem,
 } from "@angel-engine/daemon-api/source-control";
 import { isProjectCloneEvent } from "@angel-engine/daemon-api/projects";
@@ -747,6 +748,15 @@ export function createDaemonClient(options: DaemonClientOptions) {
       activation: (projectId: string) =>
         request<SourceControlActivationResult>(
           `/api/source-control/activation?${query({ projectId })}`,
+        ),
+      config: (projectId: string) =>
+        request<SourceControlProjectConfig>(
+          `/api/source-control/config?${query({ projectId })}`,
+        ),
+      updateConfig: (projectId: string, input: SourceControlProjectConfig) =>
+        request<SourceControlProjectConfig>(
+          `/api/source-control/config?${query({ projectId })}`,
+          json("PUT", input),
         ),
       currentChangeRequest: (projectPath: string) =>
         request<ChangeRequestStatusResult | null>(

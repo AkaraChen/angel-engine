@@ -49,6 +49,23 @@ export const changeRequestEn = {
       "Run the provider CLI auth login, then refresh this panel.",
   },
   generalComment: "General comment",
+  hostedFallback: {
+    ambiguousDetail:
+      "Choose which remote should provide hosted source control for this workspace.",
+    apply: "Use remote",
+    configure: "Configure source control",
+    configuredProviderMissing:
+      "The configured source control provider is not available.",
+    errorDetail: "Source control provider detection failed. Try again.",
+    noProviderDetail:
+      "Local Git remains available. Configure a provider to use hosted change requests, checks, and reviews.",
+    remoteLabel: "Source control remote",
+    retry: "Detect again",
+    saving: "Configuring…",
+    title: "No Source control provider detected",
+    unavailableDetail:
+      "The source control provider is unavailable. Local Git remains available.",
+  },
   merge: "Merge",
   mergeChanged: "The change request changed before the merge completed.",
   mergeFailed: "Merge failed",
@@ -170,6 +187,20 @@ export const changeRequestZhCN = {
     unauthenticatedDetail: "请通过提供方 CLI 登录，然后刷新此面板。",
   },
   generalComment: "一般评论",
+  hostedFallback: {
+    ambiguousDetail: "请选择用于此工作区托管源代码控制的远程仓库。",
+    apply: "使用此远程仓库",
+    configure: "配置源代码控制",
+    configuredProviderMissing: "已配置的源代码控制提供方不可用。",
+    errorDetail: "检测源代码控制提供方失败，请重试。",
+    noProviderDetail:
+      "本地 Git 仍可使用。配置提供方后即可使用托管变更请求、检查和审阅。",
+    remoteLabel: "源代码控制远程仓库",
+    retry: "重新检测",
+    saving: "配置中…",
+    title: "未检测到源代码控制提供方",
+    unavailableDetail: "源代码控制提供方不可用。本地 Git 仍可使用。",
+  },
   merge: "合并",
   mergeChanged: "合并完成前变更请求状态已变化。",
   mergeFailed: "合并失败",
