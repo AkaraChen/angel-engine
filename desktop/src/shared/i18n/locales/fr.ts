@@ -500,11 +500,11 @@ export const fr = {
           confirmDeleteDetail:
             "Cela supprimera définitivement {{chatCount}} session(s) archivée(s) et {{managedWorktreeCount}} répertoire(s) worktree. Cette action est irréversible.",
           confirmDeleteTitle: "Supprimer les worktrees supprimables ?",
-          deleteFailed: "Impossible de supprimer le worktree",
+          deleteFailed: "Échec de la suppression : {{message}}",
+          deletingToast: "Suppression du worktree…",
           deleteWorktree:
             "Supprimer définitivement le worktree {{identifier}} de {{projectName}}",
-          deletedToast:
-            "{{worktreeCount}} worktree(s) supprimé(s) · {{chatCount}} session(s) archivée(s) supprimée(s)",
+          deletedToast: "Worktree supprimé",
           empty: "Aucun worktree à supprimer",
           missingOnDisk: "Absent du disque",
           noSessions: "Worktree orphelin · aucune session archivée",

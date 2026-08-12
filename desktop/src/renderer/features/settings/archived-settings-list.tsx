@@ -76,13 +76,16 @@ export function SettingsBulkCount({ children }: { children: ReactNode }) {
 /** Row shell: rounded hover target, `--primary-soft` when bulk-selected. */
 export function SettingsListRow({
   children,
+  disabled,
   selected,
 }: {
   children: ReactNode;
+  disabled?: boolean;
   selected?: boolean;
 }) {
   return (
     <article
+      aria-disabled={disabled === true}
       className={cn(
         `
           flex min-w-0 items-start gap-3 rounded-lg px-3 py-2.5 transition-colors
@@ -90,6 +93,7 @@ export function SettingsListRow({
           motion-reduce:transition-none
         `,
         selected === true ? "bg-primary-soft" : "hover:bg-overlay-hover",
+        disabled === true && "pointer-events-none opacity-50",
       )}
     >
       {children}

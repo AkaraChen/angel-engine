@@ -36,6 +36,7 @@ import {
   sectionLabelClassName,
 } from "@/features/settings/settings-controls";
 import { splitWorktreePath } from "@/features/settings/removable-worktree-path";
+import { localizedErrorMessage } from "@/platform/error-message";
 import { useApi } from "@/platform/use-api";
 import { cn } from "@/platform/utils";
 
@@ -56,6 +57,9 @@ export const RemovableWorktreesSection: FC<RemovableWorktreesSectionProps> = ({
   const [selectedPaths, setSelectedPaths] = useState<Set<string>>(
     () => new Set(),
   );
+  const [deletingPaths, setDeletingPaths] = useState<Set<string>>(
+    () => new Set(),
+  );
   const worktreesQuery = useQuery({
     ...managedWorktreeListQueryOptions({ api }),
   });
@@ -74,6 +78,7 @@ export const RemovableWorktreesSection: FC<RemovableWorktreesSectionProps> = ({
     async (targets: ManagedWorktreeSummary[]) => {
       if (targets.length === 0) return;
 
+      let deletionToast: ReturnType<typeof toast> | undefined;
       try {
         const confirmed = await confirmAction({
           cancelLabel: t("common.cancel"),
@@ -95,6 +100,14 @@ export const RemovableWorktreesSection: FC<RemovableWorktreesSectionProps> = ({
         });
         if (!confirmed) return;
 
+        const targetPaths = targets.map((worktree) => worktree.path);
+        setDeletingPaths((current) => new Set([...current, ...targetPaths]));
+        deletionToast = toast({
+          duration: Number.POSITIVE_INFINITY,
+          title: t("settings.archived.removableWorktrees.deletingToast"),
+          variant: "loading",
+        });
+
         const result = await deleteWorktreesMutation.mutateAsync({
           targets: targets.map((worktree) => ({
             expectedChatIds: worktree.chatIds,
@@ -104,27 +117,42 @@ export const RemovableWorktreesSection: FC<RemovableWorktreesSectionProps> = ({
         });
         broadcastChatsChanged();
         setSelectedPaths(new Set());
-        toast({
-          description:
-            result.failedWorktrees.length > 0
-              ? t("settings.archived.removableWorktrees.partialFailure", {
-                  count: result.failedWorktrees.length,
-                })
-              : undefined,
-          title: t("settings.archived.removableWorktrees.deletedToast", {
-            chatCount: result.deletedChatCount,
-            worktreeCount: result.deletedWorktreeCount,
-          }),
-          variant:
-            result.failedWorktrees.length > 0 ? "destructive" : undefined,
-        });
+        const failedWorktree = result.failedWorktrees[0];
+        if (failedWorktree) {
+          deletionToast.update({
+            duration: Number.POSITIVE_INFINITY,
+            title: t("settings.archived.removableWorktrees.deleteFailed", {
+              message: failedWorktree.error,
+            }),
+            variant: "destructive",
+          });
+        } else {
+          deletionToast.update({
+            duration: 2_000,
+            title: t("settings.archived.removableWorktrees.deletedToast"),
+            variant: "success",
+          });
+        }
       } catch (error) {
+        const errorToast = {
+          duration: Number.POSITIVE_INFINITY,
+          title: t("settings.archived.removableWorktrees.deleteFailed", {
+            message: localizedErrorMessage(error),
+          }),
+          variant: "destructive" as const,
+        };
+        if (deletionToast) {
+          deletionToast.update(errorToast);
+        } else {
+          toast(errorToast);
+        }
         await worktreesQuery.refetch();
-        toast({
-          description: error instanceof Error ? error.message : String(error),
-          title: t("settings.archived.removableWorktrees.deleteFailed"),
-          variant: "destructive",
-        });
+      } finally {
+        const targetPaths = new Set(targets.map((worktree) => worktree.path));
+        setDeletingPaths(
+          (current) =>
+            new Set([...current].filter((path) => !targetPaths.has(path))),
+        );
       }
     },
     [deleteWorktreesMutation, t, toast, worktreesQuery],
@@ -269,7 +297,7 @@ export const RemovableWorktreesSection: FC<RemovableWorktreesSectionProps> = ({
             {worktrees.map((worktree) => (
               <RemovableWorktreeRow
                 bulkMode={bulkMode}
-                disabled={deleteWorktreesMutation.isPending}
+                disabled={deletingPaths.has(worktree.path)}
                 key={worktree.path}
                 onDelete={() => void deleteWorktrees([worktree])}
                 onSelectedChange={(selected) =>
@@ -318,7 +346,7 @@ const RemovableWorktreeRow: FC<RemovableWorktreeRowProps> = ({
   const worktreeLabel = `${projectName} · ${identifier}`;
 
   return (
-    <SettingsListRow selected={bulkMode && selected}>
+    <SettingsListRow disabled={disabled} selected={bulkMode && selected}>
       {bulkMode ? (
         <Checkbox
           aria-label={worktree.path}

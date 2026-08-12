@@ -625,6 +625,7 @@ export interface LocaleResourceTranslationSettingsArchivedRemovableWorktrees {
   confirmDeleteDetail: string;
   confirmDeleteTitle: string;
   deleteFailed: string;
+  deletingToast: string;
   deleteWorktree: string;
   deletedToast: string;
   empty: string;
