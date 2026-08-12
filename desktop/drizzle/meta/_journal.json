@@ -85,6 +85,13 @@
       "when": 1786358636160,
       "tag": "0011_odd_spirit",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1786515765385,
+      "tag": "0012_repair_automation_tables",
+      "breakpoints": true
     }
   ]
 }
