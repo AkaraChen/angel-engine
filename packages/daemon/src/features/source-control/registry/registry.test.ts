@@ -1,18 +1,28 @@
 import type {
   ProviderActivation,
   ProviderAuthenticationState,
+  ProviderMatch,
   SourceControlProviderPlugin,
 } from "@angel-engine/daemon-api/source-control";
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { executeGit } from "../local-git/backend";
 import { ProviderInvocationError, SourceControlRegistry } from "./registry";
 
 const roots: string[] = [];
+
+function requireSingleMatch(
+  match: ProviderMatch | readonly ProviderMatch[] | null,
+): ProviderMatch {
+  if (match === null || Array.isArray(match)) {
+    throw new Error("Expected one provider match.");
+  }
+  return match as ProviderMatch;
+}
 
 async function repository(remoteUrl = "https://github.com/acme/app.git") {
   const root = await mkdtemp(
@@ -105,6 +115,100 @@ function activation(
 }
 
 describe("SourceControlRegistry", () => {
+  it("dispatches link parsing by provider score", () => {
+    const provider = fakePlugin({ host: "code.example", id: "forge" });
+    const identity = {
+      displayPath: "acme/app",
+      host: "code.example",
+      name: "app",
+      namespace: ["acme"],
+      providerId: "forge",
+      remoteId: null,
+      webUrl: "https://code.example/acme/app",
+    };
+    provider.links = {
+      matchUrl: (url) => (url.includes("code.example") ? 200 : null),
+      parseUrl: (url) => ({
+        id: "42",
+        kind: "work-item",
+        repository: identity,
+        url,
+      }),
+    };
+    const registry = new SourceControlRegistry();
+    registry.register(provider);
+
+    expect(
+      registry.parseLink("https://code.example/acme/app/issues/42"),
+    ).toEqual({
+      descriptor: {
+        id: "42",
+        kind: "work-item",
+        repository: identity,
+        url: "https://code.example/acme/app/issues/42",
+      },
+      providerId: "forge",
+      status: "resolved",
+    });
+  });
+
+  it("does not guess when multiple providers match the same repository URL", () => {
+    const registry = new SourceControlRegistry();
+    for (const id of ["forge-a", "forge-b"]) {
+      const provider = fakePlugin({ host: "code.example", id });
+      provider.repositories = {
+        parseUrl: () => ({
+          displayPath: "acme/app",
+          host: "code.example",
+          name: "app",
+          namespace: ["acme"],
+          providerId: id,
+          remoteId: null,
+          webUrl: "https://code.example/acme/app",
+        }),
+      };
+      registry.register(provider);
+    }
+
+    expect(
+      registry.parseRepositoryUrl("https://code.example/acme/app.git"),
+    ).toEqual({
+      providerIds: ["forge-a", "forge-b"],
+      status: "ambiguous",
+    });
+  });
+
+  it("reports multiple matching remotes as ambiguous", async () => {
+    const root = await repository();
+    await executeGit(root, [
+      "remote",
+      "add",
+      "mirror",
+      "https://github.com/acme/app.git",
+    ]);
+    const provider = fakePlugin({ host: "github.com", id: "fake-github" });
+    provider.discovery.match = (probe) =>
+      probe.remotes.map((candidate) => ({
+        providerId: provider.manifest.id,
+        remote: candidate,
+        repository: null,
+        score: 100,
+        source: "remote",
+      }));
+    const registry = new SourceControlRegistry();
+    registry.register(provider);
+
+    await expect(
+      registry.activate({ projectPath: root }),
+    ).resolves.toMatchObject({
+      candidates: [
+        { remote: { name: "mirror" } },
+        { remote: { name: "origin" } },
+      ],
+      status: "ambiguous",
+    });
+  });
+
   it("zero-config activates a single matching provider", async () => {
     const root = await repository();
     const registry = new SourceControlRegistry();
@@ -120,6 +224,26 @@ describe("SourceControlRegistry", () => {
       },
       status: "active",
     });
+  });
+
+  it("caches readiness until its TTL or project generation changes", async () => {
+    const root = await repository();
+    const provider = fakePlugin({ host: "github.com", id: "fake-github" });
+    const checkReadiness = vi.fn(async () => ({
+      authentication: "authenticated" as const,
+      diagnostics: [],
+    }));
+    provider.discovery.checkReadiness = checkReadiness;
+    const registry = new SourceControlRegistry({ readinessTtlMs: 60_000 });
+    registry.register(provider);
+
+    await registry.activate({ projectPath: root });
+    await registry.activate({ projectPath: root });
+    expect(checkReadiness).toHaveBeenCalledOnce();
+
+    registry.invalidate(root);
+    await registry.activate({ projectPath: root });
+    expect(checkReadiness).toHaveBeenCalledTimes(2);
   });
 
   it("represents unauthenticated operations as unsupported", async () => {
@@ -226,12 +350,36 @@ describe("SourceControlRegistry", () => {
       `https://user:${token}@github.com/acme/app.git`,
     );
     const plugin = fakePlugin({ host: "github.com", id: "fake-github" });
+    const match = plugin.discovery.match.bind(plugin.discovery);
+    plugin.discovery.match = (context) => {
+      const candidate = requireSingleMatch(match(context));
+      return {
+        ...candidate,
+        repository: {
+          displayPath: "acme/app",
+          host: "github.com",
+          name: "app",
+          namespace: ["acme"],
+          providerId: plugin.manifest.id,
+          remoteId: null,
+          webUrl: `https://user:${token}@github.com/acme/app`,
+        },
+      };
+    };
     const registry = new SourceControlRegistry({
       log: (message) => logs.push(message),
     });
     registry.register(plugin);
     const result = await registry.activate({ projectPath: root });
     if (result.status !== "active") throw new Error("Expected activation.");
+
+    expect(result.activation.remote.url).toBe(
+      "https://github.com/acme/app.git",
+    );
+    expect(result.activation.repository?.webUrl).toBe(
+      "https://github.com/acme/app",
+    );
+    expect(JSON.stringify(result)).not.toContain(token);
 
     const failure = await registry
       .invoke({
@@ -245,6 +393,44 @@ describe("SourceControlRegistry", () => {
     expect(failure.message).not.toContain(token);
     expect(logs.join("\n")).not.toContain(token);
     expect(failure.message).toContain("[REDACTED]");
+  });
+
+  it("removes URL credentials from ambiguous provider candidates", async () => {
+    const githubToken = "github-secret-token";
+    const gitlabToken = "gitlab-secret-token";
+    const root = await repository(
+      `https://user:${githubToken}@github.com/acme/app.git`,
+    );
+    await executeGit(root, [
+      "remote",
+      "add",
+      "mirror",
+      `https://user:${gitlabToken}@gitlab.com/acme/app.git`,
+    ]);
+    const registry = new SourceControlRegistry();
+    registry.register(fakePlugin({ host: "github.com", id: "fake-github" }));
+    registry.register(fakePlugin({ host: "gitlab.com", id: "fake-gitlab" }));
+
+    const result = await registry.activate({ projectPath: root });
+
+    expect(result.status).toBe("ambiguous");
+    expect(JSON.stringify(result)).not.toContain(githubToken);
+    expect(JSON.stringify(result)).not.toContain(gitlabToken);
+    if (result.status !== "ambiguous") throw new Error("Expected ambiguity.");
+    expect(result.candidates.map((candidate) => candidate.remote)).toEqual([
+      {
+        fetchUrl: "https://github.com/acme/app.git",
+        name: "origin",
+        pushUrl: "https://github.com/acme/app.git",
+        url: "https://github.com/acme/app.git",
+      },
+      {
+        fetchUrl: "https://gitlab.com/acme/app.git",
+        name: "mirror",
+        pushUrl: "https://gitlab.com/acme/app.git",
+        url: "https://gitlab.com/acme/app.git",
+      },
+    ]);
   });
 
   it("propagates caller cancellation as a typed provider error", async () => {

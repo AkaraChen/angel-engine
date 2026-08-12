@@ -5,6 +5,10 @@ import type {
   ProjectGitStatusResult,
   UpdateProjectConfigInput,
 } from "@angel-engine/daemon-api/projects";
+import type {
+  RepositoryIdentity,
+  RepositoryNamespace,
+} from "@angel-engine/daemon-api/source-control";
 
 import type { QueryClient } from "@tanstack/react-query";
 import type { ApiClient } from "@/platform/api-client";
@@ -71,42 +75,92 @@ interface ProjectContextMenuMutationParams {
   queryClient: QueryClient;
 }
 
-export function gitHubRepositoryOwnersQueryOptions({
-  api,
-  enabled = true,
-}: {
+interface SourceControlDiscoveryQueryParams {
   api: ApiClient;
   enabled?: boolean;
-}) {
+  limit?: number;
+  projectPath: string | null;
+  providerIdentity: string | null;
+  query?: string;
+  staleTime?: number;
+  supported: boolean;
+}
+
+interface SourceControlRepositoriesQueryParams
+  extends SourceControlDiscoveryQueryParams {
+  namespace: readonly string[] | null;
+}
+
+export function sourceControlNamespacesQueryOptions({
+  api,
+  enabled = true,
+  limit = 50,
+  projectPath,
+  providerIdentity,
+  query = "",
+  staleTime = 60_000,
+  supported,
+}: SourceControlDiscoveryQueryParams) {
   return queryOptions({
-    enabled,
-    queryFn: async () => api.github.listRepositoryOwners(),
-    queryKey: queryKeys.github.repositoryOwners(),
+    enabled:
+      enabled &&
+      supported &&
+      is.nonEmptyString(projectPath) &&
+      is.nonEmptyString(providerIdentity),
+    queryFn: async (): Promise<readonly RepositoryNamespace[]> => {
+      if (!is.nonEmptyString(projectPath)) {
+        throw new Error("No source-control project is active");
+      }
+      return api.sourceControl.listNamespaces(projectPath, query, limit);
+    },
+    queryKey: queryKeys.sourceControl.namespaces(
+      providerIdentity,
+      is.nonEmptyString(query) ? query : null,
+      limit,
+    ),
     retry: false,
-    // The picker is short-lived; a stale account list would silently hide an
-    // org the user just joined.
-    staleTime: 60_000,
+    staleTime,
   });
 }
 
-export function gitHubRepositoriesQueryOptions({
+export function sourceControlRepositoriesQueryOptions({
   api,
-  owner,
-}: {
-  api: ApiClient;
-  owner: string | null;
-}) {
+  enabled = true,
+  limit = 50,
+  namespace,
+  projectPath,
+  providerIdentity,
+  query = "",
+  staleTime = 60_000,
+  supported,
+}: SourceControlRepositoriesQueryParams) {
   return queryOptions({
-    enabled: is.nonEmptyString(owner),
-    queryFn: async () => {
-      if (!is.nonEmptyString(owner)) {
-        throw new Error("No owner selected");
+    enabled:
+      enabled &&
+      supported &&
+      is.nonEmptyString(projectPath) &&
+      is.nonEmptyString(providerIdentity) &&
+      namespace !== null &&
+      namespace.length > 0,
+    queryFn: async (): Promise<readonly RepositoryIdentity[]> => {
+      if (!is.nonEmptyString(projectPath) || namespace === null) {
+        throw new Error("No source-control namespace is active");
       }
-      return api.github.listRepositories({ owner });
+      return api.sourceControl.listRepositories(
+        projectPath,
+        namespace,
+        query,
+        limit,
+      );
     },
-    queryKey: queryKeys.github.repositories(owner),
+    queryKey: queryKeys.sourceControl.repositories(
+      providerIdentity,
+      namespace,
+      is.nonEmptyString(query) ? query : null,
+      limit,
+    ),
     retry: false,
-    staleTime: 60_000,
+    staleTime,
   });
 }
 

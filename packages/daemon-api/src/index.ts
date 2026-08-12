@@ -3,8 +3,6 @@ export * from "./automations";
 export * from "./daemon";
 export * from "./events";
 export * from "./chat";
-export * from "./github";
-export * from "./links";
 export * from "./mime";
 export * from "./projects";
 export * from "./source-control";

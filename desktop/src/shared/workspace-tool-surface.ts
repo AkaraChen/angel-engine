@@ -3,6 +3,7 @@ export type WorkspaceToolSurfaceHost = "sidebar" | "window";
 export interface WorkspaceToolSurfaceContext {
   chatId?: string | null;
   contextKey?: string | null;
+  projectId?: string | null;
   root?: string | null;
 }
 
@@ -86,6 +87,7 @@ export interface WorkspaceToolSurfaceState {
 export interface WorkspaceToolSurfaceContextSetInput {
   chatId?: string | null;
   contextKey?: string | null;
+  projectId?: string | null;
   root?: string | null;
 }
 
