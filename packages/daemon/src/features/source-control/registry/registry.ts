@@ -113,9 +113,16 @@ function capabilityMatrix(
   plugin: SourceControlProviderPlugin,
   authenticated: boolean,
 ): CapabilityMatrix {
+  const unsupported = Object.entries(
+    plugin.manifest.unsupportedCapabilities ?? {},
+  ).map(([capability, reason]) => [
+    capability,
+    { supported: false as const, reason },
+  ]);
   return {
-    entries: Object.fromEntries(
-      plugin.manifest.capabilities.map((capability) => [
+    entries: Object.fromEntries([
+      ...unsupported,
+      ...plugin.manifest.capabilities.map((capability) => [
         capability,
         authenticated || capability === "provider.auth"
           ? { supported: true as const }
@@ -127,7 +134,7 @@ function capabilityMatrix(
               },
             },
       ]),
-    ),
+    ]),
   };
 }
 

@@ -234,6 +234,7 @@ export type SourceControlCapabilityId =
 export type UnsupportedReasonKind =
   | "not-implemented"
   | "out-of-scope"
+  | "requires-configuration"
   | "unauthenticated"
   | "cli-missing"
   | "permission-denied"
@@ -260,6 +261,10 @@ export interface ProviderManifest {
   displayName: string;
   hosts: readonly string[];
   capabilities: readonly SourceControlCapabilityId[];
+  /** Optional explicit reasons for intentionally unsupported capabilities. */
+  unsupportedCapabilities?: Partial<
+    Record<SourceControlCapabilityId, UnsupportedReason>
+  >;
   extensions?: SourceControlExtensions;
 }
 

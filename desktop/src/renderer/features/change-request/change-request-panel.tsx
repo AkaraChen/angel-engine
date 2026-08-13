@@ -349,6 +349,12 @@ export const ChangeRequestPanel: FC<{
       <div className="mx-auto flex max-w-2xl flex-col gap-3">
         <header className="flex items-start justify-between gap-3">
           <div className="min-w-0">
+            {sourceControl.providerDisplayName && sourceControl.repository ? (
+              <div className="truncate text-xs text-muted-foreground">
+                {sourceControl.providerDisplayName} ·{" "}
+                {sourceControl.repository.displayPath}
+              </div>
+            ) : null}
             <div className="truncate text-sm font-semibold">
               #{status.number} {status.title}
             </div>
@@ -393,82 +399,77 @@ export const ChangeRequestPanel: FC<{
           </section>
         ) : null}
 
-        <section className="space-y-2 border-t border-border-subtle pt-3">
-          {checkingMergeability ? (
-            <WorkspaceToolBanner tone="attention">
-              {t("workspace.tools.pullRequest.checkingMergeability")}
-            </WorkspaceToolBanner>
-          ) : blockers.length > 0 ? (
-            <WorkspaceToolBanner tone="danger">
-              <div className="mb-1 font-medium">
-                {t("workspace.tools.pullRequest.blocked")}
+        {mergeCapability.supported ? (
+          <section className="space-y-2 border-t border-border-subtle pt-3">
+            {checkingMergeability ? (
+              <WorkspaceToolBanner tone="attention">
+                {t("workspace.tools.pullRequest.checkingMergeability")}
+              </WorkspaceToolBanner>
+            ) : blockers.length > 0 ? (
+              <WorkspaceToolBanner tone="danger">
+                <div className="mb-1 font-medium">
+                  {t("workspace.tools.pullRequest.blocked")}
+                </div>
+                <ul className="space-y-1">
+                  {blockers.map((blocker) => (
+                    <BlockerRow
+                      blocker={blocker}
+                      key={blocker.kind}
+                      onOpen={openBrowserTab}
+                    />
+                  ))}
+                </ul>
+              </WorkspaceToolBanner>
+            ) : (
+              <div className="flex items-center gap-2 text-xs text-status-success">
+                <CheckCircle className="size-4 shrink-0" weight="fill" />
+                {t("workspace.tools.pullRequest.ready")}
               </div>
-              <ul className="space-y-1">
-                {blockers.map((blocker) => (
-                  <BlockerRow
-                    blocker={blocker}
-                    key={blocker.kind}
-                    onOpen={openBrowserTab}
-                  />
-                ))}
-              </ul>
-            </WorkspaceToolBanner>
-          ) : (
-            <div className="flex items-center gap-2 text-xs text-status-success">
-              <CheckCircle className="size-4 shrink-0" weight="fill" />
-              {t("workspace.tools.pullRequest.ready")}
-            </div>
-          )}
+            )}
 
-          {optionalChecks.length > 0 ? (
-            <WorkspaceToolBanner tone="attention">
-              {t("workspace.tools.pullRequest.optionalChecksFailed", {
-                count: optionalChecks.length,
-                names: optionalChecks
-                  .slice(0, 3)
-                  .map((check) => check.name)
-                  .join(", "),
-              })}
-              <CheckLinks checks={optionalChecks} onOpen={openBrowserTab} />
-            </WorkspaceToolBanner>
-          ) : null}
+            {optionalChecks.length > 0 ? (
+              <WorkspaceToolBanner tone="attention">
+                {t("workspace.tools.pullRequest.optionalChecksFailed", {
+                  count: optionalChecks.length,
+                  names: optionalChecks
+                    .slice(0, 3)
+                    .map((check) => check.name)
+                    .join(", "),
+                })}
+                <CheckLinks checks={optionalChecks} onOpen={openBrowserTab} />
+              </WorkspaceToolBanner>
+            ) : null}
 
-          <div className="flex gap-2">
-            <Select
-              onValueChange={(value) => {
-                const next = value as MergeMethod;
-                setSelectedMethod(next);
-                writeMergeMethod(root, next);
-              }}
-              value={method}
-            >
-              <SelectTrigger
-                aria-label={t("workspace.tools.pullRequest.method")}
-                className="min-w-0 flex-1"
+            <div className="flex gap-2">
+              <Select
+                onValueChange={(value) => {
+                  const next = value as MergeMethod;
+                  setSelectedMethod(next);
+                  writeMergeMethod(root, next);
+                }}
+                value={method}
               >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {mergeMethods.map((candidate) => (
-                  <SelectItem
-                    disabled={!status.allowedMergeMethods.includes(candidate)}
-                    key={candidate}
-                    value={candidate}
-                  >
-                    {t(`workspace.tools.pullRequest.methods.${candidate}`)}
-                    {status.allowedMergeMethods.includes(candidate)
-                      ? ""
-                      : ` — ${t("workspace.tools.pullRequest.methodDisabled")}`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <CapabilityGate
-              capabilities={sourceControl.capabilities}
-              capability="changeRequests.merge"
-              remediationLabel={t("common.retry")}
-              onRemediate={() => void sourceControl.refetch()}
-            >
+                <SelectTrigger
+                  aria-label={t("workspace.tools.pullRequest.method")}
+                  className="min-w-0 flex-1"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {mergeMethods.map((candidate) => (
+                    <SelectItem
+                      disabled={!status.allowedMergeMethods.includes(candidate)}
+                      key={candidate}
+                      value={candidate}
+                    >
+                      {t(`workspace.tools.pullRequest.methods.${candidate}`)}
+                      {status.allowedMergeMethods.includes(candidate)
+                        ? ""
+                        : ` — ${t("workspace.tools.pullRequest.methodDisabled")}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Button
                 disabled={!canMerge || mergeMutation.isPending}
                 onClick={() => void merge()}
@@ -480,17 +481,17 @@ export const ChangeRequestPanel: FC<{
                   ? t("workspace.tools.pullRequest.merging")
                   : t("workspace.tools.pullRequest.merge")}
               </Button>
-            </CapabilityGate>
-          </div>
-          <label className="flex items-center gap-2 text-xs text-muted-foreground">
-            <input
-              checked={effectiveDeleteBranch}
-              onChange={(event) => setDeleteBranch(event.target.checked)}
-              type="checkbox"
-            />
-            {t("workspace.tools.pullRequest.deleteBranch")}
-          </label>
-        </section>
+            </div>
+            <label className="flex items-center gap-2 text-xs text-muted-foreground">
+              <input
+                checked={effectiveDeleteBranch}
+                onChange={(event) => setDeleteBranch(event.target.checked)}
+                type="checkbox"
+              />
+              {t("workspace.tools.pullRequest.deleteBranch")}
+            </label>
+          </section>
+        ) : null}
 
         <div
           className={cn(
@@ -508,27 +509,7 @@ export const ChangeRequestPanel: FC<{
           />
         </div>
 
-        {!reviewsCapability.supported ? (
-          <section
-            className="space-y-2 border-t border-border-subtle pt-3"
-            data-testid="workspace-reviews-unsupported"
-          >
-            <h3 className="text-xs font-medium">
-              {t("workspace.tools.pullRequest.unresolvedTitle", { count: 0 })}
-            </h3>
-            <p className="text-xs text-muted-foreground">
-              {reviewsCapability.reason.message}
-            </p>
-            <CapabilityGate
-              capabilities={sourceControl.capabilities}
-              capability="reviewThreads.list"
-            >
-              <Button size="sm" variant="outline">
-                {t("workspace.tools.pullRequest.resolve")}
-              </Button>
-            </CapabilityGate>
-          </section>
-        ) : reviewThreadsQuery.isError ? (
+        {!reviewsCapability.supported ? null : reviewThreadsQuery.isError ? (
           <section className="space-y-2 border-t border-border-subtle pt-3">
             <WorkspaceToolBanner tone="danger">
               {reviewThreadsQuery.error instanceof Error

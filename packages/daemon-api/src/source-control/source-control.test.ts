@@ -46,6 +46,12 @@ describe("source-control contracts", () => {
         displayName: "Azure DevOps",
         hosts: ["dev.azure.com"],
         capabilities: ["provider.auth", "repositoryIdentity"],
+        unsupportedCapabilities: {
+          "provider.clone": {
+            kind: "requires-configuration",
+            message: "Configure credentials before cloning.",
+          },
+        },
       },
       projectPath: "/workspace/web",
       remote: {
