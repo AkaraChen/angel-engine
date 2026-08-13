@@ -16,6 +16,7 @@ import is from "@sindresorhus/is";
 import { type as arkType } from "arktype";
 
 import { DaemonError } from "../../../../../platform/errors";
+import { GitHubError } from "./errors";
 import { truncateBody } from "./resolve";
 import {
   findGhPath,
@@ -170,7 +171,7 @@ export async function snapshotGitHubChecks(
     throw unexpectedPayload(prIdPayload.summary);
   }
   const prId = prIdPayload.data.repository?.pullRequest?.id;
-  if (!is.nonEmptyString(prId)) throw DaemonError.sourceControlItemNotFound();
+  if (!is.nonEmptyString(prId)) throw GitHubError.sourceControlItemNotFound();
   return buildGitHubCheckSummary(
     await runGraphql(runGh, CHECKS_QUERY, { ...variables, prId }),
   );
@@ -265,7 +266,7 @@ export function buildGitHubCheckSummary(json: unknown): CheckSummary {
   if (payload instanceof arkType.errors)
     throw unexpectedPayload(payload.summary);
   const pr = payload.data.repository?.pullRequest;
-  if (!pr) throw DaemonError.sourceControlItemNotFound();
+  if (!pr) throw GitHubError.sourceControlItemNotFound();
   const commit = pr.commits.nodes[0]?.commit;
   const checks = (commit?.statusCheckRollup?.contexts.nodes ?? []).map(
     mapCheck,
@@ -480,7 +481,7 @@ async function runGraphql(
     return JSON.parse((await runGh(args)).stdout) as unknown;
   } catch (cause) {
     if (cause instanceof SyntaxError)
-      throw DaemonError.sourceControlFetchFailed(
+      throw GitHubError.sourceControlFetchFailed(
         cause,
         "GitHub CLI returned invalid JSON.",
       );
@@ -492,7 +493,7 @@ async function requireGh(
   dependencies: GitHubChecksDependencies,
 ): Promise<GhRunner> {
   const path = await (dependencies.findGh ?? findGhPath)();
-  if (!is.nonEmptyString(path)) throw DaemonError.sourceControlCliMissing();
+  if (!is.nonEmptyString(path)) throw GitHubError.sourceControlCliMissing();
   return dependencies.runGh ?? runGhCli;
 }
 
@@ -504,7 +505,7 @@ function requireGitHubRepository(
     repository.namespace.length !== 1 ||
     !is.nonEmptyString(repository.namespace[0])
   )
-    throw DaemonError.sourceControlUrlUnsupported();
+    throw GitHubError.sourceControlUrlUnsupported();
   return repository;
 }
 
@@ -519,7 +520,7 @@ function requireNumber(id: string): number {
 }
 
 function unexpectedPayload(details: string): DaemonError {
-  return DaemonError.sourceControlFetchFailed(
+  return GitHubError.sourceControlFetchFailed(
     new TypeError(`Unexpected GitHub GraphQL payload: ${details}`),
   );
 }

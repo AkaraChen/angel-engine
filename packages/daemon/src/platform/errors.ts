@@ -285,11 +285,14 @@ export class DaemonError extends Data.TaggedError(
     });
   }
 
-  static sourceControlCliMissing() {
+  static sourceControlCliMissing(
+    providerId: string,
+    message = "The source-control CLI is not installed or not on PATH.",
+  ) {
     return new DaemonError({
       code: "source-control/cli-missing",
-      message: "GitHub CLI (gh) is not installed or not on PATH.",
-      sourceControl: sourceControlDetails("authenticate", false),
+      message,
+      sourceControl: sourceControlDetails(providerId, "authenticate", false),
       status: 400,
     });
   }
@@ -311,80 +314,87 @@ export class DaemonError extends Data.TaggedError(
   }
 
   static sourceControlUnauthenticated(
-    message = "GitHub CLI is not authenticated.",
+    providerId: string,
+    message = "The source-control provider is not authenticated.",
   ) {
     return new DaemonError({
       code: "source-control/unauthenticated",
       message,
-      sourceControl: sourceControlDetails("authenticate", false),
+      sourceControl: sourceControlDetails(providerId, "authenticate", false),
       status: 400,
     });
   }
 
   static sourceControlUrlUnsupported(
-    message = "Only github.com issue or pull request URLs are supported.",
+    providerId: string,
+    message = "The source-control provider does not support this URL.",
   ) {
     return new DaemonError({
       code: "source-control/url-unsupported",
       message,
-      sourceControl: sourceControlDetails("resolve-url", false),
+      sourceControl: sourceControlDetails(providerId, "resolve-url", false),
       status: 400,
     });
   }
 
   static sourceControlItemNotFound(
-    message = "GitHub issue or pull request was not found.",
+    providerId: string,
+    message = "The source-control item was not found.",
   ) {
     return new DaemonError({
       code: "source-control/item-not-found",
       message,
-      sourceControl: sourceControlDetails("get-item", false),
+      sourceControl: sourceControlDetails(providerId, "get-item", false),
       status: 404,
     });
   }
 
   static sourceControlPermissionDenied(
-    message = "You do not have permission to merge this pull request.",
+    providerId: string,
+    message = "You do not have permission to perform this source-control operation.",
   ) {
     return new DaemonError({
       code: "source-control/permission-denied",
       message,
-      sourceControl: sourceControlDetails("merge", false),
+      sourceControl: sourceControlDetails(providerId, "merge", false),
       status: 403,
     });
   }
 
   static sourceControlMergeConflict(
-    message = "The pull request can no longer be merged. Refresh its status and try again.",
+    providerId: string,
+    message = "The change request can no longer be merged. Refresh its status and try again.",
   ) {
     return new DaemonError({
       code: "source-control/merge-conflict",
       message,
-      sourceControl: sourceControlDetails("merge", false),
+      sourceControl: sourceControlDetails(providerId, "merge", false),
       status: 409,
     });
   }
 
   static sourceControlFetchFailed(
+    providerId: string,
     cause: unknown,
-    fallback = "GitHub fetch failed.",
+    fallback = "Source-control fetch failed.",
   ) {
     return new DaemonError({
       cause,
       code: "source-control/fetch-failed",
       message: gitMessageFromCause(cause, fallback),
-      sourceControl: sourceControlDetails("fetch", true, cause),
+      sourceControl: sourceControlDetails(providerId, "fetch", true, cause),
       status: 500,
     });
   }
 
   static sourceControlNetworkUnavailable(
-    message = "GitHub is unavailable. Check your network and retry.",
+    providerId: string,
+    message = "The source-control provider is unavailable. Check your network and retry.",
   ) {
     return new DaemonError({
       code: "source-control/network-unavailable",
       message,
-      sourceControl: sourceControlDetails("network", true),
+      sourceControl: sourceControlDetails(providerId, "network", true),
       status: 500,
     });
   }
@@ -392,7 +402,7 @@ export class DaemonError extends Data.TaggedError(
   static linkUnsupported() {
     return new DaemonError({
       code: "link-unsupported",
-      message: "Use a GitHub issue, GitHub pull request, or Linear issue link.",
+      message: "Use a supported work item or change request link.",
       status: 400,
     });
   }
@@ -653,12 +663,13 @@ export function daemonErrorPayload(error: DaemonError): DaemonErrorPayload {
 }
 
 function sourceControlDetails(
+  providerId: string,
   operation: string,
   retryable: boolean,
   cause?: unknown,
 ): SourceControlErrorDetails {
   return {
-    providerId: "github",
+    providerId,
     operation,
     retryable,
     ...(cause instanceof Error

@@ -29,7 +29,8 @@ function readStoredWorkspaceToolPanelWidth({
   max: number;
   min: number;
 }) {
-  const raw = window.localStorage.getItem(key);
+  const raw =
+    typeof window === "undefined" ? null : window.localStorage?.getItem(key);
   const parsed = raw === null ? Number.NaN : Number.parseInt(raw, 10);
   if (!Number.isFinite(parsed)) {
     return fallback;
@@ -37,14 +38,14 @@ function readStoredWorkspaceToolPanelWidth({
   return Math.min(max, Math.max(min, parsed));
 }
 
-export const initialWorkspaceToolFileTreeWidth =
+export const initialWorkspaceToolFileTreeWidth = () =>
   readStoredWorkspaceToolPanelWidth({
     fallback: 288,
     key: workspaceToolFileTreeWidthStorageKey,
     max: workspaceToolFileTreeWidthMax,
     min: workspaceToolFileTreeWidthMin,
   });
-export const initialWorkspaceToolGitListWidth =
+export const initialWorkspaceToolGitListWidth = () =>
   readStoredWorkspaceToolPanelWidth({
     fallback: 320,
     key: workspaceToolGitListWidthStorageKey,

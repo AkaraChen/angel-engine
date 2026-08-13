@@ -26,6 +26,7 @@ import is from "@sindresorhus/is";
 import { type as arkType } from "arktype";
 
 import { DaemonError } from "../../../../../platform/errors";
+import { GitHubError } from "./errors";
 import { executeGit, type LocalGitRunner } from "../../../local-git/backend";
 import {
   findGhPath,
@@ -370,7 +371,7 @@ export async function getGitHubChangeRequestByUrl(
 ): Promise<ChangeRequest> {
   const parsed = parseGitHubUrl(input.url);
   if (parsed?.kind !== "pullRequest") {
-    throw DaemonError.sourceControlUrlUnsupported(
+    throw GitHubError.sourceControlUrlUnsupported(
       "Only GitHub pull request URLs are supported for change requests.",
     );
   }
@@ -484,9 +485,9 @@ async function runGh(
   dependencies: GitHubChangeRequestDependencies,
 ) {
   const ghPath = await (dependencies.findGh ?? findGhPath)().catch((cause) => {
-    throw DaemonError.sourceControlFetchFailed(cause);
+    throw GitHubError.sourceControlFetchFailed(cause);
   });
-  if (!is.nonEmptyString(ghPath)) throw DaemonError.sourceControlCliMissing();
+  if (!is.nonEmptyString(ghPath)) throw GitHubError.sourceControlCliMissing();
   return (dependencies.runGh ?? runGhCli)(args).catch((cause) => {
     throw mapGhFailure(cause);
   });
@@ -661,7 +662,7 @@ function parsePayload<T>(
   try {
     json = JSON.parse(stdout);
   } catch (cause) {
-    throw DaemonError.sourceControlFetchFailed(
+    throw GitHubError.sourceControlFetchFailed(
       cause,
       "GitHub CLI returned invalid JSON.",
     );
@@ -673,7 +674,7 @@ function parsePayload<T>(
 }
 
 function unexpectedPayload(detail: string) {
-  return DaemonError.sourceControlFetchFailed(
+  return GitHubError.sourceControlFetchFailed(
     new TypeError(`Unexpected GitHub CLI pull request payload: ${detail}`),
   );
 }
