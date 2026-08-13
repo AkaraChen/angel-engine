@@ -2,7 +2,16 @@ import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+const { findProviderCli } = vi.hoisted(() => ({
+  findProviderCli: vi.fn(async () => null),
+}));
+
+vi.mock("./provider-cli", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./provider-cli")>()),
+  findProviderCli,
+}));
 
 import { executeGit } from "../local-git/backend";
 import { createSourceControlRegistry } from "./index";
@@ -54,9 +63,16 @@ describe("built-in source-control providers", () => {
     });
 
     expect(result).toMatchObject({
-      activation: { provider: { id: provider } },
+      activation: {
+        authentication: "unavailable",
+        provider: { id: provider },
+        unavailableReason: { kind: "cli-missing" },
+      },
       status: "active",
     });
+    expect(findProviderCli).toHaveBeenCalledWith(
+      provider === "gitlab" ? "glab" : "az",
+    );
   });
 
   it("keeps the GitHub provider entry point narrow", async () => {
