@@ -103,6 +103,7 @@ export interface ParsedGitHubUrl {
 
 export function parseGitHubRepositoryUrl(
   raw: string,
+  allowedHost?: string,
 ): RepositoryIdentity | null {
   const trimmed = raw.trim();
   const shorthand = /^([\w.-]+)\/([\w.-]+?)(?:\.git)?$/.exec(trimmed);
@@ -124,7 +125,12 @@ export function parseGitHubRepositoryUrl(
       return null;
     }
   }
-  if (host !== "github.com" && host !== "www.github.com") return null;
+  if (
+    allowedHost
+      ? host !== allowedHost
+      : host !== "github.com" && host !== "www.github.com"
+  )
+    return null;
   const segments = pathname.split("/").filter(Boolean);
   if (segments.length < 2) return null;
   const namespace = segments[0];
@@ -132,21 +138,22 @@ export function parseGitHubRepositoryUrl(
     ? segments[1].slice(0, -4)
     : segments[1];
   if (!is.nonEmptyString(namespace) || !is.nonEmptyString(name)) return null;
-  return gitHubRepositoryIdentity(namespace, name);
+  return gitHubRepositoryIdentity(namespace, name, host);
 }
 
 function gitHubRepositoryIdentity(
   namespace: string,
   name: string,
+  host = "github.com",
 ): RepositoryIdentity {
   return {
     providerId: "github",
-    host: "github.com",
+    host,
     namespace: [namespace],
     name,
     remoteId: null,
     displayPath: `${namespace}/${name}`,
-    webUrl: `https://github.com/${namespace}/${name}`,
+    webUrl: `https://${host}/${namespace}/${name}`,
   };
 }
 

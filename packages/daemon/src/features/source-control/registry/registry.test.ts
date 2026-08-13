@@ -274,6 +274,44 @@ describe("SourceControlRegistry", () => {
     });
   });
 
+  it("preserves a fail-closed requires-configuration readiness reason", async () => {
+    const root = await repository();
+    const provider = fakePlugin({
+      authentication: "unavailable",
+      host: "github.com",
+      id: "fake-github",
+    });
+    provider.discovery.checkReadiness = async () => ({
+      authentication: "unavailable",
+      diagnostics: [
+        {
+          code: "source-control/requires-configuration",
+          message: "Configure the self-hosted integration.",
+          severity: "error",
+        },
+      ],
+    });
+    const registry = new SourceControlRegistry();
+    registry.register(provider);
+
+    const result = await registry.activate({ projectPath: root });
+
+    expect(result).toMatchObject({
+      activation: {
+        capabilities: {
+          entries: {
+            "checks.list": {
+              reason: { kind: "requires-configuration" },
+              supported: false,
+            },
+          },
+        },
+        unavailableReason: { kind: "requires-configuration" },
+      },
+      status: "active",
+    });
+  });
+
   it("uses an explicit host mapping for a self-hosted remote", async () => {
     const root = await repository("https://code.acme.internal/team/app.git");
     const registry = new SourceControlRegistry();

@@ -240,19 +240,23 @@ export function createGitLabPlugin(
         await credentialedClone({
           cli: {
             clone: async (targetPath, timeoutMs) => {
-              await runGlab(
-                [
-                  "repo",
-                  "clone",
-                  input.repository.displayPath,
-                  targetPath,
-                  "--hostname",
-                  input.repository.host,
-                ],
-                { timeoutMs },
-              );
+              await runGlab(["repo", "clone", remoteUrl, targetPath], {
+                signal: context.signal,
+                timeoutMs,
+              });
             },
-            isAvailable: async () => (await findGlab()) !== null,
+            isAuthenticated: async () => {
+              if ((await findGlab()) === null) return false;
+              try {
+                await runGlab(
+                  ["auth", "status", "--hostname", input.repository.host],
+                  { signal: context.signal, timeoutMs: remaining(context) },
+                );
+                return true;
+              } catch {
+                return false;
+              }
+            },
           },
           context,
           getToken,
@@ -483,6 +487,7 @@ async function gitLabAuthStatus(
   }
   try {
     await runGlab(["auth", "status", "--hostname", host], {
+      signal: context.signal,
       timeoutMs: remaining(context),
     });
     return { authentication: "authenticated" as const, diagnostics: [] };
@@ -560,6 +565,7 @@ async function gitLabJson<Output>(
   try {
     output = (
       await runGlab(["api", "--hostname", host, endpoint, ...extra], {
+        signal: context.signal,
         timeoutMs: remaining(context),
       })
     ).stdout;

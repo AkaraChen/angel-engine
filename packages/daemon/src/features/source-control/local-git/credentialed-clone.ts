@@ -18,7 +18,7 @@ export class CloneRequiresConfigurationError extends Error {
 
 export interface CredentialedCloneCli {
   clone(targetPath: string, timeoutMs: number): Promise<void>;
-  isAvailable(): Promise<boolean>;
+  isAuthenticated(): Promise<boolean>;
 }
 
 export interface CredentialedCloneOptions {
@@ -46,9 +46,22 @@ export async function credentialedClone(
     return;
   }
 
-  if (options.cli && (await options.cli.isAvailable())) {
-    await options.cli.clone(options.targetPath, timeout);
-    return;
+  let cliAuthenticated = false;
+  if (options.cli) {
+    try {
+      cliAuthenticated = await options.cli.isAuthenticated();
+    } catch {
+      // CLI discovery/authentication failures are fallback conditions.
+    }
+  }
+  if (options.cli && cliAuthenticated) {
+    try {
+      await options.cli.clone(options.targetPath, timeout);
+      return;
+    } catch {
+      // A provider CLI can be installed and authenticated yet still fail to
+      // clone. Continue through credential-helper/token/public Git fallbacks.
+    }
   }
 
   if (await credentialHelperHasCredential(options.remoteUrl, timeout)) {

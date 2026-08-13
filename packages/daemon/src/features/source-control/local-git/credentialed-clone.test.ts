@@ -65,4 +65,24 @@ describe("credentialed clone", () => {
     });
     expect(runGit).toHaveBeenCalledOnce();
   });
+
+  it("falls back when CLI authentication discovery fails", async () => {
+    const cliClone = vi.fn(async () => undefined);
+    const runGit = vi.fn(async () => ({ stderr: "", stdout: "" }));
+    await credentialedClone({
+      cli: {
+        clone: cliClone,
+        isAuthenticated: async () => {
+          throw new Error("CLI discovery failed");
+        },
+      },
+      context: context(),
+      getToken: async () => "fallback-token",
+      remoteUrl: "https://gitlab.invalid/acme/widgets.git",
+      runGit,
+      targetPath: "/managed/widgets",
+    });
+    expect(cliClone).not.toHaveBeenCalled();
+    expect(runGit).toHaveBeenCalledOnce();
+  });
 });

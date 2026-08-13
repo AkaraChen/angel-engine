@@ -1,6 +1,7 @@
 import type {
   CapabilityMatrix,
   ProbeContext,
+  ProviderMatch,
   RepositoryIdentity,
   SourceControlCapabilityId,
   SourceControlProviderPlugin,
@@ -11,6 +12,7 @@ import {
   ProviderRegistryError,
   SourceControlRegistry,
 } from "../registry/registry";
+import { invokeProvider } from "../registry/invoke";
 
 const ALL_CAPABILITIES: readonly SourceControlCapabilityId[] = [
   "provider.auth",
@@ -45,8 +47,21 @@ export interface RepositoryContractFixture {
 }
 
 export interface ProviderContractFixtures {
+  auth?: {
+    expectedAuthentication: "authenticated" | "unauthenticated" | "unavailable";
+    run(plugin: SourceControlProviderPlugin): Promise<unknown>;
+  };
+  operations?: readonly {
+    capability: SourceControlCapabilityId;
+    run(plugin: SourceControlProviderPlugin): Promise<unknown>;
+  }[];
   probe?: ProbeContext;
   repository: RepositoryContractFixture;
+  selfHosted?: {
+    expected: RepositoryIdentity;
+    probe: ProbeContext;
+    url: string;
+  };
 }
 
 /** Shared compliance suite for built-in and third-party source-control plugins. */
@@ -70,6 +85,32 @@ export function runProviderContractSuite(
           (capability) => declared.has(capability as SourceControlCapabilityId),
         ),
       ).toEqual([]);
+      const exercised = new Set<SourceControlCapabilityId>([
+        "provider.auth",
+        "repositoryIdentity",
+        ...(fixtures.operations?.map((fixture) => fixture.capability) ?? []),
+      ]);
+      expect([...exercised].sort()).toEqual([...declared].sort());
+    });
+
+    it("runs readiness and authentication fixtures", async () => {
+      if (!fixtures.probe || !fixtures.auth) return;
+      const match = firstMatch(plugin.discovery.match(fixtures.probe));
+      expect(match).not.toBeNull();
+      await expect(
+        plugin.discovery.checkReadiness(match!, operationContext()),
+      ).resolves.toMatchObject({
+        authentication: fixtures.auth.expectedAuthentication,
+      });
+      await expect(fixtures.auth.run(plugin)).resolves.toMatchObject({
+        authentication: fixtures.auth.expectedAuthentication,
+      });
+    });
+
+    it.each(
+      fixtures.operations ?? [],
+    )("executes declared $capability fixture", async (fixture) => {
+      await expect(fixture.run(plugin)).resolves.not.toBeUndefined();
     });
 
     it.each(
@@ -123,7 +164,77 @@ export function runProviderContractSuite(
         expect(() => plugin.discovery.match(fixtures.probe!)).not.toThrow();
       });
     }
+
+    if (fixtures.selfHosted) {
+      it("preserves mapped self-hosted identity", () => {
+        expect(plugin.git.parseUrl(fixtures.selfHosted!.url)).toBeNull();
+        const match = firstMatch(
+          plugin.discovery.match(fixtures.selfHosted!.probe),
+        );
+        expect(match?.repository).toEqual(fixtures.selfHosted!.expected);
+      });
+    }
+
+    it("enforces cancellation and deadlines when an operation ignores its signal", async () => {
+      const controller = new AbortController();
+      const cancellation = invokeProvider({
+        operation: "contract.cancel",
+        providerId: plugin.manifest.id,
+        run: () => new Promise<never>(() => undefined),
+        signal: controller.signal,
+        timeoutMs: 1_000,
+      });
+      controller.abort(new Error("cancel contract"));
+      await expect(cancellation).rejects.toMatchObject({
+        code: "source-control/cancelled",
+      });
+      await expect(
+        invokeProvider({
+          operation: "contract.timeout",
+          providerId: plugin.manifest.id,
+          run: () => new Promise<never>(() => undefined),
+          timeoutMs: 1,
+        }),
+      ).rejects.toMatchObject({ code: "source-control/timeout" });
+    });
+
+    it("redacts credentials from invocation errors and logs", async () => {
+      const secret = `${plugin.manifest.id}-contract-secret`;
+      const logs: string[] = [];
+      let errorMessage = "";
+      try {
+        await invokeProvider({
+          log: (message) => logs.push(message),
+          operation: "contract.redaction",
+          providerId: plugin.manifest.id,
+          run: async () => {
+            throw new Error(`request failed for ${secret}`);
+          },
+          secrets: [secret],
+          timeoutMs: 1_000,
+        });
+      } catch (cause) {
+        errorMessage = cause instanceof Error ? cause.message : String(cause);
+      }
+      expect(errorMessage).not.toContain(secret);
+      expect(logs.join("\n")).not.toContain(secret);
+    });
   });
+}
+
+function operationContext() {
+  return {
+    deadline: Date.now() + 10_000,
+    signal: new AbortController().signal,
+  };
+}
+
+function firstMatch(
+  match: ProviderMatch | readonly ProviderMatch[] | null,
+): ProviderMatch | null {
+  return Array.isArray(match)
+    ? (match[0] ?? null)
+    : (match as ProviderMatch | null);
 }
 
 function implementedCapabilities(

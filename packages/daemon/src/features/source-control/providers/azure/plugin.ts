@@ -50,7 +50,7 @@ const projectListSchema = arkType({
 });
 const policySchema = arkType({
   "+": "ignore",
-  blocking: "boolean",
+  isBlocking: "boolean",
   "id?": "number | string",
   "isEnabled?": "boolean",
   "type?": arkType({
@@ -135,8 +135,8 @@ export function createAzureDevOpsPlugin(
     },
     discovery: {
       match: matchAzure,
-      checkReadiness: async (_match, context) =>
-        azureAuthStatus(findAz, runAz, context),
+      checkReadiness: async (match, context) =>
+        azureAuthStatus(findAz, runAz, context, match.remote.url),
       listNamespaces: async (input, context) => {
         const projects = await json(
           ["devops", "project", "list", "--top", String(input.limit)],
@@ -184,17 +184,13 @@ export function createAzureDevOpsPlugin(
           .filter((repository) => repository.name.toLowerCase().includes(query))
           .slice(0, input.limit)
           .map((repository) =>
-            azureRepositoryIdentity(
-              repository,
-              organization ?? "default",
-              project,
-            ),
+            azureRepositoryIdentity(repository, organization, project),
           );
       },
     },
     auth: {
-      status: async (_input, context) =>
-        azureAuthStatus(findAz, runAz, context),
+      status: async (input, context) =>
+        azureAuthStatus(findAz, runAz, context, input.remote.url),
     },
     git: {
       parseUrl: parseAzureRepositoryUrl,
@@ -207,6 +203,7 @@ export function createAzureDevOpsPlugin(
     changeRequests: {
       list: async (input, context) => {
         assertAzureRepository(input.repository);
+        const orgUrl = azureOrganizationUrl(input.repository);
         const output = await json(
           [
             "repos",
@@ -217,7 +214,7 @@ export function createAzureDevOpsPlugin(
             "--project",
             input.repository.namespace[1],
             "--organization",
-            organizationUrl(input.repository.namespace[0]),
+            orgUrl,
             "--status",
             "all",
             "--top",
@@ -237,17 +234,10 @@ export function createAzureDevOpsPlugin(
       },
       get: async (input, context) => {
         assertAzureRepository(input.repository);
+        const orgUrl = azureOrganizationUrl(input.repository);
         const [pullRequest, policies] = await Promise.all([
           json(
-            [
-              "repos",
-              "pr",
-              "show",
-              "--id",
-              input.id,
-              "--organization",
-              organizationUrl(input.repository.namespace[0]),
-            ],
+            ["repos", "pr", "show", "--id", input.id, "--organization", orgUrl],
             pullRequestSchema,
             context,
           ),
@@ -261,7 +251,7 @@ export function createAzureDevOpsPlugin(
               "--project",
               input.repository.namespace[1],
               "--organization",
-              organizationUrl(input.repository.namespace[0]),
+              orgUrl,
             ],
             policySchema.array(),
             context,
@@ -320,7 +310,22 @@ async function azureAuthStatus(
   findAz: () => Promise<string | null>,
   runAz: ProviderCliRunner,
   context: ProviderOperationContext,
+  remoteUrl?: string,
 ) {
+  const host = remoteUrl ? remoteHost(remoteUrl) : "dev.azure.com";
+  if (!PUBLIC_HOSTS.has(host) && !host.endsWith(".visualstudio.com")) {
+    return {
+      authentication: "unavailable" as const,
+      diagnostics: [
+        {
+          code: "source-control/requires-configuration",
+          message:
+            "Azure DevOps Server is not supported by Azure CLI. Configure a supported Server integration before using hosted operations.",
+          severity: "error" as const,
+        },
+      ],
+    };
+  }
   if ((await findAz()) === null) {
     return {
       authentication: "unavailable" as const,
@@ -335,6 +340,7 @@ async function azureAuthStatus(
   }
   try {
     await runAz(["account", "show", "--output", "json"], {
+      signal: context.signal,
       timeoutMs: remaining(context),
     });
     return { authentication: "authenticated" as const, diagnostics: [] };
@@ -374,7 +380,13 @@ export function parseAzureRepositoryUrl(
     const v3 = segments.indexOf("v3");
     const identity = segments.slice(v3 + 1);
     if (v3 < 0 || identity.length !== 3) return null;
-    return azureIdentity(location.host, identity[0], identity[1], identity[2]);
+    return azureIdentity(
+      location.host,
+      identity[0],
+      identity[1],
+      identity[2],
+      `https://dev.azure.com/${identity[0]}`,
+    );
   }
   const marker = segments.indexOf("_git");
   if (marker < 0 || !segments[marker + 1]) return null;
@@ -388,6 +400,10 @@ export function parseAzureRepositoryUrl(
     organization,
     project,
     segments[marker + 1],
+    location.host.endsWith(".visualstudio.com")
+      ? `https://${location.host}`
+      : `https://${location.host}/${segments.slice(0, marker - 1).join("/")}`,
+    `https://${location.host}/${segments.slice(0, marker + 2).join("/")}`,
   );
 }
 
@@ -403,30 +419,55 @@ function azureIdentity(
   organization: string,
   project: string,
   name: string,
+  orgUrl: string,
+  webUrl?: string,
 ): RepositoryIdentity {
   const canonicalHost = PUBLIC_HOSTS.has(host) ? "dev.azure.com" : host;
   return {
     displayPath: `${organization}/${project}/${name}`,
+    extensions: { azure: { orgUrl } },
     host: canonicalHost,
     name,
     namespace: [organization, project],
     providerId: PROVIDER_ID,
     remoteId: null,
-    webUrl: `https://${canonicalHost}/${organization}/${project}/_git/${name}`,
+    webUrl:
+      webUrl ??
+      `https://${canonicalHost}/${organization}/${project}/_git/${name}`,
   };
 }
 
 function azureRepositoryIdentity(
   repository: typeof repositorySchema.infer,
-  organization: string,
+  organization: string | null,
   project: string,
 ): RepositoryIdentity {
+  const parsed =
+    organization === null && repository.webUrl
+      ? parseAzureRepositoryUrl(repository.webUrl)
+      : null;
+  if (parsed) {
+    return {
+      ...parsed,
+      extensions: {
+        azure: {
+          ...(parsed.extensions?.azure as object),
+          projectId: repository.project?.id ?? null,
+        },
+      },
+      remoteId: repository.id,
+    };
+  }
+  const orgUrl = organizationUrl(organization ?? "default");
+  const resolvedOrganization = organization ?? organizationFromUrl(orgUrl);
   return {
-    displayPath: `${organization}/${project}/${repository.name}`,
-    extensions: { azure: { projectId: repository.project?.id ?? null } },
+    displayPath: `${resolvedOrganization}/${project}/${repository.name}`,
+    extensions: {
+      azure: { orgUrl, projectId: repository.project?.id ?? null },
+    },
     host: "dev.azure.com",
     name: repository.name,
-    namespace: [organization, project],
+    namespace: [resolvedOrganization, project],
     providerId: PROVIDER_ID,
     remoteId: repository.id,
     webUrl: repository.webUrl ?? repository.remoteUrl ?? null,
@@ -492,7 +533,7 @@ function mapPolicy(policy: typeof policySchema.infer): MergeRequirement {
           ? "checks"
           : "other";
   return {
-    blocking: policy.blocking,
+    blocking: policy.isBlocking,
     detailsUrl: policy.url ?? null,
     id: String(policy.id ?? policy.type?.id ?? label),
     kind,
@@ -511,6 +552,7 @@ async function azureJson<Output>(
   try {
     output = (
       await runAz([...args, "--output", "json", "--only-show-errors"], {
+        signal: context.signal,
         timeoutMs: remaining(context),
       })
     ).stdout;
@@ -556,6 +598,50 @@ function organizationUrl(organization: string) {
   return organization.startsWith("http")
     ? organization
     : `https://dev.azure.com/${organization}`;
+}
+
+function organizationFromUrl(orgUrl: string) {
+  try {
+    return (
+      new URL(orgUrl).pathname.split("/").filter(Boolean).at(-1) ?? "default"
+    );
+  } catch {
+    return "default";
+  }
+}
+
+function azureOrganizationUrl(repository: RepositoryIdentity) {
+  const extension = repository.extensions?.azure;
+  const orgUrl =
+    extension && typeof extension === "object" && "orgUrl" in extension
+      ? extension.orgUrl
+      : null;
+  if (typeof orgUrl !== "string") {
+    throw DaemonError.sourceControlCapabilityUnsupported(
+      "The Azure DevOps organization URL is missing from this repository identity.",
+      PROVIDER_ID,
+    );
+  }
+  let parsed: URL;
+  try {
+    parsed = new URL(orgUrl);
+  } catch {
+    throw DaemonError.sourceControlCapabilityUnsupported(
+      "The Azure DevOps organization URL is invalid.",
+      PROVIDER_ID,
+    );
+  }
+  if (
+    parsed.protocol !== "https:" ||
+    (parsed.hostname !== "dev.azure.com" &&
+      !parsed.hostname.endsWith(".visualstudio.com"))
+  ) {
+    throw DaemonError.sourceControlCapabilityUnsupported(
+      "Azure DevOps Server hosted operations require a Server-compatible integration; Azure CLI supports Azure DevOps Services only.",
+      PROVIDER_ID,
+    );
+  }
+  return parsed.toString().replace(/\/$/, "");
 }
 
 function remoteLocation(raw: string) {

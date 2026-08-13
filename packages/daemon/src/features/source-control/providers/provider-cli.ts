@@ -8,7 +8,7 @@ const OUTPUT_LIMIT = 4 * 1024 * 1024;
 
 export type ProviderCliRunner = (
   args: readonly string[],
-  options?: { cwd?: string; timeoutMs?: number },
+  options?: { cwd?: string; signal?: AbortSignal; timeoutMs?: number },
 ) => Promise<{ stderr: string; stdout: string }>;
 
 export function findProviderCli(command: string): Promise<string | null> {
@@ -29,6 +29,7 @@ export function createProviderCliRunner(command: string): ProviderCliRunner {
       cwd: options.cwd,
       env,
       maxBuffer: OUTPUT_LIMIT,
+      signal: options.signal,
       timeout: options.timeoutMs ?? 30_000,
     });
     return {

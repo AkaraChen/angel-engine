@@ -111,7 +111,10 @@ function matchGitHub(
   const matches = candidates.map((candidate) => ({
     providerId: PROVIDER_ID,
     remote: candidate.remote,
-    repository: parseGitHubRepositoryUrl(candidate.remote.url),
+    repository: parseGitHubRepositoryUrl(
+      candidate.remote.url,
+      remoteHost(candidate.remote.url) ?? undefined,
+    ),
     score: candidate.score,
     source: candidate.source,
   }));
@@ -206,10 +209,24 @@ async function cloneGitHubRepository(
             "--",
             "--progress",
           ],
-          { timeoutMs },
+          { signal: context.signal, timeoutMs },
         );
       },
-      isAvailable: async () => (await dependencies.findGh()) !== null,
+      isAuthenticated: async () => {
+        if ((await dependencies.findGh()) === null) return false;
+        try {
+          await dependencies.runGh(
+            ["auth", "status", "--hostname", input.repository.host],
+            {
+              signal: context.signal,
+              timeoutMs: Math.max(1, context.deadline - Date.now()),
+            },
+          );
+          return true;
+        } catch {
+          return false;
+        }
+      },
     },
     context,
     remoteUrl: cloneUrl,
