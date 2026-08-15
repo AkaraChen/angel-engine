@@ -5,6 +5,7 @@ import type {
 
 import { describe, expect, it } from "vitest";
 import {
+  cronForNaturalSchedule,
   createAutomationFormInitialState,
   hasMissedRun,
   nextRunPreview,
@@ -33,7 +34,21 @@ describe("schedule model", () => {
       preset: "every-30-minutes",
       projectId: "project-1",
       prompt: "Report CI exceptions.",
+      time: "09:00",
+      weekday: "1",
     });
+  });
+
+  it("maps natural schedule choices back to cron", () => {
+    expect(cronForNaturalSchedule("daily", "14:30", "1", "")).toBe(
+      "30 14 * * *",
+    );
+    expect(cronForNaturalSchedule("weekly", "08:05", "5", "")).toBe(
+      "5 8 * * 5",
+    );
+    expect(cronForNaturalSchedule("custom", "09:00", "1", "*/5 * * * *")).toBe(
+      "*/5 * * * *",
+    );
   });
 
   it("validates supported five-field cron expressions", () => {

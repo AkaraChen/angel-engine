@@ -48,6 +48,8 @@ export interface CreateAutomationInput {
 export interface CreateAutomationFormState extends CreateAutomationInput {
   preset: SchedulePreset;
   projectId: string;
+  time: string;
+  weekday: string;
 }
 
 export type AutomationTemplate = Partial<CreateAutomationInput> & {
@@ -71,6 +73,8 @@ export const DEFAULT_CREATE_AUTOMATION_FORM: CreateAutomationFormState = {
   preset: "daily",
   projectId: "",
   prompt: "",
+  time: "09:00",
+  weekday: "1",
 };
 
 export function createAutomationFormInitialState(
@@ -85,9 +89,62 @@ export function createAutomationFormInitialState(
     ...template,
     cron,
     name: uniqueAutomationName(template.name, existingNames),
-    preset: presetForCron(cron) ?? "custom",
+    preset: naturalPresetForCron(cron),
     projectId: template.projectId ?? DEFAULT_CREATE_AUTOMATION_FORM.projectId,
+    time: timeForCron(cron) ?? DEFAULT_CREATE_AUTOMATION_FORM.time,
+    weekday: weekdayForCron(cron) ?? DEFAULT_CREATE_AUTOMATION_FORM.weekday,
   };
+}
+
+function naturalPresetForCron(cron: string): SchedulePreset {
+  const normalized = cron.trim();
+  if (/^\d+ \* \* \* \*$/.test(normalized)) return "hourly";
+  if (/^\d+ \d+ \* \* \*$/.test(normalized)) return "daily";
+  if (/^\d+ \d+ \* \* [0-7]$/.test(normalized)) return "weekly";
+  return presetForCron(normalized) ?? "custom";
+}
+
+function timeForCron(cron: string): string | undefined {
+  const [minute, hour] = cron.trim().split(/\s+/);
+  if (
+    minute === undefined ||
+    hour === undefined ||
+    !/^\d+$/.test(minute) ||
+    !/^\d+$/.test(hour)
+  ) {
+    return undefined;
+  }
+  return `${hour.padStart(2, "0")}:${minute.padStart(2, "0")}`;
+}
+
+function weekdayForCron(cron: string): string | undefined {
+  const weekday = cron.trim().split(/\s+/)[4];
+  return weekday !== undefined && /^[0-7]$/.test(weekday) ? weekday : undefined;
+}
+
+export function cronForNaturalSchedule(
+  preset: SchedulePreset,
+  time: string,
+  weekday: string,
+  customCron: string,
+): string {
+  if (preset === "custom") return customCron;
+  if (preset === "hourly") return PRESET_CRON.hourly;
+  if (preset === "every-30-minutes") return PRESET_CRON["every-30-minutes"];
+  if (preset === "weekdays") return PRESET_CRON.weekdays;
+
+  const [hour, minute] = time.split(":");
+  if (
+    hour === undefined ||
+    minute === undefined ||
+    !/^\d{2}$/.test(hour) ||
+    !/^\d{2}$/.test(minute)
+  ) {
+    return "";
+  }
+  return preset === "weekly"
+    ? `${Number(minute)} ${Number(hour)} * * ${weekday}`
+    : `${Number(minute)} ${Number(hour)} * * *`;
 }
 
 function uniqueAutomationName(name: string, existingNames: string[]): string {
@@ -149,7 +206,8 @@ export function nextRunPreview(
   now = new Date(),
   customCron?: string,
 ): Date[] {
-  const expression = preset === "custom" ? customCron : PRESET_CRON[preset];
+  const expression =
+    customCron ?? (preset === "custom" ? undefined : PRESET_CRON[preset]);
   if (expression === undefined) return [];
 
   const cron = parseCron(expression);
