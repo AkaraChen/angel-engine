@@ -12,6 +12,7 @@ import {
   presetForCron,
   sortedRuns,
   validateCron,
+  weekdayKeyForValue,
 } from "@/features/schedule/schedule-model";
 
 describe("schedule model", () => {
@@ -48,6 +49,33 @@ describe("schedule model", () => {
     );
     expect(cronForNaturalSchedule("custom", "09:00", "1", "*/5 * * * *")).toBe(
       "*/5 * * * *",
+    );
+  });
+
+  it("normalizes Sunday weekday 7 at the form boundary", () => {
+    const state = createAutomationFormInitialState({
+      cron: "0 9 * * 7",
+      name: "Sunday report",
+      prompt: "Summarize the week.",
+    });
+
+    expect(state.weekday).toBe("0");
+    expect(state.cron).toBe("0 9 * * 0");
+  });
+
+  it("displays normalized Sunday as Sunday", () => {
+    const { weekday } = createAutomationFormInitialState({
+      cron: "0 9 * * 7",
+      name: "Sunday report",
+      prompt: "Summarize the week.",
+    });
+
+    expect(weekdayKeyForValue(weekday)).toBe("sunday");
+  });
+
+  it("writes Sunday weekday 7 back as 0", () => {
+    expect(cronForNaturalSchedule("weekly", "09:00", "7", "")).toBe(
+      "0 9 * * 0",
     );
   });
 

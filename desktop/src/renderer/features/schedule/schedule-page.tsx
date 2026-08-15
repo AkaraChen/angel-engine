@@ -64,6 +64,7 @@ import {
   presetForCron,
   sortedRuns,
   validateCron,
+  weekdayKeyForValue,
 } from "@/features/schedule/schedule-model";
 import { formatDateTime, formatRelativeTime } from "@/platform/format-time";
 import { cn } from "@/platform/utils";
@@ -1258,21 +1259,8 @@ function summaryScheduleLabel(t: TFunction, state: CreateFormState): string {
       ),
     });
   }
+  if (state.preset === "custom") return state.cron;
   return presetLabel(t, state.preset);
-}
-
-function weekdayKeyForValue(value: string): string {
-  return (
-    [
-      "sunday",
-      "monday",
-      "tuesday",
-      "wednesday",
-      "thursday",
-      "friday",
-      "saturday",
-    ][Number(value)] ?? "monday"
-  );
 }
 function ScheduleSkeleton() {
   return (

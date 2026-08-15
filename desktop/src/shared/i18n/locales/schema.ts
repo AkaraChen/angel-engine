@@ -591,7 +591,7 @@ export interface LocaleResourceTranslationSchedule {
     manual: string;
     scheduled: string;
   };
-  wizard?: {
+  wizard: {
     advancedSettings: string;
     back: string;
     blankDescription: string;

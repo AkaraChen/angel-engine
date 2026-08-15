@@ -83,16 +83,24 @@ export function createAutomationFormInitialState(
 ): CreateAutomationFormState {
   if (template === undefined) return { ...DEFAULT_CREATE_AUTOMATION_FORM };
 
-  const cron = template.cron;
+  const preset = naturalPresetForCron(template.cron);
+  const time =
+    timeForCron(template.cron) ?? DEFAULT_CREATE_AUTOMATION_FORM.time;
+  const weekday =
+    weekdayForCron(template.cron) ?? DEFAULT_CREATE_AUTOMATION_FORM.weekday;
+  const cron =
+    preset === "weekly"
+      ? cronForNaturalSchedule(preset, time, weekday, template.cron)
+      : template.cron;
   return {
     ...DEFAULT_CREATE_AUTOMATION_FORM,
     ...template,
     cron,
     name: uniqueAutomationName(template.name, existingNames),
-    preset: naturalPresetForCron(cron),
+    preset,
     projectId: template.projectId ?? DEFAULT_CREATE_AUTOMATION_FORM.projectId,
-    time: timeForCron(cron) ?? DEFAULT_CREATE_AUTOMATION_FORM.time,
-    weekday: weekdayForCron(cron) ?? DEFAULT_CREATE_AUTOMATION_FORM.weekday,
+    time,
+    weekday,
   };
 }
 
@@ -119,7 +127,22 @@ function timeForCron(cron: string): string | undefined {
 
 function weekdayForCron(cron: string): string | undefined {
   const weekday = cron.trim().split(/\s+/)[4];
-  return weekday !== undefined && /^[0-7]$/.test(weekday) ? weekday : undefined;
+  if (weekday === "7") return "0";
+  return weekday !== undefined && /^[0-6]$/.test(weekday) ? weekday : undefined;
+}
+
+export function weekdayKeyForValue(value: string): string {
+  return (
+    [
+      "sunday",
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+    ][Number(value)] ?? "monday"
+  );
 }
 
 export function cronForNaturalSchedule(
@@ -143,7 +166,7 @@ export function cronForNaturalSchedule(
     return "";
   }
   return preset === "weekly"
-    ? `${Number(minute)} ${Number(hour)} * * ${weekday}`
+    ? `${Number(minute)} ${Number(hour)} * * ${weekday === "7" ? "0" : weekday}`
     : `${Number(minute)} ${Number(hour)} * * *`;
 }
 
