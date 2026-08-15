@@ -6,6 +6,7 @@ import type {
 import { describe, expect, it } from "vitest";
 import {
   hasMissedRun,
+  createAutomationFormState,
   nextRunPreview,
   presetForCron,
   sortedRuns,
@@ -13,6 +14,37 @@ import {
 } from "@/features/schedule/schedule-model";
 
 describe("schedule model", () => {
+  it("prefills every supplied template field and preserves other defaults", () => {
+    expect(
+      createAutomationFormState(
+        {
+          cron: "*/30 * * * *",
+          name: "CI heartbeat",
+          notifyOnFailure: false,
+          projectId: "project-1",
+          prompt: "Report CI exceptions.",
+        },
+        ["CI heartbeat", "CI heartbeat 2"],
+      ),
+    ).toEqual({
+      cron: "*/30 * * * *",
+      name: "CI heartbeat 3",
+      notifyOnFailure: false,
+      preset: "every-30-minutes",
+      projectId: "project-1",
+      prompt: "Report CI exceptions.",
+    });
+
+    expect(createAutomationFormState({ name: "Partial template" })).toEqual({
+      cron: "0 9 * * *",
+      name: "Partial template",
+      notifyOnFailure: true,
+      preset: "daily",
+      projectId: "",
+      prompt: "",
+    });
+  });
+
   it("validates supported five-field cron expressions", () => {
     expect(validateCron("0 9 * * *")).toBe(true);
     expect(validateCron("*/30 * * * *")).toBe(true);

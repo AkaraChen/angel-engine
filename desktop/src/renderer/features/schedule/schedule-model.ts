@@ -45,6 +45,23 @@ export interface CreateAutomationInput {
   prompt: string;
 }
 
+export interface AutomationTemplate {
+  cron?: string;
+  name?: string;
+  notifyOnFailure?: boolean;
+  projectId?: string;
+  prompt?: string;
+}
+
+export interface CreateAutomationFormState {
+  cron: string;
+  name: string;
+  notifyOnFailure: boolean;
+  preset: SchedulePreset;
+  projectId: string;
+  prompt: string;
+}
+
 export const PRESET_CRON: Record<Exclude<SchedulePreset, "custom">, string> = {
   "every-30-minutes": "*/30 * * * *",
   daily: "0 9 * * *",
@@ -52,6 +69,55 @@ export const PRESET_CRON: Record<Exclude<SchedulePreset, "custom">, string> = {
   weekdays: "0 9 * * 1-5",
   weekly: "0 9 * * 1",
 };
+
+export const DEFAULT_CREATE_AUTOMATION_FORM: CreateAutomationFormState = {
+  cron: PRESET_CRON.daily,
+  name: "",
+  notifyOnFailure: true,
+  preset: "daily",
+  projectId: "",
+  prompt: "",
+};
+
+export function createAutomationFormState(
+  template?: AutomationTemplate,
+  existingNames: string[] = [],
+): CreateAutomationFormState {
+  if (template === undefined) return DEFAULT_CREATE_AUTOMATION_FORM;
+
+  const cron = template.cron ?? DEFAULT_CREATE_AUTOMATION_FORM.cron;
+  const preset = presetForCron(cron) ?? "custom";
+  const name = template.name
+    ? uniqueAutomationName(template.name, existingNames)
+    : DEFAULT_CREATE_AUTOMATION_FORM.name;
+
+  return {
+    ...DEFAULT_CREATE_AUTOMATION_FORM,
+    ...(template.cron === undefined ? {} : { cron }),
+    ...(template.name === undefined ? {} : { name }),
+    ...(template.notifyOnFailure === undefined
+      ? {}
+      : { notifyOnFailure: template.notifyOnFailure }),
+    ...(template.projectId === undefined
+      ? {}
+      : { projectId: template.projectId }),
+    ...(template.prompt === undefined ? {} : { prompt: template.prompt }),
+    preset,
+  };
+}
+
+function uniqueAutomationName(name: string, existingNames: string[]): string {
+  const normalizedNames = new Set(
+    existingNames.map((value) => value.trim().toLocaleLowerCase()),
+  );
+  if (!normalizedNames.has(name.trim().toLocaleLowerCase())) return name;
+
+  let suffix = 2;
+  while (normalizedNames.has(`${name} ${suffix}`.trim().toLocaleLowerCase())) {
+    suffix += 1;
+  }
+  return `${name} ${suffix}`;
+}
 
 const CRON_FIELD_RANGES = [
   [0, 59],
