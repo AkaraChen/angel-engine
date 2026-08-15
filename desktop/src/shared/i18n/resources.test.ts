@@ -44,9 +44,11 @@ describe.each(translatedLanguages)("%s locale", (language) => {
 
   it("does not silently reuse English schedule copy", () => {
     const intentionallySame: Partial<Record<typeof language, string[]>> = {
-      de: ["name"],
-      es: ["triggerType.manual"],
-      fr: ["status.active"],
+      de: ["guided.stepLabel", "name"],
+      es: ["guided.stepLabel", "triggerType.manual"],
+      fr: ["guided.stepLabel", "status.active"],
+      ja: ["guided.stepLabel"],
+      ko: ["guided.stepLabel"],
     };
 
     expect(

@@ -47,6 +47,7 @@ export interface CreateAutomationInput {
 
 export interface AutomationTemplate {
   cron?: string;
+  id?: string;
   name?: string;
   notifyOnFailure?: boolean;
   projectId?: string;
