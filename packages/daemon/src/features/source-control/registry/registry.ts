@@ -9,6 +9,7 @@ import {
   type ProviderLinkDescriptor,
   type SourceControlCapabilityId,
   type SourceControlProviderPlugin,
+  type UnsupportedReason,
 } from "@angel-engine/daemon-api/source-control";
 
 import { collectProbeContext } from "./probe";
@@ -112,22 +113,52 @@ function activationKey(activation: ProviderActivation) {
 function capabilityMatrix(
   plugin: SourceControlProviderPlugin,
   authenticated: boolean,
+  unavailableReason: UnsupportedReason,
 ): CapabilityMatrix {
+  const unsupported = Object.entries(
+    plugin.manifest.unsupportedCapabilities ?? {},
+  ).map(([capability, reason]) => [
+    capability,
+    { supported: false as const, reason },
+  ]);
   return {
-    entries: Object.fromEntries(
-      plugin.manifest.capabilities.map((capability) => [
+    entries: Object.fromEntries([
+      ...unsupported,
+      ...plugin.manifest.capabilities.map((capability) => [
         capability,
         authenticated || capability === "provider.auth"
           ? { supported: true as const }
           : {
               supported: false as const,
-              reason: {
-                kind: "unauthenticated" as const,
-                message: `${plugin.manifest.displayName} is not authenticated.`,
-              },
+              reason: unavailableReason,
             },
       ]),
-    ),
+    ]),
+  };
+}
+
+function readinessReason(
+  plugin: SourceControlProviderPlugin,
+  readiness: ProviderReadiness,
+): UnsupportedReason {
+  const diagnostic = readiness.diagnostics.find((entry) =>
+    [
+      "source-control/requires-configuration",
+      "source-control/cli-missing",
+      "source-control/unauthenticated",
+    ].includes(entry.code),
+  );
+  const kind = diagnostic?.code.replace("source-control/", "");
+  if (
+    kind === "requires-configuration" ||
+    kind === "cli-missing" ||
+    kind === "unauthenticated"
+  ) {
+    return { kind, message: diagnostic!.message };
+  }
+  return {
+    kind: "unauthenticated",
+    message: `${plugin.manifest.displayName} is not authenticated.`,
   };
 }
 
@@ -398,25 +429,25 @@ export class SourceControlRegistry {
       });
     }
     const authenticated = readiness.authentication === "authenticated";
+    const unavailableReason = readinessReason(plugin, readiness);
     const outboundSecrets = outboundSecretsFromMatch(match);
     const result = sanitizeSourceControlValue<ActivationResult>(
       {
         status: "active",
         activation: {
           authentication: readiness.authentication,
-          capabilities: capabilityMatrix(plugin, authenticated),
+          capabilities: capabilityMatrix(
+            plugin,
+            authenticated,
+            unavailableReason,
+          ),
           diagnostics: redactSourceControlValue(readiness.diagnostics, secrets),
           generation: this.generation(options.projectPath),
           projectPath: options.projectPath,
           provider: plugin.manifest,
           remote: { name: match.remote.name, url: match.remote.url },
           repository: match.repository,
-          unavailableReason: authenticated
-            ? null
-            : {
-                kind: "unauthenticated",
-                message: `${plugin.manifest.displayName} is not authenticated.`,
-              },
+          unavailableReason: authenticated ? null : unavailableReason,
         },
       },
       outboundSecrets,

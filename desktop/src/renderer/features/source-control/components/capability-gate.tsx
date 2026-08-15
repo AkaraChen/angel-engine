@@ -41,7 +41,8 @@ export function CapabilityGate({
   const canRemediate =
     remediationAvailable ??
     (state.reason.kind === "unauthenticated" ||
-      state.reason.kind === "cli-missing");
+      state.reason.kind === "cli-missing" ||
+      state.reason.kind === "requires-configuration");
 
   return (
     <Tooltip>

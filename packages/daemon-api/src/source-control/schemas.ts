@@ -178,7 +178,7 @@ export const reviewThreadSchema = arkType({
 
 export const unsupportedReasonSchema = arkType({
   "+": "reject",
-  kind: "'not-implemented' | 'out-of-scope' | 'unauthenticated' | 'cli-missing' | 'permission-denied' | 'plan-restricted' | 'unknown-capability'",
+  kind: "'not-implemented' | 'out-of-scope' | 'requires-configuration' | 'unauthenticated' | 'cli-missing' | 'permission-denied' | 'plan-restricted' | 'unknown-capability'",
   message: "string > 0",
   "docsUrl?": "string",
 });
@@ -211,6 +211,7 @@ export const providerManifestSchema = arkType({
   displayName: "string > 0",
   hosts: "string[]",
   capabilities: capabilityIdSchema.array(),
+  "unsupportedCapabilities?": { "[string]": unsupportedReasonSchema },
   "extensions?": extensionsSchema,
 });
 

@@ -92,7 +92,17 @@ vi.mock("@/features/source-control/api/use-activation", () => ({
   useSourceControlActivation: () => ({
     capabilities,
     projectPath: "/repo",
+    providerDisplayName: "Example Forge",
     providerIdentity: "forge:code.example/acme/widgets:1",
+    repository: {
+      displayPath: "acme/widgets",
+      host: "code.example",
+      name: "widgets",
+      namespace: ["acme"],
+      providerId: "forge",
+      remoteId: null,
+      webUrl: "https://code.example/acme/widgets",
+    },
     refetch: vi.fn(),
     status: "active",
   }),
@@ -315,6 +325,7 @@ describe("ChangeRequestPanel", () => {
       expect(screen.getByText("PR description body")).toBeDefined();
     });
     expect(currentChangeRequest).toHaveBeenCalledWith("/repo");
+    expect(screen.getByText("Example Forge · acme/widgets")).toBeDefined();
   });
 
   it("makes no checks or review request without a current change request", async () => {
@@ -395,7 +406,7 @@ describe("ChangeRequestPanel", () => {
     });
   });
 
-  it("shows an explicit disabled state and makes no review request when the capability is missing", async () => {
+  it("hides review-thread semantics and makes no request when the capability is missing", async () => {
     capabilities = {
       entries: {
         "changeRequests.list": { supported: true },
@@ -407,11 +418,21 @@ describe("ChangeRequestPanel", () => {
 
     renderPanel();
 
-    expect(
-      (await screen.findByTestId("workspace-reviews-unsupported")).textContent,
-    ).toContain(
-      "Capability reviewThreads.list was not declared by the provider.",
-    );
+    await waitFor(() => expect(currentChangeRequest).toHaveBeenCalled());
+    expect(screen.queryByTestId("workspace-reviews-unsupported")).toBeNull();
     expect(reviewThreads).not.toHaveBeenCalled();
+  });
+
+  it("hides merge affordances when the provider does not declare merge", async () => {
+    pullRequestStatus.mockResolvedValue(openStatus);
+    renderPanel();
+
+    await screen.findByText("#42 Feature");
+    expect(
+      screen.queryByRole("button", {
+        name: "workspace.tools.pullRequest.merge",
+      }),
+    ).toBeNull();
+    expect(screen.queryByText("workspace.tools.pullRequest.ready")).toBeNull();
   });
 });

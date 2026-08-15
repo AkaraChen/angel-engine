@@ -12,7 +12,7 @@ const GH_TIMEOUT_MS = 30_000;
 
 export type GhRunner = (
   args: string[],
-  options?: { cwd?: string; timeoutMs?: number },
+  options?: { cwd?: string; signal?: AbortSignal; timeoutMs?: number },
 ) => Promise<{
   stderr: string;
   stdout: string;
@@ -22,6 +22,7 @@ interface GhExecutorOptions {
   cwd?: string;
   env: NodeJS.ProcessEnv;
   maxBuffer: number;
+  signal?: AbortSignal;
   timeout: number;
 }
 
@@ -53,6 +54,7 @@ export function createGhRunner(execute: GhExecutor): GhRunner {
         cwd: options.cwd,
         env,
         maxBuffer: GH_OUTPUT_MAX_BUFFER,
+        signal: options.signal,
         timeout: options.timeoutMs ?? GH_TIMEOUT_MS,
       });
       return {

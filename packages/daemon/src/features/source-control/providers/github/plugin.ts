@@ -9,8 +9,8 @@ import type {
   RemoteDescriptor,
   SourceControlProviderPlugin,
 } from "@angel-engine/daemon-api/source-control";
-import path from "node:path";
 import { executeGit, type LocalGitRunner } from "../../local-git/backend";
+import { credentialedClone } from "../../local-git/credentialed-clone";
 
 import {
   extractProcessOutput,
@@ -111,7 +111,10 @@ function matchGitHub(
   const matches = candidates.map((candidate) => ({
     providerId: PROVIDER_ID,
     remote: candidate.remote,
-    repository: parseGitHubRepositoryUrl(candidate.remote.url),
+    repository: parseGitHubRepositoryUrl(
+      candidate.remote.url,
+      remoteHost(candidate.remote.url) ?? undefined,
+    ),
     score: candidate.score,
     source: candidate.source,
   }));
@@ -193,27 +196,44 @@ async function cloneGitHubRepository(
   ) {
     throw new TypeError("A GitHub repository is required.");
   }
-  const timeoutMs = Math.max(1, context.deadline - Date.now());
-  if (await dependencies.findGh()) {
-    await dependencies.runGh(
-      [
-        "repo",
-        "clone",
-        input.repository.displayPath,
-        input.targetPath,
-        "--",
-        "--progress",
-      ],
-      { timeoutMs },
-    );
-  } else {
-    const cloneUrl = `${input.repository.webUrl ?? input.repository.displayPath}.git`;
-    await dependencies.runGit(
-      path.dirname(input.targetPath),
-      ["clone", "--progress", cloneUrl, input.targetPath],
-      { signal: context.signal, timeout: timeoutMs },
-    );
-  }
+  const cloneUrl = `${input.repository.webUrl ?? input.repository.displayPath}.git`;
+  await credentialedClone({
+    cli: {
+      clone: async (targetPath, timeoutMs) => {
+        await dependencies.runGh(
+          [
+            "repo",
+            "clone",
+            input.repository.displayPath,
+            targetPath,
+            "--",
+            "--progress",
+          ],
+          { signal: context.signal, timeoutMs },
+        );
+      },
+      isAuthenticated: async () => {
+        if ((await dependencies.findGh()) === null) return false;
+        try {
+          await dependencies.runGh(
+            ["auth", "status", "--hostname", input.repository.host],
+            {
+              signal: context.signal,
+              timeoutMs: Math.max(1, context.deadline - Date.now()),
+            },
+          );
+          return true;
+        } catch {
+          return false;
+        }
+      },
+    },
+    context,
+    remoteUrl: cloneUrl,
+    runGit: dependencies.runGit,
+    targetPath: input.targetPath,
+    username: "x-access-token",
+  });
   return { projectPath: input.targetPath };
 }
 
