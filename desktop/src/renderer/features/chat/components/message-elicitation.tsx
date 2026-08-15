@@ -14,8 +14,10 @@ import {
 } from "@angel-engine/daemon-api/chat";
 import { useAuiState } from "@assistant-ui/react";
 import {
+  Check,
   CaretDown as ChevronDown,
   Question as CircleHelp,
+  X as CloseIcon,
   PaperPlaneRight as Send,
 } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
@@ -32,6 +34,11 @@ import {
   ElicitationQuestionInput,
   PermissionApprovalActions,
 } from "@/features/chat/components/elicitation-controls";
+import {
+  elicitationResolvedSubject,
+  formatElicitationDecision,
+  isNegativeElicitationDecision,
+} from "@/features/chat/components/elicitation-summary";
 import { JsonBlock } from "@/features/chat/components/message-content-parts";
 import { inspectorCardClassName } from "@/features/chat/components/message-styles";
 import { PlanMessagePart } from "@/features/chat/components/plan-message";
@@ -126,8 +133,8 @@ function ElicitationQuestionCard({
 
   // The only component in the whole thread allowed to tint its entire card.
   // It has earned it: an open elicitation blocks the run, so it has to break
-  // the transcript's rhythm rather than blend into it. Once answered it drops
-  // back to a plain card like everything else.
+  // the transcript's rhythm rather than blend into it. Once answered it collapses
+  // to a borderless one-line summary (see early return below).
   const elicitationCardClassName = cn(
     inspectorCardClassName,
     "my-2",
@@ -147,7 +154,7 @@ function ElicitationQuestionCard({
   });
   const allowBypass = backingActionKind !== "plan";
   const phase = submittedResponseType
-    ? submittedResponseType === "cancel"
+    ? submittedResponseType === "cancel" || submittedResponseType === "deny"
       ? "cancelled"
       : "resolved:Answers"
     : elicitation.phase;
@@ -179,6 +186,44 @@ function ElicitationQuestionCard({
     resume({ answers: responseAnswers, type: "answers" });
   };
 
+  // Once answered, drop the attention card entirely: a borderless one-line
+  // summary is enough to scan what was approved without replaying the form.
+  if (!awaitingInput) {
+    const decision = formatElicitationDecision(
+      phase,
+      submittedResponseType,
+      isPermissionRequest,
+      t,
+      formatElicitationPhase,
+    );
+    const subject = elicitationResolvedSubject(elicitation, title);
+    const negative = isNegativeElicitationDecision(
+      phase,
+      submittedResponseType,
+    );
+    return (
+      <div
+        className="
+          my-1.5 flex min-h-7 w-full min-w-0 items-center gap-2 px-1 py-1
+          text-xs
+        "
+      >
+        {negative ? (
+          <CloseIcon className="size-3.5 shrink-0 text-status-danger" />
+        ) : (
+          <Check className="size-3.5 shrink-0 text-status-success" />
+        )}
+        <span className="shrink-0 font-medium">{decision}</span>
+        <span aria-hidden className="text-muted-foreground/60">
+          ·
+        </span>
+        <span className="min-w-0 flex-1 truncate text-muted-foreground">
+          {subject}
+        </span>
+      </div>
+    );
+  }
+
   return (
     <Collapsible
       className={elicitationCardClassName}
@@ -195,12 +240,7 @@ function ElicitationQuestionCard({
         )}
         type="button"
       >
-        <CircleHelp
-          className={cn(
-            "size-3.5 shrink-0",
-            awaitingInput ? "text-status-attention" : "text-muted-foreground",
-          )}
-        />
+        <CircleHelp className="size-3.5 shrink-0 text-status-attention" />
         <div className="min-w-0 flex-1">
           <div className="truncate font-medium">{title}</div>
           <div
@@ -237,7 +277,7 @@ function ElicitationQuestionCard({
           {isPermissionRequest ? (
             <PermissionApprovalActions
               allowBypass={allowBypass}
-              disabled={!awaitingInput}
+              disabled={false}
               onResume={resume}
             />
           ) : (
@@ -245,7 +285,7 @@ function ElicitationQuestionCard({
               {hasQuestions ? (
                 questions.map((question) => (
                   <ElicitationQuestionInput
-                    disabled={!awaitingInput}
+                    disabled={false}
                     key={question.id}
                     onChange={(value) =>
                       setAnswers((current) => ({
@@ -266,32 +306,26 @@ function ElicitationQuestionCard({
                     focus-visible:border-primary/40 focus-visible:ring-3
                     focus-visible:ring-primary/12
                   "
-                  disabled={!awaitingInput}
+                  disabled={false}
                   onChange={(event) => setFallbackAnswer(event.target.value)}
                   value={fallbackAnswer}
                 />
               )}
 
-              {awaitingInput ? (
-                <div className="flex flex-wrap justify-end gap-2">
-                  <Button
-                    onClick={() => resume({ type: "cancel" })}
-                    size="xs"
-                    type="button"
-                    variant="ghost"
-                  >
-                    {t("common.cancel")}
-                  </Button>
-                  <Button onClick={submitAnswers} size="xs" type="button">
-                    <Send className="size-3.5" />
-                    {t("common.submit")}
-                  </Button>
-                </div>
-              ) : (
-                <div className="text-right text-[11px] text-muted-foreground">
-                  {formatElicitationPhase(phase, t)}
-                </div>
-              )}
+              <div className="flex flex-wrap justify-end gap-2">
+                <Button
+                  onClick={() => resume({ type: "cancel" })}
+                  size="xs"
+                  type="button"
+                  variant="ghost"
+                >
+                  {t("common.cancel")}
+                </Button>
+                <Button onClick={submitAnswers} size="xs" type="button">
+                  <Send className="size-3.5" />
+                  {t("common.submit")}
+                </Button>
+              </div>
             </div>
           )}
         </div>
