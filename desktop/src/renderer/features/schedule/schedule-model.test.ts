@@ -5,14 +5,147 @@ import type {
 
 import { describe, expect, it } from "vitest";
 import {
+  automationParameterGroups,
+  cronForNaturalSchedule,
+  createAutomationFormInitialState,
   hasMissedRun,
   nextRunPreview,
   presetForCron,
+  reconcileAutomationWizardNavigation,
   sortedRuns,
+  summarizeAutomationPrompt,
+  validateAutomationWizard,
   validateCron,
+  weekdayKeyForValue,
 } from "@/features/schedule/schedule-model";
 
 describe("schedule model", () => {
+  it("prefills every form value supplied by a template", () => {
+    expect(
+      createAutomationFormInitialState(
+        {
+          cron: "*/30 * * * *",
+          name: "CI heartbeat",
+          notifyOnFailure: false,
+          projectId: "project-1",
+          prompt: "Report CI exceptions.",
+        },
+        ["CI heartbeat", "CI heartbeat (2)"],
+      ),
+    ).toEqual({
+      cron: "*/30 * * * *",
+      name: "CI heartbeat (3)",
+      notifyOnFailure: false,
+      preset: "every-30-minutes",
+      projectId: "project-1",
+      prompt: "Report CI exceptions.",
+      time: "09:00",
+      weekday: "1",
+    });
+  });
+
+  it("maps natural schedule choices back to cron", () => {
+    expect(cronForNaturalSchedule("daily", "14:30", "1", "")).toBe(
+      "30 14 * * *",
+    );
+    expect(cronForNaturalSchedule("weekly", "08:05", "5", "")).toBe(
+      "5 8 * * 5",
+    );
+    expect(cronForNaturalSchedule("custom", "09:00", "1", "*/5 * * * *")).toBe(
+      "*/5 * * * *",
+    );
+  });
+
+  it("does not turn an empty run time into midnight", () => {
+    expect(cronForNaturalSchedule("daily", "", "1", "")).toBe("");
+  });
+
+  it("separates missing template parameters from advanced defaults", () => {
+    const template = {
+      cron: "0 9 * * *",
+      name: "Daily report",
+      notifyOnFailure: true,
+      prompt: "Summarize progress.",
+    };
+
+    expect(automationParameterGroups(template)).toEqual({
+      advanced: ["name", "prompt", "notifyOnFailure"],
+      primary: ["projectId"],
+    });
+    expect(automationParameterGroups()).toEqual({
+      advanced: [],
+      primary: ["name", "prompt", "projectId", "notifyOnFailure"],
+    });
+  });
+
+  it("invalidates every later step after an earlier step becomes invalid", () => {
+    const state = {
+      ...createAutomationFormInitialState({
+        cron: "0 9 * * *",
+        name: "Daily report",
+        prompt: "Summarize progress.",
+      }),
+      cron: "",
+      time: "",
+    };
+
+    const validation = validateAutomationWizard(state, true, false);
+    expect(validation).toEqual({
+      firstInvalidStep: 2,
+      steps: [true, false, false, false],
+      timeRequired: true,
+    });
+    expect(
+      reconcileAutomationWizardNavigation(
+        {
+          completedSteps: [true, true, true, false],
+          step: 4,
+        },
+        validation.steps,
+        validation.firstInvalidStep,
+      ),
+    ).toEqual({
+      completedSteps: [true, false, false, false],
+      step: 2,
+    });
+  });
+
+  it("summarizes the current prompt for confirmation", () => {
+    const prompt = `  ${"Current task ".repeat(20)}  `;
+    const summary = summarizeAutomationPrompt(prompt);
+
+    expect(summary.length).toBeLessThanOrEqual(118);
+    expect(summary.startsWith("Current task")).toBe(true);
+    expect(summary.endsWith("…")).toBe(true);
+  });
+
+  it("normalizes Sunday weekday 7 at the form boundary", () => {
+    const state = createAutomationFormInitialState({
+      cron: "0 9 * * 7",
+      name: "Sunday report",
+      prompt: "Summarize the week.",
+    });
+
+    expect(state.weekday).toBe("0");
+    expect(state.cron).toBe("0 9 * * 0");
+  });
+
+  it("displays normalized Sunday as Sunday", () => {
+    const { weekday } = createAutomationFormInitialState({
+      cron: "0 9 * * 7",
+      name: "Sunday report",
+      prompt: "Summarize the week.",
+    });
+
+    expect(weekdayKeyForValue(weekday)).toBe("sunday");
+  });
+
+  it("writes Sunday weekday 7 back as 0", () => {
+    expect(cronForNaturalSchedule("weekly", "09:00", "7", "")).toBe(
+      "0 9 * * 0",
+    );
+  });
+
   it("validates supported five-field cron expressions", () => {
     expect(validateCron("0 9 * * *")).toBe(true);
     expect(validateCron("*/30 * * * *")).toBe(true);

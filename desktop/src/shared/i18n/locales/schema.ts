@@ -591,6 +591,38 @@ export interface LocaleResourceTranslationSchedule {
     manual: string;
     scheduled: string;
   };
+  wizard: {
+    advancedSettings: string;
+    back: string;
+    blankDescription: string;
+    blankName: string;
+    chooseRequired: string;
+    dailyAt: string;
+    edit: string;
+    next: string;
+    nextRun: string;
+    noExtraParameters: string;
+    requiredName: string;
+    requiredPrompt: string;
+    requiredTime: string;
+    stepCount: string;
+    weeklyAt: string;
+    steps: {
+      confirm: string;
+      parameters: string;
+      what: string;
+      when: string;
+    };
+    weekdays: {
+      friday: string;
+      monday: string;
+      saturday: string;
+      sunday: string;
+      thursday: string;
+      tuesday: string;
+      wednesday: string;
+    };
+  };
 }
 
 export interface LocaleResourceTranslationSidebar {

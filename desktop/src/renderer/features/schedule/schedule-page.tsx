@@ -5,21 +5,32 @@ import type {
   Automation,
   AutomationRun,
   AutomationRunStatus,
+  AutomationParameterField,
+  AutomationTemplate,
+  CreateAutomationFormState,
+  AutomationWizardNavigation,
   SchedulePreset,
 } from "@/features/schedule/schedule-model";
 
 import {
   CalendarDots,
+  CaretDown,
   CaretRight,
+  Check,
   Plus,
   Trash,
   WarningCircle,
 } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useReducer, useRef, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { confirmAction } from "@/components/ui/confirm-dialog";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { getProjectDisplayName } from "@/app/workspace/workspace-display";
 import {
   Dialog,
@@ -48,16 +59,30 @@ import {
   setAutomationEnabledMutationOptions,
 } from "@/features/schedule/requests/automations";
 import {
+  automationParameterGroups,
+  cronForNaturalSchedule,
+  createAutomationFormInitialState,
   nextRunPreview,
   PRESET_CRON,
   presetForCron,
+  reconcileAutomationWizardNavigation,
   sortedRuns,
+  summarizeAutomationPrompt,
   validateCron,
+  validateAutomationWizard,
+  weekdayKeyForValue,
 } from "@/features/schedule/schedule-model";
 import { formatDateTime, formatRelativeTime } from "@/platform/format-time";
 import { cn } from "@/platform/utils";
 
 const NO_PROJECT_SELECT_VALUE = "__no_project__";
+const WIZARD_STEPS = ["what", "when", "parameters", "confirm"] as const;
+const INITIAL_WIZARD_NAVIGATION: AutomationWizardNavigation = {
+  completedSteps: [false, false, false, false],
+  step: 1,
+};
+type RecipeKey = "ciHeartbeat" | "dependencyAudit" | "nightlyTests";
+type WizardSource = RecipeKey | "blank";
 
 /** Older runs stop informing the decision to keep or fix an automation. */
 const RUN_HISTORY_LIMIT = 5;
@@ -89,6 +114,7 @@ export const SchedulePage: FC<SchedulePageProps> = ({ projects }) => {
   const listQuery = useQuery(automationListQueryOptions());
   const automations = listQuery.data ?? [];
   const [createOpen, setCreateOpen] = useState(false);
+  const [createSource, setCreateSource] = useState<WizardSource>();
   const [expandedId, setExpandedId] = useState<string>();
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -162,7 +188,13 @@ export const SchedulePage: FC<SchedulePageProps> = ({ projects }) => {
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-background">
       <div className="flex items-center justify-end gap-4 px-6 py-4">
-        <Button size="sm" onClick={() => setCreateOpen(true)}>
+        <Button
+          size="sm"
+          onClick={() => {
+            setCreateSource(undefined);
+            setCreateOpen(true);
+          }}
+        >
           <Plus weight="bold" />
           {t("schedule.newAutomation")}
         </Button>
@@ -182,7 +214,12 @@ export const SchedulePage: FC<SchedulePageProps> = ({ projects }) => {
           ) : listQuery.isError ? (
             <ScheduleNotice text={t("schedule.disconnected")} />
           ) : automations.length === 0 ? (
-            <ScheduleRecipes onCreate={() => setCreateOpen(true)} />
+            <ScheduleRecipes
+              onCreate={(source) => {
+                setCreateSource(source);
+                setCreateOpen(true);
+              }}
+            />
           ) : (
             <div className="space-y-1.5">
               {broken.map(renderCard)}
@@ -193,9 +230,11 @@ export const SchedulePage: FC<SchedulePageProps> = ({ projects }) => {
       </div>
 
       <CreateAutomationDialog
+        automations={automations}
         onOpenChange={setCreateOpen}
         open={createOpen}
         projects={projects}
+        source={createSource}
       />
     </div>
   );
@@ -379,14 +418,7 @@ function RunRow({ run }: { run: AutomationRun }) {
   );
 }
 
-interface CreateFormState {
-  cron: string;
-  name: string;
-  notifyOnFailure: boolean;
-  preset: SchedulePreset;
-  projectId: string;
-  prompt: string;
-}
+type CreateFormState = CreateAutomationFormState;
 
 type CreateFormAction =
   | {
@@ -395,58 +427,137 @@ type CreateFormAction =
       value: boolean | string;
     }
   | { preset: SchedulePreset; type: "preset" }
+  | { state: CreateFormState; type: "initialize" }
   | { type: "reset" };
-
-const INITIAL_CREATE_FORM: CreateFormState = {
-  cron: PRESET_CRON.daily,
-  name: "",
-  notifyOnFailure: true,
-  preset: "daily",
-  projectId: "",
-  prompt: "",
-};
 
 function createFormReducer(
   state: CreateFormState,
   action: CreateFormAction,
 ): CreateFormState {
-  if (action.type === "reset") return INITIAL_CREATE_FORM;
+  if (action.type === "initialize") return action.state;
+  if (action.type === "reset") return createAutomationFormInitialState();
   if (action.type === "preset") {
     return {
       ...state,
-      cron:
-        action.preset === "custom" ? state.cron : PRESET_CRON[action.preset],
+      cron: cronForNaturalSchedule(
+        action.preset,
+        state.time,
+        state.weekday,
+        state.cron,
+      ),
       preset: action.preset,
     };
   }
-  return { ...state, [action.field]: action.value };
+
+  const next = { ...state, [action.field]: action.value };
+  if (action.field === "time" || action.field === "weekday") {
+    next.cron = cronForNaturalSchedule(
+      next.preset,
+      next.time,
+      next.weekday,
+      next.cron,
+    );
+  }
+  return next;
 }
 
 function CreateAutomationDialog({
+  automations,
   onOpenChange,
   open,
   projects,
+  source,
 }: {
+  automations: Automation[];
   onOpenChange: (open: boolean) => void;
   open: boolean;
   projects: Project[];
+  source?: WizardSource;
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const [state, dispatch] = useReducer(createFormReducer, INITIAL_CREATE_FORM);
+  const [state, dispatch] = useReducer(
+    createFormReducer,
+    undefined,
+    createAutomationFormInitialState,
+  );
+  const [selection, setSelection] = useState<WizardSource>();
+  const [navigation, setNavigation] = useState(INITIAL_WIZARD_NAVIGATION);
+  const step = navigation.step;
   const createMutation = useMutation(
     createAutomationMutationOptions({ queryClient }),
   );
-  const cronValid = state.preset !== "custom" || validateCron(state.cron);
-  const canSubmit =
-    state.name.trim().length > 0 && state.prompt.trim().length > 0 && cronValid;
   const project = projects.find(({ id }) => id === state.projectId);
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const cronValid = validateCron(state.cron);
   const preview = nextRunPreview(state.preset, new Date(), state.cron);
+  const nameValid = state.name.trim().length > 0;
+  const promptValid = state.prompt.trim().length > 0;
+  const validation = validateAutomationWizard(
+    state,
+    selection !== undefined,
+    preview[0] !== undefined,
+  );
+  const [whatValid, whenValid, parametersValid, confirmValid] =
+    validation.steps;
+  const stepValid = validation.steps[step - 1] ?? false;
+  const selectedTemplate =
+    selection === undefined || selection === "blank"
+      ? undefined
+      : automationTemplateForRecipe(t, selection);
+  const validationReason =
+    validation.firstInvalidStep === 1
+      ? t("schedule.wizard.chooseRequired")
+      : validation.firstInvalidStep === 2
+        ? t(
+            validation.timeRequired
+              ? "schedule.wizard.requiredTime"
+              : "schedule.invalidCron",
+          )
+        : validation.firstInvalidStep === 3
+          ? t(
+              nameValid
+                ? "schedule.wizard.requiredPrompt"
+                : "schedule.wizard.requiredName",
+            )
+          : undefined;
   const isDirty =
+    selection !== undefined ||
     state.name.length > 0 ||
     state.prompt.length > 0 ||
     state.projectId.length > 0;
+
+  useEffect(() => {
+    setNavigation((current) =>
+      reconcileAutomationWizardNavigation(
+        current,
+        [whatValid, whenValid, parametersValid, confirmValid],
+        validation.firstInvalidStep,
+      ),
+    );
+  }, [
+    confirmValid,
+    parametersValid,
+    validation.firstInvalidStep,
+    whatValid,
+    whenValid,
+  ]);
+
+  useEffect(() => {
+    if (!open) return;
+    const template =
+      source === undefined || source === "blank"
+        ? undefined
+        : automationTemplateForRecipe(t, source);
+    dispatch({
+      state: createAutomationFormInitialState(
+        template,
+        automations.map(({ name }) => name),
+      ),
+      type: "initialize",
+    });
+    setSelection(source);
+    setNavigation(INITIAL_WIZARD_NAVIGATION);
+  }, [automations, open, source, t]);
 
   const requestOpenChange = (nextOpen: boolean) => {
     if (!nextOpen && isDirty) {
@@ -458,6 +569,7 @@ function CreateAutomationDialog({
       }).then((confirmed) => {
         if (!confirmed) return;
         dispatch({ type: "reset" });
+        setSelection(undefined);
         onOpenChange(false);
       });
       return;
@@ -466,9 +578,46 @@ function CreateAutomationDialog({
     onOpenChange(nextOpen);
   };
 
+  const chooseSource = (nextSource: WizardSource) => {
+    const template =
+      nextSource === "blank"
+        ? undefined
+        : automationTemplateForRecipe(t, nextSource);
+    setSelection(nextSource);
+    setNavigation(INITIAL_WIZARD_NAVIGATION);
+    dispatch({
+      state: createAutomationFormInitialState(
+        template,
+        automations.map(({ name }) => name),
+      ),
+      type: "initialize",
+    });
+  };
+
+  const advance = () => {
+    if (!stepValid || step >= WIZARD_STEPS.length) return;
+    setNavigation((current) => {
+      const completedSteps = [...current.completedSteps] as [
+        boolean,
+        boolean,
+        boolean,
+        boolean,
+      ];
+      completedSteps[current.step - 1] = true;
+      return {
+        completedSteps,
+        step: (current.step + 1) as 2 | 3 | 4,
+      };
+    });
+  };
+
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!canSubmit) return;
+    if (step < WIZARD_STEPS.length) {
+      advance();
+      return;
+    }
+    if (!validation.steps[3]) return;
     createMutation.mutate(
       {
         cron: state.cron,
@@ -480,170 +629,83 @@ function CreateAutomationDialog({
       {
         onSuccess: () => {
           dispatch({ type: "reset" });
+          setSelection(undefined);
           onOpenChange(false);
         },
       },
     );
   };
 
+  const nextRun = preview[0]
+    ? formatDateTime(preview[0].toISOString())
+    : undefined;
+
   return (
     <Dialog open={open} onOpenChange={requestOpenChange}>
-      <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{t("schedule.createTitle")}</DialogTitle>
           <DialogDescription>
             {t("schedule.createDescription")}
           </DialogDescription>
         </DialogHeader>
-        <form className="space-y-4" onSubmit={submit}>
-          <Field label={t("schedule.name")}>
-            <Input
-              autoFocus
-              value={state.name}
-              onChange={(event) =>
-                dispatch({
-                  field: "name",
-                  type: "field",
-                  value: event.currentTarget.value,
-                })
-              }
-            />
-          </Field>
-          <Field label={t("schedule.schedule")}>
-            <Select
-              value={state.preset}
-              onValueChange={(value) =>
-                dispatch({
-                  preset: value as SchedulePreset,
-                  type: "preset",
-                })
-              }
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(
-                  [
-                    "every-30-minutes",
-                    "hourly",
-                    "daily",
-                    "weekdays",
-                    "weekly",
-                    "custom",
-                  ] as const
-                ).map((preset) => (
-                  <SelectItem key={preset} value={preset}>
-                    {presetLabel(t, preset)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-          {state.preset === "custom" ? (
-            <Field label={t("schedule.customCron")}>
-              <Input
-                aria-invalid={!cronValid}
-                className="font-mono"
-                value={state.cron}
-                onChange={(event) =>
-                  dispatch({
-                    field: "cron",
-                    type: "field",
-                    value: event.currentTarget.value,
-                  })
-                }
-              />
-            </Field>
+
+        <WizardProgress
+          completedSteps={navigation.completedSteps}
+          current={step}
+          onStepChange={(nextStep) =>
+            setNavigation((current) => ({ ...current, step: nextStep }))
+          }
+          stepValidity={validation.steps}
+        />
+
+        <form className="space-y-5" onSubmit={submit}>
+          {step === 1 ? (
+            <WhatStep onChoose={chooseSource} selected={selection} />
           ) : null}
-          <div
-            className={cn(
-              "rounded-md px-3 py-2 text-xs",
-              cronValid
-                ? "bg-surface-2 text-muted-foreground"
-                : "border border-status-danger-border bg-status-danger-soft text-status-danger",
-            )}
-          >
-            {cronValid ? (
-              <>
-                <p className="mb-1 font-medium text-foreground">
-                  {t("schedule.nextThreeRuns", { timezone })}
-                </p>
-                {preview.map((date) => (
-                  <p key={date.toISOString()}>
-                    {formatDateTime(date.toISOString())}
-                  </p>
-                ))}
-              </>
-            ) : (
-              <p>{t("schedule.invalidCron")}</p>
-            )}
-          </div>
-          <Field label={t("schedule.prompt")}>
-            <Textarea
-              className="min-h-32"
-              value={state.prompt}
-              onChange={(event) =>
-                dispatch({
-                  field: "prompt",
-                  type: "field",
-                  value: event.currentTarget.value,
-                })
-              }
+          {step === 2 ? (
+            <WhenStep
+              cronValid={cronValid}
+              dispatch={dispatch}
+              nextRun={nextRun}
+              state={state}
+              timeRequired={validation.timeRequired}
             />
-          </Field>
-          <Field label={t("schedule.agent")}>
-            <Select disabled value="current">
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="current">
-                  {t("schedule.currentAgent")}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
-          <Field label={t("schedule.project")}>
-            <Select
-              value={state.projectId || NO_PROJECT_SELECT_VALUE}
-              onValueChange={(value) =>
-                dispatch({
-                  field: "projectId",
-                  type: "field",
-                  value: value === NO_PROJECT_SELECT_VALUE ? "" : value,
-                })
-              }
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NO_PROJECT_SELECT_VALUE}>
-                  {t("schedule.noProject")}
-                </SelectItem>
-                {projects.map((item) => (
-                  <SelectItem key={item.id} value={item.id}>
-                    {getProjectDisplayName(item.path)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-          <label className="flex items-center justify-between gap-4 rounded-md border border-border-subtle px-3 py-2.5 text-sm">
-            <span>{t("schedule.notifyOnFailure")}</span>
-            <Switch
-              checked={state.notifyOnFailure}
-              onCheckedChange={(checked) =>
-                dispatch({
-                  field: "notifyOnFailure",
-                  type: "field",
-                  value: checked,
-                })
-              }
+          ) : null}
+          {step === 3 ? (
+            <ParametersStep
+              dispatch={dispatch}
+              nameValid={nameValid}
+              projects={projects}
+              promptValid={promptValid}
+              state={state}
+              template={selectedTemplate}
             />
-          </label>
-          <DialogFooter>
+          ) : null}
+          {step === 4 ? (
+            <ConfirmStep
+              nextRun={nextRun}
+              onEdit={(nextStep) =>
+                setNavigation((current) => ({ ...current, step: nextStep }))
+              }
+              project={project}
+              state={state}
+            />
+          ) : null}
+
+          {step === WIZARD_STEPS.length && validationReason ? (
+            <ConfirmValidationNotice
+              onEdit={() =>
+                setNavigation((current) => ({
+                  ...current,
+                  step: validation.firstInvalidStep ?? 1,
+                }))
+              }
+              reason={validationReason}
+            />
+          ) : null}
+
+          <DialogFooter className="flex-row justify-between gap-2 sm:justify-between">
             <Button
               type="button"
               variant="outline"
@@ -651,16 +713,603 @@ function CreateAutomationDialog({
             >
               {t("common.cancel")}
             </Button>
-            <Button
-              disabled={!canSubmit || createMutation.isPending}
-              type="submit"
-            >
-              {t("schedule.createAction")}
-            </Button>
+            <div className="ml-auto flex min-w-0 gap-2">
+              {step > 1 ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() =>
+                    setNavigation((current) => ({
+                      ...current,
+                      step: (current.step - 1) as 1 | 2 | 3,
+                    }))
+                  }
+                >
+                  {t("schedule.wizard.back")}
+                </Button>
+              ) : null}
+              <Button
+                disabled={!stepValid || createMutation.isPending}
+                type="submit"
+              >
+                {step === WIZARD_STEPS.length
+                  ? t("schedule.createAction")
+                  : t("schedule.wizard.next")}
+              </Button>
+            </div>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+export function WizardProgress({
+  completedSteps,
+  current,
+  onStepChange,
+  stepValidity,
+}: {
+  completedSteps: readonly boolean[];
+  current: number;
+  onStepChange: (step: AutomationWizardNavigation["step"]) => void;
+  stepValidity: readonly boolean[];
+}) {
+  const { t } = useTranslation();
+  return (
+    <>
+      <p className="text-sm font-medium sm:hidden">
+        {t("schedule.wizard.stepCount", {
+          current,
+          total: WIZARD_STEPS.length,
+        })}
+      </p>
+      <ol className="hidden items-center sm:flex">
+        {WIZARD_STEPS.map((stepName, index) => {
+          const stepNumber = index + 1;
+          const complete =
+            (completedSteps[index] ?? false) && (stepValidity[index] ?? false);
+          const active = stepNumber === current;
+          return (
+            <li className="flex min-w-0 flex-1 items-center" key={stepName}>
+              <button
+                className={cn(
+                  "flex min-w-0 items-center gap-2 text-left text-xs font-medium",
+                  active ? "text-foreground" : "text-muted-foreground",
+                  complete && "hover:text-foreground",
+                )}
+                disabled={!complete || active}
+                onClick={() =>
+                  onStepChange(stepNumber as AutomationWizardNavigation["step"])
+                }
+                type="button"
+              >
+                <span
+                  className={cn(
+                    "flex size-6 shrink-0 items-center justify-center rounded-full border",
+                    active &&
+                      "border-primary bg-primary-soft text-primary-strong",
+                    complete &&
+                      "border-primary-strong bg-primary-strong text-primary-foreground",
+                  )}
+                >
+                  {complete ? <Check weight="bold" /> : stepNumber}
+                </span>
+                <span className="truncate">
+                  {t("schedule.wizard.steps." + stepName)}
+                </span>
+              </button>
+              {stepNumber < WIZARD_STEPS.length ? (
+                <span className="mx-3 h-px flex-1 bg-border-subtle" />
+              ) : null}
+            </li>
+          );
+        })}
+      </ol>
+    </>
+  );
+}
+
+function WhatStep({
+  onChoose,
+  selected,
+}: {
+  onChoose: (source: WizardSource) => void;
+  selected?: WizardSource;
+}) {
+  const { t } = useTranslation();
+  const recipes: RecipeKey[] = [
+    "dependencyAudit",
+    "ciHeartbeat",
+    "nightlyTests",
+  ];
+  return (
+    <div className="space-y-3">
+      <div className="grid gap-3 sm:grid-cols-2">
+        {recipes.map((recipe) => (
+          <ChoiceCard
+            description={t("schedule.recipes." + recipe + "Description")}
+            key={recipe}
+            label={t("schedule.recipes." + recipe)}
+            onClick={() => onChoose(recipe)}
+            selected={selected === recipe}
+          />
+        ))}
+        <ChoiceCard
+          description={t("schedule.wizard.blankDescription")}
+          label={t("schedule.wizard.blankName")}
+          onClick={() => onChoose("blank")}
+          selected={selected === "blank"}
+        />
+      </div>
+      {selected === undefined ? (
+        <p className="text-xs text-status-danger">
+          {t("schedule.wizard.chooseRequired")}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function ChoiceCard({
+  description,
+  label,
+  onClick,
+  selected,
+}: {
+  description: string;
+  label: string;
+  onClick: () => void;
+  selected: boolean;
+}) {
+  return (
+    <button
+      aria-pressed={selected}
+      className={cn(
+        "rounded-lg border bg-card p-4 text-left transition-colors hover:bg-overlay-hover",
+        selected ? "border-primary ring-2 ring-primary/20" : "border-border",
+      )}
+      onClick={onClick}
+      type="button"
+    >
+      <span className="flex items-center justify-between gap-3 text-sm font-medium">
+        {label}
+        {selected ? (
+          <Check className="size-4 text-primary-strong" weight="bold" />
+        ) : null}
+      </span>
+      <span className="mt-1 block text-xs text-muted-foreground">
+        {description}
+      </span>
+    </button>
+  );
+}
+
+export function WhenStep({
+  cronValid,
+  dispatch,
+  nextRun,
+  state,
+  timeRequired,
+}: {
+  cronValid: boolean;
+  dispatch: (action: CreateFormAction) => void;
+  nextRun?: string;
+  state: CreateFormState;
+  timeRequired: boolean;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="space-y-4">
+      <Field label={t("schedule.schedule")}>
+        <Select
+          value={state.preset}
+          onValueChange={(value) =>
+            dispatch({ preset: value as SchedulePreset, type: "preset" })
+          }
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {(
+              [
+                "every-30-minutes",
+                "hourly",
+                "daily",
+                "weekdays",
+                "weekly",
+                "custom",
+              ] as const
+            ).map((preset) => (
+              <SelectItem key={preset} value={preset}>
+                {preset === "daily"
+                  ? t("schedule.wizard.dailyAt", { time: state.time })
+                  : preset === "weekly"
+                    ? t("schedule.wizard.weeklyAt", {
+                        time: state.time,
+                        weekday: t(
+                          "schedule.wizard.weekdays." +
+                            weekdayKeyForValue(state.weekday),
+                        ),
+                      })
+                    : presetLabel(t, preset)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </Field>
+      {state.preset === "daily" || state.preset === "weekly" ? (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {state.preset === "weekly" ? (
+            <Field label={t("schedule.schedulePresets.weekly")}>
+              <Select
+                value={state.weekday}
+                onValueChange={(value) =>
+                  dispatch({ field: "weekday", type: "field", value })
+                }
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[
+                    ["1", "monday"],
+                    ["2", "tuesday"],
+                    ["3", "wednesday"],
+                    ["4", "thursday"],
+                    ["5", "friday"],
+                    ["6", "saturday"],
+                    ["0", "sunday"],
+                  ].map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {t("schedule.wizard.weekdays." + label)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          ) : null}
+          <Field label={t("schedule.schedule")}>
+            <Input
+              aria-describedby={timeRequired ? "time-error" : undefined}
+              aria-invalid={timeRequired}
+              type="time"
+              value={state.time}
+              onChange={(event) =>
+                dispatch({
+                  field: "time",
+                  type: "field",
+                  value: event.currentTarget.value,
+                })
+              }
+            />
+            {timeRequired ? (
+              <span className="text-xs text-status-danger" id="time-error">
+                {t("schedule.wizard.requiredTime")}
+              </span>
+            ) : null}
+          </Field>
+        </div>
+      ) : null}
+      {state.preset === "custom" ? (
+        <Field label={t("schedule.customCron")}>
+          <Input
+            aria-describedby="cron-error"
+            aria-invalid={!cronValid}
+            className="font-mono"
+            value={state.cron}
+            onChange={(event) =>
+              dispatch({
+                field: "cron",
+                type: "field",
+                value: event.currentTarget.value,
+              })
+            }
+          />
+          {!cronValid ? (
+            <span className="text-xs text-status-danger" id="cron-error">
+              {t("schedule.invalidCron")}
+            </span>
+          ) : null}
+        </Field>
+      ) : null}
+      {cronValid && nextRun ? (
+        <div className="rounded-md bg-surface-2 px-3 py-3 text-sm">
+          <span className="font-medium">
+            {t("schedule.wizard.nextRun", { time: nextRun })}
+          </span>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export function ParametersStep({
+  dispatch,
+  nameValid,
+  projects,
+  promptValid,
+  state,
+  template,
+}: {
+  dispatch: (action: CreateFormAction) => void;
+  nameValid: boolean;
+  projects: Project[];
+  promptValid: boolean;
+  state: CreateFormState;
+  template?: AutomationTemplate;
+}) {
+  const { t } = useTranslation();
+  const { advanced, primary } = automationParameterGroups(template);
+  const primaryFields = (
+    <ParameterFields
+      dispatch={dispatch}
+      fields={primary}
+      nameValid={nameValid}
+      projects={projects}
+      promptValid={promptValid}
+      state={state}
+    />
+  );
+  if (template === undefined) {
+    return <div className="space-y-4">{primaryFields}</div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      {primary.length > 0 ? (
+        primaryFields
+      ) : (
+        <p className="rounded-md bg-surface-2 px-3 py-3 text-sm text-muted-foreground">
+          {t("schedule.wizard.noExtraParameters")}
+        </p>
+      )}
+      {advanced.length > 0 ? (
+        <Collapsible>
+          <CollapsibleTrigger asChild>
+            <Button
+              className="w-full justify-between"
+              type="button"
+              variant="outline"
+            >
+              {t("schedule.wizard.advancedSettings")}
+              <CaretDown className="transition-transform group-data-[state=open]/button:rotate-180" />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-4 space-y-4">
+            <ParameterFields
+              dispatch={dispatch}
+              fields={advanced}
+              nameValid={nameValid}
+              projects={projects}
+              promptValid={promptValid}
+              state={state}
+            />
+          </CollapsibleContent>
+        </Collapsible>
+      ) : null}
+      {advanced.includes("name") && !nameValid ? (
+        <p className="text-xs text-status-danger">
+          {t("schedule.wizard.requiredName")}
+        </p>
+      ) : null}
+      {advanced.includes("prompt") && !promptValid ? (
+        <p className="text-xs text-status-danger">
+          {t("schedule.wizard.requiredPrompt")}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function ParameterFields({
+  dispatch,
+  fields,
+  nameValid,
+  projects,
+  promptValid,
+  state,
+}: {
+  dispatch: (action: CreateFormAction) => void;
+  fields: AutomationParameterField[];
+  nameValid: boolean;
+  projects: Project[];
+  promptValid: boolean;
+  state: CreateFormState;
+}) {
+  const { t } = useTranslation();
+  return (
+    <>
+      {fields.includes("name") ? (
+        <Field label={t("schedule.name")}>
+          <Input
+            aria-describedby="name-error"
+            aria-invalid={!nameValid}
+            value={state.name}
+            onChange={(event) =>
+              dispatch({
+                field: "name",
+                type: "field",
+                value: event.currentTarget.value,
+              })
+            }
+          />
+          {!nameValid ? (
+            <span className="text-xs text-status-danger" id="name-error">
+              {t("schedule.wizard.requiredName")}
+            </span>
+          ) : null}
+        </Field>
+      ) : null}
+      {fields.includes("prompt") ? (
+        <Field label={t("schedule.prompt")}>
+          <Textarea
+            aria-describedby="prompt-error"
+            aria-invalid={!promptValid}
+            className="min-h-28"
+            value={state.prompt}
+            onChange={(event) =>
+              dispatch({
+                field: "prompt",
+                type: "field",
+                value: event.currentTarget.value,
+              })
+            }
+          />
+          {!promptValid ? (
+            <span className="text-xs text-status-danger" id="prompt-error">
+              {t("schedule.wizard.requiredPrompt")}
+            </span>
+          ) : null}
+        </Field>
+      ) : null}
+      {fields.includes("projectId") ? (
+        <Field label={t("schedule.project")}>
+          <Select
+            value={state.projectId || NO_PROJECT_SELECT_VALUE}
+            onValueChange={(value) =>
+              dispatch({
+                field: "projectId",
+                type: "field",
+                value: value === NO_PROJECT_SELECT_VALUE ? "" : value,
+              })
+            }
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_PROJECT_SELECT_VALUE}>
+                {t("schedule.noProject")}
+              </SelectItem>
+              {projects.map((item) => (
+                <SelectItem key={item.id} value={item.id}>
+                  {getProjectDisplayName(item.path)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+      ) : null}
+      {fields.includes("notifyOnFailure") ? (
+        <label className="flex items-center justify-between gap-4 rounded-md border border-border-subtle px-3 py-2.5 text-sm">
+          <span>{t("schedule.notifyOnFailure")}</span>
+          <Switch
+            checked={state.notifyOnFailure}
+            onCheckedChange={(checked) =>
+              dispatch({
+                field: "notifyOnFailure",
+                type: "field",
+                value: checked,
+              })
+            }
+          />
+        </label>
+      ) : null}
+    </>
+  );
+}
+
+export function ConfirmStep({
+  nextRun,
+  onEdit,
+  project,
+  state,
+}: {
+  nextRun?: string;
+  onEdit: (step: AutomationWizardNavigation["step"]) => void;
+  project?: Project;
+  state: CreateFormState;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="divide-y divide-border-subtle rounded-lg border border-border">
+      <SummaryRow
+        label={t("schedule.wizard.steps.what")}
+        onEdit={() => onEdit(3)}
+      >
+        <p className="font-medium">{state.name}</p>
+        <p className="mt-1 text-muted-foreground">
+          {summarizeAutomationPrompt(state.prompt)}
+        </p>
+      </SummaryRow>
+      <SummaryRow
+        label={t("schedule.wizard.steps.when")}
+        onEdit={() => onEdit(2)}
+      >
+        <p>{summaryScheduleLabel(t, state)}</p>
+      </SummaryRow>
+      <SummaryRow
+        label={t("schedule.wizard.nextRun", { time: "" }).replace(
+          /[:：]\s*$/,
+          "",
+        )}
+        onEdit={() => onEdit(2)}
+      >
+        <p>{nextRun}</p>
+      </SummaryRow>
+      <SummaryRow
+        label={t("schedule.wizard.steps.parameters")}
+        onEdit={() => onEdit(3)}
+      >
+        <p>
+          {project
+            ? getProjectDisplayName(project.path)
+            : t("schedule.noProject")}
+        </p>
+        <p className="mt-1 text-muted-foreground">
+          {t("schedule.notifyOnFailure")}:{" "}
+          {state.notifyOnFailure ? t("common.allow") : t("common.deny")}
+        </p>
+      </SummaryRow>
+    </div>
+  );
+}
+
+export function ConfirmValidationNotice({
+  onEdit,
+  reason,
+}: {
+  onEdit: () => void;
+  reason: string;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div
+      className="flex items-center justify-between gap-3 rounded-md bg-status-danger-soft px-3 py-2 text-sm text-status-danger"
+      role="alert"
+    >
+      <p>{reason}</p>
+      <Button size="xs" type="button" variant="outline" onClick={onEdit}>
+        {t("schedule.wizard.edit")}
+      </Button>
+    </div>
+  );
+}
+
+function SummaryRow({
+  children,
+  label,
+  onEdit,
+}: {
+  children: ReactNode;
+  label: string;
+  onEdit: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <section aria-label={label} className="flex items-start gap-4 p-4">
+      <div className="min-w-0 flex-1">
+        <p className="mb-1 text-xs font-medium text-muted-foreground">
+          {label}
+        </p>
+        <div className="text-sm">{children}</div>
+      </div>
+      <Button size="xs" type="button" variant="ghost" onClick={onEdit}>
+        {t("schedule.wizard.edit")}
+      </Button>
+    </section>
   );
 }
 
@@ -673,8 +1322,35 @@ function Field({ children, label }: { children: ReactNode; label: string }) {
   );
 }
 
-function ScheduleRecipes({ onCreate }: { onCreate: () => void }) {
+function automationTemplateForRecipe(
+  t: TFunction,
+  recipe: RecipeKey,
+): AutomationTemplate {
+  const cron =
+    recipe === "ciHeartbeat"
+      ? PRESET_CRON["every-30-minutes"]
+      : recipe === "nightlyTests"
+        ? "0 2 * * *"
+        : PRESET_CRON.daily;
+  return {
+    cron,
+    name: t("schedule.recipes." + recipe),
+    notifyOnFailure: true,
+    prompt: t("schedule.recipes." + recipe + "Description"),
+  };
+}
+
+function ScheduleRecipes({
+  onCreate,
+}: {
+  onCreate: (source: WizardSource) => void;
+}) {
   const { t } = useTranslation();
+  const recipes: RecipeKey[] = [
+    "dependencyAudit",
+    "ciHeartbeat",
+    "nightlyTests",
+  ];
   return (
     <div className="m-auto w-full max-w-3xl p-6">
       <div className="mb-5 text-center">
@@ -687,31 +1363,48 @@ function ScheduleRecipes({ onCreate }: { onCreate: () => void }) {
         </p>
       </div>
       <div className="grid gap-3 sm:grid-cols-3">
-        {(["dependencyAudit", "ciHeartbeat", "nightlyTests"] as const).map(
-          (recipe) => (
-            <button
-              className="rounded-lg border border-border bg-card p-4 text-left hover:bg-overlay-hover"
-              key={recipe}
-              onClick={onCreate}
-              type="button"
-            >
-              <span className="block text-sm font-medium">
-                {t(`schedule.recipes.${recipe}`)}
-              </span>
-              <span className="mt-1 block text-xs text-muted-foreground">
-                {t(`schedule.recipes.${recipe}Description`)}
-              </span>
-            </button>
-          ),
-        )}
+        {recipes.map((recipe) => (
+          <button
+            className="rounded-lg border border-border bg-card p-4 text-left hover:bg-overlay-hover"
+            key={recipe}
+            onClick={() => onCreate(recipe)}
+            type="button"
+          >
+            <span className="block text-sm font-medium">
+              {t("schedule.recipes." + recipe)}
+            </span>
+            <span className="mt-1 block text-xs text-muted-foreground">
+              {t("schedule.recipes." + recipe + "Description")}
+            </span>
+          </button>
+        ))}
       </div>
-      <Button className="mx-auto mt-3 flex" variant="ghost" onClick={onCreate}>
+      <Button
+        className="mx-auto mt-3 flex"
+        variant="ghost"
+        onClick={() => onCreate("blank")}
+      >
         {t("schedule.startFromScratch")}
       </Button>
     </div>
   );
 }
 
+function summaryScheduleLabel(t: TFunction, state: CreateFormState): string {
+  if (state.preset === "daily") {
+    return t("schedule.wizard.dailyAt", { time: state.time });
+  }
+  if (state.preset === "weekly") {
+    return t("schedule.wizard.weeklyAt", {
+      time: state.time,
+      weekday: t(
+        "schedule.wizard.weekdays." + weekdayKeyForValue(state.weekday),
+      ),
+    });
+  }
+  if (state.preset === "custom") return state.cron;
+  return presetLabel(t, state.preset);
+}
 function ScheduleSkeleton() {
   return (
     <div className="space-y-2 p-3">

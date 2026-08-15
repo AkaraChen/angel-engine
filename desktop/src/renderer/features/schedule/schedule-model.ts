@@ -45,6 +45,36 @@ export interface CreateAutomationInput {
   prompt: string;
 }
 
+export interface CreateAutomationFormState extends CreateAutomationInput {
+  preset: SchedulePreset;
+  projectId: string;
+  time: string;
+  weekday: string;
+}
+
+export type AutomationTemplate = Partial<CreateAutomationInput> & {
+  cron: string;
+  name: string;
+  prompt: string;
+};
+
+export type AutomationParameterField =
+  | "name"
+  | "notifyOnFailure"
+  | "projectId"
+  | "prompt";
+
+export interface AutomationWizardValidation {
+  firstInvalidStep?: 1 | 2 | 3;
+  steps: readonly [boolean, boolean, boolean, boolean];
+  timeRequired: boolean;
+}
+
+export interface AutomationWizardNavigation {
+  completedSteps: readonly [boolean, boolean, boolean, boolean];
+  step: 1 | 2 | 3 | 4;
+}
+
 export const PRESET_CRON: Record<Exclude<SchedulePreset, "custom">, string> = {
   "every-30-minutes": "*/30 * * * *",
   daily: "0 9 * * *",
@@ -52,6 +82,206 @@ export const PRESET_CRON: Record<Exclude<SchedulePreset, "custom">, string> = {
   weekdays: "0 9 * * 1-5",
   weekly: "0 9 * * 1",
 };
+
+export const DEFAULT_CREATE_AUTOMATION_FORM: CreateAutomationFormState = {
+  cron: PRESET_CRON.daily,
+  name: "",
+  notifyOnFailure: true,
+  preset: "daily",
+  projectId: "",
+  prompt: "",
+  time: "09:00",
+  weekday: "1",
+};
+
+export function createAutomationFormInitialState(
+  template?: AutomationTemplate,
+  existingNames: string[] = [],
+): CreateAutomationFormState {
+  if (template === undefined) return { ...DEFAULT_CREATE_AUTOMATION_FORM };
+
+  const preset = naturalPresetForCron(template.cron);
+  const time =
+    timeForCron(template.cron) ?? DEFAULT_CREATE_AUTOMATION_FORM.time;
+  const weekday =
+    weekdayForCron(template.cron) ?? DEFAULT_CREATE_AUTOMATION_FORM.weekday;
+  const cron =
+    preset === "weekly"
+      ? cronForNaturalSchedule(preset, time, weekday, template.cron)
+      : template.cron;
+  return {
+    ...DEFAULT_CREATE_AUTOMATION_FORM,
+    ...template,
+    cron,
+    name: uniqueAutomationName(template.name, existingNames),
+    preset,
+    projectId: template.projectId ?? DEFAULT_CREATE_AUTOMATION_FORM.projectId,
+    time,
+    weekday,
+  };
+}
+
+function naturalPresetForCron(cron: string): SchedulePreset {
+  const normalized = cron.trim();
+  if (/^\d+ \* \* \* \*$/.test(normalized)) return "hourly";
+  if (/^\d+ \d+ \* \* \*$/.test(normalized)) return "daily";
+  if (/^\d+ \d+ \* \* [0-7]$/.test(normalized)) return "weekly";
+  return presetForCron(normalized) ?? "custom";
+}
+
+function timeForCron(cron: string): string | undefined {
+  const [minute, hour] = cron.trim().split(/\s+/);
+  if (
+    minute === undefined ||
+    hour === undefined ||
+    !/^\d+$/.test(minute) ||
+    !/^\d+$/.test(hour)
+  ) {
+    return undefined;
+  }
+  return `${hour.padStart(2, "0")}:${minute.padStart(2, "0")}`;
+}
+
+function weekdayForCron(cron: string): string | undefined {
+  const weekday = cron.trim().split(/\s+/)[4];
+  if (weekday === "7") return "0";
+  return weekday !== undefined && /^[0-6]$/.test(weekday) ? weekday : undefined;
+}
+
+export function weekdayKeyForValue(value: string): string {
+  return (
+    [
+      "sunday",
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+    ][Number(value)] ?? "monday"
+  );
+}
+
+export function cronForNaturalSchedule(
+  preset: SchedulePreset,
+  time: string,
+  weekday: string,
+  customCron: string,
+): string {
+  if (preset === "custom") return customCron;
+  if (preset === "hourly") return PRESET_CRON.hourly;
+  if (preset === "every-30-minutes") return PRESET_CRON["every-30-minutes"];
+  if (preset === "weekdays") return PRESET_CRON.weekdays;
+
+  const [hour, minute] = time.split(":");
+  if (
+    hour === undefined ||
+    minute === undefined ||
+    !/^\d{2}$/.test(hour) ||
+    !/^\d{2}$/.test(minute)
+  ) {
+    return "";
+  }
+  return preset === "weekly"
+    ? `${Number(minute)} ${Number(hour)} * * ${weekday === "7" ? "0" : weekday}`
+    : `${Number(minute)} ${Number(hour)} * * *`;
+}
+
+export function automationParameterGroups(template?: AutomationTemplate): {
+  advanced: AutomationParameterField[];
+  primary: AutomationParameterField[];
+} {
+  const fields: AutomationParameterField[] = [
+    "name",
+    "prompt",
+    "projectId",
+    "notifyOnFailure",
+  ];
+  if (template === undefined) return { advanced: [], primary: fields };
+
+  return {
+    advanced: fields.filter((field) => template[field] !== undefined),
+    primary: fields.filter((field) => template[field] === undefined),
+  };
+}
+
+export function validateAutomationWizard(
+  state: CreateAutomationFormState,
+  sourceSelected: boolean,
+  hasNextRun: boolean,
+): AutomationWizardValidation {
+  const timeRequired =
+    (state.preset === "daily" || state.preset === "weekly") &&
+    state.time.trim().length === 0;
+  const sourceValid = sourceSelected;
+  const scheduleValid =
+    sourceValid && !timeRequired && validateCron(state.cron) && hasNextRun;
+  const parametersValid =
+    scheduleValid &&
+    state.name.trim().length > 0 &&
+    state.prompt.trim().length > 0;
+  const steps = [
+    sourceValid,
+    scheduleValid,
+    parametersValid,
+    parametersValid,
+  ] as const;
+  const invalidIndex = steps.slice(0, 3).findIndex((valid) => !valid);
+
+  return {
+    firstInvalidStep:
+      invalidIndex === -1 ? undefined : ((invalidIndex + 1) as 1 | 2 | 3),
+    steps,
+    timeRequired,
+  };
+}
+
+export function reconcileAutomationWizardNavigation(
+  navigation: AutomationWizardNavigation,
+  stepValidity: readonly [boolean, boolean, boolean, boolean],
+  firstInvalidStep?: 1 | 2 | 3,
+): AutomationWizardNavigation {
+  const completedSteps = navigation.completedSteps.map(
+    (completed, index) => completed && stepValidity[index],
+  ) as [boolean, boolean, boolean, boolean];
+  const step =
+    firstInvalidStep !== undefined && navigation.step > firstInvalidStep
+      ? firstInvalidStep
+      : navigation.step;
+  if (
+    step === navigation.step &&
+    completedSteps.every(
+      (completed, index) => completed === navigation.completedSteps[index],
+    )
+  ) {
+    return navigation;
+  }
+  return { completedSteps, step };
+}
+
+export function summarizeAutomationPrompt(prompt: string): string {
+  const normalized = prompt.trim().replace(/\s+/g, " ");
+  return normalized.length > 120
+    ? `${normalized.slice(0, 117).trimEnd()}…`
+    : normalized;
+}
+
+function uniqueAutomationName(name: string, existingNames: string[]): string {
+  const normalizedNames = new Set(
+    existingNames.map((existingName) =>
+      existingName.trim().toLocaleLowerCase(),
+    ),
+  );
+  if (!normalizedNames.has(name.trim().toLocaleLowerCase())) return name;
+
+  let suffix = 2;
+  while (
+    normalizedNames.has(`${name} (${suffix})`.trim().toLocaleLowerCase())
+  ) {
+    suffix += 1;
+  }
+  return `${name} (${suffix})`;
+}
 
 const CRON_FIELD_RANGES = [
   [0, 59],
@@ -95,7 +325,8 @@ export function nextRunPreview(
   now = new Date(),
   customCron?: string,
 ): Date[] {
-  const expression = preset === "custom" ? customCron : PRESET_CRON[preset];
+  const expression =
+    customCron ?? (preset === "custom" ? undefined : PRESET_CRON[preset]);
   if (expression === undefined) return [];
 
   const cron = parseCron(expression);

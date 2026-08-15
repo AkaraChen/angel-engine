@@ -1,5 +1,242 @@
 import type { LocaleResourceTranslationSchedule } from "./schema";
 
+const scheduleWizardFallback = {
+  advancedSettings: "Advanced settings",
+  back: "Back",
+  blankDescription: "Define a recurring task from the ground up.",
+  blankName: "Blank automation",
+  chooseRequired: "Choose a template or start blank to continue.",
+  dailyAt: "Daily at {{time}}",
+  edit: "Edit",
+  next: "Next",
+  nextRun: "Next run: {{time}}",
+  noExtraParameters:
+    "This template is ready to use. Customize its defaults only if needed.",
+  requiredName: "Enter a name for this automation.",
+  requiredPrompt: "Describe what the agent should accomplish.",
+  requiredTime: "Enter a run time.",
+  stepCount: "Step {{current}} of {{total}}",
+  weeklyAt: "{{weekday}} at {{time}}",
+  steps: {
+    confirm: "Confirm",
+    parameters: "Details",
+    what: "What",
+    when: "When",
+  },
+  weekdays: {
+    friday: "Friday",
+    monday: "Monday",
+    saturday: "Saturday",
+    sunday: "Sunday",
+    thursday: "Thursday",
+    tuesday: "Tuesday",
+    wednesday: "Wednesday",
+  },
+};
+
+const scheduleWizardZhTW = {
+  advancedSettings: "進階設定",
+  back: "上一步",
+  blankDescription: "從頭定義一項定期執行的工作。",
+  blankName: "空白自動化",
+  chooseRequired: "請選擇範本或空白開始後繼續。",
+  dailyAt: "每天 {{time}}",
+  edit: "修改",
+  next: "下一步",
+  nextRun: "下一次執行：{{time}}",
+  noExtraParameters: "此範本已可直接使用，只需在必要時修改預設值。",
+  requiredName: "請輸入自動化名稱。",
+  requiredPrompt: "請說明代理程式應完成的工作。",
+  requiredTime: "請填寫執行時間。",
+  stepCount: "第 {{current}}／{{total}} 步",
+  weeklyAt: "每週{{weekday}} {{time}}",
+  steps: {
+    confirm: "確認",
+    parameters: "詳細資料",
+    what: "做什麼",
+    when: "何時",
+  },
+  weekdays: {
+    friday: "週五",
+    monday: "週一",
+    saturday: "週六",
+    sunday: "週日",
+    thursday: "週四",
+    tuesday: "週二",
+    wednesday: "週三",
+  },
+};
+
+const scheduleWizardFr = {
+  advancedSettings: "Paramètres avancés",
+  back: "Retour",
+  blankDescription: "Définissez une tâche récurrente de A à Z.",
+  blankName: "Automatisation vierge",
+  chooseRequired: "Choisissez un modèle ou partez de zéro pour continuer.",
+  dailyAt: "Tous les jours à {{time}}",
+  edit: "Modifier",
+  next: "Suivant",
+  nextRun: "Prochaine exécution : {{time}}",
+  noExtraParameters:
+    "Ce modèle est prêt. Modifiez ses valeurs par défaut si nécessaire.",
+  requiredName: "Saisissez un nom pour cette automatisation.",
+  requiredPrompt: "Décrivez ce que l’agent doit accomplir.",
+  requiredTime: "Indiquez une heure d’exécution.",
+  stepCount: "Étape {{current}} sur {{total}}",
+  weeklyAt: "Chaque {{weekday}} à {{time}}",
+  steps: {
+    confirm: "Confirmer",
+    parameters: "Détails",
+    what: "Tâche",
+    when: "Planification",
+  },
+  weekdays: {
+    friday: "Vendredi",
+    monday: "Lundi",
+    saturday: "Samedi",
+    sunday: "Dimanche",
+    thursday: "Jeudi",
+    tuesday: "Mardi",
+    wednesday: "Mercredi",
+  },
+};
+
+const scheduleWizardDe = {
+  advancedSettings: "Erweiterte Einstellungen",
+  back: "Zurück",
+  blankDescription: "Erstellen Sie eine wiederkehrende Aufgabe von Grund auf.",
+  blankName: "Leere Automatisierung",
+  chooseRequired: "Wählen Sie eine Vorlage oder beginnen Sie leer.",
+  dailyAt: "Täglich um {{time}}",
+  edit: "Ändern",
+  next: "Weiter",
+  nextRun: "Nächste Ausführung: {{time}}",
+  noExtraParameters:
+    "Diese Vorlage ist einsatzbereit. Ändern Sie Standardwerte nur bei Bedarf.",
+  requiredName: "Geben Sie einen Namen für diese Automatisierung ein.",
+  requiredPrompt: "Beschreiben Sie, was der Agent erledigen soll.",
+  requiredTime: "Geben Sie eine Ausführungszeit ein.",
+  stepCount: "Schritt {{current}} von {{total}}",
+  weeklyAt: "Jeden {{weekday}} um {{time}}",
+  steps: {
+    confirm: "Bestätigen",
+    parameters: "Einzelheiten",
+    what: "Aufgabe",
+    when: "Zeitplan",
+  },
+  weekdays: {
+    friday: "Freitag",
+    monday: "Montag",
+    saturday: "Samstag",
+    sunday: "Sonntag",
+    thursday: "Donnerstag",
+    tuesday: "Dienstag",
+    wednesday: "Mittwoch",
+  },
+};
+
+const scheduleWizardKo = {
+  advancedSettings: "고급 설정",
+  back: "이전",
+  blankDescription: "반복 작업을 처음부터 정의합니다.",
+  blankName: "빈 자동화",
+  chooseRequired: "계속하려면 템플릿을 선택하거나 빈 상태로 시작하세요.",
+  dailyAt: "매일 {{time}}",
+  edit: "수정",
+  next: "다음",
+  nextRun: "다음 실행: {{time}}",
+  noExtraParameters:
+    "이 템플릿은 바로 사용할 수 있습니다. 필요한 경우에만 기본값을 바꾸세요.",
+  requiredName: "자동화 이름을 입력하세요.",
+  requiredPrompt: "에이전트가 수행할 작업을 설명하세요.",
+  requiredTime: "실행 시간을 입력하세요.",
+  stepCount: "{{total}}단계 중 {{current}}단계",
+  weeklyAt: "매주 {{weekday}} {{time}}",
+  steps: {
+    confirm: "확인",
+    parameters: "세부 정보",
+    what: "작업",
+    when: "실행 시간",
+  },
+  weekdays: {
+    friday: "금요일",
+    monday: "월요일",
+    saturday: "토요일",
+    sunday: "일요일",
+    thursday: "목요일",
+    tuesday: "화요일",
+    wednesday: "수요일",
+  },
+};
+
+const scheduleWizardJa = {
+  advancedSettings: "詳細設定",
+  back: "戻る",
+  blankDescription: "定期タスクを最初から設定します。",
+  blankName: "空のオートメーション",
+  chooseRequired: "テンプレートを選ぶか、空の状態から開始してください。",
+  dailyAt: "毎日 {{time}}",
+  edit: "変更",
+  next: "次へ",
+  nextRun: "次回の実行：{{time}}",
+  noExtraParameters:
+    "このテンプレートはそのまま使えます。必要な場合のみ既定値を変更してください。",
+  requiredName: "オートメーション名を入力してください。",
+  requiredPrompt: "エージェントが行う内容を説明してください。",
+  requiredTime: "実行時刻を入力してください。",
+  stepCount: "{{total}} ステップ中 {{current}}",
+  weeklyAt: "毎週{{weekday}} {{time}}",
+  steps: {
+    confirm: "確認",
+    parameters: "詳細",
+    what: "内容",
+    when: "実行日時",
+  },
+  weekdays: {
+    friday: "金曜日",
+    monday: "月曜日",
+    saturday: "土曜日",
+    sunday: "日曜日",
+    thursday: "木曜日",
+    tuesday: "火曜日",
+    wednesday: "水曜日",
+  },
+};
+
+const scheduleWizardEs = {
+  advancedSettings: "Configuración avanzada",
+  back: "Atrás",
+  blankDescription: "Define una tarea recurrente desde cero.",
+  blankName: "Automatización en blanco",
+  chooseRequired: "Elige una plantilla o empieza en blanco para continuar.",
+  dailyAt: "Cada día a las {{time}}",
+  edit: "Modificar",
+  next: "Siguiente",
+  nextRun: "Próxima ejecución: {{time}}",
+  noExtraParameters:
+    "Esta plantilla está lista. Cambia sus valores predeterminados solo si es necesario.",
+  requiredName: "Escribe un nombre para esta automatización.",
+  requiredPrompt: "Describe lo que debe realizar el agente.",
+  requiredTime: "Introduce una hora de ejecución.",
+  stepCount: "Paso {{current}} de {{total}}",
+  weeklyAt: "Cada {{weekday}} a las {{time}}",
+  steps: {
+    confirm: "Confirmar",
+    parameters: "Detalles",
+    what: "Tarea",
+    when: "Horario",
+  },
+  weekdays: {
+    friday: "Viernes",
+    monday: "Lunes",
+    saturday: "Sábado",
+    sunday: "Domingo",
+    thursday: "Jueves",
+    tuesday: "Martes",
+    wednesday: "Miércoles",
+  },
+};
+
 export const scheduleEn = {
   agent: "Agent / runtime",
   alreadyRunning: "Already running",
@@ -62,6 +299,7 @@ export const scheduleEn = {
     manual: "Manual",
     scheduled: "Scheduled",
   },
+  wizard: scheduleWizardFallback,
 } satisfies LocaleResourceTranslationSchedule;
 
 export const scheduleZhCN = {
@@ -124,6 +362,38 @@ export const scheduleZhCN = {
   triggerType: {
     manual: "手动",
     scheduled: "定时",
+  },
+  wizard: {
+    advancedSettings: "高级设置",
+    back: "上一步",
+    blankDescription: "从头定义一个定期执行的任务。",
+    blankName: "空白开始",
+    chooseRequired: "请选择模板或空白开始后继续。",
+    dailyAt: "每天 {{time}}",
+    edit: "修改",
+    next: "下一步",
+    nextRun: "下一次运行：{{time}}",
+    noExtraParameters: "这个模板已可直接使用，仅在需要时修改默认值。",
+    requiredName: "请输入调度名称。",
+    requiredPrompt: "请说明智能体要完成什么。",
+    requiredTime: "请填写运行时间。",
+    stepCount: "第 {{current}}/{{total}} 步",
+    weeklyAt: "每周{{weekday}} {{time}}",
+    steps: {
+      confirm: "确认",
+      parameters: "具体参数",
+      what: "做什么",
+      when: "什么时候跑",
+    },
+    weekdays: {
+      friday: "周五",
+      monday: "周一",
+      saturday: "周六",
+      sunday: "周日",
+      thursday: "周四",
+      tuesday: "周二",
+      wednesday: "周三",
+    },
   },
 } satisfies LocaleResourceTranslationSchedule;
 
@@ -188,6 +458,7 @@ export const scheduleZhTW = {
     manual: "手動",
     scheduled: "排程",
   },
+  wizard: scheduleWizardZhTW,
 } satisfies LocaleResourceTranslationSchedule;
 
 export const scheduleFr = {
@@ -254,6 +525,7 @@ export const scheduleFr = {
     manual: "Manuelle",
     scheduled: "Planifiée",
   },
+  wizard: scheduleWizardFr,
 } satisfies LocaleResourceTranslationSchedule;
 
 export const scheduleDe = {
@@ -318,6 +590,7 @@ export const scheduleDe = {
     manual: "Manuell",
     scheduled: "Geplant",
   },
+  wizard: scheduleWizardDe,
 } satisfies LocaleResourceTranslationSchedule;
 
 export const scheduleKo = {
@@ -382,6 +655,7 @@ export const scheduleKo = {
     manual: "수동",
     scheduled: "예약됨",
   },
+  wizard: scheduleWizardKo,
 } satisfies LocaleResourceTranslationSchedule;
 
 export const scheduleJa = {
@@ -446,6 +720,7 @@ export const scheduleJa = {
     manual: "手動",
     scheduled: "スケジュール済み",
   },
+  wizard: scheduleWizardJa,
 } satisfies LocaleResourceTranslationSchedule;
 
 export const scheduleEs = {
@@ -512,4 +787,5 @@ export const scheduleEs = {
     manual: "Manual",
     scheduled: "Programada",
   },
+  wizard: scheduleWizardEs,
 } satisfies LocaleResourceTranslationSchedule;
