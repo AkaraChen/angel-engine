@@ -58,6 +58,18 @@ export type AutomationTemplate = Partial<CreateAutomationInput> & {
   prompt: string;
 };
 
+export type AutomationParameterField =
+  | "name"
+  | "notifyOnFailure"
+  | "projectId"
+  | "prompt";
+
+export interface AutomationWizardValidation {
+  firstInvalidStep?: 1 | 2 | 3;
+  steps: readonly [boolean, boolean, boolean, boolean];
+  timeRequired: boolean;
+}
+
 export const PRESET_CRON: Record<Exclude<SchedulePreset, "custom">, string> = {
   "every-30-minutes": "*/30 * * * *",
   daily: "0 9 * * *",
@@ -168,6 +180,62 @@ export function cronForNaturalSchedule(
   return preset === "weekly"
     ? `${Number(minute)} ${Number(hour)} * * ${weekday === "7" ? "0" : weekday}`
     : `${Number(minute)} ${Number(hour)} * * *`;
+}
+
+export function automationParameterGroups(template?: AutomationTemplate): {
+  advanced: AutomationParameterField[];
+  primary: AutomationParameterField[];
+} {
+  const fields: AutomationParameterField[] = [
+    "name",
+    "prompt",
+    "projectId",
+    "notifyOnFailure",
+  ];
+  if (template === undefined) return { advanced: [], primary: fields };
+
+  return {
+    advanced: fields.filter((field) => template[field] !== undefined),
+    primary: fields.filter((field) => template[field] === undefined),
+  };
+}
+
+export function validateAutomationWizard(
+  state: CreateAutomationFormState,
+  sourceSelected: boolean,
+  hasNextRun: boolean,
+): AutomationWizardValidation {
+  const timeRequired =
+    (state.preset === "daily" || state.preset === "weekly") &&
+    state.time.trim().length === 0;
+  const sourceValid = sourceSelected;
+  const scheduleValid =
+    sourceValid && !timeRequired && validateCron(state.cron) && hasNextRun;
+  const parametersValid =
+    scheduleValid &&
+    state.name.trim().length > 0 &&
+    state.prompt.trim().length > 0;
+  const steps = [
+    sourceValid,
+    scheduleValid,
+    parametersValid,
+    parametersValid,
+  ] as const;
+  const invalidIndex = steps.slice(0, 3).findIndex((valid) => !valid);
+
+  return {
+    firstInvalidStep:
+      invalidIndex === -1 ? undefined : ((invalidIndex + 1) as 1 | 2 | 3),
+    steps,
+    timeRequired,
+  };
+}
+
+export function summarizeAutomationPrompt(prompt: string): string {
+  const normalized = prompt.trim().replace(/\s+/g, " ");
+  return normalized.length > 120
+    ? `${normalized.slice(0, 117).trimEnd()}…`
+    : normalized;
 }
 
 function uniqueAutomationName(name: string, existingNames: string[]): string {

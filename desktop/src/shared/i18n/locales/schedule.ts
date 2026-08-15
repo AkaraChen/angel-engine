@@ -14,6 +14,7 @@ const scheduleWizardFallback = {
     "This template is ready to use. Customize its defaults only if needed.",
   requiredName: "Enter a name for this automation.",
   requiredPrompt: "Describe what the agent should accomplish.",
+  requiredTime: "Enter a run time.",
   stepCount: "Step {{current}} of {{total}}",
   weeklyAt: "{{weekday}} at {{time}}",
   steps: {
@@ -46,6 +47,7 @@ const scheduleWizardZhTW = {
   noExtraParameters: "此範本已可直接使用，只需在必要時修改預設值。",
   requiredName: "請輸入自動化名稱。",
   requiredPrompt: "請說明代理程式應完成的工作。",
+  requiredTime: "請填寫執行時間。",
   stepCount: "第 {{current}}／{{total}} 步",
   weeklyAt: "每週{{weekday}} {{time}}",
   steps: {
@@ -79,6 +81,7 @@ const scheduleWizardFr = {
     "Ce modèle est prêt. Modifiez ses valeurs par défaut si nécessaire.",
   requiredName: "Saisissez un nom pour cette automatisation.",
   requiredPrompt: "Décrivez ce que l’agent doit accomplir.",
+  requiredTime: "Indiquez une heure d’exécution.",
   stepCount: "Étape {{current}} sur {{total}}",
   weeklyAt: "Chaque {{weekday}} à {{time}}",
   steps: {
@@ -112,6 +115,7 @@ const scheduleWizardDe = {
     "Diese Vorlage ist einsatzbereit. Ändern Sie Standardwerte nur bei Bedarf.",
   requiredName: "Geben Sie einen Namen für diese Automatisierung ein.",
   requiredPrompt: "Beschreiben Sie, was der Agent erledigen soll.",
+  requiredTime: "Geben Sie eine Ausführungszeit ein.",
   stepCount: "Schritt {{current}} von {{total}}",
   weeklyAt: "Jeden {{weekday}} um {{time}}",
   steps: {
@@ -145,6 +149,7 @@ const scheduleWizardKo = {
     "이 템플릿은 바로 사용할 수 있습니다. 필요한 경우에만 기본값을 바꾸세요.",
   requiredName: "자동화 이름을 입력하세요.",
   requiredPrompt: "에이전트가 수행할 작업을 설명하세요.",
+  requiredTime: "실행 시간을 입력하세요.",
   stepCount: "{{total}}단계 중 {{current}}단계",
   weeklyAt: "매주 {{weekday}} {{time}}",
   steps: {
@@ -178,6 +183,7 @@ const scheduleWizardJa = {
     "このテンプレートはそのまま使えます。必要な場合のみ既定値を変更してください。",
   requiredName: "オートメーション名を入力してください。",
   requiredPrompt: "エージェントが行う内容を説明してください。",
+  requiredTime: "実行時刻を入力してください。",
   stepCount: "{{total}} ステップ中 {{current}}",
   weeklyAt: "毎週{{weekday}} {{time}}",
   steps: {
@@ -211,6 +217,7 @@ const scheduleWizardEs = {
     "Esta plantilla está lista. Cambia sus valores predeterminados solo si es necesario.",
   requiredName: "Escribe un nombre para esta automatización.",
   requiredPrompt: "Describe lo que debe realizar el agente.",
+  requiredTime: "Introduce una hora de ejecución.",
   stepCount: "Paso {{current}} de {{total}}",
   weeklyAt: "Cada {{weekday}} a las {{time}}",
   steps: {
@@ -369,6 +376,7 @@ export const scheduleZhCN = {
     noExtraParameters: "这个模板已可直接使用，仅在需要时修改默认值。",
     requiredName: "请输入调度名称。",
     requiredPrompt: "请说明智能体要完成什么。",
+    requiredTime: "请填写运行时间。",
     stepCount: "第 {{current}}/{{total}} 步",
     weeklyAt: "每周{{weekday}} {{time}}",
     steps: {

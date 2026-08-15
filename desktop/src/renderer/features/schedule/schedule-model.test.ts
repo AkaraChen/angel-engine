@@ -5,12 +5,15 @@ import type {
 
 import { describe, expect, it } from "vitest";
 import {
+  automationParameterGroups,
   cronForNaturalSchedule,
   createAutomationFormInitialState,
   hasMissedRun,
   nextRunPreview,
   presetForCron,
   sortedRuns,
+  summarizeAutomationPrompt,
+  validateAutomationWizard,
   validateCron,
   weekdayKeyForValue,
 } from "@/features/schedule/schedule-model";
@@ -50,6 +53,55 @@ describe("schedule model", () => {
     expect(cronForNaturalSchedule("custom", "09:00", "1", "*/5 * * * *")).toBe(
       "*/5 * * * *",
     );
+  });
+
+  it("does not turn an empty run time into midnight", () => {
+    expect(cronForNaturalSchedule("daily", "", "1", "")).toBe("");
+  });
+
+  it("separates missing template parameters from advanced defaults", () => {
+    const template = {
+      cron: "0 9 * * *",
+      name: "Daily report",
+      notifyOnFailure: true,
+      prompt: "Summarize progress.",
+    };
+
+    expect(automationParameterGroups(template)).toEqual({
+      advanced: ["name", "prompt", "notifyOnFailure"],
+      primary: ["projectId"],
+    });
+    expect(automationParameterGroups()).toEqual({
+      advanced: [],
+      primary: ["name", "prompt", "projectId", "notifyOnFailure"],
+    });
+  });
+
+  it("invalidates every later step after an earlier step becomes invalid", () => {
+    const state = {
+      ...createAutomationFormInitialState({
+        cron: "0 9 * * *",
+        name: "Daily report",
+        prompt: "Summarize progress.",
+      }),
+      cron: "",
+      time: "",
+    };
+
+    expect(validateAutomationWizard(state, true, false)).toEqual({
+      firstInvalidStep: 2,
+      steps: [true, false, false, false],
+      timeRequired: true,
+    });
+  });
+
+  it("summarizes the current prompt for confirmation", () => {
+    const prompt = `  ${"Current task ".repeat(20)}  `;
+    const summary = summarizeAutomationPrompt(prompt);
+
+    expect(summary.length).toBeLessThanOrEqual(118);
+    expect(summary.startsWith("Current task")).toBe(true);
+    expect(summary.endsWith("…")).toBe(true);
   });
 
   it("normalizes Sunday weekday 7 at the form boundary", () => {

@@ -604,6 +604,7 @@ export interface LocaleResourceTranslationSchedule {
     noExtraParameters: string;
     requiredName: string;
     requiredPrompt: string;
+    requiredTime: string;
     stepCount: string;
     weeklyAt: string;
     steps: {

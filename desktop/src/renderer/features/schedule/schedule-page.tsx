@@ -5,6 +5,7 @@ import type {
   Automation,
   AutomationRun,
   AutomationRunStatus,
+  AutomationParameterField,
   AutomationTemplate,
   CreateAutomationFormState,
   SchedulePreset,
@@ -57,13 +58,16 @@ import {
   setAutomationEnabledMutationOptions,
 } from "@/features/schedule/requests/automations";
 import {
+  automationParameterGroups,
   cronForNaturalSchedule,
   createAutomationFormInitialState,
   nextRunPreview,
   PRESET_CRON,
   presetForCron,
   sortedRuns,
+  summarizeAutomationPrompt,
   validateCron,
+  validateAutomationWizard,
   weekdayKeyForValue,
 } from "@/features/schedule/schedule-model";
 import { formatDateTime, formatRelativeTime } from "@/platform/format-time";
@@ -482,14 +486,32 @@ function CreateAutomationDialog({
   const preview = nextRunPreview(state.preset, new Date(), state.cron);
   const nameValid = state.name.trim().length > 0;
   const promptValid = state.prompt.trim().length > 0;
-  const stepValid =
-    step === 1
-      ? selection !== undefined
-      : step === 2
-        ? cronValid && preview[0] !== undefined
-        : step === 3
-          ? nameValid && promptValid
-          : true;
+  const validation = validateAutomationWizard(
+    state,
+    selection !== undefined,
+    preview[0] !== undefined,
+  );
+  const stepValid = validation.steps[step - 1] ?? false;
+  const selectedTemplate =
+    selection === undefined || selection === "blank"
+      ? undefined
+      : automationTemplateForRecipe(t, selection);
+  const validationReason =
+    validation.firstInvalidStep === 1
+      ? t("schedule.wizard.chooseRequired")
+      : validation.firstInvalidStep === 2
+        ? t(
+            validation.timeRequired
+              ? "schedule.wizard.requiredTime"
+              : "schedule.invalidCron",
+          )
+        : validation.firstInvalidStep === 3
+          ? t(
+              nameValid
+                ? "schedule.wizard.requiredPrompt"
+                : "schedule.wizard.requiredName",
+            )
+          : undefined;
   const isDirty =
     selection !== undefined ||
     state.name.length > 0 ||
@@ -561,7 +583,7 @@ function CreateAutomationDialog({
       advance();
       return;
     }
-    if (!nameValid || !promptValid || !cronValid) return;
+    if (!validation.steps[3]) return;
     createMutation.mutate(
       {
         cron: state.cron,
@@ -598,6 +620,7 @@ function CreateAutomationDialog({
           current={step}
           furthest={furthestStep}
           onStepChange={setStep}
+          stepValidity={validation.steps}
         />
 
         <form className="space-y-5" onSubmit={submit}>
@@ -610,6 +633,7 @@ function CreateAutomationDialog({
               dispatch={dispatch}
               nextRun={nextRun}
               state={state}
+              timeRequired={validation.timeRequired}
             />
           ) : null}
           {step === 3 ? (
@@ -619,7 +643,7 @@ function CreateAutomationDialog({
               projects={projects}
               promptValid={promptValid}
               state={state}
-              templateSelected={selection !== "blank"}
+              template={selectedTemplate}
             />
           ) : null}
           {step === 4 ? (
@@ -628,6 +652,13 @@ function CreateAutomationDialog({
               onEdit={setStep}
               project={project}
               state={state}
+            />
+          ) : null}
+
+          {step === WIZARD_STEPS.length && validationReason ? (
+            <ConfirmValidationNotice
+              onEdit={() => setStep(validation.firstInvalidStep ?? 1)}
+              reason={validationReason}
             />
           ) : null}
 
@@ -665,14 +696,16 @@ function CreateAutomationDialog({
   );
 }
 
-function WizardProgress({
+export function WizardProgress({
   current,
   furthest,
   onStepChange,
+  stepValidity,
 }: {
   current: number;
   furthest: number;
   onStepChange: (step: number) => void;
+  stepValidity: readonly boolean[];
 }) {
   const { t } = useTranslation();
   return (
@@ -686,7 +719,8 @@ function WizardProgress({
       <ol className="hidden items-center sm:flex">
         {WIZARD_STEPS.map((stepName, index) => {
           const stepNumber = index + 1;
-          const complete = stepNumber < current || stepNumber < furthest;
+          const complete =
+            stepNumber < furthest && (stepValidity[index] ?? false);
           const active = stepNumber === current;
           return (
             <li className="flex min-w-0 flex-1 items-center" key={stepName}>
@@ -696,7 +730,7 @@ function WizardProgress({
                   active ? "text-foreground" : "text-muted-foreground",
                   complete && "hover:text-foreground",
                 )}
-                disabled={!complete}
+                disabled={!complete || active}
                 onClick={() => onStepChange(stepNumber)}
                 type="button"
               >
@@ -801,16 +835,18 @@ function ChoiceCard({
   );
 }
 
-function WhenStep({
+export function WhenStep({
   cronValid,
   dispatch,
   nextRun,
   state,
+  timeRequired,
 }: {
   cronValid: boolean;
   dispatch: (action: CreateFormAction) => void;
   nextRun?: string;
   state: CreateFormState;
+  timeRequired: boolean;
 }) {
   const { t } = useTranslation();
   return (
@@ -886,6 +922,8 @@ function WhenStep({
           ) : null}
           <Field label={t("schedule.schedule")}>
             <Input
+              aria-describedby={timeRequired ? "time-error" : undefined}
+              aria-invalid={timeRequired}
               type="time"
               value={state.time}
               onChange={(event) =>
@@ -896,6 +934,11 @@ function WhenStep({
                 })
               }
             />
+            {timeRequired ? (
+              <span className="text-xs text-status-danger" id="time-error">
+                {t("schedule.wizard.requiredTime")}
+              </span>
+            ) : null}
           </Field>
         </div>
       ) : null}
@@ -932,59 +975,76 @@ function WhenStep({
   );
 }
 
-function ParametersStep({
+export function ParametersStep({
   dispatch,
   nameValid,
   projects,
   promptValid,
   state,
-  templateSelected,
+  template,
 }: {
   dispatch: (action: CreateFormAction) => void;
   nameValid: boolean;
   projects: Project[];
   promptValid: boolean;
   state: CreateFormState;
-  templateSelected: boolean;
+  template?: AutomationTemplate;
 }) {
   const { t } = useTranslation();
-  const fields = (
+  const { advanced, primary } = automationParameterGroups(template);
+  const primaryFields = (
     <ParameterFields
       dispatch={dispatch}
+      fields={primary}
       nameValid={nameValid}
       projects={projects}
       promptValid={promptValid}
       state={state}
     />
   );
-  if (!templateSelected) return <div className="space-y-4">{fields}</div>;
+  if (template === undefined) {
+    return <div className="space-y-4">{primaryFields}</div>;
+  }
 
   return (
     <div className="space-y-4">
-      <p className="rounded-md bg-surface-2 px-3 py-3 text-sm text-muted-foreground">
-        {t("schedule.wizard.noExtraParameters")}
-      </p>
-      <Collapsible>
-        <CollapsibleTrigger asChild>
-          <Button
-            className="w-full justify-between"
-            type="button"
-            variant="outline"
-          >
-            {t("schedule.wizard.advancedSettings")}
-            <CaretDown className="transition-transform group-data-[state=open]/button:rotate-180" />
-          </Button>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="mt-4 space-y-4">
-          {fields}
-        </CollapsibleContent>
-      </Collapsible>
-      {!nameValid ? (
+      {primary.length > 0 ? (
+        primaryFields
+      ) : (
+        <p className="rounded-md bg-surface-2 px-3 py-3 text-sm text-muted-foreground">
+          {t("schedule.wizard.noExtraParameters")}
+        </p>
+      )}
+      {advanced.length > 0 ? (
+        <Collapsible>
+          <CollapsibleTrigger asChild>
+            <Button
+              className="w-full justify-between"
+              type="button"
+              variant="outline"
+            >
+              {t("schedule.wizard.advancedSettings")}
+              <CaretDown className="transition-transform group-data-[state=open]/button:rotate-180" />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-4 space-y-4">
+            <ParameterFields
+              dispatch={dispatch}
+              fields={advanced}
+              nameValid={nameValid}
+              projects={projects}
+              promptValid={promptValid}
+              state={state}
+            />
+          </CollapsibleContent>
+        </Collapsible>
+      ) : null}
+      {advanced.includes("name") && !nameValid ? (
         <p className="text-xs text-status-danger">
           {t("schedule.wizard.requiredName")}
         </p>
       ) : null}
-      {!promptValid ? (
+      {advanced.includes("prompt") && !promptValid ? (
         <p className="text-xs text-status-danger">
           {t("schedule.wizard.requiredPrompt")}
         </p>
@@ -995,12 +1055,14 @@ function ParametersStep({
 
 function ParameterFields({
   dispatch,
+  fields,
   nameValid,
   projects,
   promptValid,
   state,
 }: {
   dispatch: (action: CreateFormAction) => void;
+  fields: AutomationParameterField[];
   nameValid: boolean;
   projects: Project[];
   promptValid: boolean;
@@ -1009,89 +1071,97 @@ function ParameterFields({
   const { t } = useTranslation();
   return (
     <>
-      <Field label={t("schedule.name")}>
-        <Input
-          aria-describedby="name-error"
-          aria-invalid={!nameValid}
-          value={state.name}
-          onChange={(event) =>
-            dispatch({
-              field: "name",
-              type: "field",
-              value: event.currentTarget.value,
-            })
-          }
-        />
-        {!nameValid ? (
-          <span className="text-xs text-status-danger" id="name-error">
-            {t("schedule.wizard.requiredName")}
-          </span>
-        ) : null}
-      </Field>
-      <Field label={t("schedule.prompt")}>
-        <Textarea
-          aria-describedby="prompt-error"
-          aria-invalid={!promptValid}
-          className="min-h-28"
-          value={state.prompt}
-          onChange={(event) =>
-            dispatch({
-              field: "prompt",
-              type: "field",
-              value: event.currentTarget.value,
-            })
-          }
-        />
-        {!promptValid ? (
-          <span className="text-xs text-status-danger" id="prompt-error">
-            {t("schedule.wizard.requiredPrompt")}
-          </span>
-        ) : null}
-      </Field>
-      <Field label={t("schedule.project")}>
-        <Select
-          value={state.projectId || NO_PROJECT_SELECT_VALUE}
-          onValueChange={(value) =>
-            dispatch({
-              field: "projectId",
-              type: "field",
-              value: value === NO_PROJECT_SELECT_VALUE ? "" : value,
-            })
-          }
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={NO_PROJECT_SELECT_VALUE}>
-              {t("schedule.noProject")}
-            </SelectItem>
-            {projects.map((item) => (
-              <SelectItem key={item.id} value={item.id}>
-                {getProjectDisplayName(item.path)}
+      {fields.includes("name") ? (
+        <Field label={t("schedule.name")}>
+          <Input
+            aria-describedby="name-error"
+            aria-invalid={!nameValid}
+            value={state.name}
+            onChange={(event) =>
+              dispatch({
+                field: "name",
+                type: "field",
+                value: event.currentTarget.value,
+              })
+            }
+          />
+          {!nameValid ? (
+            <span className="text-xs text-status-danger" id="name-error">
+              {t("schedule.wizard.requiredName")}
+            </span>
+          ) : null}
+        </Field>
+      ) : null}
+      {fields.includes("prompt") ? (
+        <Field label={t("schedule.prompt")}>
+          <Textarea
+            aria-describedby="prompt-error"
+            aria-invalid={!promptValid}
+            className="min-h-28"
+            value={state.prompt}
+            onChange={(event) =>
+              dispatch({
+                field: "prompt",
+                type: "field",
+                value: event.currentTarget.value,
+              })
+            }
+          />
+          {!promptValid ? (
+            <span className="text-xs text-status-danger" id="prompt-error">
+              {t("schedule.wizard.requiredPrompt")}
+            </span>
+          ) : null}
+        </Field>
+      ) : null}
+      {fields.includes("projectId") ? (
+        <Field label={t("schedule.project")}>
+          <Select
+            value={state.projectId || NO_PROJECT_SELECT_VALUE}
+            onValueChange={(value) =>
+              dispatch({
+                field: "projectId",
+                type: "field",
+                value: value === NO_PROJECT_SELECT_VALUE ? "" : value,
+              })
+            }
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NO_PROJECT_SELECT_VALUE}>
+                {t("schedule.noProject")}
               </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </Field>
-      <label className="flex items-center justify-between gap-4 rounded-md border border-border-subtle px-3 py-2.5 text-sm">
-        <span>{t("schedule.notifyOnFailure")}</span>
-        <Switch
-          checked={state.notifyOnFailure}
-          onCheckedChange={(checked) =>
-            dispatch({
-              field: "notifyOnFailure",
-              type: "field",
-              value: checked,
-            })
-          }
-        />
-      </label>
+              {projects.map((item) => (
+                <SelectItem key={item.id} value={item.id}>
+                  {getProjectDisplayName(item.path)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+      ) : null}
+      {fields.includes("notifyOnFailure") ? (
+        <label className="flex items-center justify-between gap-4 rounded-md border border-border-subtle px-3 py-2.5 text-sm">
+          <span>{t("schedule.notifyOnFailure")}</span>
+          <Switch
+            checked={state.notifyOnFailure}
+            onCheckedChange={(checked) =>
+              dispatch({
+                field: "notifyOnFailure",
+                type: "field",
+                value: checked,
+              })
+            }
+          />
+        </label>
+      ) : null}
     </>
   );
 }
 
-function ConfirmStep({
+export function ConfirmStep({
   nextRun,
   onEdit,
   project,
@@ -1107,10 +1177,12 @@ function ConfirmStep({
     <div className="divide-y divide-border-subtle rounded-lg border border-border">
       <SummaryRow
         label={t("schedule.wizard.steps.what")}
-        onEdit={() => onEdit(1)}
+        onEdit={() => onEdit(3)}
       >
         <p className="font-medium">{state.name}</p>
-        <p className="mt-1 text-muted-foreground">{state.prompt}</p>
+        <p className="mt-1 text-muted-foreground">
+          {summarizeAutomationPrompt(state.prompt)}
+        </p>
       </SummaryRow>
       <SummaryRow
         label={t("schedule.wizard.steps.when")}
@@ -1145,6 +1217,27 @@ function ConfirmStep({
   );
 }
 
+export function ConfirmValidationNotice({
+  onEdit,
+  reason,
+}: {
+  onEdit: () => void;
+  reason: string;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div
+      className="flex items-center justify-between gap-3 rounded-md bg-status-danger-soft px-3 py-2 text-sm text-status-danger"
+      role="alert"
+    >
+      <p>{reason}</p>
+      <Button size="xs" type="button" variant="outline" onClick={onEdit}>
+        {t("schedule.wizard.edit")}
+      </Button>
+    </div>
+  );
+}
+
 function SummaryRow({
   children,
   label,
@@ -1156,7 +1249,7 @@ function SummaryRow({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="flex items-start gap-4 p-4">
+    <section aria-label={label} className="flex items-start gap-4 p-4">
       <div className="min-w-0 flex-1">
         <p className="mb-1 text-xs font-medium text-muted-foreground">
           {label}
@@ -1166,7 +1259,7 @@ function SummaryRow({
       <Button size="xs" type="button" variant="ghost" onClick={onEdit}>
         {t("schedule.wizard.edit")}
       </Button>
-    </div>
+    </section>
   );
 }
 
