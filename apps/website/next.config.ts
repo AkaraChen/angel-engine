@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 
+/** 301 the default Vercel host so SEO signals stay on ag.akr.moe */
 const nextConfig: NextConfig = {
   async redirects() {
     return [
