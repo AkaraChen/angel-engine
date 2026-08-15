@@ -1,0 +1,18 @@
+# Angel Engine
+
+> Every coding agent. One calm desktop.
+
+Angel Engine is a local desktop that gathers coding agents (Codex, OpenCode, Claude Code, and similar) into one calm chat UI. It runs on your machine. It is not a hosted cloud agent orchestrator.
+
+Canonical site: https://ag.akr.moe
+
+## Links
+
+- [Homepage](https://ag.akr.moe)
+- [GitHub](https://github.com/AkaraChen/angel-engine)
+
+## Also from Akara
+
+- [akr.moe](https://akr.moe) — Akara Chen's site (hub)
+- [2code](https://2code.akr.moe) — Terminal workstation for projects, worktrees, and agents
+- [OGKit](https://ogkit.akr.moe) — Open Graph lint for web, extension, and CLI
