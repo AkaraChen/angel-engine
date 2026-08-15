@@ -45,6 +45,17 @@ export interface CreateAutomationInput {
   prompt: string;
 }
 
+export interface CreateAutomationFormState extends CreateAutomationInput {
+  preset: SchedulePreset;
+  projectId: string;
+}
+
+export type AutomationTemplate = Partial<CreateAutomationInput> & {
+  cron: string;
+  name: string;
+  prompt: string;
+};
+
 export const PRESET_CRON: Record<Exclude<SchedulePreset, "custom">, string> = {
   "every-30-minutes": "*/30 * * * *",
   daily: "0 9 * * *",
@@ -52,6 +63,49 @@ export const PRESET_CRON: Record<Exclude<SchedulePreset, "custom">, string> = {
   weekdays: "0 9 * * 1-5",
   weekly: "0 9 * * 1",
 };
+
+export const DEFAULT_CREATE_AUTOMATION_FORM: CreateAutomationFormState = {
+  cron: PRESET_CRON.daily,
+  name: "",
+  notifyOnFailure: true,
+  preset: "daily",
+  projectId: "",
+  prompt: "",
+};
+
+export function createAutomationFormInitialState(
+  template?: AutomationTemplate,
+  existingNames: string[] = [],
+): CreateAutomationFormState {
+  if (template === undefined) return { ...DEFAULT_CREATE_AUTOMATION_FORM };
+
+  const cron = template.cron;
+  return {
+    ...DEFAULT_CREATE_AUTOMATION_FORM,
+    ...template,
+    cron,
+    name: uniqueAutomationName(template.name, existingNames),
+    preset: presetForCron(cron) ?? "custom",
+    projectId: template.projectId ?? DEFAULT_CREATE_AUTOMATION_FORM.projectId,
+  };
+}
+
+function uniqueAutomationName(name: string, existingNames: string[]): string {
+  const normalizedNames = new Set(
+    existingNames.map((existingName) =>
+      existingName.trim().toLocaleLowerCase(),
+    ),
+  );
+  if (!normalizedNames.has(name.trim().toLocaleLowerCase())) return name;
+
+  let suffix = 2;
+  while (
+    normalizedNames.has(`${name} (${suffix})`.trim().toLocaleLowerCase())
+  ) {
+    suffix += 1;
+  }
+  return `${name} (${suffix})`;
+}
 
 const CRON_FIELD_RANGES = [
   [0, 59],

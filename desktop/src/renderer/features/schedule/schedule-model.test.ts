@@ -5,6 +5,7 @@ import type {
 
 import { describe, expect, it } from "vitest";
 import {
+  createAutomationFormInitialState,
   hasMissedRun,
   nextRunPreview,
   presetForCron,
@@ -13,6 +14,28 @@ import {
 } from "@/features/schedule/schedule-model";
 
 describe("schedule model", () => {
+  it("prefills every form value supplied by a template", () => {
+    expect(
+      createAutomationFormInitialState(
+        {
+          cron: "*/30 * * * *",
+          name: "CI heartbeat",
+          notifyOnFailure: false,
+          projectId: "project-1",
+          prompt: "Report CI exceptions.",
+        },
+        ["CI heartbeat", "CI heartbeat (2)"],
+      ),
+    ).toEqual({
+      cron: "*/30 * * * *",
+      name: "CI heartbeat (3)",
+      notifyOnFailure: false,
+      preset: "every-30-minutes",
+      projectId: "project-1",
+      prompt: "Report CI exceptions.",
+    });
+  });
+
   it("validates supported five-field cron expressions", () => {
     expect(validateCron("0 9 * * *")).toBe(true);
     expect(validateCron("*/30 * * * *")).toBe(true);

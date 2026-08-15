@@ -5,6 +5,8 @@ import type {
   Automation,
   AutomationRun,
   AutomationRunStatus,
+  AutomationTemplate,
+  CreateAutomationFormState,
   SchedulePreset,
 } from "@/features/schedule/schedule-model";
 
@@ -16,7 +18,7 @@ import {
   WarningCircle,
 } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useReducer, useRef, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { confirmAction } from "@/components/ui/confirm-dialog";
@@ -48,6 +50,7 @@ import {
   setAutomationEnabledMutationOptions,
 } from "@/features/schedule/requests/automations";
 import {
+  createAutomationFormInitialState,
   nextRunPreview,
   PRESET_CRON,
   presetForCron,
@@ -89,6 +92,7 @@ export const SchedulePage: FC<SchedulePageProps> = ({ projects }) => {
   const listQuery = useQuery(automationListQueryOptions());
   const automations = listQuery.data ?? [];
   const [createOpen, setCreateOpen] = useState(false);
+  const [createTemplate, setCreateTemplate] = useState<AutomationTemplate>();
   const [expandedId, setExpandedId] = useState<string>();
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -162,7 +166,13 @@ export const SchedulePage: FC<SchedulePageProps> = ({ projects }) => {
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-background">
       <div className="flex items-center justify-end gap-4 px-6 py-4">
-        <Button size="sm" onClick={() => setCreateOpen(true)}>
+        <Button
+          size="sm"
+          onClick={() => {
+            setCreateTemplate(undefined);
+            setCreateOpen(true);
+          }}
+        >
           <Plus weight="bold" />
           {t("schedule.newAutomation")}
         </Button>
@@ -182,7 +192,12 @@ export const SchedulePage: FC<SchedulePageProps> = ({ projects }) => {
           ) : listQuery.isError ? (
             <ScheduleNotice text={t("schedule.disconnected")} />
           ) : automations.length === 0 ? (
-            <ScheduleRecipes onCreate={() => setCreateOpen(true)} />
+            <ScheduleRecipes
+              onCreate={(template) => {
+                setCreateTemplate(template);
+                setCreateOpen(true);
+              }}
+            />
           ) : (
             <div className="space-y-1.5">
               {broken.map(renderCard)}
@@ -193,9 +208,11 @@ export const SchedulePage: FC<SchedulePageProps> = ({ projects }) => {
       </div>
 
       <CreateAutomationDialog
+        automations={automations}
         onOpenChange={setCreateOpen}
         open={createOpen}
         projects={projects}
+        template={createTemplate}
       />
     </div>
   );
@@ -379,14 +396,7 @@ function RunRow({ run }: { run: AutomationRun }) {
   );
 }
 
-interface CreateFormState {
-  cron: string;
-  name: string;
-  notifyOnFailure: boolean;
-  preset: SchedulePreset;
-  projectId: string;
-  prompt: string;
-}
+type CreateFormState = CreateAutomationFormState;
 
 type CreateFormAction =
   | {
@@ -395,22 +405,15 @@ type CreateFormAction =
       value: boolean | string;
     }
   | { preset: SchedulePreset; type: "preset" }
+  | { state: CreateFormState; type: "initialize" }
   | { type: "reset" };
-
-const INITIAL_CREATE_FORM: CreateFormState = {
-  cron: PRESET_CRON.daily,
-  name: "",
-  notifyOnFailure: true,
-  preset: "daily",
-  projectId: "",
-  prompt: "",
-};
 
 function createFormReducer(
   state: CreateFormState,
   action: CreateFormAction,
 ): CreateFormState {
-  if (action.type === "reset") return INITIAL_CREATE_FORM;
+  if (action.type === "initialize") return action.state;
+  if (action.type === "reset") return createAutomationFormInitialState();
   if (action.type === "preset") {
     return {
       ...state,
@@ -423,17 +426,25 @@ function createFormReducer(
 }
 
 function CreateAutomationDialog({
+  automations,
   onOpenChange,
   open,
   projects,
+  template,
 }: {
+  automations: Automation[];
   onOpenChange: (open: boolean) => void;
   open: boolean;
   projects: Project[];
+  template?: AutomationTemplate;
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const [state, dispatch] = useReducer(createFormReducer, INITIAL_CREATE_FORM);
+  const [state, dispatch] = useReducer(
+    createFormReducer,
+    undefined,
+    createAutomationFormInitialState,
+  );
   const createMutation = useMutation(
     createAutomationMutationOptions({ queryClient }),
   );
@@ -447,6 +458,17 @@ function CreateAutomationDialog({
     state.name.length > 0 ||
     state.prompt.length > 0 ||
     state.projectId.length > 0;
+
+  useEffect(() => {
+    if (!open) return;
+    dispatch({
+      state: createAutomationFormInitialState(
+        template,
+        automations.map(({ name }) => name),
+      ),
+      type: "initialize",
+    });
+  }, [automations, open, template]);
 
   const requestOpenChange = (nextOpen: boolean) => {
     if (!nextOpen && isDirty) {
@@ -673,7 +695,11 @@ function Field({ children, label }: { children: ReactNode; label: string }) {
   );
 }
 
-function ScheduleRecipes({ onCreate }: { onCreate: () => void }) {
+function ScheduleRecipes({
+  onCreate,
+}: {
+  onCreate: (template?: AutomationTemplate) => void;
+}) {
   const { t } = useTranslation();
   return (
     <div className="m-auto w-full max-w-3xl p-6">
@@ -688,24 +714,42 @@ function ScheduleRecipes({ onCreate }: { onCreate: () => void }) {
       </div>
       <div className="grid gap-3 sm:grid-cols-3">
         {(["dependencyAudit", "ciHeartbeat", "nightlyTests"] as const).map(
-          (recipe) => (
-            <button
-              className="rounded-lg border border-border bg-card p-4 text-left hover:bg-overlay-hover"
-              key={recipe}
-              onClick={onCreate}
-              type="button"
-            >
-              <span className="block text-sm font-medium">
-                {t(`schedule.recipes.${recipe}`)}
-              </span>
-              <span className="mt-1 block text-xs text-muted-foreground">
-                {t(`schedule.recipes.${recipe}Description`)}
-              </span>
-            </button>
-          ),
+          (recipe) => {
+            const cron =
+              recipe === "ciHeartbeat"
+                ? PRESET_CRON["every-30-minutes"]
+                : recipe === "nightlyTests"
+                  ? "0 2 * * *"
+                  : PRESET_CRON.daily;
+            const template: AutomationTemplate = {
+              cron,
+              name: t(`schedule.recipes.${recipe}`),
+              notifyOnFailure: true,
+              prompt: t(`schedule.recipes.${recipe}Description`),
+            };
+            return (
+              <button
+                className="rounded-lg border border-border bg-card p-4 text-left hover:bg-overlay-hover"
+                key={recipe}
+                onClick={() => onCreate(template)}
+                type="button"
+              >
+                <span className="block text-sm font-medium">
+                  {t(`schedule.recipes.${recipe}`)}
+                </span>
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  {t(`schedule.recipes.${recipe}Description`)}
+                </span>
+              </button>
+            );
+          },
         )}
       </div>
-      <Button className="mx-auto mt-3 flex" variant="ghost" onClick={onCreate}>
+      <Button
+        className="mx-auto mt-3 flex"
+        variant="ghost"
+        onClick={() => onCreate()}
+      >
         {t("schedule.startFromScratch")}
       </Button>
     </div>
