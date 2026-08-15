@@ -11,6 +11,7 @@ import {
   hasMissedRun,
   nextRunPreview,
   presetForCron,
+  reconcileAutomationWizardNavigation,
   sortedRuns,
   summarizeAutomationPrompt,
   validateAutomationWizard,
@@ -88,10 +89,24 @@ describe("schedule model", () => {
       time: "",
     };
 
-    expect(validateAutomationWizard(state, true, false)).toEqual({
+    const validation = validateAutomationWizard(state, true, false);
+    expect(validation).toEqual({
       firstInvalidStep: 2,
       steps: [true, false, false, false],
       timeRequired: true,
+    });
+    expect(
+      reconcileAutomationWizardNavigation(
+        {
+          completedSteps: [true, true, true, false],
+          step: 4,
+        },
+        validation.steps,
+        validation.firstInvalidStep,
+      ),
+    ).toEqual({
+      completedSteps: [true, false, false, false],
+      step: 2,
     });
   });
 

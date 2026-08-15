@@ -126,8 +126,8 @@ describe("schedule wizard boundaries", () => {
   it("makes later visited steps unreachable after an earlier invalidation", () => {
     render(
       <WizardProgress
+        completedSteps={[true, true, true, false]}
         current={2}
-        furthest={4}
         onStepChange={vi.fn()}
         stepValidity={[true, false, false, false]}
       />,

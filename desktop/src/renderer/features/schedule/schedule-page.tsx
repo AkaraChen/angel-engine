@@ -8,6 +8,7 @@ import type {
   AutomationParameterField,
   AutomationTemplate,
   CreateAutomationFormState,
+  AutomationWizardNavigation,
   SchedulePreset,
 } from "@/features/schedule/schedule-model";
 
@@ -64,6 +65,7 @@ import {
   nextRunPreview,
   PRESET_CRON,
   presetForCron,
+  reconcileAutomationWizardNavigation,
   sortedRuns,
   summarizeAutomationPrompt,
   validateCron,
@@ -75,6 +77,10 @@ import { cn } from "@/platform/utils";
 
 const NO_PROJECT_SELECT_VALUE = "__no_project__";
 const WIZARD_STEPS = ["what", "when", "parameters", "confirm"] as const;
+const INITIAL_WIZARD_NAVIGATION: AutomationWizardNavigation = {
+  completedSteps: [false, false, false, false],
+  step: 1,
+};
 type RecipeKey = "ciHeartbeat" | "dependencyAudit" | "nightlyTests";
 type WizardSource = RecipeKey | "blank";
 
@@ -476,8 +482,8 @@ function CreateAutomationDialog({
     createAutomationFormInitialState,
   );
   const [selection, setSelection] = useState<WizardSource>();
-  const [step, setStep] = useState(1);
-  const [furthestStep, setFurthestStep] = useState(1);
+  const [navigation, setNavigation] = useState(INITIAL_WIZARD_NAVIGATION);
+  const step = navigation.step;
   const createMutation = useMutation(
     createAutomationMutationOptions({ queryClient }),
   );
@@ -491,6 +497,8 @@ function CreateAutomationDialog({
     selection !== undefined,
     preview[0] !== undefined,
   );
+  const [whatValid, whenValid, parametersValid, confirmValid] =
+    validation.steps;
   const stepValid = validation.steps[step - 1] ?? false;
   const selectedTemplate =
     selection === undefined || selection === "blank"
@@ -519,6 +527,22 @@ function CreateAutomationDialog({
     state.projectId.length > 0;
 
   useEffect(() => {
+    setNavigation((current) =>
+      reconcileAutomationWizardNavigation(
+        current,
+        [whatValid, whenValid, parametersValid, confirmValid],
+        validation.firstInvalidStep,
+      ),
+    );
+  }, [
+    confirmValid,
+    parametersValid,
+    validation.firstInvalidStep,
+    whatValid,
+    whenValid,
+  ]);
+
+  useEffect(() => {
     if (!open) return;
     const template =
       source === undefined || source === "blank"
@@ -532,8 +556,7 @@ function CreateAutomationDialog({
       type: "initialize",
     });
     setSelection(source);
-    setStep(1);
-    setFurthestStep(1);
+    setNavigation(INITIAL_WIZARD_NAVIGATION);
   }, [automations, open, source, t]);
 
   const requestOpenChange = (nextOpen: boolean) => {
@@ -561,6 +584,7 @@ function CreateAutomationDialog({
         ? undefined
         : automationTemplateForRecipe(t, nextSource);
     setSelection(nextSource);
+    setNavigation(INITIAL_WIZARD_NAVIGATION);
     dispatch({
       state: createAutomationFormInitialState(
         template,
@@ -572,9 +596,19 @@ function CreateAutomationDialog({
 
   const advance = () => {
     if (!stepValid || step >= WIZARD_STEPS.length) return;
-    const nextStep = step + 1;
-    setStep(nextStep);
-    setFurthestStep((current) => Math.max(current, nextStep));
+    setNavigation((current) => {
+      const completedSteps = [...current.completedSteps] as [
+        boolean,
+        boolean,
+        boolean,
+        boolean,
+      ];
+      completedSteps[current.step - 1] = true;
+      return {
+        completedSteps,
+        step: (current.step + 1) as 2 | 3 | 4,
+      };
+    });
   };
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -617,9 +651,11 @@ function CreateAutomationDialog({
         </DialogHeader>
 
         <WizardProgress
+          completedSteps={navigation.completedSteps}
           current={step}
-          furthest={furthestStep}
-          onStepChange={setStep}
+          onStepChange={(nextStep) =>
+            setNavigation((current) => ({ ...current, step: nextStep }))
+          }
           stepValidity={validation.steps}
         />
 
@@ -649,7 +685,9 @@ function CreateAutomationDialog({
           {step === 4 ? (
             <ConfirmStep
               nextRun={nextRun}
-              onEdit={setStep}
+              onEdit={(nextStep) =>
+                setNavigation((current) => ({ ...current, step: nextStep }))
+              }
               project={project}
               state={state}
             />
@@ -657,7 +695,12 @@ function CreateAutomationDialog({
 
           {step === WIZARD_STEPS.length && validationReason ? (
             <ConfirmValidationNotice
-              onEdit={() => setStep(validation.firstInvalidStep ?? 1)}
+              onEdit={() =>
+                setNavigation((current) => ({
+                  ...current,
+                  step: validation.firstInvalidStep ?? 1,
+                }))
+              }
               reason={validationReason}
             />
           ) : null}
@@ -675,7 +718,12 @@ function CreateAutomationDialog({
                 <Button
                   type="button"
                   variant="ghost"
-                  onClick={() => setStep((current) => current - 1)}
+                  onClick={() =>
+                    setNavigation((current) => ({
+                      ...current,
+                      step: (current.step - 1) as 1 | 2 | 3,
+                    }))
+                  }
                 >
                   {t("schedule.wizard.back")}
                 </Button>
@@ -697,14 +745,14 @@ function CreateAutomationDialog({
 }
 
 export function WizardProgress({
+  completedSteps,
   current,
-  furthest,
   onStepChange,
   stepValidity,
 }: {
+  completedSteps: readonly boolean[];
   current: number;
-  furthest: number;
-  onStepChange: (step: number) => void;
+  onStepChange: (step: AutomationWizardNavigation["step"]) => void;
   stepValidity: readonly boolean[];
 }) {
   const { t } = useTranslation();
@@ -720,7 +768,7 @@ export function WizardProgress({
         {WIZARD_STEPS.map((stepName, index) => {
           const stepNumber = index + 1;
           const complete =
-            stepNumber < furthest && (stepValidity[index] ?? false);
+            (completedSteps[index] ?? false) && (stepValidity[index] ?? false);
           const active = stepNumber === current;
           return (
             <li className="flex min-w-0 flex-1 items-center" key={stepName}>
@@ -731,7 +779,9 @@ export function WizardProgress({
                   complete && "hover:text-foreground",
                 )}
                 disabled={!complete || active}
-                onClick={() => onStepChange(stepNumber)}
+                onClick={() =>
+                  onStepChange(stepNumber as AutomationWizardNavigation["step"])
+                }
                 type="button"
               >
                 <span
@@ -1168,7 +1218,7 @@ export function ConfirmStep({
   state,
 }: {
   nextRun?: string;
-  onEdit: (step: number) => void;
+  onEdit: (step: AutomationWizardNavigation["step"]) => void;
   project?: Project;
   state: CreateFormState;
 }) {

@@ -70,6 +70,11 @@ export interface AutomationWizardValidation {
   timeRequired: boolean;
 }
 
+export interface AutomationWizardNavigation {
+  completedSteps: readonly [boolean, boolean, boolean, boolean];
+  step: 1 | 2 | 3 | 4;
+}
+
 export const PRESET_CRON: Record<Exclude<SchedulePreset, "custom">, string> = {
   "every-30-minutes": "*/30 * * * *",
   daily: "0 9 * * *",
@@ -229,6 +234,29 @@ export function validateAutomationWizard(
     steps,
     timeRequired,
   };
+}
+
+export function reconcileAutomationWizardNavigation(
+  navigation: AutomationWizardNavigation,
+  stepValidity: readonly [boolean, boolean, boolean, boolean],
+  firstInvalidStep?: 1 | 2 | 3,
+): AutomationWizardNavigation {
+  const completedSteps = navigation.completedSteps.map(
+    (completed, index) => completed && stepValidity[index],
+  ) as [boolean, boolean, boolean, boolean];
+  const step =
+    firstInvalidStep !== undefined && navigation.step > firstInvalidStep
+      ? firstInvalidStep
+      : navigation.step;
+  if (
+    step === navigation.step &&
+    completedSteps.every(
+      (completed, index) => completed === navigation.completedSteps[index],
+    )
+  ) {
+    return navigation;
+  }
+  return { completedSteps, step };
 }
 
 export function summarizeAutomationPrompt(prompt: string): string {
