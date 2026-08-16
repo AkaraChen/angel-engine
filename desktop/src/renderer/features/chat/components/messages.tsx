@@ -1,4 +1,5 @@
 import type { ChatComposerSubmission } from "@/features/chat/components/composer/chat-composer";
+import type { PartState } from "@assistant-ui/react";
 import { useMessageError } from "@assistant-ui/core/react";
 import {
   ActionBarPrimitive,
@@ -48,6 +49,7 @@ import {
 } from "@/features/chat/components/thread-styles";
 import { ToolActionMessagePart } from "@/features/chat/components/tool-action-message";
 import { TurnActivity } from "@/features/chat/components/turn-activity";
+import { activityPartIndices } from "@/features/chat/components/turn-activity-parts";
 import { useChatRuntimeActions } from "@/features/chat/runtime/use-chat-runtime-actions";
 import { parseShepherdSourceCard } from "@/features/shepherd/parse-shepherd-source-card";
 import { ShepherdSourceCard } from "@/features/shepherd/shepherd-source-card";
@@ -434,11 +436,6 @@ const standardAssistantMessagePartComponents = {
   },
 };
 
-const chatAssistantMessagePartComponents = {
-  ...assistantMessagePartBaseComponents,
-  ChainOfThought: TurnActivity,
-};
-
 function UserMessageParts() {
   return <MessagePrimitive.Parts components={userMessagePartComponents} />;
 }
@@ -451,13 +448,41 @@ function UserMessageAttachmentParts() {
 
 function AssistantMessageParts() {
   const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
+  if (workspaceMode === "chat") return <ChatAssistantMessageParts />;
+
   return (
     <MessagePrimitive.Parts
-      components={
-        workspaceMode === "chat"
-          ? chatAssistantMessagePartComponents
-          : standardAssistantMessagePartComponents
-      }
+      components={standardAssistantMessagePartComponents}
     />
   );
+}
+
+function ChatAssistantMessageParts() {
+  const parts = useAuiState((state) => state.message.parts);
+  const firstActivityIndex = activityPartIndices(parts)[0];
+
+  if (parts.length === 0) {
+    return (
+      <MessagePrimitive.Parts components={assistantMessagePartBaseComponents} />
+    );
+  }
+
+  return parts.map((part, index) => {
+    if (index === firstActivityIndex) {
+      return <TurnActivity key="turn-activity" />;
+    }
+    if (part.type === "reasoning" || part.type === "tool-call") return null;
+
+    return (
+      <MessagePrimitive.PartByIndex
+        components={assistantMessagePartBaseComponents}
+        index={index}
+        key={messagePartKey(part, index)}
+      />
+    );
+  });
+}
+
+function messagePartKey(part: PartState, index: number) {
+  return part.type === "tool-call" ? part.toolCallId : `${part.type}-${index}`;
 }

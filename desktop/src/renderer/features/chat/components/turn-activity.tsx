@@ -3,7 +3,7 @@ import type {
   ReasoningMessagePartComponent,
 } from "@assistant-ui/react";
 import type { TFunction } from "i18next";
-import { ChainOfThoughtPrimitive, useAuiState } from "@assistant-ui/react";
+import { MessagePrimitive, useAuiState } from "@assistant-ui/react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -14,6 +14,7 @@ import {
   ToolGroup,
 } from "@/components/assistant-ui/tool-group";
 import { ToolActionMessagePart } from "@/features/chat/components/tool-action-message";
+import { activityPartIndices } from "@/features/chat/components/turn-activity-parts";
 import {
   defaultTurnActivityDisplay,
   nextTurnActivityDisplay,
@@ -27,9 +28,12 @@ type ActivitySegment = {
 
 export function TurnActivity() {
   const { t } = useTranslation();
-  const parts = useAuiState((state) => state.chainOfThought.parts);
+  const parts = useAuiState((state) => state.message.parts);
+  const messageRunning = useAuiState(
+    (state) => state.message.status?.type === "running",
+  );
   const messageTiming = useAuiState((state) => state.message.metadata.timing);
-  const active = isTurnActivityActive(parts);
+  const active = messageRunning || isTurnActivityActive(parts);
   const [manualDisplay, setManualDisplay] =
     useState<ReturnType<typeof defaultTurnActivityDisplay>>();
   const display = manualDisplay ?? defaultTurnActivityDisplay(active);
@@ -106,12 +110,13 @@ export function TurnActivity() {
         status={active ? "running" : "complete"}
       />
       <ToolGroup.Content aria-busy={active}>
-        <ChainOfThoughtPrimitive.Parts
-          components={{
-            Reasoning: ExpandedReasoning,
-            tools: { Fallback: ToolActionMessagePart },
-          }}
-        />
+        {activityPartIndices(parts).map((index) => (
+          <MessagePrimitive.PartByIndex
+            components={expandedActivityPartComponents}
+            index={index}
+            key={activityPartKey(parts[index], index)}
+          />
+        ))}
       </ToolGroup.Content>
     </ToolGroup.Root>
   );
@@ -122,6 +127,15 @@ const ExpandedReasoning: ReasoningMessagePartComponent = ({ text }) => {
   return <Reasoning.Text>{text}</Reasoning.Text>;
 };
 
+const expandedActivityPartComponents = {
+  Reasoning: ExpandedReasoning,
+  tools: { Fallback: ToolActionMessagePart },
+};
+
+function activityPartKey(part: PartState | undefined, index: number) {
+  return part?.type === "tool-call" ? part.toolCallId : `reasoning-${index}`;
+}
+
 function activitySegments(parts: readonly PartState[]) {
   const segments: ActivitySegment[] = [];
 
@@ -130,7 +144,7 @@ function activitySegments(parts: readonly PartState[]) {
     if (part?.type !== "reasoning" && part?.type !== "tool-call") continue;
 
     const previous = segments.at(-1);
-    if (previous?.type === part.type) {
+    if (previous?.type === part.type && previous.endIndex === index - 1) {
       previous.endIndex = index;
     } else {
       segments.push({ endIndex: index, startIndex: index, type: part.type });
