@@ -32,6 +32,7 @@ import {
 } from "@/features/chat/components/composer/terminal-selection-to-composer";
 import { composerRichTextClassName } from "@/features/chat/components/composer/composer-rich-text";
 import { ComposerKeymapBridge } from "@/features/chat/components/composer/composer-keymap-bridge";
+import { handleComposerFilePaste } from "@/features/chat/components/composer/composer-paste";
 import { useSettingsStore } from "@/features/settings/settings-store";
 import { ipc } from "@/platform/ipc";
 import { cn } from "@/platform/utils";
@@ -90,16 +91,7 @@ export function ComposerEditor({
       }
 
       if (!allowAttachments) return false;
-
-      const files = [...(event.clipboardData?.items ?? [])]
-        .filter((item) => item.kind === "file")
-        .map((item) => item.getAsFile())
-        .filter((file): file is File => file !== null);
-      if (files.length === 0) return false;
-
-      event.preventDefault();
-      attachments.add(files);
-      return true;
+      return handleComposerFilePaste(event, (files) => attachments.add(files));
     },
     [addPasteSourceUrl, allowAttachments, attachments],
   );

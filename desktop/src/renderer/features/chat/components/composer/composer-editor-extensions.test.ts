@@ -4,14 +4,17 @@ import {
   sortExtensions,
 } from "@tiptap/core";
 import { Markdown } from "@tiptap/markdown";
+import { TextSelection } from "@tiptap/pm/state";
 import StarterKit from "@tiptap/starter-kit";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   composerEnterAction,
   composerEnterIntent,
-  ComposerDisplayMention,
+  ComposerLink,
   ComposerMention,
+  createComposerDisplayExtensions,
   createComposerKeymap,
+  handleComposerLinkPaste,
 } from "@/features/chat/components/composer/composer-editor-extensions";
 import { composerMentionsFromDocument } from "@/features/chat/components/composer/composer-editor-model";
 
@@ -126,6 +129,12 @@ describe("composer markdown", () => {
     ]);
   });
 
+  it("keeps the display editor's default inclusive link behavior", () => {
+    const editor = createDisplayEditor("https://example.com");
+
+    expect(editor.schema.marks.link.spec.inclusive).toBe(true);
+  });
+
   it("does not turn email addresses into file mentions", () => {
     const editor = createDisplayEditor(
       "email dev@example.com and inspect /tmp/output",
@@ -204,12 +213,113 @@ describe("composer Enter key decisions", () => {
   });
 });
 
+describe("composer URL paste", () => {
+  it("links only the URL inserted at a cursor and excludes later typing", () => {
+    const editor = createEditor("hello world");
+    const view = createPasteView(editor, 7);
+
+    expect(paste(view, "https://example.com")).toBe(true);
+    view.dispatch(view.state.tr.insertText("abc"));
+
+    expect(textSegments(view)).toEqual([
+      { href: null, text: "hello " },
+      { href: "https://example.com", text: "https://example.com" },
+      { href: null, text: "abcworld" },
+    ]);
+  });
+
+  it("turns only selected plain text into a link", () => {
+    const editor = createEditor("hello world");
+    const view = createPasteView(editor, { from: 7, to: 12 });
+
+    expect(paste(view, "https://example.com")).toBe(true);
+
+    expect(textSegments(view)).toEqual([
+      { href: null, text: "hello " },
+      { href: "https://example.com", text: "world" },
+    ]);
+  });
+
+  it("replaces the href only inside an existing linked selection", () => {
+    const editor = createEditor({
+      content: [
+        {
+          content: [
+            { text: "hello ", type: "text" },
+            {
+              marks: [{ attrs: { href: "https://old.example" }, type: "link" }],
+              text: "world",
+              type: "text",
+            },
+            { text: " again", type: "text" },
+          ],
+          type: "paragraph",
+        },
+      ],
+      type: "doc",
+    });
+    const view = createPasteView(editor, { from: 7, to: 12 });
+
+    expect(paste(view, "https://example.com")).toBe(true);
+
+    expect(textSegments(view)).toEqual([
+      { href: null, text: "hello " },
+      { href: "https://example.com", text: "world" },
+      { href: null, text: " again" },
+    ]);
+  });
+
+  it("changes only the selected range when it crosses a link boundary", () => {
+    const editor = createEditor({
+      content: [
+        {
+          content: [
+            {
+              marks: [{ attrs: { href: "https://old.example" }, type: "link" }],
+              text: "hello",
+              type: "text",
+            },
+            { text: " world", type: "text" },
+          ],
+          type: "paragraph",
+        },
+      ],
+      type: "doc",
+    });
+    const view = createPasteView(editor, { from: 3, to: 9 });
+
+    expect(paste(view, "https://example.com")).toBe(true);
+
+    expect(textSegments(view)).toEqual([
+      { href: "https://old.example", text: "he" },
+      { href: "https://example.com", text: "llo wo" },
+      { href: null, text: "rld" },
+    ]);
+  });
+
+  it("leaves non-URL and rich-text paste to the default paste chain", () => {
+    const editor = createEditor("hello world");
+    const plainView = createPasteView(editor, 7);
+    const richView = createPasteView(editor, 7);
+
+    expect(paste(plainView, "ordinary text")).toBe(false);
+    expect(paste(richView, "https://example.com", "<b>example</b>")).toBe(
+      false,
+    );
+  });
+});
+
 function createEditor(content: object | string) {
   const editor = new Editor({
     content,
     contentType: typeof content === "string" ? "markdown" : "json",
     extensions: [
-      StarterKit.configure({ heading: false, horizontalRule: false }),
+      StarterKit.configure({
+        heading: false,
+        horizontalRule: false,
+        link: false,
+      }),
+      ComposerLink,
       Markdown,
       ComposerMention,
     ],
@@ -218,15 +328,62 @@ function createEditor(content: object | string) {
   return editor;
 }
 
+function createPasteView(
+  editor: Editor,
+  selection: number | { from: number; to: number },
+) {
+  let state = editor.state.apply(
+    editor.state.tr.setSelection(
+      typeof selection === "number"
+        ? TextSelection.create(editor.state.doc, selection)
+        : TextSelection.create(editor.state.doc, selection.from, selection.to),
+    ),
+  );
+  return {
+    dispatch(transaction: Parameters<Editor["view"]["dispatch"]>[0]) {
+      state = state.apply(transaction);
+    },
+    get state() {
+      return state;
+    },
+  } as Editor["view"];
+}
+
+function paste(view: Editor["view"], text: string, html?: string) {
+  const types =
+    html === undefined ? ["text/plain"] : ["text/plain", "text/html"];
+  return handleComposerLinkPaste(view, {
+    clipboardData: {
+      getData: (type: string) => (type === "text/html" ? (html ?? "") : text),
+      types,
+    },
+    preventDefault: () => undefined,
+  } as unknown as ClipboardEvent);
+}
+
+function textSegments(view: Editor["view"]) {
+  const segments: { href: string | null; text: string }[] = [];
+  view.state.doc.descendants((node) => {
+    if (!node.isText) return;
+    const href =
+      (node.marks.find((mark) => mark.type.name === "link")?.attrs.href as
+        | string
+        | undefined) ?? null;
+    const previous = segments.at(-1);
+    if (previous?.href === href) {
+      previous.text += node.text ?? "";
+    } else {
+      segments.push({ href, text: node.text ?? "" });
+    }
+  });
+  return segments;
+}
+
 function createDisplayEditor(content: string) {
   const editor = new Editor({
     content,
     contentType: "markdown",
-    extensions: [
-      StarterKit.configure({ heading: false, horizontalRule: false }),
-      Markdown,
-      ComposerDisplayMention,
-    ],
+    extensions: createComposerDisplayExtensions(),
   });
   editors.push(editor);
   return editor;
