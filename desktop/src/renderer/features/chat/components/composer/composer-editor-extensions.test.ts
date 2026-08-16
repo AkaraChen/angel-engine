@@ -11,8 +11,8 @@ import {
   composerEnterAction,
   composerEnterIntent,
   ComposerLink,
-  ComposerDisplayMention,
   ComposerMention,
+  createComposerDisplayExtensions,
   createComposerKeymap,
   handleComposerLinkPaste,
 } from "@/features/chat/components/composer/composer-editor-extensions";
@@ -127,6 +127,12 @@ describe("composer markdown", () => {
       { kind: "skill", label: "skill-authoring" },
       { kind: "file", label: "src/app.ts" },
     ]);
+  });
+
+  it("keeps the display editor's default inclusive link behavior", () => {
+    const editor = createDisplayEditor("https://example.com");
+
+    expect(editor.schema.marks.link.spec.inclusive).toBe(true);
   });
 
   it("does not turn email addresses into file mentions", () => {
@@ -263,6 +269,34 @@ describe("composer URL paste", () => {
     ]);
   });
 
+  it("changes only the selected range when it crosses a link boundary", () => {
+    const editor = createEditor({
+      content: [
+        {
+          content: [
+            {
+              marks: [{ attrs: { href: "https://old.example" }, type: "link" }],
+              text: "hello",
+              type: "text",
+            },
+            { text: " world", type: "text" },
+          ],
+          type: "paragraph",
+        },
+      ],
+      type: "doc",
+    });
+    const view = createPasteView(editor, { from: 3, to: 9 });
+
+    expect(paste(view, "https://example.com")).toBe(true);
+
+    expect(textSegments(view)).toEqual([
+      { href: "https://old.example", text: "he" },
+      { href: "https://example.com", text: "llo wo" },
+      { href: null, text: "rld" },
+    ]);
+  });
+
   it("leaves non-URL and rich-text paste to the default paste chain", () => {
     const editor = createEditor("hello world");
     const plainView = createPasteView(editor, 7);
@@ -349,11 +383,7 @@ function createDisplayEditor(content: string) {
   const editor = new Editor({
     content,
     contentType: "markdown",
-    extensions: [
-      StarterKit.configure({ heading: false, horizontalRule: false }),
-      Markdown,
-      ComposerDisplayMention,
-    ],
+    extensions: createComposerDisplayExtensions(),
   });
   editors.push(editor);
   return editor;

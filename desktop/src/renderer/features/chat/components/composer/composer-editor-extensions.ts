@@ -122,9 +122,7 @@ export function createComposerDisplayExtensions(): Extensions {
     StarterKit.configure({
       heading: false,
       horizontalRule: false,
-      link: false,
     }),
-    ComposerLink,
     Markdown,
     ComposerDisplayMention,
   ];

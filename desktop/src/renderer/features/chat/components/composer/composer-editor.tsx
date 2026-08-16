@@ -90,16 +90,7 @@ export function ComposerEditor({
       }
 
       if (!allowAttachments) return false;
-
-      const files = [...(event.clipboardData?.items ?? [])]
-        .filter((item) => item.kind === "file")
-        .map((item) => item.getAsFile())
-        .filter((file): file is File => file !== null);
-      if (files.length === 0) return false;
-
-      event.preventDefault();
-      attachments.add(files);
-      return true;
+      return handleComposerFilePaste(event, (files) => attachments.add(files));
     },
     [addPasteSourceUrl, allowAttachments, attachments],
   );
@@ -161,6 +152,21 @@ export function ComposerEditor({
       </PromptInputBody>
     </ComposerKeymapBridge>
   );
+}
+
+export function handleComposerFilePaste(
+  event: ClipboardEvent,
+  addFiles: (files: File[]) => void,
+): boolean {
+  const files = [...(event.clipboardData?.items ?? [])]
+    .filter((item) => item.kind === "file")
+    .map((item) => item.getAsFile())
+    .filter((file): file is File => file !== null);
+  if (files.length === 0) return false;
+
+  event.preventDefault();
+  addFiles(files);
+  return true;
 }
 
 function ComposerEditorHeader({
