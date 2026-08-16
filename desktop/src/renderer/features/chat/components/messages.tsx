@@ -48,6 +48,7 @@ import {
 } from "@/features/chat/components/thread-styles";
 import { ToolActionMessagePart } from "@/features/chat/components/tool-action-message";
 import { TurnActivity } from "@/features/chat/components/turn-activity";
+import { buildTurnActivityRenderPlan } from "@/features/chat/components/turn-activity-parts";
 import { useChatRuntimeActions } from "@/features/chat/runtime/use-chat-runtime-actions";
 import { parseShepherdSourceCard } from "@/features/shepherd/parse-shepherd-source-card";
 import { ShepherdSourceCard } from "@/features/shepherd/shepherd-source-card";
@@ -434,11 +435,6 @@ const standardAssistantMessagePartComponents = {
   },
 };
 
-const chatAssistantMessagePartComponents = {
-  ...assistantMessagePartBaseComponents,
-  ChainOfThought: TurnActivity,
-};
-
 function UserMessageParts() {
   return <MessagePrimitive.Parts components={userMessagePartComponents} />;
 }
@@ -451,13 +447,35 @@ function UserMessageAttachmentParts() {
 
 function AssistantMessageParts() {
   const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
+  if (workspaceMode === "chat") return <ChatAssistantMessageParts />;
+
   return (
     <MessagePrimitive.Parts
-      components={
-        workspaceMode === "chat"
-          ? chatAssistantMessagePartComponents
-          : standardAssistantMessagePartComponents
-      }
+      components={standardAssistantMessagePartComponents}
+    />
+  );
+}
+
+function ChatAssistantMessageParts() {
+  const parts = useAuiState((state) => state.message.parts);
+  const hasActivity = buildTurnActivityRenderPlan(parts).some(
+    (item) => item.kind === "activity",
+  );
+
+  if (!hasActivity) {
+    return (
+      <MessagePrimitive.Parts components={assistantMessagePartBaseComponents} />
+    );
+  }
+
+  return (
+    <TurnActivity
+      renderMessagePart={(index) => (
+        <MessagePrimitive.PartByIndex
+          components={assistantMessagePartBaseComponents}
+          index={index}
+        />
+      )}
     />
   );
 }
