@@ -1,20 +1,45 @@
 import type { PartState } from "@assistant-ui/react";
 import { describe, expect, it } from "vitest";
 
-import { activityPartIndices } from "@/features/chat/components/turn-activity-parts";
+import {
+  buildTurnActivityRenderPlan,
+  visibleTurnActivityRenderPlan,
+} from "@/features/chat/components/turn-activity-parts";
 
 describe("turn activity parts", () => {
-  it("collects interleaved reasoning and tools in their original order", () => {
+  it("keeps text between activity runs under one turn controller", () => {
     const parts = [
       { type: "reasoning" },
-      { text: "before the first tool", type: "text" },
       { toolCallId: "tool-1", type: "tool-call" },
       { text: "between tools", type: "text" },
-      { type: "reasoning" },
       { toolCallId: "tool-2", type: "tool-call" },
-      { text: "done", type: "text" },
     ] as PartState[];
+    const plan = buildTurnActivityRenderPlan(parts);
 
-    expect(activityPartIndices(parts)).toEqual([0, 2, 4, 5]);
+    expect(plan).toEqual([
+      {
+        endIndex: 1,
+        isController: true,
+        kind: "activity",
+        startIndex: 0,
+      },
+      { index: 2, kind: "part" },
+      {
+        endIndex: 3,
+        isController: false,
+        kind: "activity",
+        startIndex: 3,
+      },
+    ]);
+    expect(
+      plan.filter((item) => item.kind === "activity" && item.isController),
+    ).toHaveLength(1);
+
+    expect(visibleTurnActivityRenderPlan(plan, "summary")).toEqual(plan);
+    expect(visibleTurnActivityRenderPlan(plan, "expanded")).toEqual(plan);
+    expect(visibleTurnActivityRenderPlan(plan, "collapsed")).toEqual([
+      plan[0],
+      plan[1],
+    ]);
   });
 });
