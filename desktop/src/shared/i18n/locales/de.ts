@@ -945,6 +945,15 @@ export const de = {
         activity: "Aktivität",
         approvals_one: "{{count}} Genehmigung",
         approvals_other: "{{count}} Genehmigungen",
+        calledTools_one: "{{count}} Werkzeug aufgerufen",
+        calledTools_other: "{{count}} Werkzeuge aufgerufen",
+        thinking: "Denkt nach…",
+        thoughtAndToolCalls_one:
+          "Nachgedacht und {{count}} Werkzeug aufgerufen",
+        thoughtAndToolCalls_other:
+          "Nachgedacht und {{count}} Werkzeuge aufgerufen",
+        thoughtSeconds_one: "{{count}} s nachgedacht",
+        thoughtSeconds_other: "{{count}} s nachgedacht",
         toolCalls_one: "{{count}} Werkzeugaufruf",
         toolCalls_other: "{{count}} Werkzeugaufrufe",
       },
