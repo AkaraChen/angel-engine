@@ -5,11 +5,7 @@ import { Slice } from "@tiptap/pm/model";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ComposerInteractionRefs } from "@/features/chat/components/composer/composer-editor-extensions";
 import { createComposerExtensions } from "@/features/chat/components/composer/composer-editor-extensions";
-import { handleComposerFilePaste } from "@/features/chat/components/composer/composer-editor";
-
-vi.mock("@/platform/ipc", () => ({
-  ipc: { appReadClipboardSourceUrl: vi.fn() },
-}));
+import { handleComposerFilePaste } from "@/features/chat/components/composer/composer-paste";
 
 const editors: Editor[] = [];
 
