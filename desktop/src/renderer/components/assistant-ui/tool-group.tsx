@@ -13,7 +13,9 @@ import {
 } from "@angel-engine/daemon-api/chat";
 import { useAuiState, useScrollLock } from "@assistant-ui/react";
 import {
+  Check as CheckIcon,
   CaretDown as ChevronDownIcon,
+  SpinnerGap as LoaderIcon,
   Wrench as ToolIcon,
 } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
@@ -112,11 +114,15 @@ function ToolGroupTrigger({
   active,
   className,
   label,
+  status,
   ...props
 }: ComponentProps<typeof CollapsibleTrigger> & {
   active?: boolean;
   label: string;
+  status?: "complete" | "running";
 }) {
+  const StatusIcon = status === "running" ? LoaderIcon : CheckIcon;
+
   return (
     <CollapsibleTrigger
       className={cn(
@@ -132,10 +138,22 @@ function ToolGroupTrigger({
       data-slot="tool-group-trigger"
       {...props}
     >
-      <ToolIcon
-        className="aui-tool-group-trigger-icon size-4 shrink-0"
-        data-slot="tool-group-trigger-icon"
-      />
+      {status === undefined ? (
+        <ToolIcon
+          className="aui-tool-group-trigger-icon size-4 shrink-0"
+          data-slot="tool-group-trigger-icon"
+        />
+      ) : (
+        <StatusIcon
+          className={cn(
+            "aui-tool-group-trigger-icon size-4 shrink-0",
+            status === "running"
+              ? "animate-spin text-primary"
+              : "text-status-success",
+          )}
+          data-slot="tool-group-trigger-icon"
+        />
+      )}
       <span
         className="
           aui-tool-group-trigger-label-wrapper min-w-0 truncate text-start
@@ -218,7 +236,7 @@ const ToolGroupImpl: FC<
   );
 };
 
-function formatToolGroupLabel(
+export function formatToolGroupLabel(
   parts: readonly PartState[],
   startIndex: number,
   endIndex: number,
@@ -288,7 +306,7 @@ function formatToolGroupPhase(phase: string, t: TFunction) {
   }
 }
 
-function hasActiveToolGroupPart(
+export function hasActiveToolGroupPart(
   parts: readonly PartState[],
   startIndex: number,
   endIndex: number,

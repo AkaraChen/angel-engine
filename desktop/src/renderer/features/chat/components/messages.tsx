@@ -47,6 +47,7 @@ import {
   workspaceContentColumnClass,
 } from "@/features/chat/components/thread-styles";
 import { ToolActionMessagePart } from "@/features/chat/components/tool-action-message";
+import { TurnActivity } from "@/features/chat/components/turn-activity";
 import { useChatRuntimeActions } from "@/features/chat/runtime/use-chat-runtime-actions";
 import { parseShepherdSourceCard } from "@/features/shepherd/parse-shepherd-source-card";
 import { ShepherdSourceCard } from "@/features/shepherd/shepherd-source-card";
@@ -413,20 +414,29 @@ const userMessageAttachmentPartComponents = {
   },
 };
 
-const assistantMessagePartComponents = {
+const assistantMessagePartBaseComponents = {
   Text: AssistantTextMessagePart,
-  Reasoning,
-  ReasoningGroup,
   Source: NullMessagePart,
   Image: ImageMessagePart,
   File: FileMessagePart,
+  data: {
+    Fallback: DataMessagePart,
+  },
+};
+
+const standardAssistantMessagePartComponents = {
+  ...assistantMessagePartBaseComponents,
+  Reasoning,
+  ReasoningGroup,
   ToolGroup,
   tools: {
     Fallback: ToolActionMessagePart,
   },
-  data: {
-    Fallback: DataMessagePart,
-  },
+};
+
+const chatAssistantMessagePartComponents = {
+  ...assistantMessagePartBaseComponents,
+  ChainOfThought: TurnActivity,
 };
 
 function UserMessageParts() {
@@ -440,5 +450,14 @@ function UserMessageAttachmentParts() {
 }
 
 function AssistantMessageParts() {
-  return <MessagePrimitive.Parts components={assistantMessagePartComponents} />;
+  const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
+  return (
+    <MessagePrimitive.Parts
+      components={
+        workspaceMode === "chat"
+          ? chatAssistantMessagePartComponents
+          : standardAssistantMessagePartComponents
+      }
+    />
+  );
 }

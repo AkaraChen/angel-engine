@@ -933,6 +933,15 @@ export const ja = {
         activity: "アクティビティ",
         approvals_one: "{{count}} 件の承認",
         approvals_other: "{{count}} 件の承認",
+        calledTools_one: "{{count}} 個のツールを呼び出しました",
+        calledTools_other: "{{count}} 個のツールを呼び出しました",
+        thinking: "思考中…",
+        thoughtAndToolCalls_one:
+          "思考して {{count}} 個のツールを呼び出しました",
+        thoughtAndToolCalls_other:
+          "思考して {{count}} 個のツールを呼び出しました",
+        thoughtSeconds_one: "{{count}}秒間思考しました",
+        thoughtSeconds_other: "{{count}}秒間思考しました",
         toolCalls_one: "{{count}} 件のツール呼び出し",
         toolCalls_other: "{{count}} 件のツール呼び出し",
       },

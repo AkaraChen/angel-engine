@@ -1174,6 +1174,13 @@ export interface LocaleResourceTranslationComponentsToolGroup {
   activity: string;
   approvals_one: string;
   approvals_other: string;
+  calledTools_one: string;
+  calledTools_other: string;
+  thinking: string;
+  thoughtAndToolCalls_one: string;
+  thoughtAndToolCalls_other: string;
+  thoughtSeconds_one: string;
+  thoughtSeconds_other: string;
   toolCalls_one: string;
   toolCalls_other: string;
 }
