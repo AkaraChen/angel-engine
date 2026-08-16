@@ -3,6 +3,7 @@ import type {
   ChatAvailableSkill,
 } from "@angel-engine/daemon-api/chat";
 import type { Editor, Extensions } from "@tiptap/core";
+import type { EditorView } from "@tiptap/pm/view";
 import type { ReactRenderer } from "@tiptap/react";
 import type { SuggestionOptions, SuggestionProps } from "@tiptap/suggestion";
 import type {
@@ -11,11 +12,12 @@ import type {
 } from "@/features/chat/components/composer/composer-suggestion-list";
 import type { ApiClient } from "@/platform/api-client";
 import { Extension } from "@tiptap/core";
+import Link from "@tiptap/extension-link";
 import Mention from "@tiptap/extension-mention";
 import { Placeholder } from "@tiptap/extensions";
 import { Markdown } from "@tiptap/markdown";
 import type { DOMOutputSpec } from "@tiptap/pm/model";
-import { PluginKey } from "@tiptap/pm/state";
+import { Plugin, PluginKey, TextSelection } from "@tiptap/pm/state";
 import { ReactRenderer as TiptapReactRenderer } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { basename } from "pathe";
@@ -44,8 +46,28 @@ export interface ComposerInteractionRefs {
 }
 
 const FILE_MENTION_PLUGIN_KEY = new PluginKey("composerFileMention");
+const LINK_PASTE_PLUGIN_KEY = new PluginKey("composerLinkPaste");
 const SKILL_MENTION_PLUGIN_KEY = new PluginKey("composerSkillMention");
 const SLASH_COMMAND_PLUGIN_KEY = new PluginKey("composerSlashCommand");
+
+export const ComposerLink = Link.extend({
+  inclusive: false,
+}).configure({ linkOnPaste: false });
+
+const ComposerLinkPaste = Extension.create({
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: LINK_PASTE_PLUGIN_KEY,
+        props: {
+          handlePaste: (view, event) => handleComposerLinkPaste(view, event),
+        },
+      }),
+    ];
+  },
+  name: "composerLinkPaste",
+  priority: 1001,
+});
 
 export type ComposerEnterAction = "allow-ime" | "block" | "submit";
 export type ComposerEnterIntent = "newline" | "submit";
@@ -84,7 +106,10 @@ export function createComposerExtensions({
     StarterKit.configure({
       heading: false,
       horizontalRule: false,
+      link: false,
     }),
+    ComposerLink,
+    ComposerLinkPaste,
     Markdown,
     createComposerKeymap(interactions),
     createComposerMentionExtension(interactions),
@@ -97,10 +122,71 @@ export function createComposerDisplayExtensions(): Extensions {
     StarterKit.configure({
       heading: false,
       horizontalRule: false,
+      link: false,
     }),
+    ComposerLink,
     Markdown,
     ComposerDisplayMention,
   ];
+}
+
+export function handleComposerLinkPaste(
+  view: EditorView,
+  event: ClipboardEvent,
+): boolean {
+  const clipboard = event.clipboardData;
+  if (clipboard === null || clipboard.types.includes("text/html")) return false;
+
+  const href = clipboard.getData("text/plain").trim();
+  if (!isHttpUrl(href)) return false;
+
+  const { schema, selection, storedMarks } = view.state;
+  const link = schema.marks.link;
+  if (link === undefined) return false;
+
+  let transaction = view.state.tr;
+  const linkMark = link.create({ href });
+
+  if (selection.empty) {
+    const inheritedMarks = (storedMarks ?? selection.$from.marks()).filter(
+      (mark) => mark.type !== link,
+    );
+    transaction = transaction
+      .replaceSelectionWith(
+        schema.text(href, [...inheritedMarks, linkMark]),
+        false,
+      )
+      .setStoredMarks(inheritedMarks);
+  } else {
+    if (!isPlainTextSelection(view)) return false;
+    transaction = transaction
+      .removeMark(selection.from, selection.to, link)
+      .addMark(selection.from, selection.to, linkMark);
+  }
+
+  event.preventDefault();
+  view.dispatch(transaction.scrollIntoView());
+  return true;
+}
+
+function isPlainTextSelection(view: EditorView): boolean {
+  const { doc, selection } = view.state;
+  return (
+    selection instanceof TextSelection &&
+    selection.$from.sameParent(selection.$to) &&
+    doc.textBetween(selection.from, selection.to).length ===
+      selection.to - selection.from
+  );
+}
+
+function isHttpUrl(value: string): boolean {
+  if (value.length === 0 || /\s/.test(value)) return false;
+  try {
+    const protocol = new URL(value).protocol;
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 export const ComposerMention = Mention.extend({
