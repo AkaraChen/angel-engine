@@ -268,7 +268,7 @@ function WorkspaceSidebarContent({
       <SidebarHeader className="p-2" data-electron-drag>
         {isMacOS || reserveNativeSidebarControlSpace ? (
           <div aria-hidden className="h-8 shrink-0" />
-        }
+        ) : null}
 
       </SidebarHeader>
 
@@ -314,7 +314,7 @@ function WorkspaceSidebarContent({
           </AnimatedSidebarMenuItem>
         </SidebarMenu>
 
-        <
+        <SimpleChatSidebarSection
             chats={standaloneChats}
             isLoading={isChatsLoading}
             onArchiveChat={onArchiveChat}
@@ -323,7 +323,7 @@ function WorkspaceSidebarContent({
             selectedChatId={selectedChatId}
           />
 
-        <
+        <ProjectSidebarSection
             isLoading={isProjectsLoading}
             onArchiveChat={onArchiveChat}
             onCloneRepository={onCloneRepository}
