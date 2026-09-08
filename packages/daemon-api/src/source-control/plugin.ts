@@ -66,7 +66,6 @@ export interface ChecksCapability {
   fixPrompt?: ProviderOperation<"checks.fixPrompt">;
 }
 
-export type AutomationCapability = Record<never, never>;
 export type ReleaseCapability = Record<never, never>;
 export interface ProviderLinkDescriptor {
   id: string;
@@ -89,7 +88,6 @@ export interface SourceControlProviderPlugin {
   changeRequests?: ChangeRequestCapability;
   reviews?: ReviewCapability;
   checks?: ChecksCapability;
-  automation?: AutomationCapability;
   releases?: ReleaseCapability;
   links?: LinkResolutionCapability;
 }

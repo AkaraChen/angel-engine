@@ -1,5 +1,4 @@
 export * from "./agents";
-export * from "./automations";
 export * from "./daemon";
 export * from "./events";
 export * from "./chat";

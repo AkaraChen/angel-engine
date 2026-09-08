@@ -1,5 +1,4 @@
 import type { LocaleResource } from "./schema";
-import { scheduleEn } from "./schedule";
 import { changeRequestEn } from "./change-request";
 
 export const en = {
@@ -403,7 +402,6 @@ export const en = {
         list: "List view",
       },
     },
-    schedule: scheduleEn,
     sidebar: {
       addProject: "Add project",
       archiveChat: "Archive chat",

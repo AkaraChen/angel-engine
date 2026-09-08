@@ -49,7 +49,6 @@ import { FleetPage } from "@/features/fleet/fleet-page";
 import { CloneProgressDialog } from "@/features/projects/components/clone-progress-dialog";
 import { CloneRepositoryDialog } from "@/features/projects/components/clone-repository-dialog";
 import { ProjectSettingsDialog } from "@/features/projects/components/project-settings-dialog";
-import { SchedulePage } from "@/features/schedule/schedule-page";
 import { queryKeys } from "@/platform/query-keys";
 
 interface WorkspacePageViewProps {
@@ -57,7 +56,6 @@ interface WorkspacePageViewProps {
   currentRoutePath: string;
   draftGuard: WorktreeDraftGuard;
   fleetActive: boolean;
-  scheduleActive: boolean;
   model: WorkspacePageModel;
   navigation: WorkspaceNavigation;
   powerTabs: PowerWorktreeTabs;
@@ -68,7 +66,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
   currentRoutePath,
   draftGuard,
   fleetActive,
-  scheduleActive,
   model,
   navigation,
   powerTabs,
@@ -182,7 +179,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     openChat,
     openChatFromFleet,
     openFleet,
-    openSchedule,
     openPowerWorktree,
     openSettings,
     selectDraftProject,
@@ -348,7 +344,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           <WorkspaceSidebar
             chats={chats}
             fleetActive={fleetActive}
-            scheduleActive={scheduleActive}
             isChatsLoading={chatsQuery.isPending}
             isMacOS={isMacOS}
             isProjectsLoading={projectsQuery.isPending}
@@ -361,7 +356,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
             onImportSession={openImportSessionForProject}
             onOpenChat={openChat}
             onOpenFleet={openFleet}
-            onOpenSchedule={openSchedule}
             onOpenSettings={openSettings}
             onOpenWorktree={openPowerWorktree}
             onRetryWorktreeCreation={retryWorktreeCreation}
@@ -378,7 +372,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           <WorkspaceFloatingSidebar
             chats={chats}
             fleetActive={fleetActive}
-            scheduleActive={scheduleActive}
             isChatsLoading={chatsQuery.isPending}
             isMacOS={isMacOS}
             isProjectsLoading={projectsQuery.isPending}
@@ -391,7 +384,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
             onImportSession={openImportSessionForProject}
             onOpenChat={openChat}
             onOpenFleet={openFleet}
-            onOpenSchedule={openSchedule}
             onOpenSettings={openSettings}
             onOpenWorktree={openPowerWorktree}
             onRetryWorktreeCreation={retryWorktreeCreation}
@@ -486,13 +478,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                 (rightSidebarOpen || workspaceToolHost !== "sidebar")
               }
               rightSidebarToggleLabel={workspaceToolsToggleLabel}
-              title={
-                scheduleActive
-                  ? t("schedule.title")
-                  : fleetActive
-                    ? t("fleet.title")
-                    : workspaceTitle
-              }
+              title={fleetActive ? t("fleet.title") : workspaceTitle}
               includeAngelTerminal={canOpenAngelTerminal}
               onPathLauncherAction={
                 currentLauncherTarget === undefined
@@ -525,9 +511,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                 className="flex min-h-0 min-w-0 flex-1 flex-col"
                 data-workspace-mode={workspaceMode}
               >
-                {scheduleActive ? (
-                  <SchedulePage projects={projects} />
-                ) : fleetActive ? (
+                {fleetActive ? (
                   <FleetPage
                     chats={chats}
                     isMetadataError={

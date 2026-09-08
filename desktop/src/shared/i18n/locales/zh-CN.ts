@@ -1,5 +1,4 @@
 import type { LocaleResource } from "./schema";
-import { scheduleZhCN } from "./schedule";
 import { changeRequestZhCN } from "./change-request";
 
 export const zhCN = {
@@ -396,7 +395,6 @@ export const zhCN = {
         list: "列表视图",
       },
     },
-    schedule: scheduleZhCN,
     sidebar: {
       addProject: "添加项目",
       archiveChat: "归档聊天",

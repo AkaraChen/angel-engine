@@ -18,10 +18,6 @@
       "types": "./dist/agents.d.ts",
       "import": "./dist/agents.js"
     },
-    "./automations": {
-      "types": "./dist/automations.d.ts",
-      "import": "./dist/automations.js"
-    },
     "./chat": {
       "types": "./dist/chat/index.d.ts",
       "import": "./dist/chat/index.js"

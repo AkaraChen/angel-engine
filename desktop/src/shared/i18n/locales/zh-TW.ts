@@ -1,5 +1,4 @@
 import type { LocaleResource } from "./schema";
-import { scheduleZhTW } from "./schedule";
 import { changeRequestZhTW } from "./change-request";
 
 export const zhTW = {
@@ -396,7 +395,6 @@ export const zhTW = {
         list: "列表檢視",
       },
     },
-    schedule: scheduleZhTW,
     sidebar: {
       addProject: "新增專案",
       archiveChat: "封存聊天",

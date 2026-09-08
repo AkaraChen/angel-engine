@@ -1,5 +1,4 @@
 import type { LocaleResource } from "./schema";
-import { scheduleJa } from "./schedule";
 import { changeRequestJa } from "./change-request";
 
 export const ja = {
@@ -405,7 +404,6 @@ export const ja = {
         list: "リスト表示",
       },
     },
-    schedule: scheduleJa,
     sidebar: {
       addProject: "プロジェクトを追加",
       archiveChat: "チャットをアーカイブ",

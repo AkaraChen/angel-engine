@@ -11,8 +11,6 @@ import { migrate } from "drizzle-orm/libsql/migrator";
 import { Context, Effect, Layer, Ref } from "effect";
 
 import {
-  automationRuns,
-  automations,
   chatDiffAnchors,
   chats,
   customAgents,
@@ -23,8 +21,6 @@ import {
 import { DaemonError } from "./errors";
 
 export type AppDatabase = LibSQLDatabase<{
-  automationRuns: typeof automationRuns;
-  automations: typeof automations;
   chatDiffAnchors: typeof chatDiffAnchors;
   chats: typeof chats;
   customAgents: typeof customAgents;
@@ -127,8 +123,6 @@ function openDatabase(
       });
       const database = drizzle(client, {
         schema: {
-          automationRuns,
-          automations,
           chatDiffAnchors,
           chats,
           customAgents,

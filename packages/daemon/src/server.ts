@@ -236,7 +236,6 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
 
   const stopApiServices = registerApi(app, runtime, chatEvents, {
     internalBridgeSecret: options.internalBridgeSecret,
-    startAutomationScheduler: true,
   });
 
   app.put("/api/process-registry", async (context) => {

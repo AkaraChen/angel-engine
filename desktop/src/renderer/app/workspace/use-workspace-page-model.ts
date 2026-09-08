@@ -64,8 +64,6 @@ interface UseWorkspacePageModelOptions {
   draftProjectId?: string;
   /** The Fleet overview owns the main pane; no draft composer is mounted. */
   fleetActive?: boolean;
-  /** Schedule owns the main pane and must not prewarm a draft session. */
-  scheduleActive?: boolean;
   routeProjectId?: string;
   selectedChatId?: string;
 }
@@ -74,7 +72,6 @@ export function useWorkspacePageModel({
   api,
   draftProjectId: routeDraftProjectId,
   fleetActive = false,
-  scheduleActive = false,
   routeProjectId,
   selectedChatId,
 }: UseWorkspacePageModelOptions) {
@@ -160,9 +157,9 @@ export function useWorkspacePageModel({
 
   const draftState = useWorkspaceDraftState();
   const draftSessionCounterRef = useRef(0);
-  // Fleet and Schedule are chat-less routes but not drafts.
+  // Fleet is a chat-less route but not a draft.
   const isDraftPage =
-    !fleetActive && !scheduleActive && !is.nonEmptyString(selectedChatId);
+    !fleetActive && !is.nonEmptyString(selectedChatId);
   const powerModeActive = workspaceMode === "power";
   const draftWorktree = useChatTabStore((state) => state.draftWorktree);
   const activePowerWorktree = useChatTabStore((state) => state.activeWorktree);
