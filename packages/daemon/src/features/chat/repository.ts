@@ -6,7 +6,6 @@ import type {
   Chat,
   ChatCreateInput,
   ChatRunStartInput,
-  WorktreeCreationState,
 } from "@angel-engine/daemon-api/chat";
 import { isChatRunStartInput } from "@angel-engine/daemon-api/chat";
 import { randomUUID } from "node:crypto";
@@ -20,11 +19,10 @@ import {
   isAgentRuntime,
   isCustomAgentRuntime,
 } from "@angel-engine/daemon-api/agents";
-import { chats, queuedChatRuns, worktreeCreationJobs } from "../../db/schema";
+import { chats, queuedChatRuns } from "../../db/schema";
 import { type Db, withDatabase } from "../../platform/db";
 import { DaemonError } from "../../platform/errors";
 import { getCustomAgent } from "../agents/repository";
-import { withManagedWorktreeLock } from "../projects/managed-worktree-lock";
 
 const DEFAULT_CHAT_TITLE = "New chat";
 
@@ -78,39 +76,33 @@ export function getChat(
   });
 }
 
-/**
- * Takes the managed-worktree lock: a chat claiming a worktree cwd must not
- * land between a worktree deletion's eligibility check and its `rm`.
- */
 export function createChat(
   input: CreateChatRecordInput,
 ): Effect.Effect<Chat, DaemonError, Db> {
-  return withManagedWorktreeLock(
-    Effect.gen(function* () {
-      const now = new Date().toISOString();
-      const cwd = yield* normalizeOptionalDirectory(input.cwd);
-      const runtime = yield* normalizeChatRuntime(input.runtime);
-      return yield* withDatabase((database) =>
-        database
-          .insert(chats)
-          .values({
-            createdAt: now,
-            cwd,
-            id: randomUUID(),
-            projectId: normalizeOptionalString(input.projectId),
-            remoteThreadId: normalizeOptionalString(input.remoteThreadId),
-            sourceLink: input.sourceLink,
-            runtime,
-            title: normalizeTitle(input.title),
-            updatedAt: now,
-            archived: false,
-            pinned: false,
-          })
-          .returning()
-          .get(),
-      );
-    }),
-  );
+  return Effect.gen(function* () {
+    const now = new Date().toISOString();
+    const cwd = yield* normalizeOptionalDirectory(input.cwd);
+    const runtime = yield* normalizeChatRuntime(input.runtime);
+    return yield* withDatabase((database) =>
+      database
+        .insert(chats)
+        .values({
+          createdAt: now,
+          cwd,
+          id: randomUUID(),
+          projectId: normalizeOptionalString(input.projectId),
+          remoteThreadId: normalizeOptionalString(input.remoteThreadId),
+          sourceLink: input.sourceLink,
+          runtime,
+          title: normalizeTitle(input.title),
+          updatedAt: now,
+          archived: false,
+          pinned: false,
+        })
+        .returning()
+        .get(),
+    );
+  });
 }
 
 export function deleteChat(id: string): Effect.Effect<Chat, DaemonError, Db> {
@@ -292,127 +284,21 @@ export function getAmbiguousQueuedChatRun(chatId: string) {
   );
 }
 
-export interface PersistedWorktreeCreationJob {
-  chatId: string;
-  worktreeRef?: ChatCreateInput["worktreeRef"];
-  state: WorktreeCreationState;
-}
-
-export function createWorktreeCreationJob(job: PersistedWorktreeCreationJob) {
-  return withDatabase((database) =>
-    database.insert(worktreeCreationJobs).values(jobValues(job)).run(),
-  );
-}
-
-export function getWorktreeCreationJob(chatId: string) {
-  return withDatabase((database) =>
-    database
-      .select()
-      .from(worktreeCreationJobs)
-      .where(eq(worktreeCreationJobs.chatId, chatId))
-      .limit(1)
-      .get()
-      .then((row) => (row ? persistedWorktreeCreationJob(row) : null)),
-  );
-}
-
-export function listWorktreeCreationJobs() {
-  return withDatabase((database) =>
-    database
-      .select()
-      .from(worktreeCreationJobs)
-      .all()
-      .then((rows) => rows.map(persistedWorktreeCreationJob)),
-  );
-}
-
-export function updateWorktreeCreationJob(job: PersistedWorktreeCreationJob) {
-  return withDatabase((database) =>
-    database
-      .update(worktreeCreationJobs)
-      .set(jobValues(job))
-      .where(eq(worktreeCreationJobs.chatId, job.chatId))
-      .run(),
-  );
-}
-
-export function deleteWorktreeCreationJob(chatId: string) {
-  return withDatabase((database) =>
-    database
-      .delete(worktreeCreationJobs)
-      .where(eq(worktreeCreationJobs.chatId, chatId))
-      .run(),
-  );
-}
-
-export function failInterruptedWorktreeCreationJobs() {
-  return withDatabase((database) =>
-    database
-      .update(worktreeCreationJobs)
-      .set({
-        error: "Worktree creation was interrupted. Retry or cancel it.",
-        errorCode: null,
-        relatedChatId: null,
-        status: "failed",
-      })
-      .where(eq(worktreeCreationJobs.status, "creating"))
-      .run(),
-  );
-}
-
-function jobValues(job: PersistedWorktreeCreationJob) {
-  return {
-    chatId: job.chatId,
-    error: job.state.error ?? null,
-    errorCode: job.state.errorCode ?? null,
-    jobId: job.state.jobId,
-    progress: job.state.progress,
-    relatedChatId: job.state.relatedChatId ?? null,
-    worktreeRef: job.worktreeRef ?? null,
-    stage: job.state.stage,
-    status: job.state.status,
-  };
-}
-
-function persistedWorktreeCreationJob(
-  row: typeof worktreeCreationJobs.$inferSelect,
-): PersistedWorktreeCreationJob {
-  return {
-    chatId: row.chatId,
-    worktreeRef: row.worktreeRef ?? undefined,
-    state: {
-      error: row.error ?? undefined,
-      errorCode: row.errorCode ?? undefined,
-      jobId: row.jobId,
-      progress: row.progress,
-      relatedChatId: row.relatedChatId ?? undefined,
-      stage: row.stage as WorktreeCreationState["stage"],
-      status: row.status as WorktreeCreationState["status"],
-    },
-  };
-}
-
 export function archiveChat(id: string) {
   return updateChat(id, { archived: true });
 }
 
-/**
- * Takes the managed-worktree lock: restoring an archived chat makes its
- * worktree ineligible, so it must not interleave with a worktree deletion.
- */
 export function restoreArchivedChats(
   ids: string[],
 ): Effect.Effect<Chat[], DaemonError, Db> {
-  return withManagedWorktreeLock(
-    Effect.gen(function* () {
-      const restoredChats: Chat[] = [];
-      for (const id of yield* uniqueChatIds(ids)) {
-        yield* requireArchivedChat(id);
-        restoredChats.push(yield* updateChat(id, { archived: false }));
-      }
-      return restoredChats;
-    }),
-  );
+  return Effect.gen(function* () {
+    const restoredChats: Chat[] = [];
+    for (const id of yield* uniqueChatIds(ids)) {
+      yield* requireArchivedChat(id);
+      restoredChats.push(yield* updateChat(id, { archived: false }));
+    }
+    return restoredChats;
+  });
 }
 
 export function deleteArchivedChats(

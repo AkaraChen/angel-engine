@@ -22,10 +22,6 @@ import { useTranslation } from "react-i18next";
 import { WorkspaceDiffCommentPanel } from "@/app/workspace/workspace-diff-comment-panel";
 import { getErrorMessage } from "@/app/workspace/workspace-file-display";
 import {
-  formatWorkspaceGitDiffUnavailableReason,
-  WorkspaceGitBaseSelect,
-} from "@/app/workspace/workspace-git-base-select";
-import {
   useWorkspaceGitPanelState,
   WorkspaceGitCommitComposer,
 } from "@/app/workspace/workspace-git-commit";
@@ -64,7 +60,6 @@ import {
   getWorkspaceToolPatchFileLineChanges,
 } from "@/app/workspace/workspace-tool-patch-model";
 import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
-import { useWorkspaceGitBasePreference } from "@/app/workspace/use-workspace-git-base-preference";
 import { Button } from "@/components/ui/button";
 import { CapabilityGate } from "@/features/source-control/components/capability-gate";
 import {
@@ -87,7 +82,7 @@ export function WorkspaceGitPanel({
 }) {
   const { api, chatId, projectId } = useWorkspaceToolSurface();
   const { t } = useTranslation();
-  const { baseKind, setBaseKind } = useWorkspaceGitBasePreference(root);
+  const baseKind = "branch" as const;
   const {
     checkoutMutation,
     commitDescription,
@@ -195,29 +190,15 @@ export function WorkspaceGitPanel({
     <>
       <div className="flex min-h-0 flex-1 flex-col overflow-auto">
         <div className="shrink-0 border-b border-border-subtle px-3 py-2">
-          <WorkspaceGitBaseSelect
-            bases={data.availableBases}
-            resolvedBase={data.resolvedBase}
-            summary={
-              <span className="min-w-0 truncate text-xs text-muted-foreground tabular-nums">
-                {t("workspace.tools.diffBase.fileCount", {
-                  count: patchList.files.length,
-                })}
-                {` · +${totalLineChanges.additions} −${totalLineChanges.deletions}`}
-              </span>
-            }
-            value={baseKind}
-            onChange={setBaseKind}
-          />
+          <div className="px-3 py-2 text-xs text-muted-foreground">
+            {t("workspace.tools.diffBase.fileCount", {
+              count: patchList.files.length,
+            })}
+          </div>
         </div>
         {data.resolvedBase.unavailableReason ? (
           <WorkspaceToolBanner className="m-3 mb-0 shrink-0" tone="attention">
-            {formatWorkspaceGitDiffUnavailableReason({
-              fallbackKind: data.resolvedBase.kind,
-              reason: data.resolvedBase.unavailableReason,
-              requestedKind: data.requestedBaseKind,
-              t,
-            })}
+            {data.resolvedBase.unavailableReason.code}
           </WorkspaceToolBanner>
         ) : null}
         {data.warnings.length > 0 ? (
@@ -239,7 +220,7 @@ export function WorkspaceGitPanel({
           onFileSelectedChange={handleFileSelectedChange}
         />
       </div>
-      {patchList.files.length === 0 || baseKind !== "worktree" ? null : (
+      {patchList.files.length === 0 ? null : (
         <WorkspaceGitCommitComposer
           branch={data.branchStatus.branch}
           description={commitDescription}

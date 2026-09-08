@@ -17,7 +17,6 @@ import {
   providerHostMappings,
   pullRequests,
   queuedChatRuns,
-  worktreeCreationJobs,
 } from "../../db/schema";
 import { Db } from "../../platform/db";
 import {
@@ -72,7 +71,6 @@ beforeEach(async () => {
       providerHostMappings,
       pullRequests,
       queuedChatRuns,
-      worktreeCreationJobs,
     },
   }) as AppDatabase;
 });

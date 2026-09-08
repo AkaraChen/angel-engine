@@ -16,10 +16,6 @@ import {
   getErrorMessage,
 } from "@/app/workspace/workspace-file-display";
 import {
-  formatWorkspaceGitDiffUnavailableReason,
-  WorkspaceGitBaseSelect,
-} from "@/app/workspace/workspace-git-base-select";
-import {
   WorkspaceToolBanner,
   WorkspaceToolEmpty,
 } from "@/app/workspace/workspace-tool-layout";
@@ -29,7 +25,6 @@ import {
   getWorkspaceGitNumstatTotal,
 } from "@/app/workspace/workspace-tool-patch-model";
 import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
-import { useWorkspaceGitBasePreference } from "@/app/workspace/use-workspace-git-base-preference";
 import { queryKeys } from "@/platform/query-keys";
 
 export function WorkspaceFilePreview({
@@ -74,7 +69,7 @@ export function WorkspaceGitDiffTool({
 }) {
   const { api, chatId } = useWorkspaceToolSurface();
   const { t } = useTranslation();
-  const { baseKind, setBaseKind } = useWorkspaceGitBasePreference(tab.root);
+  const baseKind = "branch" as const;
   const gitQuery = useQuery({
     queryFn: async () =>
       api.workspaceTools.gitDiff({
@@ -110,7 +105,6 @@ export function WorkspaceGitDiffTool({
       baseKind={baseKind}
       data={gitQuery.data}
       pathFilter={tab.path}
-      onBaseKindChange={setBaseKind}
     />
   );
 }
@@ -171,12 +165,10 @@ function WorkspaceGitDiffResultView({
   baseKind,
   data,
   pathFilter,
-  onBaseKindChange,
 }: {
   baseKind: WorkspaceGitDiffBaseKind;
   data?: WorkspaceGitDiffResult;
   pathFilter?: string;
-  onBaseKindChange: (kind: WorkspaceGitDiffBaseKind) => void;
 }) {
   const { t } = useTranslation();
   if (!data?.isGitRepository) {
@@ -200,27 +192,13 @@ function WorkspaceGitDiffResultView({
   return (
     <div className="h-full min-h-0 overflow-auto p-3">
       <div className="mb-3">
-        <WorkspaceGitBaseSelect
-          bases={data.availableBases}
-          resolvedBase={data.resolvedBase}
-          summary={
-            <span className="min-w-0 truncate text-xs text-muted-foreground tabular-nums">
-              {t("workspace.tools.diffBase.fileCount", { count: files.length })}
-              {` · +${totalLineChanges.additions} −${totalLineChanges.deletions}`}
-            </span>
-          }
-          value={baseKind}
-          onChange={onBaseKindChange}
-        />
+        <div className="text-xs text-muted-foreground">
+          {t("workspace.tools.diffBase.fileCount", { count: files.length })}
+        </div>
       </div>
       {data.resolvedBase.unavailableReason ? (
         <WorkspaceToolBanner className="mb-3" tone="attention">
-          {formatWorkspaceGitDiffUnavailableReason({
-            fallbackKind: data.resolvedBase.kind,
-            reason: data.resolvedBase.unavailableReason,
-            requestedKind: data.requestedBaseKind,
-            t,
-          })}
+          {data.resolvedBase.unavailableReason.code}
         </WorkspaceToolBanner>
       ) : null}
       {data.warnings.length > 0 ? (
