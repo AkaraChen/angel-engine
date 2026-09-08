@@ -423,8 +423,6 @@ export const ja = {
         confirmDeleteDetail:
           "{{chatCount}} 件のアーカイブ済みセッションを完全に削除します。この操作は元に戻せません。",
         confirmDeleteTitle: "アーカイブ済みセッションを完全に削除しますか？",
-        confirmDeleteWorktreeDetail:
-          "{{chatCount}} 件のアーカイブ済みセッションと {{managedWorktreeCount}} 件の管理対象 worktree を完全に削除します。worktree ディレクトリは復元できません。",
         deletedToast: "{{count}} 件のアーカイブ済みセッションを削除しました",
         deletePermanently: "完全に削除",
         deleteSelected: "選択を削除",
@@ -433,24 +431,6 @@ export const ja = {
         filterProject: "プロジェクト",
         filterTime: "時間",
         noProject: "プロジェクトなし",
-        removableWorktrees: {
-          confirmDeleteDetail:
-            "アーカイブ済みセッション {{chatCount}} 件を完全に削除し、worktree ディレクトリ {{managedWorktreeCount}} 件を削除します。この操作は元に戻せません。",
-          confirmDeleteTitle: "削除可能な worktree を削除しますか？",
-          deleteFailed: "削除に失敗しました：{{message}}",
-          deletingToast: "worktree を削除しています…",
-          deleteWorktree:
-            "{{projectName}} の worktree {{identifier}} を完全に削除",
-          deletedToast: "worktree を削除しました",
-          empty: "削除可能な worktree はありません",
-          missingOnDisk: "ディスク上に存在しません",
-          noSessions: "孤立した worktree · アーカイブ済みセッションなし",
-          partialFailure: "{{count}} 件の worktree を削除できませんでした。",
-          scanAgain: "再スキャン",
-          sessionCount_one: "アーカイブ済みセッション {{count}} 件",
-          sessionCount_other: "アーカイブ済みセッション {{count}} 件",
-          title: "削除可能な worktree",
-        },
         restore: "復元",
         restoredToast: "{{count}} 件のアーカイブ済みセッションを復元しました",
         restoreSelected: "選択を復元",
@@ -648,11 +628,6 @@ export const ja = {
         unsupported: "自動アップデートは現在 macOS でのみ利用できます。",
       },
       workspace: {
-        dirtyPromptDescription:
-          "選択したプロジェクトに未コミットの変更がある場合、worktree 作成前に確認します。",
-        dirtyPromptSwitchLabel:
-          "dirty リポジトリから worktree を作成する前に警告する",
-        dirtyPromptTitle: "dirty リポジトリ警告",
         osNotificationsDescription:
           "バックグラウンドのチャットが完了・失敗・入力待ちのときに OS 通知を表示します。オフでもアプリ内履歴は残ります。",
         osNotificationsSwitchLabel: "OS 通知を表示",

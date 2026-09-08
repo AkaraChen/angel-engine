@@ -423,8 +423,6 @@ export const de = {
         confirmDeleteDetail:
           "Dadurch werden {{chatCount}} archivierte Sitzung(en) dauerhaft gelöscht. Dies kann nicht rückgängig gemacht werden.",
         confirmDeleteTitle: "Archivierte Sitzungen dauerhaft löschen?",
-        confirmDeleteWorktreeDetail:
-          "Dadurch werden {{chatCount}} archivierte Sitzung(en) und {{managedWorktreeCount}} verwaltete Worktree(s) dauerhaft gelöscht. Die Worktree-Verzeichnisse können nicht wiederhergestellt werden.",
         deletedToast: "{{count}} archivierte Sitzung(en) gelöscht",
         deletePermanently: "Dauerhaft löschen",
         deleteSelected: "Auswahl löschen",
@@ -433,25 +431,6 @@ export const de = {
         filterProject: "Projekt",
         filterTime: "Zeit",
         noProject: "Kein Projekt",
-        removableWorktrees: {
-          confirmDeleteDetail:
-            "Dadurch werden {{chatCount}} archivierte Sitzung(en) dauerhaft gelöscht und {{managedWorktreeCount}} Worktree-Verzeichnis(se) entfernt. Dies kann nicht rückgängig gemacht werden.",
-          confirmDeleteTitle: "Entfernbare Worktrees löschen?",
-          deleteFailed: "Löschen fehlgeschlagen: {{message}}",
-          deletingToast: "Worktree wird gelöscht…",
-          deleteWorktree:
-            "Worktree {{identifier}} von {{projectName}} dauerhaft löschen",
-          deletedToast: "Worktree gelöscht",
-          empty: "Keine entfernbaren Worktrees",
-          missingOnDisk: "Nicht auf der Festplatte",
-          noSessions: "Verwaister Worktree · keine archivierten Sitzungen",
-          partialFailure:
-            "{{count}} Worktree(s) konnten nicht entfernt werden.",
-          scanAgain: "Erneut scannen",
-          sessionCount_one: "{{count}} archivierte Sitzung(en)",
-          sessionCount_other: "{{count}} archivierte Sitzung(en)",
-          title: "Entfernbare Worktrees",
-        },
         restore: "Wiederherstellen",
         restoredToast: "{{count}} archivierte Sitzung(en) wiederhergestellt",
         restoreSelected: "Auswahl wiederherstellen",

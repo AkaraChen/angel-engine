@@ -420,8 +420,6 @@ export const en = {
         confirmDeleteDetail:
           "This will permanently delete {{chatCount}} archived session(s). This cannot be undone.",
         confirmDeleteTitle: "Delete archived sessions permanently?",
-        confirmDeleteWorktreeDetail:
-          "This will permanently delete {{chatCount}} archived session(s) and {{managedWorktreeCount}} managed worktree(s). The worktree directories cannot be restored.",
         deletedToast: "Deleted {{count}} archived session(s)",
         deletePermanently: "Delete permanently",
         deleteSelected: "Delete selected",
@@ -430,24 +428,6 @@ export const en = {
         filterProject: "Project",
         filterTime: "Time",
         noProject: "No project",
-        removableWorktrees: {
-          confirmDeleteDetail:
-            "Archived sessions permanently deleted: {{chatCount}}. Worktree directories removed: {{managedWorktreeCount}}. This cannot be undone.",
-          confirmDeleteTitle: "Delete removable worktrees?",
-          deleteFailed: "Deletion failed: {{message}}",
-          deletingToast: "Deleting worktree…",
-          deleteWorktree:
-            "Delete {{projectName}} worktree {{identifier}} permanently",
-          deletedToast: "Worktree deleted",
-          empty: "No worktrees are ready to remove",
-          missingOnDisk: "Missing on disk",
-          noSessions: "Orphaned worktree · no archived sessions",
-          partialFailure: "Failed worktree removals: {{count}}.",
-          scanAgain: "Scan again",
-          sessionCount_one: "{{count}} archived session",
-          sessionCount_other: "{{count}} archived sessions",
-          title: "Removable worktrees",
-        },
         restore: "Restore",
         restoredToast: "Restored {{count}} archived session(s)",
         restoreSelected: "Restore selected",
@@ -642,11 +622,6 @@ export const en = {
         unsupported: "Automatic updates are only available on macOS.",
       },
       workspace: {
-        dirtyPromptDescription:
-          "Ask before creating a worktree when the selected project has uncommitted changes.",
-        dirtyPromptSwitchLabel:
-          "Warn before creating worktrees from dirty repositories",
-        dirtyPromptTitle: "Dirty repository warning",
         osNotificationsDescription:
           "Show system banners when a background chat finishes, fails, or needs you. In-app history stays available either way.",
         osNotificationsSwitchLabel: "Show OS notifications",

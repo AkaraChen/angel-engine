@@ -413,8 +413,6 @@ export const zhCN = {
         confirmDeleteDetail:
           "将彻底删除 {{chatCount}} 个已归档会话。此操作无法撤销。",
         confirmDeleteTitle: "要彻底删除已归档会话吗？",
-        confirmDeleteWorktreeDetail:
-          "将彻底删除 {{chatCount}} 个已归档会话，并删除 {{managedWorktreeCount}} 个托管 worktree。worktree 目录完全无法恢复。",
         deletedToast: "已删除 {{count}} 个已归档会话",
         deletePermanently: "彻底删除",
         deleteSelected: "删除选中",
@@ -423,23 +421,6 @@ export const zhCN = {
         filterProject: "项目",
         filterTime: "时间",
         noProject: "无项目",
-        removableWorktrees: {
-          confirmDeleteDetail:
-            "将彻底删除 {{chatCount}} 个已归档会话，并移除 {{managedWorktreeCount}} 个 worktree 目录。此操作无法撤销。",
-          confirmDeleteTitle: "要删除可清理的 worktree 吗？",
-          deleteFailed: "删除失败：{{message}}",
-          deletingToast: "正在删除 worktree…",
-          deleteWorktree: "彻底删除 {{projectName}} 的 worktree {{identifier}}",
-          deletedToast: "已删除 worktree",
-          empty: "没有可清理的 worktree",
-          missingOnDisk: "磁盘上已不存在",
-          noSessions: "孤立 worktree · 无已归档会话",
-          partialFailure: "{{count}} 个 worktree 删除失败。",
-          scanAgain: "重新扫描",
-          sessionCount_one: "{{count}} 个已归档会话",
-          sessionCount_other: "{{count}} 个已归档会话",
-          title: "可清理的 worktree",
-        },
         restore: "恢复",
         restoredToast: "已恢复 {{count}} 个已归档会话",
         restoreSelected: "恢复选中",
