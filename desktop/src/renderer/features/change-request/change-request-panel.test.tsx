@@ -54,7 +54,7 @@ const reviewThreads = vi.fn<
   (projectPath: string, id: string) => Promise<ReviewThread[]>
 >(async () => []);
 const resolveReviewThread = vi.fn();
-const openBrowserTab = vi.fn();
+const openExternal = vi.fn();
 const updateSnapshot = vi.fn();
 let focusChecksSection = false;
 let capabilities: CapabilityMatrix = {
@@ -121,7 +121,7 @@ vi.mock("@/app/workspace/workspace-tool-surface-model", () => ({
     },
     chatId: "chat-1",
     focusChecksSection,
-    openBrowserTab,
+    openExternal,
     updateSnapshot,
   }),
 }));
@@ -254,7 +254,7 @@ beforeEach(() => {
   });
   reviewThreads.mockClear();
   resolveReviewThread.mockReset();
-  openBrowserTab.mockReset();
+  openExternal.mockReset();
   updateSnapshot.mockReset();
   window.localStorage.clear();
   Element.prototype.scrollIntoView = vi.fn();

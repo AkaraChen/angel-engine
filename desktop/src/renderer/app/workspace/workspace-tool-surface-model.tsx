@@ -20,7 +20,6 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 
-import { browserTitleFromUrl } from "@/app/workspace/workspace-browser-url";
 import { redirectChecksTabToPullRequest } from "@/app/workspace/workspace-tool-checks-focus";
 import {
   currentWorkspaceToolSnapshot,
@@ -39,8 +38,6 @@ import {
 } from "@/app/workspace/workspace-window-file-state";
 import { terminalClient } from "@/platform/terminal-client";
 
-const defaultWorkspaceToolBrowserUrl = "about:blank";
-
 type WorkspaceToolSnapshotUpdater = (
   current: WorkspaceToolSurfaceSnapshot,
 ) => WorkspaceToolSurfaceSnapshot;
@@ -50,14 +47,13 @@ export interface WorkspaceToolSurfaceModel {
   activeDynamicTab?: WorkspaceToolSurfaceDynamicTab;
   activeTabId: string;
   chatId: string | null;
-  addBrowserTab: () => void;
   addTerminalTab: () => void;
   api: ApiClient;
   contextKey: string | null;
   focusChecksSection: boolean;
   closeDynamicTab: (tab: WorkspaceToolSurfaceDynamicTab) => void;
   host: WorkspaceToolSurfaceHost;
-  openBrowserTab: (url: string) => void;
+  openExternal: (url: string) => void;
   openFileTab: (path: string) => void;
   projectId: string | null;
   requestSurfaceHost: (host: WorkspaceToolSurfaceHost) => Promise<void>;
@@ -222,53 +218,14 @@ export function useWorkspaceToolSurfaceModel({
 
     openWorkspaceTerminal({ contextKey, root });
   }, [contextKey, openWorkspaceTerminal, root]);
-  const openBrowserTab = useCallback(
-    (url: string) => {
-      updateSnapshot((current) => {
-        const tab = {
-          browserViewId: crypto.randomUUID(),
-          draftUrl: url,
-          id: crypto.randomUUID(),
-          kind: "browser" as const,
-          title:
-            url === defaultWorkspaceToolBrowserUrl
-              ? `Browser ${current.nextBrowserOrdinal}`
-              : browserTitleFromUrl(url),
-          url,
-        };
-
-        return {
-          ...current,
-          activeTabId: tab.id,
-          nextBrowserOrdinal: current.nextBrowserOrdinal + 1,
-          tabs: [...current.tabs, tab],
-        };
-      });
-    },
-    [updateSnapshot],
-  );
-  const addBrowserTab = useCallback(() => {
-    openBrowserTab(defaultWorkspaceToolBrowserUrl);
-  }, [openBrowserTab]);
+  const openExternal = useCallback((url: string) => {
+    window.open(url, "_blank", "noopener,noreferrer");
+  }, []);
   const closeDynamicTab = useCallback(
     (tab: WorkspaceToolSurfaceDynamicTab) => {
       if (tab.kind === "terminal") {
         terminalClient.kill({ sessionId: tab.sessionId });
       }
-      if (tab.kind === "browser") {
-        void window.workspaceBrowser
-          .destroy({
-            browserViewId: tab.browserViewId,
-          })
-          .catch((error: unknown) => {
-            console.error("Failed to destroy workspace browser view.", {
-              browserViewId: tab.browserViewId,
-              error,
-              tabId: tab.id,
-            });
-          });
-      }
-
       updateSnapshot((current) => {
         const tabIndex = current.tabs.findIndex(
           (candidate) => candidate.id === tab.id,
@@ -308,7 +265,6 @@ export function useWorkspaceToolSurfaceModel({
       active,
       activeDynamicTab,
       activeTabId,
-      addBrowserTab,
       addTerminalTab,
       api,
       chatId,
@@ -316,7 +272,7 @@ export function useWorkspaceToolSurfaceModel({
       focusChecksSection,
       closeDynamicTab,
       host,
-      openBrowserTab,
+      openExternal,
       openFileTab,
       projectId,
       requestSurfaceHost,
@@ -329,7 +285,6 @@ export function useWorkspaceToolSurfaceModel({
       active,
       activeDynamicTab,
       activeTabId,
-      addBrowserTab,
       addTerminalTab,
       api,
       chatId,
@@ -337,7 +292,7 @@ export function useWorkspaceToolSurfaceModel({
       focusChecksSection,
       closeDynamicTab,
       host,
-      openBrowserTab,
+      openExternal,
       openFileTab,
       projectId,
       requestSurfaceHost,

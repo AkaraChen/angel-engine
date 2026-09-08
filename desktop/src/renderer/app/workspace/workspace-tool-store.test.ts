@@ -6,7 +6,6 @@ describe("workspace tool terminal tabs", () => {
   it("opens a terminal at the requested workspace root", () => {
     const current: WorkspaceToolSurfaceSnapshot = {
       activeTabId: "files",
-      nextBrowserOrdinal: 1,
       nextTerminalOrdinal: 2,
       tabs: [],
     };
@@ -19,7 +18,6 @@ describe("workspace tool terminal tabs", () => {
       }),
     ).toEqual({
       activeTabId: "tab-1",
-      nextBrowserOrdinal: 1,
       nextTerminalOrdinal: 3,
       tabs: [
         {

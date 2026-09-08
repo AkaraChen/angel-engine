@@ -23,7 +23,6 @@ import { useWorkspaceToolStore } from "./workspace-tool-store";
 interface WorkspaceProcessesViewProps {
   active: boolean;
   layout: WorkspaceToolPanelLayout;
-  onOpenBrowser: (url: string) => void;
 }
 
 const COMMON_PORT_SERVICES: Readonly<Record<number, string>> = {
@@ -59,7 +58,6 @@ interface WorkspacePortItem {
 export const WorkspaceProcessesView: FC<WorkspaceProcessesViewProps> = ({
   active,
   layout,
-  onOpenBrowser,
 }) => {
   const { t } = useTranslation();
   const client = useDaemonClient();
@@ -270,7 +268,11 @@ export const WorkspaceProcessesView: FC<WorkspaceProcessesViewProps> = ({
                         size="xs"
                         variant="secondary"
                         onClick={() =>
-                          onOpenBrowser(`http://localhost:${port.port}`)
+                          window.open(
+                            `http://localhost:${port.port}`,
+                            "_blank",
+                            "noopener,noreferrer",
+                          )
                         }
                       >
                         Open
@@ -324,11 +326,17 @@ export const WorkspaceProcessesView: FC<WorkspaceProcessesViewProps> = ({
               service={port.service}
               action={
                 <Button
-                  aria-label={`Open port ${port.port} in browser tab`}
+                  aria-label={`Open port ${port.port} in browser`}
                   size="icon-sm"
-                  title={`Open port ${port.port} in browser tab`}
+                  title={`Open port ${port.port} in browser`}
                   variant="ghost"
-                  onClick={() => onOpenBrowser(`http://localhost:${port.port}`)}
+                  onClick={() =>
+                    window.open(
+                      `http://localhost:${port.port}`,
+                      "_blank",
+                      "noopener,noreferrer",
+                    )
+                  }
                 >
                   <ArrowSquareOut weight="regular" />
                 </Button>

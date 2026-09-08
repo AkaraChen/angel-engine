@@ -14,7 +14,6 @@ describe("openExistingPullRequest", () => {
     const calls: string[] = [];
     const close = vi.fn(() => calls.push("close"));
     const openExternal = vi.fn(() => calls.push("open"));
-    const openBrowserTab = vi.fn();
 
     openExistingPullRequest({
       close,
@@ -26,7 +25,6 @@ describe("openExistingPullRequest", () => {
     expect(openExternal).toHaveBeenCalledWith(
       "https://forge.com/acme/widgets/pull/42",
     );
-    expect(openBrowserTab).not.toHaveBeenCalled();
   });
 
   it("routes pull request URLs through the main-window external-open boundary", () => {

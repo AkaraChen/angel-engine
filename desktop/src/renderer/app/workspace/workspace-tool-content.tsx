@@ -1,4 +1,3 @@
-import { WorkspaceBrowserTabContent } from "@/app/workspace/workspace-browser-tab";
 import { WorkspaceFilesPanel } from "@/app/workspace/workspace-files-panels";
 import { WorkspaceGitPanel } from "@/app/workspace/workspace-git-panels";
 import { WorkspaceProcessesView } from "@/app/workspace/workspace-processes-view";
@@ -26,9 +25,7 @@ export function WorkspaceToolContent({ root }: { root: string }) {
     activeDynamicTab,
     activeTabId,
     host,
-    openBrowserTab,
     projectId,
-    updateSnapshot,
   } = useWorkspaceToolSurface();
   const layout = host === "sidebar" ? "compact" : "split";
 
@@ -50,7 +47,6 @@ export function WorkspaceToolContent({ root }: { root: string }) {
       <WorkspaceProcessesView
         active={active}
         layout={layout}
-        onOpenBrowser={openBrowserTab}
       />
     );
   }
@@ -59,14 +55,6 @@ export function WorkspaceToolContent({ root }: { root: string }) {
   }
 
   switch (activeDynamicTab.kind) {
-    case "browser":
-      return (
-        <WorkspaceBrowserTabContent
-          active={active}
-          tab={activeDynamicTab}
-          onBrowserTabChange={updateSnapshot}
-        />
-      );
     case "file-preview":
       return <WorkspaceFilePreview tab={activeDynamicTab} />;
     case "git-diff":

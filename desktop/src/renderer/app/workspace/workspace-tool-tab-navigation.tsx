@@ -3,7 +3,6 @@ import type { WorkspaceToolTabItem } from "@/app/workspace/workspace-tool-tab-mo
 
 import {
   Plus as Add,
-  Globe as Browser,
   X as Close,
   TerminalWindow as TerminalIcon,
 } from "@phosphor-icons/react";
@@ -280,7 +279,7 @@ function WorkspaceToolNewTabMenu({
 }: {
   variant?: "section" | "strip";
 }) {
-  const { addBrowserTab, addTerminalTab } = useWorkspaceToolSurface();
+  const { addTerminalTab } = useWorkspaceToolSurface();
   const { t } = useTranslation();
 
   return (
@@ -310,10 +309,6 @@ function WorkspaceToolNewTabMenu({
         <DropdownMenuItem onSelect={addTerminalTab}>
           <TerminalIcon className="size-3.5" weight="regular" />
           <span>{t("workspace.tools.terminal")}</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={addBrowserTab}>
-          <Browser className="size-3.5" weight="regular" />
-          <span>{t("workspace.tools.browser")}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -18,7 +18,6 @@ export type WorkspaceToolPinnedTabId =
 export type WorkspaceToolTabId = WorkspaceToolPinnedTabId | (string & {});
 
 export type WorkspaceToolSurfaceDynamicTab =
-  | WorkspaceToolSurfaceBrowserTab
   | WorkspaceToolSurfaceFilePreviewTab
   | WorkspaceToolSurfaceGitDiffTab
   | WorkspaceToolSurfaceTerminalTab;
@@ -49,14 +48,6 @@ export interface WorkspaceToolSurfaceTerminalTab
   sessionId: string;
 }
 
-export interface WorkspaceToolSurfaceBrowserTab
-  extends WorkspaceToolSurfaceDynamicTabBase {
-  browserViewId: string;
-  draftUrl: string;
-  kind: "browser";
-  url: string;
-}
-
 export type WorkspaceToolFocusSection = "checks";
 
 export interface WorkspaceToolSurfaceSnapshot {
@@ -66,7 +57,6 @@ export interface WorkspaceToolSurfaceSnapshot {
    * Checks section mounts; not cleared by the redirect itself.
    */
   focusSection?: WorkspaceToolFocusSection | null;
-  nextBrowserOrdinal: number;
   nextTerminalOrdinal: number;
   tabs: WorkspaceToolSurfaceDynamicTab[];
   windowFileOpenRequest?: WorkspaceToolSurfaceWindowFileOpenRequest;
