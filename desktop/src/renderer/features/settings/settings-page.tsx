@@ -337,12 +337,6 @@ function WorkspaceSettings() {
   const setSendWithModEnter = useSettingsStore(
     (state) => state.setSendWithModEnter,
   );
-  const worktreeDirtyPromptEnabled = useSettingsStore(
-    (state) => state.worktreeDirtyPromptEnabled,
-  );
-  const setWorktreeDirtyPromptEnabled = useSettingsStore(
-    (state) => state.setWorktreeDirtyPromptEnabled,
-  );
   const { enabled: trayEnabled, setEnabled: setTrayEnabled } =
     useTraySettings();
   const modEnterShortcut =
@@ -367,17 +361,6 @@ function WorkspaceSettings() {
           title={t("settings.workspace.sendWithModEnterTitle", {
             shortcut: modEnterShortcut,
           })}
-        />
-        <SettingsRow
-          after={
-            <Switch
-              aria-label={t("settings.workspace.dirtyPromptSwitchLabel")}
-              checked={worktreeDirtyPromptEnabled}
-              onCheckedChange={setWorktreeDirtyPromptEnabled}
-            />
-          }
-          description={t("settings.workspace.dirtyPromptDescription")}
-          title={t("settings.workspace.dirtyPromptTitle")}
         />
         <SettingsRow
           after={
