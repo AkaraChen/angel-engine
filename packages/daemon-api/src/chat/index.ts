@@ -275,17 +275,10 @@ interface ChatActivityBase {
 }
 
 export type ChatActivityStatus =
-  | "running"
-  | "waiting_for_you"
-  | "stuck"
-  | "done"
-  | "failed";
+  "running" | "waiting_for_you" | "stuck" | "done" | "failed";
 
 export type ChatActivityReason =
-  | "approval"
-  | "question"
-  | "process_exited"
-  | "runtime_error";
+  "approval" | "question" | "process_exited" | "runtime_error";
 
 export type ChatActivity =
   | (ChatActivityBase & {
@@ -623,7 +616,6 @@ export const chatSendInputSchema = arkType({
   "cwd?": "string > 0 | undefined",
   "model?": "string > 0 | undefined",
   "mode?": "string > 0 | undefined",
-  "origin?": "'shepherd' | undefined",
   "permissionMode?": "string > 0 | undefined",
   "prewarmId?": "string > 0 | undefined",
   "projectId?": "string > 0 | undefined",
