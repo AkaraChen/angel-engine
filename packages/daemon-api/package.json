@@ -38,10 +38,6 @@
       "types": "./dist/shepherd.d.ts",
       "import": "./dist/shepherd.js"
     },
-    "./terminal": {
-      "types": "./dist/terminal.d.ts",
-      "import": "./dist/terminal.js"
-    },
     "./workspace-tools": {
       "types": "./dist/workspace-tools.d.ts",
       "import": "./dist/workspace-tools.js"

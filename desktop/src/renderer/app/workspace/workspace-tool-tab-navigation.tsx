@@ -1,11 +1,7 @@
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import type { WorkspaceToolTabItem } from "@/app/workspace/workspace-tool-tab-model";
 
-import {
-  Plus as Add,
-  X as Close,
-  TerminalWindow as TerminalIcon,
-} from "@phosphor-icons/react";
+import { Plus as Add, X as Close } from "@phosphor-icons/react";
 import { Fragment, useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -279,7 +275,6 @@ function WorkspaceToolNewTabMenu({
 }: {
   variant?: "section" | "strip";
 }) {
-  const { addTerminalTab } = useWorkspaceToolSurface();
   const { t } = useTranslation();
 
   return (
@@ -305,12 +300,7 @@ function WorkspaceToolNewTabMenu({
           <Add className="size-3.5" weight="regular" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" variant="native">
-        <DropdownMenuItem onSelect={addTerminalTab}>
-          <TerminalIcon className="size-3.5" weight="regular" />
-          <span>{t("workspace.tools.terminal")}</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
+      <DropdownMenuContent align="start" variant="native"></DropdownMenuContent>
     </DropdownMenu>
   );
 }

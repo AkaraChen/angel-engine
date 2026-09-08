@@ -16,10 +16,8 @@ import { useCallback, useRef } from "react";
 
 import {
   workspaceToolChecksTabId,
-  workspaceToolFilesTabId,
   workspaceToolGitTabId,
   workspaceToolPullRequestTabId,
-  workspaceToolProcessesTabId,
 } from "@/app/workspace/workspace-tool-store";
 
 export type WorkspaceToolTabSelectHandler = (
@@ -131,10 +129,8 @@ export interface WorkspaceToolTabItem {
 }
 
 export interface WorkspaceToolPinnedTabLabels {
-  files: string;
   gitChanges: string;
   pullRequest: string;
-  processes: string;
 }
 
 export function workspaceToolTabItems(
@@ -142,12 +138,6 @@ export function workspaceToolTabItems(
   labels: WorkspaceToolPinnedTabLabels,
 ): WorkspaceToolTabItem[] {
   return [
-    {
-      icon: Folder,
-      id: workspaceToolFilesTabId,
-      pinned: true,
-      title: labels.files,
-    },
     {
       icon: GitBranch,
       id: workspaceToolGitTabId,
@@ -159,12 +149,6 @@ export function workspaceToolTabItems(
       id: workspaceToolPullRequestTabId,
       pinned: true,
       title: labels.pullRequest,
-    },
-    {
-      icon: Cpu,
-      id: workspaceToolProcessesTabId,
-      pinned: true,
-      title: labels.processes,
     },
     ...dynamicTabs.map((tab) => ({
       dynamicTab: tab,
@@ -184,16 +168,14 @@ export function visibleActiveWorkspaceToolTabId(
   }
 
   if (
-    snapshot.activeTabId === workspaceToolFilesTabId ||
     snapshot.activeTabId === workspaceToolGitTabId ||
     snapshot.activeTabId === workspaceToolPullRequestTabId ||
-    snapshot.activeTabId === workspaceToolProcessesTabId ||
     snapshot.tabs.some((tab) => tab.id === snapshot.activeTabId)
   ) {
     return snapshot.activeTabId;
   }
 
-  return workspaceToolFilesTabId;
+  return workspaceToolGitTabId;
 }
 
 export function workspaceToolTabIcon(tab: WorkspaceToolSurfaceDynamicTab) {

@@ -24,11 +24,9 @@ describe("workspace tool pinned tabs", () => {
     });
     expect(
       workspaceToolTabItems([], {
-        files: "Files",
         gitChanges: "Git changes",
-        processes: "Processes",
         pullRequest: "Pull request",
       }).map((tab) => tab.id),
-    ).toEqual(["files", "git", "pr", "processes"]);
+    ).toEqual(["git", "pr"]);
   });
 });

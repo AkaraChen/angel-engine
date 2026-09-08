@@ -49,7 +49,6 @@ interface WorkspaceToolState {
   windowFilesEditorDirty: boolean;
   focusWorkspaceToolSurface: () => void;
   closeWindowFile: (input: { path: string; root: string }) => void;
-  openWorkspaceTerminal: (input: { contextKey: string; root: string }) => void;
   openWindowFile: (input: { path: string; root: string }) => void;
   requestWorkspaceToolHost: (host: WorkspaceToolSurfaceHost) => void;
   selectWindowFile: (input: { path: string; root: string }) => void;
@@ -128,15 +127,6 @@ export const useWorkspaceToolStore = create<WorkspaceToolState>()(
     },
     host: "sidebar",
     hydrated: false,
-    openWorkspaceTerminal: ({ contextKey, root }) => {
-      get().updateWorkspaceToolSnapshot(contextKey, (current) =>
-        appendWorkspaceTerminalTab(current, {
-          id: crypto.randomUUID(),
-          root,
-          sessionId: crypto.randomUUID(),
-        }),
-      );
-    },
     openWindowFile: (input) => {
       set((current) => {
         const rootState =
@@ -352,7 +342,7 @@ export function ensureWorkspaceToolSurfaceEvents() {
 
 function createDefaultWorkspaceToolSnapshot(): WorkspaceToolSurfaceSnapshot {
   return {
-    activeTabId: workspaceToolFilesTabId,
+    activeTabId: workspaceToolGitTabId,
     nextTerminalOrdinal: 1,
     tabs: [],
   };

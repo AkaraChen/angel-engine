@@ -10,7 +10,6 @@ export default defineConfig({
         "@earendil-works/pi-coding-agent",
         /^@earendil-works\/pi-/,
         "electron",
-        "node-pty",
         "ccusage",
         /^@ccusage\//,
       ],

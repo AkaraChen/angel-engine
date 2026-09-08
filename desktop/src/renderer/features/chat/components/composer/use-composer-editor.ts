@@ -7,7 +7,6 @@ import type {
   ComposerCatalog,
   ComposerInteractionRefs,
 } from "@/features/chat/components/composer/composer-editor-extensions";
-import type { ComposerTerminalSelection } from "@/features/chat/components/composer/terminal-selection-to-composer";
 import type { ComposerSourceControlAttachment } from "@/features/chat/components/composer/source-control-attachments";
 import { useEditor, useEditorState } from "@tiptap/react";
 import { useCallback, useMemo, useRef, useState } from "react";
@@ -30,7 +29,6 @@ export interface ComposerEditorController {
     attachment: ComposerSourceControlAttachment,
   ) => void;
   addPasteSourceUrl: (sourceUrl: string) => void;
-  addTerminalSelection: (selection: ComposerTerminalSelection) => void;
   editor: Editor | null;
   focus: () => void;
   getMarkdown: () => string;
@@ -40,11 +38,9 @@ export interface ComposerEditorController {
   pasteSourceUrls: string[];
   removeSourceControlAttachment: (id: string) => void;
   removeMention: (id: string) => void;
-  removeTerminalSelection: (id: string) => void;
   removePasteSourceUrl: (sourceUrl: string) => void;
   reset: () => void;
   selectedSkills: ComposerMentionedSkill[];
-  terminalSelections: ComposerTerminalSelection[];
   setInteractions: (interactions: ComposerEditorInteractions) => void;
   setTextInput: (setInput: (value: string) => void) => void;
 }
@@ -85,24 +81,6 @@ export function useComposerEditor({
   );
   const removeSourceControlAttachment = useCallback((id: string) => {
     setSourceControlAttachments((current) =>
-      current.filter((item) => item.id !== id),
-    );
-  }, []);
-  const [terminalSelections, setTerminalSelections] = useState<
-    ComposerTerminalSelection[]
-  >([]);
-  const addTerminalSelection = useCallback(
-    (selection: ComposerTerminalSelection) => {
-      setTerminalSelections((current) =>
-        current.some((item) => item.id === selection.id)
-          ? current
-          : [...current, selection],
-      );
-    },
-    [],
-  );
-  const removeTerminalSelection = useCallback((id: string) => {
-    setTerminalSelections((current) =>
       current.filter((item) => item.id !== id),
     );
   }, []);
@@ -193,7 +171,6 @@ export function useComposerEditor({
       editor.commands.clearContent();
     }
     setPasteSourceUrls([]);
-    setTerminalSelections([]);
     setSourceControlAttachments([]);
   }, [editor]);
   const removeMention = useCallback(
@@ -233,7 +210,6 @@ export function useComposerEditor({
   return {
     addSourceControlAttachment,
     addPasteSourceUrl,
-    addTerminalSelection,
     editor,
     focus,
     getMarkdown,
@@ -244,10 +220,8 @@ export function useComposerEditor({
     removeSourceControlAttachment,
     removeMention,
     removePasteSourceUrl,
-    removeTerminalSelection,
     reset,
     selectedSkills,
-    terminalSelections,
     setInteractions,
     setTextInput,
   };

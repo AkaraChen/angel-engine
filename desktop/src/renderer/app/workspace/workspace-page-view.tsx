@@ -1,17 +1,22 @@
 import type { Project } from "@angel-engine/daemon-api/projects";
 import type { PathLauncherActionId } from "@shared/path-launcher";
 import type { FC } from "react";
+import type { PowerWorktreeTabs } from "@/app/workspace/use-power-worktree-tabs";
 import type { ImportSessionTarget } from "@/features/chat/components/import-session-dialog";
 import type { WorkspaceChatActions } from "@/app/workspace/use-workspace-chat-actions";
 import type { WorkspaceNavigation } from "@/app/workspace/use-workspace-navigation";
 import type { WorkspacePageModel } from "@/app/workspace/use-workspace-page-model";
+import type { WorktreeDraftGuard } from "@/app/workspace/use-worktree-draft-guard";
 
 import is from "@sindresorhus/is";
 import { Suspense, useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ChatRestoreLoading } from "@/app/workspace/chat-restore-loading";
+import { DraftCreationLocationSelect } from "@/app/workspace/draft-project-select";
 import { NewChatThread } from "@/app/workspace/new-chat-thread";
 import { getProjectDisplayName } from "@/app/workspace/workspace-display";
+import { PowerWorktreeHistoryPage } from "@/app/workspace/power-worktree-history-page";
+import { PowerWorktreeTabBar } from "@/app/workspace/power-worktree-tab-bar";
 import {
   ActiveChatThread,
   ChatRestoreErrorBoundary,
@@ -33,6 +38,8 @@ import {
 } from "@/app/workspace/workspace-sidebar-control";
 import { WorkspaceToolContextBridge } from "@/app/workspace/workspace-tool-host";
 import { useWorkspaceToolStore } from "@/app/workspace/workspace-tool-store";
+import { WorktreeDirtyDialog } from "@/app/workspace/worktree-dirty-dialog";
+import { WorktreeSetupGuidance } from "@/app/workspace/worktree-setup-guidance";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { ImportSessionDialog } from "@/features/chat/components/import-session-dialog";
 import { RenameChatDialog } from "@/features/chat/components/rename-chat-dialog";
@@ -42,22 +49,29 @@ import { FleetPage } from "@/features/fleet/fleet-page";
 import { CloneProgressDialog } from "@/features/projects/components/clone-progress-dialog";
 import { CloneRepositoryDialog } from "@/features/projects/components/clone-repository-dialog";
 import { ProjectSettingsDialog } from "@/features/projects/components/project-settings-dialog";
+import { SchedulePage } from "@/features/schedule/schedule-page";
 import { queryKeys } from "@/platform/query-keys";
 
 interface WorkspacePageViewProps {
   chatActions: WorkspaceChatActions;
   currentRoutePath: string;
+  draftGuard: WorktreeDraftGuard;
   fleetActive: boolean;
+  scheduleActive: boolean;
   model: WorkspacePageModel;
   navigation: WorkspaceNavigation;
+  powerTabs: PowerWorktreeTabs;
 }
 
 export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
   chatActions,
   currentRoutePath,
+  draftGuard,
   fleetActive,
+  scheduleActive,
   model,
   navigation,
+  powerTabs,
 }) => {
   const queryClient = useQueryClient();
   const [importTarget, setImportTarget] = useState<ImportSessionTarget | null>(
@@ -80,20 +94,29 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
   }, []);
 
   const {
+    activePowerWorktreeProject,
     activeRuntime,
     api,
+    canCreateDraftWorktree,
     canShowRightSidebar,
     chatAttention,
     chatOptions,
     chats,
     chatsQuery,
     dockedWorkspaceToolContext,
+    draftCreationLocation,
     draftProject,
     initialDraftPrompt,
     isMacOS,
+    isProjectMode,
     modeOverride,
     modelOverride,
     permissionModeOverride,
+    pinnedDraftCwd,
+    powerDraftContext,
+    powerDraftTabActive,
+    powerHomePageContext,
+    powerModeActive,
     projectChatsByProjectId,
     projects,
     projectsQuery,
@@ -121,6 +144,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     sidebarOpenMobile,
     t,
     toggleWorkspaceTools,
+    workspaceMode,
     workspaceToolHost,
     workspaceToolContextKey,
     workspaceToolRoot,
@@ -145,10 +169,8 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     runProjectContextMenuAction,
     updateChatFromRun,
   } = chatActions;
-  const openWorkspaceTerminal = useWorkspaceToolStore(
-    (state) => state.openWorkspaceTerminal,
-  );
   const {
+    changeWorkspaceMode,
     createChatForProject,
     createChatForSelection,
     createStandaloneWorkspace,
@@ -157,6 +179,8 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     openChat,
     openChatFromFleet,
     openFleet,
+    openSchedule,
+    openPowerWorktree,
     openSettings,
     selectDraftProject,
   } = navigation;
@@ -195,39 +219,42 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     paletteImportProject === undefined
       ? null
       : () => openImportSessionForProject(paletteImportProject);
+  const {
+    closeWorktreeDirtyPrompt,
+    configureSetupWithAgent,
+    confirmProjectWorktreeCreation,
+    dismissSetupGuidance,
+    ensureDraftChatCanSubmit,
+    migrateLegacyInitScript,
+    rememberWorktreeDirtyChoice,
+    setDraftCreationLocation,
+    setRememberWorktreeDirtyChoice,
+    setupGuidanceVisible,
+    setupLegacyInitScript,
+    worktreeDirtyPrompt,
+  } = draftGuard;
+  const {
+    chatTabChats,
+    closeChatTab,
+    closeDraftTab,
+    openDraftTabFromTabBar,
+    openPowerHistoryChatTab,
+    openSelectedPowerWorktreeHome,
+    powerHomeTabContext,
+  } = powerTabs;
   const currentLauncherTarget = resolveWorkspacePathLauncherTarget({
     chats,
     draftProjectId: draftProject.id,
     projects,
     selectedChat,
+    worktree: powerHomePageContext ?? powerDraftContext,
   });
-  const canOpenAngelTerminal =
-    canShowRightSidebar &&
-    is.nonEmptyString(workspaceToolContextKey) &&
-    is.nonEmptyString(workspaceToolRoot);
   const runCurrentWorkspacePathLauncherAction = async (
     action: PathLauncherActionId,
   ) => {
     if (currentLauncherTarget === undefined) return;
 
-    const result = await runPathLauncherAction(currentLauncherTarget, action);
-    if (
-      typeof result !== "object" ||
-      result.action !== "open_angel_terminal" ||
-      !is.nonEmptyString(workspaceToolContextKey)
-    ) {
-      return;
-    }
-
-    openWorkspaceTerminal({
-      contextKey: workspaceToolContextKey,
-      root: result.target,
-    });
-    if (workspaceToolHost === "sidebar") {
-      setRightSidebarOpen(true);
-    } else {
-      toggleWorkspaceTools();
-    }
+    await runPathLauncherAction(currentLauncherTarget, action);
   };
   const handleChatContextMenuAction = (
     chat: (typeof chats)[number],
@@ -247,6 +274,33 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
   ) => {
     void runPathLauncherAction({ projectId: project.id }, action);
   };
+  const runWorktreePathLauncherAction = (
+    project: (typeof projects)[number],
+    worktree: Parameters<typeof navigation.openPowerWorktree>[1],
+    action: PathLauncherActionId,
+  ) => {
+    const chatId = worktree.isMain ? undefined : worktree.chats[0]?.id;
+    void runPathLauncherAction({ chatId, projectId: project.id }, action);
+  };
+  const cancelWorktreeCreation = async (chat: (typeof chats)[number]) => {
+    await api.chats.cancelWorktreeCreation(chat.id);
+    await queryClient.invalidateQueries({ queryKey: queryKeys.chats.list() });
+    if (selectedChatId === chat.id) {
+      navigation.navigateToDraft(chat.projectId ?? undefined, {
+        replace: true,
+      });
+    }
+  };
+  const retryWorktreeCreation = async (chat: (typeof chats)[number]) => {
+    if (!is.nonEmptyString(chat.projectId)) return;
+    const approval = await confirmProjectWorktreeCreation(chat.projectId);
+    if (!approval) return;
+    await api.chats.retryWorktreeCreation(
+      chat.id,
+      typeof approval === "string" ? approval : undefined,
+    );
+    await queryClient.invalidateQueries({ queryKey: queryKeys.chats.list() });
+  };
 
   return (
     <SidebarProvider
@@ -256,28 +310,42 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
       openMobile={sidebarOpenMobile}
     >
       <WorkspaceKeymapBindings
+        hasClosableTab={powerTabs.hasClosableTab}
+        hasMultipleTabs={powerTabs.hasMultipleTabs}
+        onCloseTab={powerTabs.closeActiveTab}
         onCreateStandaloneChat={createChatForSelection}
+        onNewTab={powerTabs.openOrFocusDraftTab}
+        onNextTab={powerTabs.goToNextTab}
         onOpenSettings={openSettings}
+        onPreviousTab={powerTabs.goToPreviousTab}
+        powerModeActive={powerTabs.powerModeActive}
       >
         <WorkspaceSidebarControlPortalProvider>
           <WorkspaceSidebar
             chats={chats}
             fleetActive={fleetActive}
+            scheduleActive={scheduleActive}
             isChatsLoading={chatsQuery.isPending}
             isMacOS={isMacOS}
             isProjectsLoading={projectsQuery.isPending}
             onArchiveChat={archiveChat}
             onCloneRepository={openCloneDialog}
+            onCancelWorktreeCreation={cancelWorktreeCreation}
             onCreateProject={() => void createProjectFromPicker()}
             onCreateProjectChat={createChatForProject}
             onCreateStandaloneChat={createChatForSelection}
             onImportSession={openImportSessionForProject}
             onOpenChat={openChat}
             onOpenFleet={openFleet}
+            onOpenSchedule={openSchedule}
             onOpenSettings={openSettings}
+            onOpenWorktree={openPowerWorktree}
+            onRetryWorktreeCreation={retryWorktreeCreation}
             onChatContextMenuAction={handleChatContextMenuAction}
             onProjectContextMenuAction={handleProjectContextMenuAction}
             onProjectPathLauncherAction={runProjectPathLauncherAction}
+            onWorktreePathLauncherAction={runWorktreePathLauncherAction}
+            onWorkspaceModeChange={changeWorkspaceMode}
             projectChatsByProjectId={projectChatsByProjectId}
             projects={projects}
             selectedChatId={selectedChatId}
@@ -286,21 +354,28 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           <WorkspaceFloatingSidebar
             chats={chats}
             fleetActive={fleetActive}
+            scheduleActive={scheduleActive}
             isChatsLoading={chatsQuery.isPending}
             isMacOS={isMacOS}
             isProjectsLoading={projectsQuery.isPending}
             onArchiveChat={archiveChat}
             onCloneRepository={openCloneDialog}
+            onCancelWorktreeCreation={cancelWorktreeCreation}
             onCreateProject={() => void createProjectFromPicker()}
             onCreateProjectChat={createChatForProject}
             onCreateStandaloneChat={createChatForSelection}
             onImportSession={openImportSessionForProject}
             onOpenChat={openChat}
             onOpenFleet={openFleet}
+            onOpenSchedule={openSchedule}
             onOpenSettings={openSettings}
+            onOpenWorktree={openPowerWorktree}
+            onRetryWorktreeCreation={retryWorktreeCreation}
             onChatContextMenuAction={handleChatContextMenuAction}
             onProjectContextMenuAction={handleProjectContextMenuAction}
             onProjectPathLauncherAction={runProjectPathLauncherAction}
+            onWorktreePathLauncherAction={runWorktreePathLauncherAction}
+            onWorkspaceModeChange={changeWorkspaceMode}
             projectChatsByProjectId={projectChatsByProjectId}
             projects={projects}
             selectedChatId={selectedChatId}
@@ -360,6 +435,12 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
             }}
             url={cloneUrl}
           />
+          <WorktreeDirtyDialog
+            checked={rememberWorktreeDirtyChoice}
+            onCheckedChange={setRememberWorktreeDirtyChoice}
+            onClose={closeWorktreeDirtyPrompt}
+            state={worktreeDirtyPrompt}
+          />
           <WorkspaceToolContextBridge
             chatId={selectedChatId ?? null}
             contextKey={workspaceToolContextKey ?? null}
@@ -373,7 +454,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
             <WorkspaceHeader
               attention={chatAttention}
               breadcrumbProject={
-                selectedChat?.projectId ? selectedProjectName : undefined
+                isProjectMode && selectedChat ? selectedProjectName : undefined
               }
               running={selectedChatIsRunning}
               rightSidebarOpen={
@@ -381,8 +462,14 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                 (rightSidebarOpen || workspaceToolHost !== "sidebar")
               }
               rightSidebarToggleLabel={workspaceToolsToggleLabel}
-              title={fleetActive ? t("fleet.title") : workspaceTitle}
-              includeAngelTerminal={canOpenAngelTerminal}
+              title={
+                scheduleActive
+                  ? t("schedule.title")
+                  : fleetActive
+                    ? t("fleet.title")
+                    : workspaceTitle
+              }
+              includeAngelTerminal={false}
               onPathLauncherAction={
                 currentLauncherTarget === undefined
                   ? undefined
@@ -396,9 +483,27 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                   : undefined
               }
             />
+            {powerModeActive && powerHomeTabContext !== undefined ? (
+              <PowerWorktreeTabBar
+                activeChatId={selectedChatId}
+                chats={chatTabChats}
+                draftTabActive={powerDraftTabActive}
+                homeTabActive={powerHomePageContext !== undefined}
+                onCloseChat={closeChatTab}
+                onCloseDraftTab={closeDraftTab}
+                onNewChat={openDraftTabFromTabBar}
+                onOpenChat={openChat}
+                onOpenHome={openSelectedPowerWorktreeHome}
+              />
+            ) : null}
             <main className="flex min-h-0 flex-1 overflow-hidden">
-              <section className="flex min-h-0 min-w-0 flex-1 flex-col">
-                {fleetActive ? (
+              <section
+                className="flex min-h-0 min-w-0 flex-1 flex-col"
+                data-workspace-mode={workspaceMode}
+              >
+                {scheduleActive ? (
+                  <SchedulePage projects={projects} />
+                ) : fleetActive ? (
                   <FleetPage
                     chats={chats}
                     isMetadataError={
@@ -407,9 +512,20 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                     isMetadataPending={
                       chatsQuery.isPending || projectsQuery.isPending
                     }
-                    onNewChat={createChatForSelection}
+                    onNewChat={openDraftTabFromTabBar}
                     onOpenChat={openChatFromFleet}
                     projects={projects}
+                  />
+                ) : powerHomePageContext !== undefined ? (
+                  <PowerWorktreeHistoryPage
+                    chats={chats}
+                    groupKey={powerHomePageContext.groupKey}
+                    label={t("sidebar.powerWorktreeHistoricalChat")}
+                    onArchiveChat={(chat) => void archiveChat(chat)}
+                    onNewChat={openDraftTabFromTabBar}
+                    onOpenChat={openPowerHistoryChatTab}
+                    onChatContextMenuAction={handleChatContextMenuAction}
+                    projectPath={activePowerWorktreeProject?.path}
                   />
                 ) : is.nonEmptyString(selectedChatId) ? (
                   selectedChatIsRunning && selectedChat ? (
@@ -440,7 +556,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                           api={api}
                           currentRoutePath={currentRoutePath}
                           draftAgentConfig={selectedChatAgentConfig}
-                          includeProjectInRoute={true}
+                          includeProjectInRoute={isProjectMode}
                           onChatCreated={updateChatFromRun}
                           onForkChatCreated={(chat) => {
                             updateChatFromRun(chat);
@@ -466,10 +582,32 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                   <NewChatThread
                     chatOptions={chatOptions}
                     chats={chats}
+                    creationLocation={draftCreationLocation}
+                    cwd={pinnedDraftCwd}
+                    creationLocationAccessory={
+                      canCreateDraftWorktree ? (
+                        <DraftCreationLocationSelect
+                          onValueChange={setDraftCreationLocation}
+                          value={draftCreationLocation}
+                          variant="ghost"
+                        />
+                      ) : undefined
+                    }
                     key={runtimePageKey}
                     initialMarkdown={initialDraftPrompt}
                     model={modelOverride}
                     mode={modeOverride}
+                    notice={
+                      setupGuidanceVisible ? (
+                        <WorktreeSetupGuidance
+                          hasLegacyInitScript={setupLegacyInitScript.length > 0}
+                          onConfigure={configureSetupWithAgent}
+                          onDismiss={dismissSetupGuidance}
+                          onMigrate={() => void migrateLegacyInitScript()}
+                        />
+                      ) : undefined
+                    }
+                    onBeforeSubmit={ensureDraftChatCanSubmit}
                     onChatCreated={updateChatFromRun}
                     onChatMessagesUpdated={setChatMessagesInCache}
                     onChatUpdated={updateChatFromRun}
@@ -477,7 +615,11 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                     onOpenChat={openChat}
                     onProjectChange={selectDraftProject}
                     permissionMode={permissionModeOverride}
-                    prewarmId={model.prewarmQuery.data?.prewarmId}
+                    prewarmId={
+                      draftCreationLocation === "worktree"
+                        ? undefined
+                        : model.prewarmQuery.data?.prewarmId
+                    }
                     projectId={draftProject.id}
                     projectName={selectedProjectName}
                     projectPath={draftProject.path}

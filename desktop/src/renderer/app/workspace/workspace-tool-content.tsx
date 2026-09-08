@@ -1,9 +1,6 @@
-import { WorkspaceFilesPanel } from "@/app/workspace/workspace-files-panels";
 import { WorkspaceGitPanel } from "@/app/workspace/workspace-git-panels";
-import { WorkspaceProcessesView } from "@/app/workspace/workspace-processes-view";
 import { ChangeRequestPanel } from "@/features/change-request/change-request-panel";
 import { HostedSourceControlPanel } from "@/features/source-control/components/hosted-source-control-panel";
-import { WorkspaceTerminalView } from "@/app/workspace/workspace-terminal-view";
 import { WorkspaceToolEmpty } from "@/app/workspace/workspace-tool-layout";
 import { useTranslation } from "react-i18next";
 import {
@@ -11,10 +8,8 @@ import {
   WorkspaceGitDiffTool,
 } from "@/app/workspace/workspace-tool-results";
 import {
-  workspaceToolFilesTabId,
   workspaceToolGitTabId,
   workspaceToolPullRequestTabId,
-  workspaceToolProcessesTabId,
 } from "@/app/workspace/workspace-tool-store";
 import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
 
@@ -24,9 +19,6 @@ export function WorkspaceToolContent({ root }: { root: string }) {
     useWorkspaceToolSurface();
   const layout = host === "sidebar" ? "compact" : "split";
 
-  if (activeTabId === workspaceToolFilesTabId) {
-    return <WorkspaceFilesPanel layout={layout} root={root} />;
-  }
   if (activeTabId === workspaceToolGitTabId) {
     return <WorkspaceGitPanel layout={layout} root={root} />;
   }
@@ -37,9 +29,6 @@ export function WorkspaceToolContent({ root }: { root: string }) {
       </HostedSourceControlPanel>
     );
   }
-  if (activeTabId === workspaceToolProcessesTabId) {
-    return <WorkspaceProcessesView active={active} layout={layout} />;
-  }
   if (!activeDynamicTab) {
     return <WorkspaceToolEmpty title={t("workspace.tools.unavailable")} />;
   }
@@ -49,13 +38,5 @@ export function WorkspaceToolContent({ root }: { root: string }) {
       return <WorkspaceFilePreview tab={activeDynamicTab} />;
     case "git-diff":
       return <WorkspaceGitDiffTool tab={activeDynamicTab} />;
-    case "terminal":
-      return (
-        <WorkspaceTerminalView
-          focusOnMount
-          root={activeDynamicTab.root}
-          sessionId={activeDynamicTab.sessionId}
-        />
-      );
   }
 }

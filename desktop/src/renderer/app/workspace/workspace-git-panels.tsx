@@ -4,7 +4,7 @@ import type {
 } from "@angel-engine/daemon-api/workspace-tools";
 import type { FormEvent } from "react";
 import type { UseMutationResult } from "@tanstack/react-query";
-import type { WorkspaceToolPanelLayout } from "@/app/workspace/workspace-files-panels";
+type WorkspaceToolPanelLayout = "compact" | "split";
 import type { WorkspaceToolPatchFile } from "@/app/workspace/workspace-tool-patch-model";
 
 import {

@@ -25,7 +25,7 @@ import {
   currentWorkspaceToolSnapshot,
   useWorkspaceToolStore,
   workspaceToolChecksTabId,
-  workspaceToolFilesTabId,
+  workspaceToolGitTabId,
   workspaceToolPullRequestTabId,
 } from "@/app/workspace/workspace-tool-store";
 import {
@@ -36,7 +36,6 @@ import {
   confirmWorkspaceWindowFilesExit,
   useWorkspaceWindowFileOpener,
 } from "@/app/workspace/workspace-window-file-state";
-import { terminalClient } from "@/platform/terminal-client";
 
 type WorkspaceToolSnapshotUpdater = (
   current: WorkspaceToolSurfaceSnapshot,
@@ -47,7 +46,6 @@ export interface WorkspaceToolSurfaceModel {
   activeDynamicTab?: WorkspaceToolSurfaceDynamicTab;
   activeTabId: string;
   chatId: string | null;
-  addTerminalTab: () => void;
   api: ApiClient;
   contextKey: string | null;
   focusChecksSection: boolean;
@@ -81,9 +79,6 @@ export function useWorkspaceToolSurfaceModel({
   const snapshots = useWorkspaceToolStore((state) => state.snapshots);
   const storeUpdateSnapshot = useWorkspaceToolStore(
     (state) => state.updateWorkspaceToolSnapshot,
-  );
-  const openWorkspaceTerminal = useWorkspaceToolStore(
-    (state) => state.openWorkspaceTerminal,
   );
   const requestHost = useWorkspaceToolStore(
     (state) => state.requestWorkspaceToolHost,
@@ -195,7 +190,7 @@ export function useWorkspaceToolSurfaceModel({
       openWorkspaceWindowFile({ path, root });
       updateSnapshot((current) => ({
         ...current,
-        activeTabId: workspaceToolFilesTabId,
+        activeTabId: workspaceToolGitTabId,
         windowFileOpenRequest:
           host === "sidebar"
             ? {
@@ -211,21 +206,11 @@ export function useWorkspaceToolSurfaceModel({
     },
     [host, openWorkspaceWindowFile, requestSurfaceHost, root, updateSnapshot],
   );
-  const addTerminalTab = useCallback(() => {
-    if (!is.nonEmptyString(contextKey) || !is.nonEmptyString(root)) {
-      return;
-    }
-
-    openWorkspaceTerminal({ contextKey, root });
-  }, [contextKey, openWorkspaceTerminal, root]);
   const openExternal = useCallback((url: string) => {
     window.open(url, "_blank", "noopener,noreferrer");
   }, []);
   const closeDynamicTab = useCallback(
     (tab: WorkspaceToolSurfaceDynamicTab) => {
-      if (tab.kind === "terminal") {
-        terminalClient.kill({ sessionId: tab.sessionId });
-      }
       updateSnapshot((current) => {
         const tabIndex = current.tabs.findIndex(
           (candidate) => candidate.id === tab.id,
@@ -236,7 +221,7 @@ export function useWorkspaceToolSurfaceModel({
         const nextActiveTab =
           current.activeTabId === tab.id
             ? (tabs[Math.max(0, Math.min(tabIndex, tabs.length - 1))]?.id ??
-              workspaceToolFilesTabId)
+              workspaceToolGitTabId)
             : current.activeTabId;
 
         return {
@@ -252,10 +237,8 @@ export function useWorkspaceToolSurfaceModel({
   const tabItems = useMemo(
     () =>
       workspaceToolTabItems(snapshot.tabs, {
-        files: t("workspace.tools.tabs.files"),
         gitChanges: t("workspace.tools.tabs.gitChanges"),
         pullRequest: t("workspace.tools.tabs.pullRequest"),
-        processes: t("workspace.tools.tabs.processes"),
       }),
     [snapshot.tabs, t],
   );
@@ -265,7 +248,6 @@ export function useWorkspaceToolSurfaceModel({
       active,
       activeDynamicTab,
       activeTabId,
-      addTerminalTab,
       api,
       chatId,
       contextKey,
@@ -285,7 +267,6 @@ export function useWorkspaceToolSurfaceModel({
       active,
       activeDynamicTab,
       activeTabId,
-      addTerminalTab,
       api,
       chatId,
       contextKey,

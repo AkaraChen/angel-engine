@@ -6,7 +6,7 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
-      external: ["@angel-engine/client-napi", "electron", "libsql", "node-pty"],
+      external: ["@angel-engine/client-napi", "electron", "libsql"],
       output: {
         entryFileNames: "daemon.js",
         intro:
