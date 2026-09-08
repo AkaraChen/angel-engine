@@ -90,7 +90,6 @@ export const zhTW = {
       open: "開啟 {{name}}",
     },
     workspace: {
-      browser: { back: "上一頁", forward: "下一頁", urlLabel: "網址" },
       files: {
         fileUnavailable: "檔案無法使用",
         openFiles: "已開啟的檔案",
@@ -155,7 +154,6 @@ export const zhTW = {
       statsLastActive: "最近活動",
 
       tools: {
-        browser: "瀏覽器",
         diffUnavailable: "差異無法使用",
         openInWindow: "在視窗中開啟",
         terminal: "終端機",

@@ -1,6 +1,5 @@
 import { create } from "zustand";
 
-const defaultBrowserUrl = "about:blank";
 const rightSidebarWidthStorageKey = "angel-engine.right-sidebar-width";
 export const defaultWorkspaceRightSidebarWidth = 288;
 export const minWorkspaceRightSidebarWidth = 240;
@@ -49,8 +48,6 @@ export const useWorkspaceUiStore = create<WorkspaceUiState>()((set) => ({
   expandedProjectIds: new Set(),
   rightSidebarOpen: true,
   rightSidebarWidth: initialRightSidebarWidth,
-  setBrowserUrl: (browserUrl) =>
-    set({ browserUrl: sanitizeBrowserUrl(browserUrl) }),
   setRightSidebarOpen: (rightSidebarOpen) => set({ rightSidebarOpen }),
   setRightSidebarWidth: (rightSidebarWidth) => {
     const nextRightSidebarWidth =
@@ -136,12 +133,6 @@ export const useWorkspaceUiStore = create<WorkspaceUiState>()((set) => ({
       return { collapsedWorktreeGroupKeys };
     }),
 }));
-
-function sanitizeBrowserUrl(value: unknown) {
-  return typeof value === "string" && value.trim()
-    ? value.trim()
-    : defaultBrowserUrl;
-}
 
 function readRightSidebarWidth() {
   try {

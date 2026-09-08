@@ -1,4 +1,3 @@
-import { WorkspaceBrowserTabContent } from "@/app/workspace/workspace-browser-tab";
 import { WorkspaceFilesPanel } from "@/app/workspace/workspace-files-panels";
 import { WorkspaceGitPanel } from "@/app/workspace/workspace-git-panels";
 import { WorkspaceProcessesView } from "@/app/workspace/workspace-processes-view";
@@ -21,15 +20,8 @@ import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-
 
 export function WorkspaceToolContent({ root }: { root: string }) {
   const { t } = useTranslation();
-  const {
-    active,
-    activeDynamicTab,
-    activeTabId,
-    host,
-    openBrowserTab,
-    projectId,
-    updateSnapshot,
-  } = useWorkspaceToolSurface();
+  const { active, activeDynamicTab, activeTabId, host, projectId } =
+    useWorkspaceToolSurface();
   const layout = host === "sidebar" ? "compact" : "split";
 
   if (activeTabId === workspaceToolFilesTabId) {
@@ -46,27 +38,13 @@ export function WorkspaceToolContent({ root }: { root: string }) {
     );
   }
   if (activeTabId === workspaceToolProcessesTabId) {
-    return (
-      <WorkspaceProcessesView
-        active={active}
-        layout={layout}
-        onOpenBrowser={openBrowserTab}
-      />
-    );
+    return <WorkspaceProcessesView active={active} layout={layout} />;
   }
   if (!activeDynamicTab) {
     return <WorkspaceToolEmpty title={t("workspace.tools.unavailable")} />;
   }
 
   switch (activeDynamicTab.kind) {
-    case "browser":
-      return (
-        <WorkspaceBrowserTabContent
-          active={active}
-          tab={activeDynamicTab}
-          onBrowserTabChange={updateSnapshot}
-        />
-      );
     case "file-preview":
       return <WorkspaceFilePreview tab={activeDynamicTab} />;
     case "git-diff":

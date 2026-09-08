@@ -69,7 +69,7 @@ export const ChangeRequestPanel: FC<{
     api,
     chatId,
     focusChecksSection,
-    openBrowserTab,
+    openExternal,
     updateSnapshot,
   } = useWorkspaceToolSurface();
   const queryClient = useQueryClient();
@@ -366,7 +366,7 @@ export const ChangeRequestPanel: FC<{
           <div className="flex shrink-0 gap-1">
             <Button
               aria-label={t("workspace.tools.pullRequest.open")}
-              onClick={() => openBrowserTab(status.url)}
+              onClick={() => openExternal(status.url)}
               size="icon-sm"
               variant="ghost"
             >
@@ -415,7 +415,7 @@ export const ChangeRequestPanel: FC<{
                     <BlockerRow
                       blocker={blocker}
                       key={blocker.kind}
-                      onOpen={openBrowserTab}
+                      onOpen={openExternal}
                     />
                   ))}
                 </ul>
@@ -436,7 +436,7 @@ export const ChangeRequestPanel: FC<{
                     .map((check) => check.name)
                     .join(", "),
                 })}
-                <CheckLinks checks={optionalChecks} onOpen={openBrowserTab} />
+                <CheckLinks checks={optionalChecks} onOpen={openExternal} />
               </WorkspaceToolBanner>
             ) : null}
 
@@ -539,7 +539,7 @@ export const ChangeRequestPanel: FC<{
                 pending={resolveMutation.isPending}
                 pullRequestNumber={status.number}
                 thread={thread}
-                onOpen={(url) => openBrowserTab(url)}
+                onOpen={(url) => openExternal(url)}
                 onResolve={() => resolveMutation.mutateAsync(thread.id)}
               />
             ))}

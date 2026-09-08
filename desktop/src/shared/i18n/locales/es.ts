@@ -90,7 +90,6 @@ export const es = {
       open: "Abrir {{name}}",
     },
     workspace: {
-      browser: { back: "Atrás", forward: "Adelante", urlLabel: "URL" },
       files: {
         fileUnavailable: "Archivo no disponible",
         openFiles: "Archivos abiertos",
@@ -158,7 +157,6 @@ export const es = {
       statsLastActive: "Última actividad",
 
       tools: {
-        browser: "Navegador",
         diffUnavailable: "Diferencia no disponible",
         openInWindow: "Abrir en una ventana",
         terminal: "Terminal",

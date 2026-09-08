@@ -12,7 +12,6 @@ describe("workspace tool pinned tabs", () => {
   it("redirects a persisted checks tab to the pull request panel", () => {
     const snapshot: WorkspaceToolSurfaceSnapshot = {
       activeTabId: "checks",
-      nextBrowserOrdinal: 1,
       nextTerminalOrdinal: 1,
       tabs: [],
     };

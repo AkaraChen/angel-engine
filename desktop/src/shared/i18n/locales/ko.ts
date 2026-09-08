@@ -90,7 +90,6 @@ export const ko = {
       open: "{{name}} 열기",
     },
     workspace: {
-      browser: { back: "뒤로", forward: "앞으로", urlLabel: "URL" },
       files: {
         fileUnavailable: "파일을 사용할 수 없음",
         openFiles: "열린 파일",
@@ -157,7 +156,6 @@ export const ko = {
       statsLastActive: "마지막 활동",
 
       tools: {
-        browser: "브라우저",
         diffUnavailable: "차이를 사용할 수 없음",
         openInWindow: "창에서 열기",
         terminal: "터미널",
