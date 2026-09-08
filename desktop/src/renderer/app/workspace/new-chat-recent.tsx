@@ -54,8 +54,6 @@ export function NewChatRecentSection({
     : allRecentChats.slice(0, RECENT_CHAT_LIMIT);
   const hiddenCount = allRecentChats.length - RECENT_CHAT_LIMIT;
 
-  if (recentChats.length === 0) return null;
-
   return (
     <section className="mt-10 w-full">
       <h3

@@ -23,7 +23,6 @@ import {
 export function useWorkspaceNavigation(model: WorkspacePageModel) {
   const {
     activeRuntime,
-    chats,
     draftSessionCounterRef,
     isDraftPage,
     location,
@@ -31,7 +30,6 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
     modelOverride,
     navigate,
     permissionModeOverride,
-    projects,
     reasoningEffortOverride,
     routeDraftProjectId,
     selectedChatRuntimeConfig,

@@ -100,7 +100,6 @@ describe("NewChatRecentSection", () => {
     expect(titles[4]).toContain("thread.empty.recentShowAll");
     expect(titles.join(" ")).not.toContain("archived");
     expect(titles.join(" ")).not.toContain("oldest");
-
   });
 
   it("lists project and standalone chats in the unified chat", () => {
@@ -234,20 +233,5 @@ describe("NewChatRecentSection", () => {
     expect(screen.getByText("thread.empty.recentEmpty")).toBeTruthy();
     screen.getByRole("button").click();
     expect(onCreateProject).toHaveBeenCalledOnce();
-  });
-
-  it("hides the project empty state in chat mode", () => {
-    const { container } = render(
-      <NewChatRecentSection
-        chats={[]}
-        onCreateProject={vi.fn()}
-        onOpenChat={vi.fn()}
-        projects={projects}
-      />,
-    );
-
-    expect(container.innerHTML).toBe("");
-    expect(screen.queryByText("thread.empty.recentEmpty")).toBeNull();
-    expect(screen.queryByRole("button")).toBeNull();
   });
 });

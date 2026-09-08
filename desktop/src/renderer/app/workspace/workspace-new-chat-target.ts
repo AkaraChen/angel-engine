@@ -27,12 +27,10 @@ export function resolveWorkspaceNewChatTarget({
     return { type: "none" };
   }
 
-  if (true) {
-    const project =
-      projects.find((candidate) => candidate.id === selectedProjectId) ??
-      projects[0];
-    if (project !== undefined) return { project, type: "project" };
-  }
+  const project =
+    projects.find((candidate) => candidate.id === selectedProjectId) ??
+    projects[0];
+  if (project !== undefined) return { project, type: "project" };
 
   return { type: "standalone" };
 }

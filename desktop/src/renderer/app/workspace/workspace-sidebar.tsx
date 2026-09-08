@@ -2,7 +2,6 @@ import type { Chat } from "@angel-engine/daemon-api/chat";
 import type { Project } from "@angel-engine/daemon-api/projects";
 import type { ReactElement } from "react";
 
-import type { ProjectWorktreeChatGroup } from "@/features/chat/worktree-grouping";
 import type { PathLauncherActionId } from "@shared/path-launcher";
 import type { ChatContextMenuAction } from "@/features/chat/api/queries";
 import type { ProjectContextMenuAction } from "@/features/projects/api/queries";
