@@ -20,8 +20,6 @@ const languageStorageKey = "angel-engine.language";
 const settingsBroadcastChannel = "angel-engine.settings.v1";
 const senderId = globalThis.crypto?.randomUUID?.() ?? String(Date.now());
 const sendWithModEnterStorageKey = "angel-engine.send-with-mod-enter";
-const worktreeDirtyPromptStorageKey =
-  "angel-engine.worktree-dirty-prompt-enabled";
 const usageBurnRateWarningStorageKey =
   "angel-engine.usage-burn-rate-warning-enabled";
 const usageBurnRateThresholdStorageKey =
@@ -36,7 +34,6 @@ interface SettingsBroadcastMessage {
   themeMode: DesktopThemeMode;
   usageBurnRateThreshold: number;
   usageBurnRateWarningEnabled: boolean;
-  worktreeDirtyPromptEnabled: boolean;
 }
 
 interface SettingsState {
@@ -57,12 +54,10 @@ interface SettingsState {
   setThemeMode: (themeMode: DesktopThemeMode) => void;
   setUsageBurnRateThreshold: (threshold: number) => void;
   setUsageBurnRateWarningEnabled: (enabled: boolean) => void;
-  setWorktreeDirtyPromptEnabled: (enabled: boolean) => void;
   themeMode: DesktopThemeMode;
   updateCustomAgent: (input: UpdateCustomAgentInput) => Promise<CustomAgent>;
   usageBurnRateThreshold: number;
   usageBurnRateWarningEnabled: boolean;
-  worktreeDirtyPromptEnabled: boolean;
 }
 
 const broadcastChannel = createBroadcastChannel();
@@ -175,13 +170,6 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
         : { usageBurnRateWarningEnabled: enabled },
     );
   },
-  setWorktreeDirtyPromptEnabled: (enabled) => {
-    updateSettingsState(set, get, (current) =>
-      current.worktreeDirtyPromptEnabled === enabled
-        ? {}
-        : { worktreeDirtyPromptEnabled: enabled },
-    );
-  },
   themeMode: readDesktopThemeMode(),
   usageBurnRateThreshold: readUsageBurnRateThreshold(),
   usageBurnRateWarningEnabled: readUsageBurnRateWarningEnabled(),
@@ -193,7 +181,6 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     );
     return agent;
   },
-  worktreeDirtyPromptEnabled: readWorktreeDirtyPromptEnabled(),
 }));
 
 broadcastChannel?.addEventListener("message", (event) => {
@@ -208,7 +195,6 @@ broadcastChannel?.addEventListener("message", (event) => {
     themeMode: message.themeMode,
     usageBurnRateThreshold: message.usageBurnRateThreshold,
     usageBurnRateWarningEnabled: message.usageBurnRateWarningEnabled,
-    worktreeDirtyPromptEnabled: message.worktreeDirtyPromptEnabled,
   });
   if (message.refreshAgentOptions === true) {
     invalidateAgentCatalog();
@@ -248,7 +234,6 @@ function settingsBroadcastMessage(
     | "themeMode"
     | "usageBurnRateThreshold"
     | "usageBurnRateWarningEnabled"
-    | "worktreeDirtyPromptEnabled"
   >,
   options: UpdateSettingsStateOptions = {},
 ): SettingsBroadcastMessage {
@@ -261,7 +246,6 @@ function settingsBroadcastMessage(
     themeMode: state.themeMode,
     usageBurnRateThreshold: state.usageBurnRateThreshold,
     usageBurnRateWarningEnabled: state.usageBurnRateWarningEnabled,
-    worktreeDirtyPromptEnabled: state.worktreeDirtyPromptEnabled,
   };
 }
 
@@ -269,7 +253,6 @@ function applySettingsSideEffects(message: SettingsBroadcastMessage) {
   writeAgentSettings(message.agentSettings);
   writeLanguage(message.language);
   writeSendWithModEnter(message.sendWithModEnter);
-  writeWorktreeDirtyPromptEnabled(message.worktreeDirtyPromptEnabled);
   writeUsageBurnRateThreshold(message.usageBurnRateThreshold);
   writeUsageBurnRateWarningEnabled(message.usageBurnRateWarningEnabled);
   setDesktopThemeMode(message.themeMode);
@@ -292,9 +275,6 @@ function readBroadcastMessage(value: unknown): SettingsBroadcastMessage | null {
     ),
     usageBurnRateWarningEnabled: sanitizeUsageBurnRateWarningEnabled(
       input.usageBurnRateWarningEnabled,
-    ),
-    worktreeDirtyPromptEnabled: sanitizeWorktreeDirtyPromptEnabled(
-      input.worktreeDirtyPromptEnabled,
     ),
   };
 }
@@ -355,29 +335,6 @@ function writeSendWithModEnter(enabled: boolean) {
 
 function sanitizeSendWithModEnter(value: unknown) {
   return value === true || value === "true";
-}
-
-function readWorktreeDirtyPromptEnabled() {
-  try {
-    return sanitizeWorktreeDirtyPromptEnabled(
-      window.localStorage.getItem(worktreeDirtyPromptStorageKey),
-    );
-  } catch {
-    return true;
-  }
-}
-
-function writeWorktreeDirtyPromptEnabled(enabled: boolean) {
-  window.localStorage.setItem(
-    worktreeDirtyPromptStorageKey,
-    enabled ? "true" : "false",
-  );
-}
-
-function sanitizeWorktreeDirtyPromptEnabled(value: unknown) {
-  if (value === false || value === "false") return false;
-  if (value === true || value === "true") return true;
-  return true;
 }
 
 function readUsageBurnRateThreshold() {
