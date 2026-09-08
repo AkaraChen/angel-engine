@@ -8,19 +8,6 @@ import type {
   DesktopWindowRole,
 } from "../../shared/desktop-window";
 import type {
-  WorkspaceToolContextSetInput,
-  WorkspaceToolInstance,
-  WorkspaceToolInstanceCloseInput,
-  WorkspaceToolWindowOpenInput,
-} from "../../shared/workspace-tool-instances";
-
-import type {
-  WorkspaceToolSurfaceContextSetInput,
-  WorkspaceToolSurfaceHostSetInput,
-  WorkspaceToolSurfaceSnapshotSetInput,
-  WorkspaceToolSurfaceState,
-} from "../../shared/workspace-tool-surface";
-import type {
   DesktopNotificationHistory,
   DesktopNotificationPreferences,
   DesktopNotificationPreferencesSetInput,
@@ -57,19 +44,6 @@ import {
   DESKTOP_WINDOW_ROLE_ARGUMENT_PREFIX,
   DESKTOP_WINDOW_CLOSE_CURRENT_CHANNEL,
   DESKTOP_WINDOW_CONTENT_READY_CHANNEL,
-  DESKTOP_WORKSPACE_TOOL_CONTEXT_SET_CHANNEL,
-  DESKTOP_WORKSPACE_TOOL_INSTANCE_CLOSE_CHANNEL,
-  DESKTOP_WORKSPACE_TOOL_INSTANCE_REGISTER_CHANNEL,
-  DESKTOP_WORKSPACE_TOOL_INSTANCE_UPDATED_CHANNEL,
-  DESKTOP_WORKSPACE_TOOL_SURFACE_CHANGED_CHANNEL,
-  DESKTOP_WORKSPACE_TOOL_SURFACE_CONTEXT_SET_CHANNEL,
-  DESKTOP_WORKSPACE_TOOL_SURFACE_FOCUS_CHANNEL,
-  DESKTOP_WORKSPACE_TOOL_SURFACE_GET_CHANNEL,
-  DESKTOP_WORKSPACE_TOOL_SURFACE_HOST_SET_CHANNEL,
-  DESKTOP_WORKSPACE_TOOL_SURFACE_SNAPSHOT_SET_CHANNEL,
-  DESKTOP_WORKSPACE_TOOL_WINDOW_CLOSED_CHANNEL,
-  DESKTOP_WORKSPACE_TOOL_WINDOW_GET_CHANNEL,
-  DESKTOP_WORKSPACE_TOOL_WINDOW_OPEN_CHANNEL,
 } from "../../shared/desktop-window";
 import { isDesktopNotificationHistory } from "../../shared/notification-preferences";
 import {
@@ -222,58 +196,6 @@ export function exposeDesktopWindowBridge() {
         );
       };
     },
-    onWorkspaceToolWindowClosed(handler: (toolId: string) => void) {
-      const listener = (
-        _event: IpcRendererEvent,
-        payload: WorkspaceToolInstanceCloseInput,
-      ) => {
-        handler(payload.toolId);
-      };
-
-      ipcRenderer.on(DESKTOP_WORKSPACE_TOOL_WINDOW_CLOSED_CHANNEL, listener);
-      return () => {
-        ipcRenderer.removeListener(
-          DESKTOP_WORKSPACE_TOOL_WINDOW_CLOSED_CHANNEL,
-          listener,
-        );
-      };
-    },
-    onWorkspaceToolInstanceUpdated(
-      handler: (instance: WorkspaceToolInstance) => void,
-    ) {
-      const listener = (
-        _event: IpcRendererEvent,
-        payload: WorkspaceToolInstance,
-      ) => {
-        handler(payload);
-      };
-
-      ipcRenderer.on(DESKTOP_WORKSPACE_TOOL_INSTANCE_UPDATED_CHANNEL, listener);
-      return () => {
-        ipcRenderer.removeListener(
-          DESKTOP_WORKSPACE_TOOL_INSTANCE_UPDATED_CHANNEL,
-          listener,
-        );
-      };
-    },
-    onWorkspaceToolSurfaceChanged(
-      handler: (state: WorkspaceToolSurfaceState) => void,
-    ) {
-      const listener = (
-        _event: IpcRendererEvent,
-        payload: WorkspaceToolSurfaceState,
-      ) => {
-        handler(payload);
-      };
-
-      ipcRenderer.on(DESKTOP_WORKSPACE_TOOL_SURFACE_CHANGED_CHANNEL, listener);
-      return () => {
-        ipcRenderer.removeListener(
-          DESKTOP_WORKSPACE_TOOL_SURFACE_CHANGED_CHANNEL,
-          listener,
-        );
-      };
-    },
     async installUpdate() {
       return ipcRenderer.invoke(
         DESKTOP_INSTALL_UPDATE_CHANNEL,
@@ -298,60 +220,17 @@ export function exposeDesktopWindowBridge() {
     openSettings() {
       ipcRenderer.send(DESKTOP_SETTINGS_OPEN_CHANNEL);
     },
-    async getWorkspaceToolWindowInstance(toolId: string) {
-      return ipcRenderer.invoke(
-        DESKTOP_WORKSPACE_TOOL_WINDOW_GET_CHANNEL,
-        toolId,
-      ) as Promise<WorkspaceToolInstance | null>;
-    },
-    async getWorkspaceToolSurfaceState() {
-      return ipcRenderer.invoke(
-        DESKTOP_WORKSPACE_TOOL_SURFACE_GET_CHANNEL,
-      ) as Promise<WorkspaceToolSurfaceState>;
-    },
     async getWorkspaceDiffBase(root: string) {
       return ipcRenderer.invoke(
         DESKTOP_WORKSPACE_DIFF_BASE_GET_CHANNEL,
         root,
       ) as Promise<WorkspaceDiffBasePreference | undefined>;
     },
-    openWorkspaceToolWindow(input: WorkspaceToolWindowOpenInput) {
-      ipcRenderer.send(DESKTOP_WORKSPACE_TOOL_WINDOW_OPEN_CHANNEL, input);
-    },
-    closeWorkspaceToolInstance(input: WorkspaceToolInstanceCloseInput) {
-      ipcRenderer.send(DESKTOP_WORKSPACE_TOOL_INSTANCE_CLOSE_CHANNEL, input);
-    },
-    registerWorkspaceToolWindowInstance(input: WorkspaceToolWindowOpenInput) {
-      ipcRenderer.send(DESKTOP_WORKSPACE_TOOL_INSTANCE_REGISTER_CHANNEL, input);
-    },
-    focusWorkspaceToolSurface() {
-      ipcRenderer.send(DESKTOP_WORKSPACE_TOOL_SURFACE_FOCUS_CHANNEL);
-    },
     setActiveChatId(chatId: string | null) {
       ipcRenderer.send(DESKTOP_ACTIVE_CHAT_SET_CHANNEL, chatId);
     },
     setTheme(input: DesktopThemeSetInput) {
       ipcRenderer.send(DESKTOP_THEME_SET_CHANNEL, input);
-    },
-    setWorkspaceToolContext(input: WorkspaceToolContextSetInput) {
-      ipcRenderer.send(DESKTOP_WORKSPACE_TOOL_CONTEXT_SET_CHANNEL, input);
-    },
-    setWorkspaceToolSurfaceContext(input: WorkspaceToolSurfaceContextSetInput) {
-      ipcRenderer.send(
-        DESKTOP_WORKSPACE_TOOL_SURFACE_CONTEXT_SET_CHANNEL,
-        input,
-      );
-    },
-    setWorkspaceToolSurfaceHost(input: WorkspaceToolSurfaceHostSetInput) {
-      ipcRenderer.send(DESKTOP_WORKSPACE_TOOL_SURFACE_HOST_SET_CHANNEL, input);
-    },
-    setWorkspaceToolSurfaceSnapshot(
-      input: WorkspaceToolSurfaceSnapshotSetInput,
-    ) {
-      ipcRenderer.send(
-        DESKTOP_WORKSPACE_TOOL_SURFACE_SNAPSHOT_SET_CHANNEL,
-        input,
-      );
     },
     setWorkspaceDiffBase(input: WorkspaceDiffBasePreferenceInput) {
       return ipcRenderer.invoke(DESKTOP_WORKSPACE_DIFF_BASE_SET_CHANNEL, input);
@@ -366,7 +245,7 @@ function desktopWindowRole(argv: string[]): DesktopWindowRole {
     )
     ?.slice(DESKTOP_WINDOW_ROLE_ARGUMENT_PREFIX.length);
 
-  if (value === "main" || value === "settings" || value === "workspace-tool") {
+  if (value === "main" || value === "settings") {
     return value;
   }
 

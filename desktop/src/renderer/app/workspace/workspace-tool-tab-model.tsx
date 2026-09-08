@@ -4,14 +4,7 @@ import type {
 } from "@shared/workspace-tool-surface";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 
-import {
-  Cpu,
-  FileText,
-  Folder,
-  GitBranch,
-  GitPullRequest,
-  TerminalWindow as TerminalIcon,
-} from "@phosphor-icons/react";
+import { FileText, GitBranch, GitPullRequest } from "@phosphor-icons/react";
 import { useCallback, useRef } from "react";
 
 import {
@@ -122,7 +115,7 @@ export function useWorkspaceToolTabKeyboard<T extends { id: string }>({
 
 export interface WorkspaceToolTabItem {
   dynamicTab?: WorkspaceToolSurfaceDynamicTab;
-  icon: typeof Folder;
+  icon: typeof FileText;
   id: string;
   pinned: boolean;
   title: string;
@@ -184,7 +177,5 @@ export function workspaceToolTabIcon(tab: WorkspaceToolSurfaceDynamicTab) {
       return FileText;
     case "git-diff":
       return GitBranch;
-    case "terminal":
-      return TerminalIcon;
   }
 }

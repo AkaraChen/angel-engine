@@ -5,7 +5,7 @@ export interface DesktopOpenChatFromNotificationEvent {
 
 export type DesktopThemeMode = "light" | "dark" | "system";
 
-export type DesktopWindowRole = "main" | "settings" | "workspace-tool";
+export type DesktopWindowRole = "main" | "settings";
 
 export const DESKTOP_WINDOW_ROLE_ARGUMENT_PREFIX = "--desktop-window-role=";
 
@@ -70,29 +70,3 @@ export const DESKTOP_UPDATE_DOWNLOADED_CHANNEL =
   "desktop-window:update:downloaded";
 export const DESKTOP_WINDOW_CLOSE_CURRENT_CHANNEL =
   "desktop-window:close-current";
-export const DESKTOP_WORKSPACE_TOOL_CONTEXT_SET_CHANNEL =
-  "desktop-window:workspace-tool-context:set";
-export const DESKTOP_WORKSPACE_TOOL_SURFACE_CHANGED_CHANNEL =
-  "desktop-window:workspace-tool-surface:changed";
-export const DESKTOP_WORKSPACE_TOOL_SURFACE_CONTEXT_SET_CHANNEL =
-  "desktop-window:workspace-tool-surface-context:set";
-export const DESKTOP_WORKSPACE_TOOL_SURFACE_FOCUS_CHANNEL =
-  "desktop-window:workspace-tool-surface:focus";
-export const DESKTOP_WORKSPACE_TOOL_SURFACE_GET_CHANNEL =
-  "desktop-window:workspace-tool-surface:get";
-export const DESKTOP_WORKSPACE_TOOL_SURFACE_HOST_SET_CHANNEL =
-  "desktop-window:workspace-tool-surface-host:set";
-export const DESKTOP_WORKSPACE_TOOL_SURFACE_SNAPSHOT_SET_CHANNEL =
-  "desktop-window:workspace-tool-surface-snapshot:set";
-export const DESKTOP_WORKSPACE_TOOL_INSTANCE_CLOSE_CHANNEL =
-  "desktop-window:workspace-tool-instance:close";
-export const DESKTOP_WORKSPACE_TOOL_INSTANCE_REGISTER_CHANNEL =
-  "desktop-window:workspace-tool-instance:register";
-export const DESKTOP_WORKSPACE_TOOL_INSTANCE_UPDATED_CHANNEL =
-  "desktop-window:workspace-tool-instance:updated";
-export const DESKTOP_WORKSPACE_TOOL_WINDOW_GET_CHANNEL =
-  "desktop-window:workspace-tool-window:get";
-export const DESKTOP_WORKSPACE_TOOL_WINDOW_OPEN_CHANNEL =
-  "desktop-window:workspace-tool-window:open";
-export const DESKTOP_WORKSPACE_TOOL_WINDOW_CLOSED_CHANNEL =
-  "desktop-window:workspace-tool-window:closed";

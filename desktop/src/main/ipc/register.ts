@@ -7,7 +7,6 @@ import { prewarmPathLauncher } from "../features/path-launcher/runtime";
 import { registerDesktopWindowAppearanceIpc } from "../windows/appearance";
 import { registerDesktopWindowContentReadyIpc } from "../windows/content-ready";
 import { registerDesktopWindowIpc } from "../windows/notifications";
-import { registerWorkspaceToolWindowIpc } from "../windows/workspace-tool-window";
 import { createAppRouter } from "./router";
 import { registerWorkspaceDiffPreferencesIpc } from "../workspace-diff-preferences";
 import { MainIpcError, mainIpcErrorEnvelope } from "../platform/errors";
@@ -22,7 +21,6 @@ export function registerAllIpc({ openSettingsWindow }: RegisterAllIpcOptions) {
   registerDesktopWindowAppearanceIpc();
   registerDesktopWindowContentReadyIpc();
   registerDesktopWindowIpc();
-  registerWorkspaceToolWindowIpc();
   registerWorkspaceDiffPreferencesIpc();
   ipcMain.on(DESKTOP_SETTINGS_OPEN_CHANNEL, openSettingsWindow);
   void prewarmPathLauncher().catch((error: unknown) => {

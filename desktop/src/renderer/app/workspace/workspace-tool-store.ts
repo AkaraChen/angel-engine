@@ -1,80 +1,15 @@
-import type { WorkspaceFileReadResult } from "@angel-engine/daemon-api/workspace-tools";
 import type {
   WorkspaceToolSurfaceContext,
-  WorkspaceToolSurfaceHost,
   WorkspaceToolSurfaceSnapshot,
-  WorkspaceToolSurfaceState,
 } from "@shared/workspace-tool-surface";
 
 import is from "@sindresorhus/is";
 import { create } from "zustand";
 
-export type WorkspaceWindowFileState =
-  | {
-      status: "error";
-      message: string;
-    }
-  | {
-      status: "loading";
-    }
-  | {
-      result: Extract<WorkspaceFileReadResult, { type: "unsupported" }>;
-      status: "unsupported";
-    }
-  | {
-      draftContent: string;
-      savedContent: string;
-      size: number;
-      status: "text";
-    };
-
-export interface WorkspaceWindowFilesState {
-  activePath: string | null;
-  fileStates: Record<string, WorkspaceWindowFileState>;
-  openFilePaths: string[];
-}
-
-export const emptyWorkspaceWindowFilesState: WorkspaceWindowFilesState = {
-  activePath: null,
-  fileStates: {},
-  openFilePaths: [],
-};
-
 interface WorkspaceToolState {
   context: WorkspaceToolSurfaceContext;
-  hydrated: boolean;
-  host: WorkspaceToolSurfaceHost;
   snapshots: Record<string, WorkspaceToolSurfaceSnapshot>;
-  windowFilesByRoot: Record<string, WorkspaceWindowFilesState>;
-  windowFilesEditorDirty: boolean;
-  focusWorkspaceToolSurface: () => void;
-  closeWindowFile: (input: { path: string; root: string }) => void;
-  openWindowFile: (input: { path: string; root: string }) => void;
-  requestWorkspaceToolHost: (host: WorkspaceToolSurfaceHost) => void;
-  selectWindowFile: (input: { path: string; root: string }) => void;
-  setWindowFileDraftContent: (input: {
-    content: string;
-    path: string;
-    root: string;
-  }) => void;
-  setWindowFileReadError: (input: {
-    message: string;
-    path: string;
-    root: string;
-  }) => void;
-  setWindowFileReadResult: (input: {
-    result: WorkspaceFileReadResult;
-    root: string;
-  }) => void;
-  setWindowFileSavedContent: (input: {
-    content: string;
-    path: string;
-    root: string;
-    size: number;
-  }) => void;
-  setWindowFilesEditorDirty: (dirty: boolean) => void;
   syncWorkspaceToolContext: (context: WorkspaceToolSurfaceContext) => void;
-  syncWorkspaceToolState: (state: WorkspaceToolSurfaceState) => void;
   updateWorkspaceToolSnapshot: (
     contextKey: string,
     updater: (
@@ -83,267 +18,31 @@ interface WorkspaceToolState {
   ) => void;
 }
 
-export const workspaceToolFilesTabId = "files";
 export const workspaceToolGitTabId = "git";
 export const workspaceToolChecksTabId = "checks";
 export const workspaceToolPullRequestTabId = "pr";
-export const workspaceToolProcessesTabId = "processes";
 
 export const useWorkspaceToolStore = create<WorkspaceToolState>()(
   (set, get) => ({
-    closeWindowFile: (input) => {
-      set((current) => {
-        const rootState =
-          current.windowFilesByRoot[input.root] ??
-          emptyWorkspaceWindowFilesState;
-        const closingIndex = rootState.openFilePaths.indexOf(input.path);
-        const openFilePaths = rootState.openFilePaths.filter(
-          (path) => path !== input.path,
-        );
-        const { [input.path]: _closedState, ...fileStates } =
-          rootState.fileStates;
-        const activePath =
-          rootState.activePath === input.path
-            ? (openFilePaths[
-                Math.min(closingIndex, openFilePaths.length - 1)
-              ] ?? null)
-            : rootState.activePath;
-
-        return {
-          windowFilesByRoot: {
-            ...current.windowFilesByRoot,
-            [input.root]: {
-              activePath,
-              fileStates,
-              openFilePaths,
-            },
-          },
-        };
-      });
-    },
     context: {},
-    focusWorkspaceToolSurface: () => {
-      window.desktopWindow.focusWorkspaceToolSurface();
-    },
-    host: "sidebar",
-    hydrated: false,
-    openWindowFile: (input) => {
-      set((current) => {
-        const rootState =
-          current.windowFilesByRoot[input.root] ??
-          emptyWorkspaceWindowFilesState;
-        return {
-          windowFilesByRoot: {
-            ...current.windowFilesByRoot,
-            [input.root]: {
-              activePath: input.path,
-              fileStates: {
-                ...rootState.fileStates,
-                [input.path]:
-                  rootState.fileStates[input.path]?.status === "error"
-                    ? { status: "loading" }
-                    : (rootState.fileStates[input.path] ?? {
-                        status: "loading",
-                      }),
-              },
-              openFilePaths: rootState.openFilePaths.includes(input.path)
-                ? rootState.openFilePaths
-                : [...rootState.openFilePaths, input.path],
-            },
-          },
-        };
-      });
-    },
-    requestWorkspaceToolHost: (host) => {
-      set({ host });
-      window.desktopWindow.setWorkspaceToolSurfaceHost({ host });
-    },
-    selectWindowFile: (input) => {
-      set((current) => {
-        const rootState = current.windowFilesByRoot[input.root];
-        if (!rootState?.openFilePaths.includes(input.path)) {
-          return {};
-        }
-
-        return {
-          windowFilesByRoot: {
-            ...current.windowFilesByRoot,
-            [input.root]: {
-              ...rootState,
-              activePath: input.path,
-            },
-          },
-        };
-      });
-    },
-    setWindowFileDraftContent: (input) => {
-      set((current) => {
-        const rootState = current.windowFilesByRoot[input.root];
-        const fileState = rootState?.fileStates[input.path];
-        if (fileState?.status !== "text") {
-          return {};
-        }
-
-        return {
-          windowFilesByRoot: {
-            ...current.windowFilesByRoot,
-            [input.root]: {
-              ...rootState,
-              fileStates: {
-                ...rootState.fileStates,
-                [input.path]: {
-                  ...fileState,
-                  draftContent: input.content,
-                },
-              },
-            },
-          },
-        };
-      });
-    },
-    setWindowFileReadError: (input) => {
-      set((current) => {
-        const rootState = current.windowFilesByRoot[input.root];
-        if (rootState?.fileStates[input.path]?.status !== "loading") {
-          return {};
-        }
-
-        return {
-          windowFilesByRoot: {
-            ...current.windowFilesByRoot,
-            [input.root]: {
-              ...rootState,
-              fileStates: {
-                ...rootState.fileStates,
-                [input.path]: {
-                  message: input.message,
-                  status: "error",
-                },
-              },
-            },
-          },
-        };
-      });
-    },
-    setWindowFileReadResult: (input) => {
-      set((current) => {
-        const rootState = current.windowFilesByRoot[input.root];
-        const path = input.result.path;
-        if (rootState?.fileStates[path]?.status !== "loading") {
-          return {};
-        }
-
-        return {
-          windowFilesByRoot: {
-            ...current.windowFilesByRoot,
-            [input.root]: {
-              ...rootState,
-              fileStates: {
-                ...rootState.fileStates,
-                [path]: createWorkspaceWindowFileState(input.result),
-              },
-            },
-          },
-        };
-      });
-    },
-    setWindowFileSavedContent: (input) => {
-      set((current) => {
-        const rootState = current.windowFilesByRoot[input.root];
-        const fileState = rootState?.fileStates[input.path];
-        if (fileState?.status !== "text") {
-          return {};
-        }
-
-        return {
-          windowFilesByRoot: {
-            ...current.windowFilesByRoot,
-            [input.root]: {
-              ...rootState,
-              fileStates: {
-                ...rootState.fileStates,
-                [input.path]: {
-                  ...fileState,
-                  savedContent: input.content,
-                  size: input.size,
-                },
-              },
-            },
-          },
-        };
-      });
-    },
-    syncWorkspaceToolContext: (context) => {
-      set({ context });
-      window.desktopWindow.setWorkspaceToolSurfaceContext(context);
-    },
-    setWindowFilesEditorDirty: (dirty) => {
-      set({ windowFilesEditorDirty: dirty });
-    },
     snapshots: {},
-    windowFilesByRoot: {},
-    windowFilesEditorDirty: false,
-    syncWorkspaceToolState: (state) => {
-      const contextKey = state.context.contextKey ?? undefined;
-      set((current) => ({
-        context: state.context,
-        host: state.host,
-        hydrated: true,
-        snapshots:
-          is.nonEmptyString(contextKey) && !is.falsy(state.snapshot)
-            ? {
-                ...current.snapshots,
-                [contextKey]: sanitizeWorkspaceToolSnapshot(state.snapshot),
-              }
-            : current.snapshots,
-      }));
-    },
+    syncWorkspaceToolContext: (context) => set({ context }),
     updateWorkspaceToolSnapshot: (contextKey, updater) => {
       const currentSnapshot =
         get().snapshots[contextKey] ?? createDefaultWorkspaceToolSnapshot();
-      const snapshot = updater(currentSnapshot);
-
       set((current) => ({
         snapshots: {
           ...current.snapshots,
-          [contextKey]: snapshot,
+          [contextKey]: updater(currentSnapshot),
         },
       }));
-      window.desktopWindow.setWorkspaceToolSurfaceSnapshot({
-        contextKey,
-        snapshot,
-      });
     },
   }),
 );
 
-let workspaceToolSurfaceEventsInitialized = false;
-
-export function ensureWorkspaceToolSurfaceEvents() {
-  if (workspaceToolSurfaceEventsInitialized) {
-    return;
-  }
-  workspaceToolSurfaceEventsInitialized = true;
-
-  window.desktopWindow
-    .getWorkspaceToolSurfaceState()
-    .then((state) => {
-      useWorkspaceToolStore.getState().syncWorkspaceToolState(state);
-    })
-    .catch((error) => {
-      console.error("Failed to hydrate workspace tool surface state.", error);
-      useWorkspaceToolStore.setState({ hydrated: true });
-    });
-
-  window.desktopWindow.onWorkspaceToolSurfaceChanged((state) => {
-    useWorkspaceToolStore.getState().syncWorkspaceToolState(state);
-  });
-}
-
 function createDefaultWorkspaceToolSnapshot(): WorkspaceToolSurfaceSnapshot {
   return {
     activeTabId: workspaceToolGitTabId,
-    nextTerminalOrdinal: 1,
     tabs: [],
   };
 }
@@ -352,17 +51,15 @@ function sanitizeWorkspaceToolSnapshot(
   snapshot: WorkspaceToolSurfaceSnapshot,
 ): WorkspaceToolSurfaceSnapshot {
   const tabs = snapshot.tabs.filter(
-    (tab) => (tab.kind as string) !== "browser",
+    (tab) =>
+      (tab.kind as string) !== "browser" && (tab.kind as string) !== "terminal",
   );
   const activeTabId = tabs.some((tab) => tab.id === snapshot.activeTabId)
     ? snapshot.activeTabId
-    : snapshot.activeTabId === workspaceToolFilesTabId ||
-        snapshot.activeTabId === workspaceToolGitTabId ||
-        snapshot.activeTabId === workspaceToolChecksTabId ||
-        snapshot.activeTabId === workspaceToolPullRequestTabId ||
-        snapshot.activeTabId === workspaceToolProcessesTabId
+    : snapshot.activeTabId === workspaceToolGitTabId ||
+        snapshot.activeTabId === workspaceToolPullRequestTabId
       ? snapshot.activeTabId
-      : workspaceToolFilesTabId;
+      : workspaceToolGitTabId;
 
   return { ...snapshot, activeTabId, tabs };
 }
@@ -378,45 +75,4 @@ export function currentWorkspaceToolSnapshot(
   return sanitizeWorkspaceToolSnapshot(
     snapshots[contextKey] ?? createDefaultWorkspaceToolSnapshot(),
   );
-}
-
-export function appendWorkspaceTerminalTab(
-  current: WorkspaceToolSurfaceSnapshot,
-  input: { id: string; root: string; sessionId: string },
-): WorkspaceToolSurfaceSnapshot {
-  const tab = {
-    id: input.id,
-    kind: "terminal" as const,
-    root: input.root,
-    sessionId: input.sessionId,
-    title: `Terminal ${current.nextTerminalOrdinal}`,
-  };
-
-  return {
-    ...current,
-    activeTabId: tab.id,
-    nextTerminalOrdinal: current.nextTerminalOrdinal + 1,
-    tabs: [...current.tabs, tab],
-  };
-}
-
-function createWorkspaceWindowFileState(
-  result: WorkspaceFileReadResult,
-): WorkspaceWindowFileState {
-  if (result.type === "unsupported") {
-    return { result, status: "unsupported" };
-  }
-
-  return {
-    draftContent: result.content,
-    savedContent: result.content,
-    size: result.size,
-    status: "text",
-  };
-}
-
-export function isWorkspaceWindowFileStateDirty(
-  state: WorkspaceWindowFileState | undefined,
-) {
-  return state?.status === "text" && state.draftContent !== state.savedContent;
 }

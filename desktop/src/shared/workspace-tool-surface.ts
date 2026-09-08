@@ -1,5 +1,3 @@
-export type WorkspaceToolSurfaceHost = "sidebar" | "window";
-
 export interface WorkspaceToolSurfaceContext {
   chatId?: string | null;
   contextKey?: string | null;
@@ -19,8 +17,7 @@ export type WorkspaceToolTabId = WorkspaceToolPinnedTabId | (string & {});
 
 export type WorkspaceToolSurfaceDynamicTab =
   | WorkspaceToolSurfaceFilePreviewTab
-  | WorkspaceToolSurfaceGitDiffTab
-  | WorkspaceToolSurfaceTerminalTab;
+  | WorkspaceToolSurfaceGitDiffTab;
 
 interface WorkspaceToolSurfaceDynamicTabBase {
   id: string;
@@ -41,13 +38,6 @@ export interface WorkspaceToolSurfaceGitDiffTab
   root: string;
 }
 
-export interface WorkspaceToolSurfaceTerminalTab
-  extends WorkspaceToolSurfaceDynamicTabBase {
-  kind: "terminal";
-  root: string;
-  sessionId: string;
-}
-
 export type WorkspaceToolFocusSection = "checks";
 
 export interface WorkspaceToolSurfaceSnapshot {
@@ -57,35 +47,5 @@ export interface WorkspaceToolSurfaceSnapshot {
    * Checks section mounts; not cleared by the redirect itself.
    */
   focusSection?: WorkspaceToolFocusSection | null;
-  nextTerminalOrdinal: number;
   tabs: WorkspaceToolSurfaceDynamicTab[];
-  windowFileOpenRequest?: WorkspaceToolSurfaceWindowFileOpenRequest;
-}
-
-export interface WorkspaceToolSurfaceWindowFileOpenRequest {
-  id: string;
-  path: string;
-  root: string;
-}
-
-export interface WorkspaceToolSurfaceState {
-  context: WorkspaceToolSurfaceContext;
-  host: WorkspaceToolSurfaceHost;
-  snapshot: WorkspaceToolSurfaceSnapshot | null;
-}
-
-export interface WorkspaceToolSurfaceContextSetInput {
-  chatId?: string | null;
-  contextKey?: string | null;
-  projectId?: string | null;
-  root?: string | null;
-}
-
-export interface WorkspaceToolSurfaceHostSetInput {
-  host: WorkspaceToolSurfaceHost;
-}
-
-export interface WorkspaceToolSurfaceSnapshotSetInput {
-  contextKey: string;
-  snapshot: WorkspaceToolSurfaceSnapshot;
 }

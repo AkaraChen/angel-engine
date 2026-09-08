@@ -1,15 +1,9 @@
-import type { WorkspaceToolSurfaceHost } from "@shared/workspace-tool-surface";
 import type { ReactNode } from "react";
 import type { ApiClient } from "@/platform/api-client";
 
-import {
-  FolderOpen,
-  GitBranch,
-  AppWindow as WindowIcon,
-} from "@phosphor-icons/react";
+import { FolderOpen, GitBranch } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 import { workspaceToolRootName } from "@/app/workspace/workspace-file-display";
@@ -21,33 +15,16 @@ import {
 } from "@/components/ui/tooltip";
 import { queryKeys } from "@/platform/query-keys";
 
-export function WorkspaceToolWindowTitleBridge({
-  root,
-}: {
-  root?: string | null;
-}) {
-  useEffect(() => {
-    const rootName = is.nonEmptyString(root)
-      ? workspaceToolRootName(root)
-      : undefined;
-    document.title = is.nonEmptyString(rootName) ? rootName : "Angel Engine";
-  }, [root]);
-
-  return null;
-}
-
 export function WorkspaceToolSidebarHeader({
   api,
   root,
   showRepositoryName = false,
   trailingActions,
-  onRequestHost,
 }: {
   api: ApiClient;
   root?: string | null;
   showRepositoryName?: boolean;
   trailingActions?: ReactNode;
-  onRequestHost: (host: WorkspaceToolSurfaceHost) => void;
 }) {
   const { t } = useTranslation();
   return (
@@ -62,11 +39,6 @@ export function WorkspaceToolSidebarHeader({
         api={api}
         root={root}
         showRepositoryName={showRepositoryName}
-      />
-      <WorkspaceToolHeaderButton
-        icon={<WindowIcon weight="regular" />}
-        label={t("workspace.tools.openInWindow")}
-        onClick={() => onRequestHost("window")}
       />
       {trailingActions}
     </div>

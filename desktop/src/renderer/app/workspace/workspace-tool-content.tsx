@@ -15,9 +15,9 @@ import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-
 
 export function WorkspaceToolContent({ root }: { root: string }) {
   const { t } = useTranslation();
-  const { activeDynamicTab, activeTabId, host, projectId } =
+  const { activeDynamicTab, activeTabId, projectId } =
     useWorkspaceToolSurface();
-  const layout = host === "sidebar" ? "compact" : "split";
+  const layout = "compact" as const;
 
   if (activeTabId === workspaceToolGitTabId) {
     return <WorkspaceGitPanel layout={layout} root={root} />;

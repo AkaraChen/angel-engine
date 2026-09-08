@@ -1,6 +1,5 @@
 import type {
   WorkspaceToolSurfaceDynamicTab,
-  WorkspaceToolSurfaceHost,
   WorkspaceToolSurfaceSnapshot,
   WorkspaceToolTabId,
 } from "@shared/workspace-tool-surface";
@@ -9,14 +8,12 @@ import type { WorkspaceToolTabItem } from "@/app/workspace/workspace-tool-tab-mo
 import type { ApiClient } from "@/platform/api-client";
 
 import is from "@sindresorhus/is";
-import { useQueryClient } from "@tanstack/react-query";
 import {
   createContext,
   useCallback,
   useContext,
   useEffect,
   useMemo,
-  useRef,
 } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -32,10 +29,6 @@ import {
   visibleActiveWorkspaceToolTabId,
   workspaceToolTabItems,
 } from "@/app/workspace/workspace-tool-tab-model";
-import {
-  confirmWorkspaceWindowFilesExit,
-  useWorkspaceWindowFileOpener,
-} from "@/app/workspace/workspace-window-file-state";
 
 type WorkspaceToolSnapshotUpdater = (
   current: WorkspaceToolSurfaceSnapshot,
@@ -50,11 +43,8 @@ export interface WorkspaceToolSurfaceModel {
   contextKey: string | null;
   focusChecksSection: boolean;
   closeDynamicTab: (tab: WorkspaceToolSurfaceDynamicTab) => void;
-  host: WorkspaceToolSurfaceHost;
   openExternal: (url: string) => void;
-  openFileTab: (path: string) => void;
   projectId: string | null;
-  requestSurfaceHost: (host: WorkspaceToolSurfaceHost) => Promise<void>;
   root: string | null;
   selectTab: (tabId: WorkspaceToolTabId) => Promise<boolean>;
   tabItems: WorkspaceToolTabItem[];
@@ -65,23 +55,17 @@ export function useWorkspaceToolSurfaceModel({
   active,
   api,
   contextKey: propContextKey,
-  host,
   root: propRoot,
 }: {
   active: boolean;
   api: ApiClient;
   contextKey?: string | null;
-  host: WorkspaceToolSurfaceHost;
   root?: string | null;
 }): WorkspaceToolSurfaceModel {
-  const queryClient = useQueryClient();
   const context = useWorkspaceToolStore((state) => state.context);
   const snapshots = useWorkspaceToolStore((state) => state.snapshots);
   const storeUpdateSnapshot = useWorkspaceToolStore(
     (state) => state.updateWorkspaceToolSnapshot,
-  );
-  const requestHost = useWorkspaceToolStore(
-    (state) => state.requestWorkspaceToolHost,
   );
   const contextKey = propContextKey ?? context.contextKey ?? null;
   const chatId = context.chatId ?? null;
@@ -106,22 +90,6 @@ export function useWorkspaceToolSurfaceModel({
     snapshot.activeTabId === workspaceToolChecksTabId;
   const activeTabId = visibleActiveWorkspaceToolTabId(snapshot);
   const activeDynamicTab = snapshot.tabs.find((tab) => tab.id === activeTabId);
-  const openWorkspaceWindowFile = useWorkspaceWindowFileOpener(api);
-  const confirmWindowFilesEditorExit = useCallback(async () => {
-    if (host === "sidebar") {
-      return true;
-    }
-    return confirmWorkspaceWindowFilesExit({ api, queryClient, root });
-  }, [api, host, queryClient, root]);
-  const requestSurfaceHost = useCallback(
-    async (nextHost: WorkspaceToolSurfaceHost) => {
-      if (nextHost !== host && !(await confirmWindowFilesEditorExit())) {
-        return;
-      }
-      requestHost(nextHost);
-    },
-    [confirmWindowFilesEditorExit, host, requestHost],
-  );
   const updateSnapshot = useCallback(
     (updater: WorkspaceToolSnapshotUpdater) => {
       if (!is.nonEmptyString(contextKey)) {
@@ -132,44 +100,15 @@ export function useWorkspaceToolSurfaceModel({
     },
     [contextKey, storeUpdateSnapshot],
   );
-  const windowFileOpenRequest = snapshot.windowFileOpenRequest;
-  const handledWindowFileOpenRequestIdRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (
-      host === "sidebar" ||
-      windowFileOpenRequest === undefined ||
-      handledWindowFileOpenRequestIdRef.current === windowFileOpenRequest.id
-    ) {
-      return;
-    }
-
-    handledWindowFileOpenRequestIdRef.current = windowFileOpenRequest.id;
-    openWorkspaceWindowFile({
-      path: windowFileOpenRequest.path,
-      root: windowFileOpenRequest.root,
-    });
-    updateSnapshot((current) =>
-      current.windowFileOpenRequest?.id === windowFileOpenRequest.id
-        ? { ...current, windowFileOpenRequest: undefined }
-        : current,
-    );
-  }, [host, openWorkspaceWindowFile, updateSnapshot, windowFileOpenRequest]);
   const selectTab = useCallback(
     async (tabId: WorkspaceToolTabId) => {
       const resolvedTabId =
         tabId === workspaceToolChecksTabId
           ? workspaceToolPullRequestTabId
           : tabId;
-      if (
-        resolvedTabId !== activeTabId &&
-        !(await confirmWindowFilesEditorExit())
-      ) {
-        return false;
-      }
       updateSnapshot((current) => ({
         ...current,
         activeTabId: resolvedTabId,
-        // Selecting checks parks focus intent; leaving the PR tab clears it.
         focusSection:
           tabId === workspaceToolChecksTabId
             ? "checks"
@@ -179,32 +118,7 @@ export function useWorkspaceToolSurfaceModel({
       }));
       return true;
     },
-    [activeTabId, confirmWindowFilesEditorExit, updateSnapshot],
-  );
-  const openFileTab = useCallback(
-    (path: string) => {
-      if (!is.nonEmptyString(root)) {
-        return;
-      }
-
-      openWorkspaceWindowFile({ path, root });
-      updateSnapshot((current) => ({
-        ...current,
-        activeTabId: workspaceToolGitTabId,
-        windowFileOpenRequest:
-          host === "sidebar"
-            ? {
-                id: crypto.randomUUID(),
-                path,
-                root,
-              }
-            : current.windowFileOpenRequest,
-      }));
-      if (host === "sidebar") {
-        void requestSurfaceHost("window");
-      }
-    },
-    [host, openWorkspaceWindowFile, requestSurfaceHost, root, updateSnapshot],
+    [updateSnapshot],
   );
   const openExternal = useCallback((url: string) => {
     window.open(url, "_blank", "noopener,noreferrer");
@@ -253,11 +167,8 @@ export function useWorkspaceToolSurfaceModel({
       contextKey,
       focusChecksSection,
       closeDynamicTab,
-      host,
       openExternal,
-      openFileTab,
       projectId,
-      requestSurfaceHost,
       root,
       selectTab,
       tabItems,
@@ -272,11 +183,8 @@ export function useWorkspaceToolSurfaceModel({
       contextKey,
       focusChecksSection,
       closeDynamicTab,
-      host,
       openExternal,
-      openFileTab,
       projectId,
-      requestSurfaceHost,
       root,
       selectTab,
       tabItems,

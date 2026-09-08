@@ -2,7 +2,6 @@ import type {
   KeyboardEvent as ReactKeyboardEvent,
   PointerEvent as ReactPointerEvent,
 } from "react";
-import type { WorkspaceToolSurfaceHost } from "@shared/workspace-tool-surface";
 import type { ApiClient } from "@/platform/api-client";
 
 import { SidebarSimple as SidebarFold } from "@phosphor-icons/react";
@@ -35,7 +34,6 @@ interface WorkspaceRightSidebarProps {
   root: string;
   width: number;
   onClose: () => void;
-  onRequestHost: (host: WorkspaceToolSurfaceHost) => void;
   onWidthChange: (width: number) => void;
 }
 
@@ -47,7 +45,6 @@ export function WorkspaceRightSidebar({
   root,
   width,
   onClose,
-  onRequestHost,
   onWidthChange,
 }: WorkspaceRightSidebarProps) {
   const { t } = useTranslation();
@@ -158,7 +155,6 @@ export function WorkspaceRightSidebar({
               onClick={onClose}
             />
           }
-          onRequestHost={onRequestHost}
         />
         <div
           className="
@@ -194,7 +190,6 @@ export function WorkspaceRightSidebar({
               active={active && open}
               api={api}
               contextKey={contextKey}
-              host="sidebar"
               root={root}
             />
           </div>

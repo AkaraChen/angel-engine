@@ -1,5 +1,5 @@
 import type { AgentRuntime } from "@angel-engine/daemon-api/agents";
-import type { Chat } from "@angel-engine/daemon-api/chat";
+import type { Chat, ChatCreationLocation } from "@angel-engine/daemon-api/chat";
 import type { Project } from "@angel-engine/daemon-api/projects";
 import type { useApi } from "@/platform/use-api";
 
@@ -20,14 +20,19 @@ import {
   getWorkspaceTitle,
 } from "@/app/workspace/workspace-display";
 import { draftAgentConfigFromExplicitOverrides } from "@/app/workspace/workspace-draft-agent-config";
-import { chatNotificationRoutePath } from "@/app/workspace/workspace-route-paths";
+import {
+  chatNotificationRoutePath,
+  isChatOpenableInWorkspaceMode,
+} from "@/app/workspace/workspace-route-paths";
 import {
   draftRuntimeKeyFromProjectId,
   workspaceRuntimePageKey,
 } from "@/app/workspace/workspace-runtime-keys";
-import { useWorkspaceToolStore } from "@/app/workspace/workspace-tool-store";
 import { resolveWorkspaceToolContext } from "@/app/workspace/workspace-tool-context";
-import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
+import {
+  isProjectWorkspaceMode,
+  useWorkspaceUiStore,
+} from "@/app/workspace/workspace-ui-store";
 import { useToast } from "@/components/ui/toast";
 import { useAgentCatalog } from "@/features/agents/agent-catalog-context";
 import {
@@ -42,7 +47,12 @@ import {
   useChatRunConfig,
   useChatRunIsRunning,
 } from "@/features/chat/state/chat-run-store";
-import { projectListQueryOptions } from "@/features/projects/api/queries";
+import { useChatTabStore } from "@/features/chat/state/chat-tab-store";
+import {
+  projectGitStatusQueryOptions,
+  projectListQueryOptions,
+} from "@/features/projects/api/queries";
+import { useSettingsStore } from "@/features/settings/settings-store";
 import { useAgentSettings } from "@/features/settings/use-agent-settings";
 
 const EMPTY_CHATS: Chat[] = [];
@@ -54,6 +64,7 @@ interface UseWorkspacePageModelOptions {
   /** The Fleet overview owns the main pane; no draft composer is mounted. */
   fleetActive?: boolean;
   /** Schedule owns the main pane and must not prewarm a draft session. */
+  scheduleActive?: boolean;
   routeProjectId?: string;
   selectedChatId?: string;
 }
@@ -62,6 +73,7 @@ export function useWorkspacePageModel({
   api,
   draftProjectId: routeDraftProjectId,
   fleetActive = false,
+  scheduleActive = false,
   routeProjectId,
   selectedChatId,
 }: UseWorkspacePageModelOptions) {
@@ -82,6 +94,16 @@ export function useWorkspacePageModel({
   const rightSidebarWidth = useWorkspaceUiStore(
     (state) => state.rightSidebarWidth,
   );
+  const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
+  const lastOpenedTargets = useWorkspaceUiStore(
+    (state) => state.lastOpenedTargets,
+  );
+  const rememberLastOpenedTarget = useWorkspaceUiStore(
+    (state) => state.rememberLastOpenedTarget,
+  );
+  const setWorkspaceMode = useWorkspaceUiStore(
+    (state) => state.setWorkspaceMode,
+  );
   const setRightSidebarOpen = useWorkspaceUiStore(
     (state) => state.setRightSidebarOpen,
   );
@@ -95,12 +117,11 @@ export function useWorkspacePageModel({
   const toggleRightSidebar = useWorkspaceUiStore(
     (state) => state.toggleRightSidebar,
   );
-  const workspaceToolHost = useWorkspaceToolStore((state) => state.host);
-  const focusWorkspaceToolSurface = useWorkspaceToolStore(
-    (state) => state.focusWorkspaceToolSurface,
+  const worktreeDirtyPromptEnabled = useSettingsStore(
+    (state) => state.worktreeDirtyPromptEnabled,
   );
-  const requestWorkspaceToolHost = useWorkspaceToolStore(
-    (state) => state.requestWorkspaceToolHost,
+  const setWorktreeDirtyPromptEnabled = useSettingsStore(
+    (state) => state.setWorktreeDirtyPromptEnabled,
   );
   const enabledAgentOptions = useMemo(
     () => getEnabledAgentOptions(agentSettings, availableAgentOptions),
@@ -114,13 +135,49 @@ export function useWorkspacePageModel({
       })),
     [enabledAgentOptions],
   );
-  const showRightSidebar = true;
-  const previousWorkspaceToolHostRef = useRef(workspaceToolHost);
+  const isProjectMode = isProjectWorkspaceMode(workspaceMode);
+  const showRightSidebar = isProjectMode;
+  const previousWorkspaceModeRef = useRef(workspaceMode);
+
+  useEffect(() => {
+    if (
+      !isProjectWorkspaceMode(previousWorkspaceModeRef.current) &&
+      isProjectWorkspaceMode(workspaceMode)
+    ) {
+      setRightSidebarOpen(true);
+    }
+    previousWorkspaceModeRef.current = workspaceMode;
+  }, [setRightSidebarOpen, workspaceMode]);
 
   const draftState = useWorkspaceDraftState();
   const draftSessionCounterRef = useRef(0);
-  // Fleet is a chat-less route but not a draft.
-  const isDraftPage = !fleetActive && !is.nonEmptyString(selectedChatId);
+  // Fleet and Schedule are chat-less routes but not drafts.
+  const isDraftPage =
+    !fleetActive && !scheduleActive && !is.nonEmptyString(selectedChatId);
+  const powerModeActive = workspaceMode === "power";
+  const draftWorktree = useChatTabStore((state) => state.draftWorktree);
+  const activePowerWorktree = useChatTabStore((state) => state.activeWorktree);
+  const powerWorktreeView = useChatTabStore(
+    (state) => state.activeWorktreeView,
+  );
+  const powerDraftContext =
+    powerModeActive &&
+    isDraftPage &&
+    draftWorktree !== undefined &&
+    routeDraftProjectId === draftWorktree.projectId
+      ? draftWorktree
+      : undefined;
+  const powerDraftTabActive =
+    powerWorktreeView === "draft" && powerDraftContext !== undefined;
+  const pinnedDraftCwd = powerDraftTabActive
+    ? powerDraftContext.cwd
+    : undefined;
+  const powerHomePageContext =
+    powerModeActive &&
+    powerWorktreeView === "home" &&
+    activePowerWorktree !== undefined
+      ? activePowerWorktree
+      : undefined;
 
   const projectsQuery = useQuery({ ...projectListQueryOptions({ api }) });
   const chatsQuery = useQuery({ ...chatListQueryOptions({ api }) });
@@ -134,12 +191,21 @@ export function useWorkspacePageModel({
     projects,
     isDraftPage ? routeDraftProjectId : undefined,
   );
-  const selectedProjectId = isDraftPage
-    ? draftProject.id
-    : (routeProjectId ?? selectedChat?.projectId ?? undefined);
+  const selectedProjectId =
+    workspaceMode === "chat"
+      ? undefined
+      : isDraftPage
+        ? draftProject.id
+        : (routeProjectId ?? selectedChat?.projectId ?? undefined);
   const selectedProject = is.nonEmptyString(selectedProjectId)
     ? projects.find((project) => project.id === selectedProjectId)
     : undefined;
+  const activePowerWorktreeProject =
+    powerHomePageContext !== undefined
+      ? projects.find(
+          (project) => project.id === powerHomePageContext.projectId,
+        )
+      : undefined;
   const selectedProjectPath = isDraftPage
     ? draftProject.path
     : (selectedProject?.path ?? selectedChat?.cwd);
@@ -148,9 +214,14 @@ export function useWorkspacePageModel({
     : is.nonEmptyString(selectedProjectPath)
       ? getProjectDisplayName(selectedProjectPath)
       : undefined;
-  const projectWorkspaceToolRoot = selectedProjectPath;
+  const projectWorkspaceToolRoot =
+    pinnedDraftCwd ?? powerHomePageContext?.cwd ?? selectedProjectPath;
   const workspaceToolContext = resolveWorkspaceToolContext({
-    projectId: selectedChat?.projectId ?? selectedProjectId,
+    projectId:
+      selectedChat?.projectId ??
+      powerDraftContext?.projectId ??
+      powerHomePageContext?.projectId ??
+      selectedProjectId,
     projectRoot:
       is.nonEmptyString(selectedChat?.projectId) &&
       is.nonEmptyString(selectedChatId)
@@ -158,49 +229,24 @@ export function useWorkspacePageModel({
         : (projectWorkspaceToolRoot ?? undefined),
     selectedChatId,
     selectedChatProjectId: selectedChat?.projectId ?? undefined,
+    workspaceMode,
   });
   const workspaceToolContextKey = workspaceToolContext?.contextKey;
   const workspaceToolRoot = workspaceToolContext?.root;
   const canShowRightSidebar = showRightSidebar && workspaceToolContext !== null;
   const dockedWorkspaceToolContext =
     canShowRightSidebar &&
-    workspaceToolHost === "sidebar" &&
     is.nonEmptyString(workspaceToolContextKey) &&
     is.nonEmptyString(workspaceToolRoot)
       ? { contextKey: workspaceToolContextKey, root: workspaceToolRoot }
       : null;
 
-  useEffect(() => {
-    if (
-      previousWorkspaceToolHostRef.current !== "sidebar" &&
-      workspaceToolHost === "sidebar" &&
-      canShowRightSidebar &&
-      is.nonEmptyString(workspaceToolContextKey) &&
-      is.nonEmptyString(workspaceToolRoot)
-    ) {
-      setRightSidebarOpen(true);
-    }
-    previousWorkspaceToolHostRef.current = workspaceToolHost;
-  }, [
-    canShowRightSidebar,
-    setRightSidebarOpen,
-    workspaceToolHost,
-    workspaceToolContextKey,
-    workspaceToolRoot,
-  ]);
   const toggleWorkspaceTools = useCallback(() => {
-    if (workspaceToolHost !== "sidebar") {
-      focusWorkspaceToolSurface();
-      return;
-    }
     toggleRightSidebar();
-  }, [focusWorkspaceToolSurface, toggleRightSidebar, workspaceToolHost]);
-  const workspaceToolsToggleLabel =
-    workspaceToolHost !== "sidebar"
-      ? t("workspace.rightSidebar.focus")
-      : rightSidebarOpen
-        ? t("workspace.rightSidebar.hide")
-        : t("workspace.rightSidebar.show");
+  }, [toggleRightSidebar]);
+  const workspaceToolsToggleLabel = rightSidebarOpen
+    ? t("workspace.rightSidebar.hide")
+    : t("workspace.rightSidebar.show");
   const workspaceTitle = getWorkspaceTitle({
     selectedChat,
     selectedProjectName,
@@ -210,6 +256,9 @@ export function useWorkspacePageModel({
   const draftRuntimeKey = isDraftPage
     ? draftRuntimeKeyFromProjectId(routeDraftProjectId)
     : undefined;
+  const draftCreationLocationKey = draftRuntimeKey ?? "standalone";
+  const requestedDraftCreationLocation =
+    draftState.draftCreationLocations[draftCreationLocationKey] ?? "project";
   const runtimePageKey = workspaceRuntimePageKey({
     chatRuntime,
     draftProjectId: routeDraftProjectId,
@@ -230,6 +279,21 @@ export function useWorkspacePageModel({
         availableAgentOptions,
       );
   const activeRuntime = chatRuntime ?? draftRuntime;
+  const draftProjectGitStatusQuery = useQuery({
+    ...projectGitStatusQueryOptions({
+      api,
+      enabled: isDraftPage && isProjectMode && draftProject.id !== undefined,
+      projectId: draftProject.id,
+    }),
+  });
+  const canCreateDraftWorktree =
+    isDraftPage &&
+    isProjectMode &&
+    pinnedDraftCwd === undefined &&
+    draftProjectGitStatusQuery.data?.isGitRepository === true;
+  const draftCreationLocation: ChatCreationLocation = canCreateDraftWorktree
+    ? requestedDraftCreationLocation
+    : "project";
   const shouldPrewarmChat =
     isDraftPage &&
     (!is.nonEmptyString(routeDraftProjectId) ||
@@ -237,18 +301,23 @@ export function useWorkspacePageModel({
   const prewarmQuery = useQuery({
     ...chatPrewarmQueryOptions({
       api,
-      enabled: shouldPrewarmChat,
+      creationLocation: draftCreationLocation,
+      enabled:
+        shouldPrewarmChat &&
+        draftCreationLocation !== "worktree" &&
+        pinnedDraftCwd === undefined,
       projectId: draftProject.id,
       runtime: activeRuntime,
     }),
   });
-  const inspectDraftRuntimeConfig = false;
+  const inspectDraftRuntimeConfig =
+    draftCreationLocation === "worktree" || pinnedDraftCwd !== undefined;
   const shouldInspectDraftRuntimeConfig =
     isDraftPage && inspectDraftRuntimeConfig && draftProject.path !== undefined;
   const draftRuntimeConfigQuery = useQuery({
     ...chatRuntimeConfigQueryOptions({
       api,
-      cwd: draftProject.path,
+      cwd: pinnedDraftCwd ?? draftProject.path,
       enabled: shouldInspectDraftRuntimeConfig,
       runtime: activeRuntime,
     }),
@@ -284,6 +353,34 @@ export function useWorkspacePageModel({
     window.desktopWindow.setActiveChatId(selectedChatId ?? null);
   }, [selectedChatId]);
 
+  useEffect(() => {
+    if (
+      selectedChat &&
+      isChatOpenableInWorkspaceMode(selectedChat, workspaceMode)
+    ) {
+      rememberLastOpenedTarget(workspaceMode, {
+        chatId: selectedChat.id,
+        type: "chat",
+      });
+      return;
+    }
+    if (isDraftPage) {
+      rememberLastOpenedTarget(
+        workspaceMode,
+        isProjectWorkspaceMode(workspaceMode) &&
+          routeDraftProjectId !== undefined
+          ? { projectId: routeDraftProjectId, type: "draft" }
+          : { type: "draft" },
+      );
+    }
+  }, [
+    isDraftPage,
+    rememberLastOpenedTarget,
+    routeDraftProjectId,
+    selectedChat,
+    workspaceMode,
+  ]);
+
   useEffect(
     () =>
       window.desktopWindow.onOpenChatFromNotification((event) => {
@@ -312,26 +409,38 @@ export function useWorkspacePageModel({
   return {
     ...draftState,
     ...draftChatOptions,
+    activePowerWorktree,
+    activePowerWorktreeProject,
     activeRuntime,
     api,
+    canCreateDraftWorktree,
     canShowRightSidebar,
     chatAttention,
     chats,
     chatsQuery,
     dockedWorkspaceToolContext,
+    draftCreationLocation,
+    draftCreationLocationKey,
+    draftProjectGitStatusQuery,
     draftProject,
     draftSessionCounterRef,
     isDraftPage,
     isMacOS,
+    isProjectMode,
     initialDraftPrompt: draftState.draftInitialPrompts[runtimePageKey] ?? "",
+    lastOpenedTargets,
     location,
     navigate,
+    pinnedDraftCwd,
+    powerDraftContext,
+    powerDraftTabActive,
+    powerHomePageContext,
+    powerModeActive,
     prewarmQuery,
     projectChatsByProjectId,
     projects,
     projectsQuery,
     queryClient,
-    requestWorkspaceToolHost,
     rightSidebarOpen,
     rightSidebarWidth,
     routeDraftProjectId,
@@ -350,17 +459,20 @@ export function useWorkspacePageModel({
     setRightSidebarOpen,
     setSidebarOpen,
     setSidebarOpenMobile,
+    setWorkspaceMode,
+    setWorktreeDirtyPromptEnabled,
     sidebarOpen,
     sidebarOpenMobile,
     t,
     toast,
     toggleWorkspaceTools,
     updateAgentSettings,
-    workspaceToolHost,
+    workspaceMode,
     workspaceToolContextKey,
     workspaceToolRoot,
     workspaceTitle,
     workspaceToolsToggleLabel,
+    worktreeDirtyPromptEnabled,
   };
 }
 
