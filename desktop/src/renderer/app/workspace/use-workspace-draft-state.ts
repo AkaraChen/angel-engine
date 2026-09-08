@@ -11,6 +11,7 @@ interface WorkspaceDraftState {
   initialPrompts: Partial<Record<string, string>>;
   runtimes: Partial<Record<string, AgentRuntime>>;
   sessionIds: Partial<Record<string, number>>;
+  cwds: Partial<Record<string, string>>;
 }
 
 type WorkspaceDraftStateAction =
@@ -34,6 +35,10 @@ type WorkspaceDraftStateAction =
       action: SetStateAction<WorkspaceDraftState["sessionIds"]>;
       type: "sessionIds";
     };
+  | {
+      action: SetStateAction<WorkspaceDraftState["cwds"]>;
+      type: "cwds";
+    };
 
 const emptyWorkspaceDraftState: WorkspaceDraftState = {
   agentConfigs: {},
@@ -41,6 +46,7 @@ const emptyWorkspaceDraftState: WorkspaceDraftState = {
   initialPrompts: {},
   runtimes: {},
   sessionIds: {},
+  cwds: {},
 };
 
 function applyWorkspaceDraftSetState<T>(
@@ -94,6 +100,11 @@ function workspaceDraftStateReducer(
           action.action,
         ),
       };
+    case "cwds":
+      return {
+        ...state,
+        cwds: applyWorkspaceDraftSetState(state.cwds, action.action),
+      };
   }
 }
 
@@ -127,6 +138,11 @@ export function useWorkspaceDraftState() {
       dispatchDraftState({ action, type: "sessionIds" }),
     [],
   );
+  const setDraftCwds = useCallback(
+    (action: SetStateAction<WorkspaceDraftState["cwds"]>) =>
+      dispatchDraftState({ action, type: "cwds" }),
+    [],
+  );
 
   return {
     draftAgentConfigs: draftState.agentConfigs,
@@ -134,10 +150,12 @@ export function useWorkspaceDraftState() {
     draftInitialPrompts: draftState.initialPrompts,
     draftRuntimes: draftState.runtimes,
     draftSessionIds: draftState.sessionIds,
+    draftCwds: draftState.cwds,
     setDraftAgentConfigs,
     setDraftCreationLocations,
     setDraftInitialPrompts,
     setDraftRuntimes,
     setDraftSessionIds,
+    setDraftCwds,
   };
 }

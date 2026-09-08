@@ -46,8 +46,9 @@ interface NewChatThreadProps {
     | ChatComposerBeforeSubmitResult
     | Promise<ChatComposerBeforeSubmitResult>;
   onCreateProject: () => Project | undefined | Promise<Project | undefined>;
+  onSelectFolder: () => void | Promise<void>;
   onOpenChat: (chat: Chat) => void;
-  onProjectChange: (projectId: string) => void;
+  onProjectChange: (projectId: string | null) => void;
   permissionMode?: string;
   prewarmId?: string;
   projectId?: string;
@@ -77,6 +78,7 @@ export function NewChatThread({
   onChatUpdated,
   onBeforeSubmit,
   onCreateProject,
+  onSelectFolder,
   onOpenChat,
   onProjectChange,
   permissionMode,
@@ -154,6 +156,7 @@ export function NewChatThread({
             onChatMessagesUpdated={onChatMessagesUpdated}
             onChatUpdated={handleChatUpdated}
             onCreateProject={onCreateProject}
+            onSelectFolder={onSelectFolder}
             onOpenChat={onOpenChat}
             onProjectChange={onProjectChange}
             permissionMode={permissionMode}

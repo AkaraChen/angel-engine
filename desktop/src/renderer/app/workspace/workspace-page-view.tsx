@@ -113,6 +113,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     modelOverride,
     permissionModeOverride,
     pinnedDraftCwd,
+    draftCwd,
     powerDraftContext,
     powerDraftTabActive,
     powerHomePageContext,
@@ -136,6 +137,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     selectedProjectName,
     setAgentModel,
     setAgentReasoningEffort,
+    setDraftCwds,
     setRightSidebarOpen,
     setRightSidebarWidth,
     setSidebarOpen,
@@ -607,7 +609,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                     chatOptions={chatOptions}
                     chats={chats}
                     creationLocation={draftCreationLocation}
-                    cwd={pinnedDraftCwd}
+                    cwd={pinnedDraftCwd ?? draftCwd}
                     creationLocationAccessory={
                       canCreateDraftWorktree ? (
                         <DraftCreationLocationSelect
@@ -636,6 +638,16 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                     onChatMessagesUpdated={setChatMessagesInCache}
                     onChatUpdated={updateChatFromRun}
                     onCreateProject={createProjectFromPicker}
+                    onSelectFolder={async () => {
+                      const selectedPath = await api.projects.chooseDirectory();
+                      if (is.nonEmptyString(selectedPath)) {
+                        selectDraftProject(undefined);
+                        setDraftCwds((current) => ({
+                          ...current,
+                          ["create"]: selectedPath,
+                        }));
+                      }
+                    }}
                     onOpenChat={openChat}
                     onProjectChange={selectDraftProject}
                     permissionMode={permissionModeOverride}
@@ -646,7 +658,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                     }
                     projectId={draftProject.id}
                     projectName={selectedProjectName}
-                    projectPath={draftProject.path}
+                    projectPath={draftCwd ?? draftProject.path}
                     projects={projects}
                     projectsStatus={projectsQuery.status}
                     reasoningEffort={reasoningEffortOverride}

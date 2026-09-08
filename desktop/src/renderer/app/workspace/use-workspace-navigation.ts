@@ -225,10 +225,7 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
         return;
       }
 
-      startNewDraftSession(
-        isProjectWorkspaceMode(nextWorkspaceMode) ? projects[0]?.id : undefined,
-        { replace: true },
-      );
+      startNewDraftSession(undefined, { replace: true });
     },
     [
       chats,
@@ -237,7 +234,6 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
       location,
       navigate,
       navigateToDraft,
-      projects,
       registerChatTab,
       setWorkspaceMode,
       startNewDraftSession,
@@ -273,11 +269,11 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
   }, [setWorkspaceMode, startNewDraftSession, workspaceMode]);
 
   const selectDraftProject = useCallback(
-    (projectId: string) => {
+    (projectId: string | null | undefined) => {
       setPowerDraftWorktree(undefined);
       setPowerActiveWorktree(undefined);
       setPowerWorktreeView(null);
-      navigateToDraft(projectId);
+      navigateToDraft(projectId ?? undefined);
     },
     [navigateToDraft],
   );

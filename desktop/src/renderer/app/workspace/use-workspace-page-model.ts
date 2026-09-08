@@ -181,6 +181,9 @@ export function useWorkspacePageModel({
   const pinnedDraftCwd = powerDraftTabActive
     ? powerDraftContext.cwd
     : undefined;
+  const draftCwd = isDraftPage
+    ? draftState.draftCwds.create
+    : undefined;
   const powerHomePageContext =
     powerModeActive &&
     powerWorktreeView === "home" &&
@@ -340,19 +343,24 @@ export function useWorkspacePageModel({
       enabled:
         shouldPrewarmChat &&
         draftCreationLocation !== "worktree" &&
-        pinnedDraftCwd === undefined,
+        pinnedDraftCwd === undefined &&
+        draftCwd === undefined,
       projectId: draftProject.id,
       runtime: activeRuntime,
     }),
   });
   const inspectDraftRuntimeConfig =
-    draftCreationLocation === "worktree" || pinnedDraftCwd !== undefined;
+    draftCreationLocation === "worktree" ||
+    pinnedDraftCwd !== undefined ||
+    draftCwd !== undefined;
   const shouldInspectDraftRuntimeConfig =
-    isDraftPage && inspectDraftRuntimeConfig && draftProject.path !== undefined;
+    isDraftPage &&
+    inspectDraftRuntimeConfig &&
+    (draftCwd !== undefined || draftProject.path !== undefined);
   const draftRuntimeConfigQuery = useQuery({
     ...chatRuntimeConfigQueryOptions({
       api,
-      cwd: pinnedDraftCwd ?? draftProject.path,
+      cwd: draftCwd ?? pinnedDraftCwd ?? draftProject.path,
       enabled: shouldInspectDraftRuntimeConfig,
       runtime: activeRuntime,
     }),
@@ -457,6 +465,7 @@ export function useWorkspacePageModel({
     draftCreationLocation,
     draftCreationLocationKey,
     draftProjectGitStatusQuery,
+    draftRuntimeKey,
     draftProject,
     draftSessionCounterRef,
     isDraftPage,
@@ -467,6 +476,7 @@ export function useWorkspacePageModel({
     location,
     navigate,
     pinnedDraftCwd,
+    draftCwd,
     powerDraftContext,
     powerDraftTabActive,
     powerHomePageContext,

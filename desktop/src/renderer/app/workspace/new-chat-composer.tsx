@@ -16,10 +16,7 @@ import { useCallback, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { DraftProjectSelect } from "@/app/workspace/draft-project-select";
 import { NewChatRecentSection } from "@/app/workspace/new-chat-recent";
-import {
-  ProjectRequirementNotice,
-  type ProjectsQueryStatus,
-} from "@/app/workspace/project-requirement-notice";
+import type { ProjectsQueryStatus } from "@/app/workspace/project-requirement-notice";
 import {
   isProjectWorkspaceMode,
   useWorkspaceUiStore,
@@ -130,8 +127,9 @@ interface NewChatComposerProps {
     config?: ChatRuntimeConfig,
   ) => void;
   onCreateProject: () => Project | undefined | Promise<Project | undefined>;
+  onSelectFolder: () => void | Promise<void>;
   onOpenChat: (chat: Chat) => void;
-  onProjectChange: (projectId: string) => void;
+  onProjectChange: (projectId: string | null) => void;
   permissionMode?: string;
   prewarmId?: string;
   projectId?: string;
@@ -157,6 +155,7 @@ export function NewChatComposer({
   onChatMessagesUpdated,
   onChatUpdated,
   onCreateProject,
+  onSelectFolder,
   onOpenChat,
   onProjectChange,
   permissionMode,
@@ -173,8 +172,6 @@ export function NewChatComposer({
   const isRunning = useChatRunIsRunning(slotKey);
   const cancelRun = useChatRunStore((state) => state.cancelRun);
   const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
-  const projectRequired =
-    isProjectWorkspaceMode(workspaceMode) && !is.nonEmptyString(projectId);
   const suggestionKeys = isProjectWorkspaceMode(workspaceMode)
     ? projectSuggestionKeys
     : chatSuggestionKeys;
@@ -311,15 +308,7 @@ export function NewChatComposer({
             {t("thread.empty.description")}
           </p>
 
-          {projectRequired ? (
-            <div className="mt-8 flex flex-col items-center gap-3 rounded-xl px-6 py-8 text-center">
-              <ProjectRequirementNotice
-                onCreateProject={onCreateProject}
-                projectCount={projects.length}
-                projectsStatus={projectsStatus}
-              />
-            </div>
-          ) : (
+          <>
             <div
               className="
             relative mt-8 animate-in duration-300 ease-standard fade-in-0
@@ -359,30 +348,35 @@ export function NewChatComposer({
                   isRunning={isRunning}
                   onCancel={handleCancel}
                   projectSelect={
-                    isProjectWorkspaceMode(workspaceMode) ? (
+                    <>
+                      {isProjectWorkspaceMode(workspaceMode) ? (
                       <>
                         <DraftProjectSelect
-                          allowNoProject={false}
+                          allowNoProject
                           onCreateProject={onCreateProject}
-                          onProjectChange={(nextProjectId) => {
-                            if (is.nonEmptyString(nextProjectId)) {
-                              onProjectChange(nextProjectId);
-                            }
-                          }}
+                          onProjectChange={onProjectChange}
                           projects={projects}
                           selectedProjectId={projectId}
                           variant="chip"
                         />
                         {creationLocationAccessory}
                       </>
-                    ) : null
+                      ) : null}
+                      <button
+                        className="rounded-full border border-border-subtle px-3 py-1 text-xs text-muted-foreground hover:bg-overlay-hover"
+                        onClick={() => void onSelectFolder()}
+                        type="button"
+                      >
+                        {cwd ?? t("workspace.noProject")}
+                      </button>
+                    </>
                   }
                 />
               </ChatComposer>
             </div>
-          )}
+          </>
 
-          {projectRequired ? null : (
+          <>
             <div
               className="
             mt-4 flex animate-in flex-wrap justify-center gap-2 duration-300
@@ -418,9 +412,9 @@ export function NewChatComposer({
                 </button>
               ))}
             </div>
-          )}
+          </>
 
-          {projectRequired ? null : (
+          <>
             <div
               className="
             animate-in duration-300 ease-standard fade-in-0
@@ -436,7 +430,7 @@ export function NewChatComposer({
                 projects={projects}
               />
             </div>
-          )}
+          </>
         </div>
       </div>
     </div>
