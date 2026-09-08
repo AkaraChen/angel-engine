@@ -2,7 +2,6 @@ import type { Chat } from "@angel-engine/daemon-api/chat";
 import type { Project } from "@angel-engine/daemon-api/projects";
 import type { WorkspacePageModel } from "@/app/workspace/use-workspace-page-model";
 import type { WorkspaceMode } from "@/app/workspace/workspace-ui-store";
-import type { ProjectWorktreeChatGroup } from "@/features/chat/worktree-grouping";
 
 import is from "@sindresorhus/is";
 import { useCallback } from "react";
@@ -13,36 +12,21 @@ import {
 import {
   chatRoutePath,
   fleetRoutePath,
-  lastOpenedTargetPath,
   projectDraftRoutePath,
   scheduleRoutePath,
-  workspaceModeForChat,
 } from "@/app/workspace/workspace-route-paths";
 import {
   draftAgentConfigKey,
   draftRuntimeKeyFromProjectId,
   workspaceRuntimePageKey,
 } from "@/app/workspace/workspace-runtime-keys";
-import { isProjectWorkspaceMode } from "@/app/workspace/workspace-ui-store";
-import {
-  openChatTab,
-  setPowerActiveWorktree,
-  setPowerDraftWorktree,
-  setPowerWorktreeView,
-} from "@/features/chat/state/chat-tab-store";
-import {
-  chatWorktreeCwd,
-  chatWorktreeGroupKey,
-} from "@/features/chat/worktree-grouping";
 
 export function useWorkspaceNavigation(model: WorkspacePageModel) {
   const {
-    activePowerWorktree,
     activeRuntime,
     chats,
     draftSessionCounterRef,
     isDraftPage,
-    lastOpenedTargets,
     location,
     modeOverride,
     modelOverride,
@@ -56,41 +40,18 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
     setDraftInitialPrompts,
     setDraftRuntimes,
     setDraftSessionIds,
-    setWorkspaceMode,
-    workspaceMode,
   } = model;
-
-  const registerChatTab = useCallback(
-    (chat: Chat, mode: WorkspaceMode) => {
-      if (mode !== "power" || !is.nonEmptyString(chat.projectId)) return;
-
-      const project = projects.find((item) => item.id === chat.projectId);
-      const groupKey = chatWorktreeGroupKey(chat, project?.path);
-      if (groupKey !== undefined) {
-        setPowerActiveWorktree({
-          cwd: chatWorktreeCwd(chat, project?.path),
-          groupKey,
-          projectId: chat.projectId,
-        });
-        setPowerWorktreeView(null);
-        openChatTab(groupKey, chat.id);
-      }
-    },
-    [projects],
-  );
 
   const navigateToChat = useCallback(
     (chat: Chat, options?: { replace?: boolean }) => {
-      setPowerDraftWorktree(undefined);
-      registerChatTab(chat, workspaceMode);
       const path = chatRoutePath(chat, {
-        includeProject: isProjectWorkspaceMode(workspaceMode),
+        includeProject: true,
       });
       if (location !== path) {
         navigate(path, options);
       }
     },
-    [location, navigate, registerChatTab, workspaceMode],
+    [location, navigate],
   );
 
   const navigateToDraft = useCallback(
@@ -103,20 +64,6 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
       }
     },
     [location, navigate],
-  );
-
-  const openPowerWorktree = useCallback(
-    (project: Project, worktreeGroup: ProjectWorktreeChatGroup) => {
-      setPowerDraftWorktree(undefined);
-      setPowerActiveWorktree({
-        cwd: worktreeGroup.cwd,
-        groupKey: worktreeGroup.key,
-        projectId: project.id,
-      });
-      setPowerWorktreeView("home");
-      navigateToDraft(project.id);
-    },
-    [navigateToDraft],
   );
 
   const startNewDraftSession = useCallback(
@@ -194,62 +141,8 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
     ],
   );
 
-  const changeWorkspaceMode = useCallback(
-    (nextWorkspaceMode: WorkspaceMode) => {
-      if (nextWorkspaceMode === workspaceMode) return;
-
-      setPowerDraftWorktree(undefined);
-      setWorkspaceMode(nextWorkspaceMode);
-
-      if (nextWorkspaceMode === "power" && activePowerWorktree !== undefined) {
-        setPowerWorktreeView("home");
-        navigateToDraft(activePowerWorktree.projectId, { replace: true });
-        return;
-      }
-
-      setPowerWorktreeView(null);
-      const target = lastOpenedTargets[nextWorkspaceMode];
-      const path = lastOpenedTargetPath({
-        chats,
-        target,
-        workspaceMode: nextWorkspaceMode,
-      });
-      if (path !== undefined) {
-        if (target?.type === "chat") {
-          const targetChat = chats.find((chat) => chat.id === target.chatId);
-          if (targetChat) registerChatTab(targetChat, nextWorkspaceMode);
-        }
-        if (location !== path) {
-          navigate(path, { replace: true });
-        }
-        return;
-      }
-
-      startNewDraftSession(
-        isProjectWorkspaceMode(nextWorkspaceMode) ? projects[0]?.id : undefined,
-        { replace: true },
-      );
-    },
-    [
-      chats,
-      activePowerWorktree,
-      lastOpenedTargets,
-      location,
-      navigate,
-      navigateToDraft,
-      projects,
-      registerChatTab,
-      setWorkspaceMode,
-      startNewDraftSession,
-      workspaceMode,
-    ],
-  );
-
   const createChatForProject = useCallback(
     (project: Project) => {
-      setPowerDraftWorktree(undefined);
-      setPowerActiveWorktree(undefined);
-      setPowerWorktreeView(null);
       if (isDraftPage && routeDraftProjectId === project.id) return;
       startNewDraftSession(project.id);
     },
@@ -257,26 +150,16 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
   );
 
   const createChatForSelection = useCallback(() => {
-    setPowerDraftWorktree(undefined);
-    setPowerActiveWorktree(undefined);
-    setPowerWorktreeView(null);
     if (isDraftPage) return;
     startNewDraftSession();
   }, [isDraftPage, startNewDraftSession]);
 
   const createStandaloneWorkspace = useCallback(() => {
-    setPowerDraftWorktree(undefined);
-    setPowerActiveWorktree(undefined);
-    setPowerWorktreeView(null);
-    if (workspaceMode !== "chat") setWorkspaceMode("chat");
     startNewDraftSession();
-  }, [setWorkspaceMode, startNewDraftSession, workspaceMode]);
+  }, [startNewDraftSession]);
 
   const selectDraftProject = useCallback(
     (projectId: string) => {
-      setPowerDraftWorktree(undefined);
-      setPowerActiveWorktree(undefined);
-      setPowerWorktreeView(null);
       navigateToDraft(projectId);
     },
     [navigateToDraft],
@@ -291,24 +174,13 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
   }, [location, navigate]);
 
   /**
-   * Fleet spans every project, so a row can point at a chat the current
-   * workspace mode cannot reach. Switch to the mode that owns the chat before
-   * navigating instead of dropping the user on a route its sidebar denies.
    */
   const openChatFromFleet = useCallback(
     (chat: Chat) => {
-      const nextWorkspaceMode = workspaceModeForChat(chat, workspaceMode);
-      if (nextWorkspaceMode !== workspaceMode) {
-        setWorkspaceMode(nextWorkspaceMode);
-      }
-      setPowerDraftWorktree(undefined);
-      registerChatTab(chat, nextWorkspaceMode);
-      const path = chatRoutePath(chat, {
-        includeProject: isProjectWorkspaceMode(nextWorkspaceMode),
-      });
+      const path = chatRoutePath(chat, { includeProject: true });
       if (location !== path) navigate(path);
     },
-    [location, navigate, registerChatTab, setWorkspaceMode, workspaceMode],
+    [location, navigate],
   );
 
   const openSettings = useCallback(() => {
@@ -322,7 +194,6 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
   );
 
   return {
-    changeWorkspaceMode,
     createChatForProject,
     createChatForSelection,
     createStandaloneWorkspace,
@@ -332,9 +203,7 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
     openChatFromFleet,
     openFleet,
     openSchedule,
-    openPowerWorktree,
     openSettings,
-    registerChatTab,
     selectDraftProject,
     startNewDraftSession,
   };
