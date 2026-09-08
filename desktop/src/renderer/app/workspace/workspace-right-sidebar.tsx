@@ -17,7 +17,6 @@ import {
 import {
   currentWorkspaceToolSnapshot,
   useWorkspaceToolStore,
-  workspaceToolGitTabId,
 } from "@/app/workspace/workspace-tool-store";
 import {
   clampWorkspaceRightSidebarWidth,
@@ -57,10 +56,6 @@ export function WorkspaceRightSidebar({
   const [resizeDraftWidth, setResizeDraftWidth] = useState<number | null>(null);
   const [resizing, setResizing] = useState(false);
   const snapshots = useWorkspaceToolStore((state) => state.snapshots);
-  const activeToolTabId = currentWorkspaceToolSnapshot(
-    contextKey,
-    snapshots,
-  ).activeTabId;
   const currentWidth = resizeDraftWidth ?? width;
   const widthStyle = { width: open ? currentWidth : 0 };
   const contentStyle = { width: currentWidth };
@@ -150,7 +145,7 @@ export function WorkspaceRightSidebar({
         <WorkspaceToolSidebarHeader
           api={api}
           root={root}
-          showRepositoryName={activeToolTabId === workspaceToolGitTabId}
+          showRepositoryName
           trailingActions={
             <WorkspaceToolHeaderButton
               icon={<SidebarFold className="scale-x-[-1]" weight="duotone" />}

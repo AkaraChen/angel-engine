@@ -16,10 +16,7 @@ import {
 import { useCallback, useRef } from "react";
 
 import {
-  workspaceToolChecksTabId,
   workspaceToolFilesTabId,
-  workspaceToolGitTabId,
-  workspaceToolPullRequestTabId,
   workspaceToolProcessesTabId,
 } from "@/app/workspace/workspace-tool-store";
 
@@ -133,8 +130,6 @@ export interface WorkspaceToolTabItem {
 
 export interface WorkspaceToolPinnedTabLabels {
   files: string;
-  gitChanges: string;
-  pullRequest: string;
   processes: string;
 }
 
@@ -148,18 +143,6 @@ export function workspaceToolTabItems(
       id: workspaceToolFilesTabId,
       pinned: true,
       title: labels.files,
-    },
-    {
-      icon: GitBranch,
-      id: workspaceToolGitTabId,
-      pinned: true,
-      title: labels.gitChanges,
-    },
-    {
-      icon: GitPullRequest,
-      id: workspaceToolPullRequestTabId,
-      pinned: true,
-      title: labels.pullRequest,
     },
     {
       icon: Cpu,
@@ -180,14 +163,8 @@ export function workspaceToolTabItems(
 export function visibleActiveWorkspaceToolTabId(
   snapshot: WorkspaceToolSurfaceSnapshot,
 ) {
-  if (snapshot.activeTabId === workspaceToolChecksTabId) {
-    return workspaceToolPullRequestTabId;
-  }
-
   if (
     snapshot.activeTabId === workspaceToolFilesTabId ||
-    snapshot.activeTabId === workspaceToolGitTabId ||
-    snapshot.activeTabId === workspaceToolPullRequestTabId ||
     snapshot.activeTabId === workspaceToolProcessesTabId ||
     snapshot.tabs.some((tab) => tab.id === snapshot.activeTabId)
   ) {
