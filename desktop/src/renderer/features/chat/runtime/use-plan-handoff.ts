@@ -5,10 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { useLocation } from "wouter";
 import { chatRoutePath } from "@/app/workspace/workspace-route-paths";
-import {
-  isProjectWorkspaceMode,
-  useWorkspaceUiStore,
-} from "@/app/workspace/workspace-ui-store";
+import {} from "@/app/workspace/workspace-ui-store";
 import { useChatEnvironment } from "@/features/chat/runtime/chat-environment-context";
 import { useChatRunStore } from "@/features/chat/state/chat-run-store";
 import { queryKeys } from "@/platform/query-keys";
@@ -22,7 +19,6 @@ export function usePlanHandoff() {
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
   const { cwd, projectId } = useChatEnvironment();
-  const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
 
   return useCallback(
     async (runtime: AgentRuntime, prompt: string) =>
@@ -32,11 +28,7 @@ export function usePlanHandoff() {
             void queryClient.invalidateQueries({
               queryKey: queryKeys.chats.list(),
             });
-            navigate(
-              chatRoutePath(chat, {
-                includeProject: isProjectWorkspaceMode(workspaceMode),
-              }),
-            );
+            navigate(chatRoutePath(chat, {}));
           },
         },
         input: {
@@ -56,6 +48,6 @@ export function usePlanHandoff() {
         },
         slotKey: `handoff:${runtime}:${Date.now()}`,
       }),
-    [cwd, navigate, projectId, queryClient, startRun, workspaceMode],
+    [cwd, navigate, projectId, queryClient, startRun],
   );
 }

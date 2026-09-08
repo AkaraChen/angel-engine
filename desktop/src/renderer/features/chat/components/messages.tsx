@@ -18,7 +18,6 @@ import type { ReactNode } from "react";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
 import { Reasoning, ReasoningGroup } from "@/components/assistant-ui/reasoning";
 import { ToolGroup } from "@/components/assistant-ui/tool-group";
 import {
@@ -83,7 +82,6 @@ const userMessageBubbleClassName =
 
 export function UserMessage() {
   const { t } = useTranslation();
-  const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
   const hasBubbleContent = useAuiState((state) =>
     state.message.parts.some(isUserBubblePart),
   );
@@ -108,7 +106,6 @@ export function UserMessage() {
         isThreadRunning &&
           "animate-in duration-200 fade-in-0 slide-in-from-bottom-1",
       )}
-      data-workspace-mode={workspaceMode}
     >
       <div
         className={
@@ -187,7 +184,6 @@ export function UserEditComposer() {
   const { t } = useTranslation();
   const aui = useAui();
   const initialText = useAuiState((state) => state.composer.text);
-  const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
   const editor = useComposerEditor({ initialMarkdown: initialText });
 
   const cancel = useCallback(() => {
@@ -205,7 +201,6 @@ export function UserEditComposer() {
   return (
     <MessagePrimitive.Root
       className={cn(messageColumnClassName, "flex justify-end")}
-      data-workspace-mode={workspaceMode}
     >
       <div className="w-full rounded-xl bg-card shadow-xs">
         <ChatComposer
@@ -241,7 +236,6 @@ export function UserEditComposer() {
 
 export function AssistantMessage() {
   const { t } = useTranslation();
-  const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
   const isThreadRunning = useAuiState((state) => state.thread.isRunning);
 
   return (
@@ -252,7 +246,6 @@ export function AssistantMessage() {
         isThreadRunning &&
           "animate-in duration-200 fade-in-0 slide-in-from-bottom-1",
       )}
-      data-workspace-mode={workspaceMode}
     >
       <div className="flex w-full flex-col items-start gap-1.5 text-sm/6">
         <div className="w-full">
@@ -446,8 +439,7 @@ function UserMessageAttachmentParts() {
 }
 
 function AssistantMessageParts() {
-  const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
-  if (workspaceMode === "chat") return <ChatAssistantMessageParts />;
+  if (true) return <ChatAssistantMessageParts />;
 
   return (
     <MessagePrimitive.Parts

@@ -6,10 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { useLocation } from "wouter";
 import { chatRoutePath } from "@/app/workspace/workspace-route-paths";
-import {
-  isProjectWorkspaceMode,
-  useWorkspaceUiStore,
-} from "@/app/workspace/workspace-ui-store";
+import {} from "@/app/workspace/workspace-ui-store";
 import { useChatRunStore } from "@/features/chat/state/chat-run-store";
 import { queryKeys } from "@/platform/query-keys";
 
@@ -29,7 +26,6 @@ export function useSessionHandoff() {
   const startRun = useChatRunStore((state) => state.startRun);
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
-  const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
 
   return useCallback(
     async ({
@@ -44,11 +40,7 @@ export function useSessionHandoff() {
             void queryClient.invalidateQueries({
               queryKey: queryKeys.chats.list(),
             });
-            navigate(
-              chatRoutePath(chat, {
-                includeProject: isProjectWorkspaceMode(workspaceMode),
-              }),
-            );
+            navigate(chatRoutePath(chat, {}));
           },
         },
         input: {
@@ -71,6 +63,6 @@ export function useSessionHandoff() {
         },
         slotKey: `session-handoff:${sourceChat.id}:${targetRuntime}:${Date.now()}`,
       }),
-    [navigate, queryClient, startRun, workspaceMode],
+    [navigate, queryClient, startRun],
   );
 }

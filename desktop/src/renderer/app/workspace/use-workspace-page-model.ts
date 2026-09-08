@@ -20,18 +20,14 @@ import {
   getWorkspaceTitle,
 } from "@/app/workspace/workspace-display";
 import { draftAgentConfigFromExplicitOverrides } from "@/app/workspace/workspace-draft-agent-config";
-import {
-  chatNotificationRoutePath,
-} from "@/app/workspace/workspace-route-paths";
+import { chatNotificationRoutePath } from "@/app/workspace/workspace-route-paths";
 import {
   draftRuntimeKeyFromProjectId,
   workspaceRuntimePageKey,
 } from "@/app/workspace/workspace-runtime-keys";
 import { useWorkspaceToolStore } from "@/app/workspace/workspace-tool-store";
 import { resolveWorkspaceToolContext } from "@/app/workspace/workspace-tool-context";
-import {
-  useWorkspaceUiStore,
-} from "@/app/workspace/workspace-ui-store";
+import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
 import { useToast } from "@/components/ui/toast";
 import { useAgentCatalog } from "@/features/agents/agent-catalog-context";
 import {
@@ -130,10 +126,8 @@ export function useWorkspacePageModel({
       })),
     [enabledAgentOptions],
   );
-  const isProjectMode = true;
-  const showRightSidebar = isProjectMode;
+  const showRightSidebar = true;
   const previousWorkspaceToolHostRef = useRef(workspaceToolHost);
-
 
   const draftState = useWorkspaceDraftState();
   const draftSessionCounterRef = useRef(0);
@@ -154,10 +148,9 @@ export function useWorkspacePageModel({
     projects,
     isDraftPage ? routeDraftProjectId : undefined,
   );
-  const selectedProjectId =
-    isDraftPage
-        ? draftProject.id
-        : (routeProjectId ?? selectedChat?.projectId ?? undefined);
+  const selectedProjectId = isDraftPage
+    ? draftProject.id
+    : (routeProjectId ?? selectedChat?.projectId ?? undefined);
   const selectedProject = is.nonEmptyString(selectedProjectId)
     ? projects.find((project) => project.id === selectedProjectId)
     : undefined;
@@ -171,8 +164,7 @@ export function useWorkspacePageModel({
       : undefined;
   const projectWorkspaceToolRoot = selectedProjectPath;
   const workspaceToolContext = resolveWorkspaceToolContext({
-    projectId:
-      selectedChat?.projectId ?? selectedProjectId,
+    projectId: selectedChat?.projectId ?? selectedProjectId,
     projectRoot:
       is.nonEmptyString(selectedChat?.projectId) &&
       is.nonEmptyString(selectedChatId)
@@ -264,7 +256,6 @@ export function useWorkspacePageModel({
   });
   const canCreateDraftWorktree =
     isDraftPage &&
-    isProjectMode &&
     pinnedDraftCwd === undefined &&
     draftProjectGitStatusQuery.data?.isGitRepository === true;
   const draftCreationLocation: ChatCreationLocation = canCreateDraftWorktree
@@ -329,7 +320,6 @@ export function useWorkspacePageModel({
     window.desktopWindow.setActiveChatId(selectedChatId ?? null);
   }, [selectedChatId]);
 
-
   useEffect(
     () =>
       window.desktopWindow.onOpenChatFromNotification((event) => {
@@ -373,7 +363,6 @@ export function useWorkspacePageModel({
     draftSessionCounterRef,
     isDraftPage,
     isMacOS,
-    isProjectMode,
     initialDraftPrompt: draftState.draftInitialPrompts[runtimePageKey] ?? "",
     location,
     navigate,

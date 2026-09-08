@@ -4,7 +4,6 @@ import { projectDraftRoutePath } from "@/app/workspace/workspace-route-paths";
 
 interface ResolveProjectDraftRedirectOptions {
   isDraftPage: boolean;
-  isProjectMode: boolean;
   projects: Project[];
   projectsQuerySucceeded: boolean;
   requestedProjectId?: string;
@@ -18,7 +17,6 @@ export interface ProjectDraftRedirect {
 
 export function resolveProjectDraftRedirect({
   isDraftPage,
-  isProjectMode,
   projects,
   projectsQuerySucceeded,
   requestedProjectId,
@@ -26,7 +24,6 @@ export function resolveProjectDraftRedirect({
 }: ResolveProjectDraftRedirectOptions): ProjectDraftRedirect | undefined {
   const fallbackProject = projects[0];
   if (
-    !isProjectMode ||
     !isDraftPage ||
     !projectsQuerySucceeded ||
     resolvedProjectId !== undefined ||

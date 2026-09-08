@@ -18,10 +18,7 @@ import {
   useWorkspaceDiffCommentStore,
 } from "@/app/workspace/workspace-diff-comment-store";
 import { chatRoutePath } from "@/app/workspace/workspace-route-paths";
-import {
-  isProjectWorkspaceMode,
-  useWorkspaceUiStore,
-} from "@/app/workspace/workspace-ui-store";
+import {} from "@/app/workspace/workspace-ui-store";
 import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -48,7 +45,6 @@ export function WorkspaceDiffCommentPanel({ root }: { root: string }) {
   const startRun = useChatRunStore((state) => state.startRun);
   const activeChatId = useChatRunStore((state) => state.activeChatId);
   const { contextKey } = useWorkspaceToolSurface();
-  const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
   const [sending, setSending] = useState(false);
@@ -88,11 +84,7 @@ export function WorkspaceDiffCommentPanel({ root }: { root: string }) {
               void queryClient.invalidateQueries({
                 queryKey: queryKeys.chats.list(),
               });
-              navigate(
-                chatRoutePath(chat, {
-                  includeProject: isProjectWorkspaceMode(workspaceMode),
-                }),
-              );
+              navigate(chatRoutePath(chat, {}));
             },
           },
           input: {
@@ -133,7 +125,6 @@ export function WorkspaceDiffCommentPanel({ root }: { root: string }) {
       sending,
       startRun,
       t,
-      workspaceMode,
     ],
   );
 

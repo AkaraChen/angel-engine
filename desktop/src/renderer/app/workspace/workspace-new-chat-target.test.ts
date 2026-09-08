@@ -20,7 +20,6 @@ describe("resolveWorkspaceNewChatTarget", () => {
         projects: [],
         selectedChatId: undefined,
         selectedProjectId: undefined,
-        workspaceMode: "chat",
       }),
     ).toEqual({ type: "standalone" });
   });
@@ -32,7 +31,6 @@ describe("resolveWorkspaceNewChatTarget", () => {
         projects: [PROJECT],
         selectedChatId: undefined,
         selectedProjectId: PROJECT.id,
-        workspaceMode: "work",
       }),
     ).toEqual({ project: PROJECT, type: "project" });
   });
@@ -44,7 +42,6 @@ describe("resolveWorkspaceNewChatTarget", () => {
         projects: [PROJECT],
         selectedChatId: undefined,
         selectedProjectId: "missing",
-        workspaceMode: "power",
       }),
     ).toEqual({ project: PROJECT, type: "project" });
   });
@@ -56,7 +53,6 @@ describe("resolveWorkspaceNewChatTarget", () => {
         projects: [PROJECT],
         selectedChatId: undefined,
         selectedProjectId: PROJECT.id,
-        workspaceMode: "work",
       }),
     ).toEqual({ type: "none" });
   });
@@ -68,7 +64,6 @@ describe("resolveWorkspaceNewChatTarget", () => {
         projects: [],
         selectedChatId: "chat-1",
         selectedProjectId: undefined,
-        workspaceMode: "chat",
       }),
     ).toEqual({ type: "standalone" });
   });

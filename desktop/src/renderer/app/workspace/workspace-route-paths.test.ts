@@ -1,8 +1,9 @@
 import type { Chat } from "@angel-engine/daemon-api/chat";
 import { describe, expect, it } from "vitest";
 import {
-  lastOpenedTargetPath,
-  workspaceModeForChat,
+  chatRoutePath,
+  chatRoutePathId,
+  projectChatRoutePath,
 } from "./workspace-route-paths";
 
 function chat(input: Partial<Chat> & Pick<Chat, "id">): Chat {
@@ -20,85 +21,17 @@ function chat(input: Partial<Chat> & Pick<Chat, "id">): Chat {
   };
 }
 
-describe("lastOpenedTargetPath", () => {
-  it("opens chat and draft targets for the matching mode", () => {
-    const standaloneChat = chat({ id: "standalone" });
-    const projectChat = chat({ id: "project", projectId: "project-id" });
-    const chats = [standaloneChat, projectChat];
-
-    expect(
-      lastOpenedTargetPath({
-        chats,
-        target: { chatId: standaloneChat.id, type: "chat" },
-        workspaceMode: "chat",
-      }),
-    ).toBe("/chat/standalone");
-    expect(
-      lastOpenedTargetPath({
-        chats,
-        target: { chatId: projectChat.id, type: "chat" },
-        workspaceMode: "work",
-      }),
-    ).toBe("/project/project-id/project");
-    expect(
-      lastOpenedTargetPath({
-        chats,
-        target: { type: "draft" },
-        workspaceMode: "chat",
-      }),
-    ).toBe("/");
-    expect(
-      lastOpenedTargetPath({
-        chats,
-        target: { projectId: "project-id", type: "draft" },
-        workspaceMode: "work",
-      }),
-    ).toBe("/project/project-id");
+describe("chat navigation migration", () => {
+  it("keeps legacy project chat URLs addressable without mode state", () => {
+    const projectChat = chat({ id: "chat-1", projectId: "project-1" });
+    expect(chatRoutePath(projectChat)).toBe("/project/project-1/chat-1");
+    expect(projectChatRoutePath("project-1", "chat-1")).toBe(
+      "/project/project-1/chat-1",
+    );
   });
 
-  it("guards archived, missing, and wrong-mode chat targets", () => {
-    const standaloneChat = chat({ id: "standalone" });
-    const projectChat = chat({ id: "project", projectId: "project-id" });
-    const archivedChat = chat({ archived: true, id: "archived" });
-    const chats = [standaloneChat, projectChat, archivedChat];
-
-    expect(
-      lastOpenedTargetPath({
-        chats,
-        target: { chatId: projectChat.id, type: "chat" },
-        workspaceMode: "chat",
-      }),
-    ).toBe(undefined);
-    expect(
-      lastOpenedTargetPath({
-        chats,
-        target: { chatId: archivedChat.id, type: "chat" },
-        workspaceMode: "work",
-      }),
-    ).toBe(undefined);
-    expect(
-      lastOpenedTargetPath({
-        chats,
-        target: { chatId: "missing", type: "chat" },
-        workspaceMode: "chat",
-      }),
-    ).toBe(undefined);
-  });
-});
-
-describe("workspaceModeForChat", () => {
-  it("switches standalone sessions to chat mode", () => {
-    const standaloneChat = chat({ id: "standalone" });
-
-    expect(workspaceModeForChat(standaloneChat, "work")).toBe("chat");
-    expect(workspaceModeForChat(standaloneChat, "power")).toBe("chat");
-  });
-
-  it("opens project sessions in the current project mode", () => {
-    const projectChat = chat({ id: "project", projectId: "project-id" });
-
-    expect(workspaceModeForChat(projectChat, "power")).toBe("power");
-    expect(workspaceModeForChat(projectChat, "work")).toBe("work");
-    expect(workspaceModeForChat(projectChat, "chat")).toBe("work");
+  it("uses the standalone chat URL when a chat has no project", () => {
+    expect(chatRoutePath(chat({ id: "chat-2" }))).toBe("/chat/chat-2");
+    expect(chatRoutePathId("chat-2")).toBe("/chat/chat-2");
   });
 });

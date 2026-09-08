@@ -1,20 +1,14 @@
-import type { WorkspaceMode } from "@/app/workspace/workspace-ui-store";
-
 /**
  * Transcript projection density. Raw events stay stored; this only changes how
  * the renderer folds tool detail.
  *
- * Fixed by workspace mode — not a user preference:
- * - chat → compact (tool rows stay collapsed by default; expand one at a time)
- * - work / power → normal (auto-open when nothing follows the tool group/row)
+ * Fixed for the unified chat transcript — not a user preference:
  */
 export type TranscriptDensity = "compact" | "normal";
 
 /** Density is fully determined by the current workspace mode. */
-export function densityForWorkspaceMode(
-  workspaceMode: WorkspaceMode,
-): TranscriptDensity {
-  return workspaceMode === "chat" ? "compact" : "normal";
+export function densityForTranscript(): TranscriptDensity {
+  return "compact";
 }
 
 /** Whether tool detail should open when the user has not toggled it manually. */

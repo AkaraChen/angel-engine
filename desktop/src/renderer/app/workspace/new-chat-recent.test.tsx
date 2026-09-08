@@ -85,7 +85,6 @@ describe("NewChatRecentSection", () => {
             updatedAt: "2026-01-08T00:00:00Z",
           }),
         ]}
-        isProjectMode
         onCreateProject={vi.fn()}
         onOpenChat={vi.fn()}
         projects={projects}
@@ -96,15 +95,15 @@ describe("NewChatRecentSection", () => {
       .getAllByRole("button")
       .map((button) => button.textContent);
     expect(titles).toHaveLength(5);
-    expect(titles[0]).toContain("newest");
-    expect(titles[3]).toContain("fourth");
+    expect(titles[0]).toContain("standalone-newest");
+    expect(titles[1]).toContain("newest");
     expect(titles[4]).toContain("thread.empty.recentShowAll");
     expect(titles.join(" ")).not.toContain("archived");
     expect(titles.join(" ")).not.toContain("oldest");
-    expect(titles.join(" ")).not.toContain("standalone-newest");
+
   });
 
-  it("lists only standalone chats in chat mode", () => {
+  it("lists project and standalone chats in the unified chat", () => {
     render(
       <NewChatRecentSection
         chats={[
@@ -127,7 +126,6 @@ describe("NewChatRecentSection", () => {
             updatedAt: "2026-01-07T00:00:00Z",
           }),
         ]}
-        isProjectMode={false}
         onCreateProject={vi.fn()}
         onOpenChat={vi.fn()}
         projects={projects}
@@ -140,7 +138,7 @@ describe("NewChatRecentSection", () => {
       .join(" ");
     expect(titles).toContain("solo-new");
     expect(titles).toContain("solo-old");
-    expect(titles).not.toContain("project-chat");
+    expect(titles).toContain("project-chat");
   });
 
   it("expands beyond the recent limit from the show-all toggle", () => {
@@ -178,7 +176,6 @@ describe("NewChatRecentSection", () => {
             updatedAt: "2026-01-03T00:00:00Z",
           }),
         ]}
-        isProjectMode
         onCreateProject={vi.fn()}
         onOpenChat={vi.fn()}
         projects={projects}
@@ -214,7 +211,6 @@ describe("NewChatRecentSection", () => {
             updatedAt: "2026-01-01T00:00:00Z",
           }),
         ]}
-        isProjectMode
         onCreateProject={vi.fn()}
         onOpenChat={vi.fn()}
         projects={projects}
@@ -229,7 +225,6 @@ describe("NewChatRecentSection", () => {
     render(
       <NewChatRecentSection
         chats={[]}
-        isProjectMode
         onCreateProject={onCreateProject}
         onOpenChat={vi.fn()}
         projects={projects}
@@ -245,7 +240,6 @@ describe("NewChatRecentSection", () => {
     const { container } = render(
       <NewChatRecentSection
         chats={[]}
-        isProjectMode={false}
         onCreateProject={vi.fn()}
         onOpenChat={vi.fn()}
         projects={projects}
