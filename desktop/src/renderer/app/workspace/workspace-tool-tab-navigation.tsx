@@ -1,22 +1,13 @@
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import type { WorkspaceToolTabItem } from "@/app/workspace/workspace-tool-tab-model";
 
-import {
-  Plus as Add,
-  X as Close,
-} from "@phosphor-icons/react";
+import { X as Close } from "@phosphor-icons/react";
 import { Fragment, useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
 import { useWorkspaceToolTabKeyboard } from "@/app/workspace/workspace-tool-tab-model";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import {} from "@/components/ui/dropdown-menu";
 import { cn } from "@/platform/utils";
 
 export type WorkspaceToolTabRailOrientation = "horizontal" | "vertical";
@@ -91,7 +82,6 @@ export function WorkspaceToolTabRail({
         >
           {tabItems.map(renderTab)}
         </div>
-        <WorkspaceToolNewTabMenu />
       </div>
     );
   }
@@ -133,7 +123,6 @@ export function WorkspaceToolTabRail({
         >
           {t("workspace.tools.tabs.tabs")}
         </span>
-        <WorkspaceToolNewTabMenu variant="section" />
       </div>
       <div className="flex flex-col gap-0.5" role="presentation">
         {dynamicTabs.map((tab) => renderTab(tab, tabItems.indexOf(tab)))}
@@ -270,41 +259,5 @@ function WorkspaceToolTabButton({
         {closeButton}
       </div>
     </Fragment>
-  );
-}
-
-function WorkspaceToolNewTabMenu({
-  variant = "strip",
-}: {
-  variant?: "section" | "strip";
-}) {
-  const { t } = useTranslation();
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          aria-label={t("workspace.tools.tabs.newTab")}
-          className={cn(
-            `
-              text-muted-foreground
-              hover:bg-overlay-hover
-              active:bg-overlay-active
-            `,
-            variant === "section"
-              ? "size-6 rounded-sm"
-              : "size-7 shrink-0 rounded-md",
-          )}
-          size="icon-xs"
-          title={t("workspace.tools.tabs.newTab")}
-          type="button"
-          variant="ghost"
-        >
-          <Add className="size-3.5" weight="regular" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" variant="native">
-      </DropdownMenuContent>
-    </DropdownMenu>
   );
 }

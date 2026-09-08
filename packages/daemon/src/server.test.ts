@@ -585,9 +585,8 @@ describe("createDaemon", () => {
     expect(response.status).toBe(200);
     await exited;
   });
-
 });
-sync function startDaemon() {
+async function startDaemon() {
   const daemon = await createDaemon({
     dataDir,
     migrationsDir: path.resolve(

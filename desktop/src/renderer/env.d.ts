@@ -17,18 +17,6 @@ import type {
   DesktopUpdateStatus,
 } from "@shared/update-channel";
 import type {
-  WorkspaceToolContextSetInput,
-  WorkspaceToolInstance,
-  WorkspaceToolInstanceCloseInput,
-  WorkspaceToolWindowOpenInput,
-} from "@shared/workspace-tool-instances";
-import type {
-  WorkspaceToolSurfaceContextSetInput,
-  WorkspaceToolSurfaceHostSetInput,
-  WorkspaceToolSurfaceSnapshotSetInput,
-  WorkspaceToolSurfaceState,
-} from "@shared/workspace-tool-surface";
-import type {
   WorkspaceDiffBasePreference,
   WorkspaceDiffBasePreferenceInput,
 } from "@shared/workspace-diff-preferences";
@@ -93,49 +81,18 @@ declare global {
       onUpdateStatusChanged: (
         handler: (status: DesktopUpdateStatus) => void,
       ) => () => void;
-      onWorkspaceToolInstanceUpdated: (
-        handler: (instance: WorkspaceToolInstance) => void,
-      ) => () => void;
-      onWorkspaceToolWindowClosed: (
-        handler: (toolId: string) => void,
-      ) => () => void;
-      onWorkspaceToolSurfaceChanged: (
-        handler: (state: WorkspaceToolSurfaceState) => void,
-      ) => () => void;
       installUpdate: () => Promise<unknown>;
       checkForUpdates: () => Promise<DesktopUpdateStatus>;
       getUpdateStatus: () => Promise<DesktopUpdateStatus>;
       setUpdateChannel: (
         input: DesktopUpdateChannelSetInput,
       ) => Promise<DesktopUpdateStatus>;
-      getWorkspaceToolWindowInstance: (
-        toolId: string,
-      ) => Promise<WorkspaceToolInstance | null>;
-      getWorkspaceToolSurfaceState: () => Promise<WorkspaceToolSurfaceState>;
       getWorkspaceDiffBase: (
         root: string,
       ) => Promise<WorkspaceDiffBasePreference | undefined>;
       openSettings: () => void;
-      closeWorkspaceToolInstance: (
-        input: WorkspaceToolInstanceCloseInput,
-      ) => void;
-      focusWorkspaceToolSurface: () => void;
-      openWorkspaceToolWindow: (input: WorkspaceToolWindowOpenInput) => void;
-      registerWorkspaceToolWindowInstance: (
-        input: WorkspaceToolWindowOpenInput,
-      ) => void;
       setActiveChatId: (chatId: string | null) => void;
       setTheme: (input: DesktopThemeSetInput) => void;
-      setWorkspaceToolContext: (input: WorkspaceToolContextSetInput) => void;
-      setWorkspaceToolSurfaceContext: (
-        input: WorkspaceToolSurfaceContextSetInput,
-      ) => void;
-      setWorkspaceToolSurfaceHost: (
-        input: WorkspaceToolSurfaceHostSetInput,
-      ) => void;
-      setWorkspaceToolSurfaceSnapshot: (
-        input: WorkspaceToolSurfaceSnapshotSetInput,
-      ) => void;
       setWorkspaceDiffBase: (
         input: WorkspaceDiffBasePreferenceInput,
       ) => Promise<void>;

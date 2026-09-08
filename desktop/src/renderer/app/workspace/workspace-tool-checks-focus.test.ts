@@ -10,7 +10,6 @@ import {
 
 const baseSnapshot: WorkspaceToolSurfaceSnapshot = {
   activeTabId: "files",
-  nextTerminalOrdinal: 1,
   tabs: [],
 };
 

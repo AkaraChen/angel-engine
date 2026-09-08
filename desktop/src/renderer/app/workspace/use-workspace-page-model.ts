@@ -28,7 +28,6 @@ import {
   draftRuntimeKeyFromProjectId,
   workspaceRuntimePageKey,
 } from "@/app/workspace/workspace-runtime-keys";
-import { useWorkspaceToolStore } from "@/app/workspace/workspace-tool-store";
 import { resolveWorkspaceToolContext } from "@/app/workspace/workspace-tool-context";
 import {
   isProjectWorkspaceMode,
@@ -118,13 +117,6 @@ export function useWorkspacePageModel({
   const toggleRightSidebar = useWorkspaceUiStore(
     (state) => state.toggleRightSidebar,
   );
-  const workspaceToolHost = useWorkspaceToolStore((state) => state.host);
-  const focusWorkspaceToolSurface = useWorkspaceToolStore(
-    (state) => state.focusWorkspaceToolSurface,
-  );
-  const requestWorkspaceToolHost = useWorkspaceToolStore(
-    (state) => state.requestWorkspaceToolHost,
-  );
   const worktreeDirtyPromptEnabled = useSettingsStore(
     (state) => state.worktreeDirtyPromptEnabled,
   );
@@ -146,7 +138,6 @@ export function useWorkspacePageModel({
   const isProjectMode = isProjectWorkspaceMode(workspaceMode);
   const showRightSidebar = isProjectMode;
   const previousWorkspaceModeRef = useRef(workspaceMode);
-  const previousWorkspaceToolHostRef = useRef(workspaceToolHost);
 
   useEffect(() => {
     if (
@@ -245,43 +236,17 @@ export function useWorkspacePageModel({
   const canShowRightSidebar = showRightSidebar && workspaceToolContext !== null;
   const dockedWorkspaceToolContext =
     canShowRightSidebar &&
-    workspaceToolHost === "sidebar" &&
     is.nonEmptyString(workspaceToolContextKey) &&
     is.nonEmptyString(workspaceToolRoot)
       ? { contextKey: workspaceToolContextKey, root: workspaceToolRoot }
       : null;
 
-  useEffect(() => {
-    if (
-      previousWorkspaceToolHostRef.current !== "sidebar" &&
-      workspaceToolHost === "sidebar" &&
-      canShowRightSidebar &&
-      is.nonEmptyString(workspaceToolContextKey) &&
-      is.nonEmptyString(workspaceToolRoot)
-    ) {
-      setRightSidebarOpen(true);
-    }
-    previousWorkspaceToolHostRef.current = workspaceToolHost;
-  }, [
-    canShowRightSidebar,
-    setRightSidebarOpen,
-    workspaceToolHost,
-    workspaceToolContextKey,
-    workspaceToolRoot,
-  ]);
   const toggleWorkspaceTools = useCallback(() => {
-    if (workspaceToolHost !== "sidebar") {
-      focusWorkspaceToolSurface();
-      return;
-    }
     toggleRightSidebar();
-  }, [focusWorkspaceToolSurface, toggleRightSidebar, workspaceToolHost]);
-  const workspaceToolsToggleLabel =
-    workspaceToolHost !== "sidebar"
-      ? t("workspace.rightSidebar.focus")
-      : rightSidebarOpen
-        ? t("workspace.rightSidebar.hide")
-        : t("workspace.rightSidebar.show");
+  }, [toggleRightSidebar]);
+  const workspaceToolsToggleLabel = rightSidebarOpen
+    ? t("workspace.rightSidebar.hide")
+    : t("workspace.rightSidebar.show");
   const workspaceTitle = getWorkspaceTitle({
     selectedChat,
     selectedProjectName,
@@ -476,7 +441,6 @@ export function useWorkspacePageModel({
     projects,
     projectsQuery,
     queryClient,
-    requestWorkspaceToolHost,
     rightSidebarOpen,
     rightSidebarWidth,
     routeDraftProjectId,
@@ -504,7 +468,6 @@ export function useWorkspacePageModel({
     toggleWorkspaceTools,
     updateAgentSettings,
     workspaceMode,
-    workspaceToolHost,
     workspaceToolContextKey,
     workspaceToolRoot,
     workspaceTitle,

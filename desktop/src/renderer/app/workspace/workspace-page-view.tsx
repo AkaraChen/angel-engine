@@ -37,7 +37,6 @@ import {
   WorkspaceSidebarControlPortalProvider,
 } from "@/app/workspace/workspace-sidebar-control";
 import { WorkspaceToolContextBridge } from "@/app/workspace/workspace-tool-host";
-import { useWorkspaceToolStore } from "@/app/workspace/workspace-tool-store";
 import { WorktreeDirtyDialog } from "@/app/workspace/worktree-dirty-dialog";
 import { WorktreeSetupGuidance } from "@/app/workspace/worktree-setup-guidance";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -121,7 +120,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     projects,
     projectsQuery,
     reasoningEffortOverride,
-    requestWorkspaceToolHost,
     rightSidebarOpen,
     rightSidebarWidth,
     routeProjectId,
@@ -145,7 +143,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     t,
     toggleWorkspaceTools,
     workspaceMode,
-    workspaceToolHost,
     workspaceToolContextKey,
     workspaceToolRoot,
     workspaceTitle,
@@ -457,10 +454,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                 isProjectMode && selectedChat ? selectedProjectName : undefined
               }
               running={selectedChatIsRunning}
-              rightSidebarOpen={
-                canShowRightSidebar &&
-                (rightSidebarOpen || workspaceToolHost !== "sidebar")
-              }
+              rightSidebarOpen={canShowRightSidebar && rightSidebarOpen}
               rightSidebarToggleLabel={workspaceToolsToggleLabel}
               title={
                 scheduleActive
@@ -477,8 +471,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                       void runCurrentWorkspacePathLauncherAction(action)
               }
               onToggleRightSidebar={
-                canShowRightSidebar &&
-                (!rightSidebarOpen || workspaceToolHost !== "sidebar")
+                canShowRightSidebar && !rightSidebarOpen
                   ? toggleWorkspaceTools
                   : undefined
               }
@@ -647,14 +640,13 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           </SidebarInset>
           {dockedWorkspaceToolContext ? (
             <WorkspaceRightSidebar
-              active={workspaceToolHost === "sidebar"}
+              active
               api={api}
               contextKey={dockedWorkspaceToolContext.contextKey}
               open={rightSidebarOpen}
               root={dockedWorkspaceToolContext.root}
               width={rightSidebarWidth}
               onClose={toggleWorkspaceTools}
-              onRequestHost={requestWorkspaceToolHost}
               onWidthChange={setRightSidebarWidth}
             />
           ) : null}

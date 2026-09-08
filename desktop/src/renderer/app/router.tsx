@@ -8,7 +8,6 @@ import {
   WorkspaceFleetPage,
   WorkspaceSchedulePage,
 } from "@/app/workspace/workspace-page";
-import { WorkspaceToolWindowPage } from "@/app/workspace/workspace-tool-host";
 
 export function AppRouter() {
   return (
@@ -22,12 +21,6 @@ export function AppRouter() {
         </Route>
         <Route path="/schedule">
           <WorkspaceSchedulePage />
-        </Route>
-        <Route path="/workspace-tools">
-          <WorkspaceToolWindowPage />
-        </Route>
-        <Route path="/workspace-tool/:toolId">
-          <Redirect replace to="/workspace-tools" />
         </Route>
         <Route component={ChatRoutePage} path="/chat/:chatId" />
         <Route
