@@ -375,7 +375,9 @@ export function currentWorkspaceToolSnapshot(
     return createDefaultWorkspaceToolSnapshot();
   }
 
-  return snapshots[contextKey] ?? createDefaultWorkspaceToolSnapshot();
+  return sanitizeWorkspaceToolSnapshot(
+    snapshots[contextKey] ?? createDefaultWorkspaceToolSnapshot(),
+  );
 }
 
 export function appendWorkspaceTerminalTab(
