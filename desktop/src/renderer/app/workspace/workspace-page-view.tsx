@@ -157,7 +157,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     openChat,
     openChatFromFleet,
     openFleet,
-    openSchedule,
     openSettings,
     selectDraftProject,
   } = navigation;
