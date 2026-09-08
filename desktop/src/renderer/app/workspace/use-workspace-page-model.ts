@@ -140,7 +140,7 @@ export function useWorkspacePageModel({
       })),
     [enabledAgentOptions],
   );
-  const isProjectMode = isProjectWorkspaceMode(workspaceMode);
+  const isProjectMode = true;
   const showRightSidebar = isProjectMode;
   const previousWorkspaceModeRef = useRef(workspaceMode);
   const previousWorkspaceToolHostRef = useRef(workspaceToolHost);
@@ -201,9 +201,7 @@ export function useWorkspacePageModel({
     isDraftPage ? routeDraftProjectId : undefined,
   );
   const selectedProjectId =
-    workspaceMode === "chat"
-      ? undefined
-      : isDraftPage
+    isDraftPage
         ? draftProject.id
         : (routeProjectId ?? selectedChat?.projectId ?? undefined);
   const selectedProject = is.nonEmptyString(selectedProjectId)
@@ -317,7 +315,7 @@ export function useWorkspacePageModel({
   const draftProjectGitStatusQuery = useQuery({
     ...projectGitStatusQueryOptions({
       api,
-      enabled: isDraftPage && isProjectMode && draftProject.id !== undefined,
+      enabled: isDraftPage && draftProject.id !== undefined,
       projectId: draftProject.id,
     }),
   });
