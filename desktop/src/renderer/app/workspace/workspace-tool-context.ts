@@ -1,4 +1,3 @@
-import type { WorkspaceMode } from "@/app/workspace/workspace-ui-store";
 import is from "@sindresorhus/is";
 
 interface ResolveWorkspaceToolContextOptions {
@@ -6,7 +5,6 @@ interface ResolveWorkspaceToolContextOptions {
   projectRoot?: string;
   selectedChatId?: string;
   selectedChatProjectId?: string;
-  workspaceMode: WorkspaceMode;
 }
 
 export interface WorkspaceToolContext {
@@ -19,12 +17,8 @@ export function resolveWorkspaceToolContext({
   projectRoot,
   selectedChatId,
   selectedChatProjectId,
-  workspaceMode,
 }: ResolveWorkspaceToolContextOptions): WorkspaceToolContext | null {
-  if (
-    !is.nonEmptyString(projectId) ||
-    !is.nonEmptyString(projectRoot)
-  ) {
+  if (!is.nonEmptyString(projectId) || !is.nonEmptyString(projectRoot)) {
     return null;
   }
 
