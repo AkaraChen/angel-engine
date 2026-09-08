@@ -23,7 +23,6 @@ import {
   draftRuntimeKeyFromProjectId,
   workspaceRuntimePageKey,
 } from "@/app/workspace/workspace-runtime-keys";
-import { isProjectWorkspaceMode } from "@/app/workspace/workspace-ui-store";
 import {
   openChatTab,
   setPowerActiveWorktree,
@@ -84,7 +83,7 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
       setPowerDraftWorktree(undefined);
       registerChatTab(chat, workspaceMode);
       const path = chatRoutePath(chat, {
-        includeProject: isProjectWorkspaceMode(workspaceMode),
+        includeProject: true,
       });
       if (location !== path) {
         navigate(path, options);
@@ -226,7 +225,6 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
       }
 
       startNewDraftSession(
-        isProjectWorkspaceMode(nextWorkspaceMode) ? projects[0]?.id : undefined,
         { replace: true },
       );
     },
@@ -304,7 +302,7 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
       setPowerDraftWorktree(undefined);
       registerChatTab(chat, nextWorkspaceMode);
       const path = chatRoutePath(chat, {
-        includeProject: isProjectWorkspaceMode(nextWorkspaceMode),
+        includeProject: true,
       });
       if (location !== path) navigate(path);
     },

@@ -144,7 +144,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     sidebarOpenMobile,
     t,
     toggleWorkspaceTools,
-    workspaceMode,
     workspaceToolHost,
     workspaceToolContextKey,
     workspaceToolRoot,
@@ -369,7 +368,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
             onProjectContextMenuAction={handleProjectContextMenuAction}
             onProjectPathLauncherAction={runProjectPathLauncherAction}
             onWorktreePathLauncherAction={runWorktreePathLauncherAction}
-            onWorkspaceModeChange={changeWorkspaceMode}
             projectChatsByProjectId={projectChatsByProjectId}
             projects={projects}
             selectedChatId={selectedChatId}
@@ -399,7 +397,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
             onProjectContextMenuAction={handleProjectContextMenuAction}
             onProjectPathLauncherAction={runProjectPathLauncherAction}
             onWorktreePathLauncherAction={runWorktreePathLauncherAction}
-            onWorkspaceModeChange={changeWorkspaceMode}
             projectChatsByProjectId={projectChatsByProjectId}
             projects={projects}
             selectedChatId={selectedChatId}
@@ -523,7 +520,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
             <main className="flex min-h-0 flex-1 overflow-hidden">
               <section
                 className="flex min-h-0 min-w-0 flex-1 flex-col"
-                data-workspace-mode={workspaceMode}
+
               >
                 {scheduleActive ? (
                   <SchedulePage projects={projects} />
