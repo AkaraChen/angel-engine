@@ -21,10 +21,6 @@ import {
   type ProjectsQueryStatus,
 } from "@/app/workspace/project-requirement-notice";
 import {
-  isProjectWorkspaceMode,
-  useWorkspaceUiStore,
-} from "@/app/workspace/workspace-ui-store";
-import {
   PromptInputFooter,
   PromptInputTools,
   usePromptInputAttachments,
@@ -85,7 +81,7 @@ const newChatHeaderClassName = cn(
  * primitives, which stay rectangular in the chat surface. Matched on
  * `data-variant` rather than `data-slot=button` because a Radix trigger rendered
  * `asChild` replaces the slot but keeps the variant. Heights are left alone so
- * the compact workspace modes keep their own (still >= 28px) hit targets.
+ * the unified chat keep their own (still >= 28px) hit targets.
  */
 const newChatFooterClassName = cn(
   `
@@ -100,12 +96,6 @@ const chatSuggestionKeys = [
   "thread.empty.suggestionSummarize",
   "thread.empty.suggestionWrite",
 ] as const;
-const projectSuggestionKeys = [
-  "thread.empty.suggestionExplore",
-  "thread.empty.suggestionFix",
-  "thread.empty.suggestionTests",
-] as const;
-
 interface NewChatComposerProps {
   chats: Chat[];
   creationLocation?: ChatCreationLocation;
@@ -172,14 +162,9 @@ export function NewChatComposer({
   const { t } = useTranslation();
   const isRunning = useChatRunIsRunning(slotKey);
   const cancelRun = useChatRunStore((state) => state.cancelRun);
-  const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
-  const projectRequired =
-    isProjectWorkspaceMode(workspaceMode) && !is.nonEmptyString(projectId);
-  const suggestionKeys = isProjectWorkspaceMode(workspaceMode)
-    ? projectSuggestionKeys
-    : chatSuggestionKeys;
-
+  const projectRequired = false;
   const editor = useComposerEditor({ initialMarkdown });
+  const suggestionKeys = chatSuggestionKeys;
   useTerminalSelectionInsert(editor);
   const sourceAttachment = editor.sourceControlAttachments[0];
   const isChangeRequest = sourceAttachment?.kind === "changeRequest";
@@ -359,23 +344,20 @@ export function NewChatComposer({
                   isRunning={isRunning}
                   onCancel={handleCancel}
                   projectSelect={
-                    isProjectWorkspaceMode(workspaceMode) ? (
-                      <>
-                        <DraftProjectSelect
-                          allowNoProject={false}
-                          onCreateProject={onCreateProject}
-                          onProjectChange={(nextProjectId) => {
-                            if (is.nonEmptyString(nextProjectId)) {
-                              onProjectChange(nextProjectId);
-                            }
-                          }}
-                          projects={projects}
-                          selectedProjectId={projectId}
-                          variant="chip"
-                        />
-                        {creationLocationAccessory}
-                      </>
-                    ) : null
+                    <>
+                      <DraftProjectSelect
+                        allowNoProject={false}
+                        onCreateProject={onCreateProject}
+                        onProjectChange={(nextProjectId) => {
+                          if (is.nonEmptyString(nextProjectId))
+                            onProjectChange(nextProjectId);
+                        }}
+                        projects={projects}
+                        selectedProjectId={projectId}
+                        variant="chip"
+                      />
+                      {creationLocationAccessory}
+                    </>
                   }
                 />
               </ChatComposer>
@@ -430,7 +412,6 @@ export function NewChatComposer({
             >
               <NewChatRecentSection
                 chats={chats}
-                isProjectMode={isProjectWorkspaceMode(workspaceMode)}
                 onCreateProject={() => void onCreateProject()}
                 onOpenChat={onOpenChat}
                 projects={projects}

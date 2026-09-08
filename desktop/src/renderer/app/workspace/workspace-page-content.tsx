@@ -46,7 +46,7 @@ export function WorkspacePageContent({
 
   if (model.selectedChat) {
     const canonicalPath = chatRoutePath(model.selectedChat, {
-      includeProject: model.isProjectMode,
+      includeProject: true,
     });
     if (canonicalPath !== currentRoutePath) {
       return <Redirect replace to={canonicalPath} />;
@@ -55,7 +55,6 @@ export function WorkspacePageContent({
 
   const projectDraftRedirect = resolveProjectDraftRedirect({
     isDraftPage: model.isDraftPage,
-    isProjectMode: model.isProjectMode,
     projects: model.projects,
     projectsQuerySucceeded: model.projectsQuery.isSuccess,
     requestedProjectId: draftProjectId,

@@ -1,29 +1,10 @@
 import { create } from "zustand";
 
-export type WorkspaceMode = "chat" | "power" | "work";
-
-export function isProjectWorkspaceMode(workspaceMode: WorkspaceMode) {
-  return workspaceMode === "work" || workspaceMode === "power";
-}
-
-export type WorkspaceLastOpenedTarget =
-  | { chatId: string; type: "chat" }
-  | { projectId?: string; type: "draft" };
-
-type WorkspaceLastOpenedTargets = Partial<
-  Record<WorkspaceMode, WorkspaceLastOpenedTarget>
->;
-
-const workspaceModeStorageKey = "angel-engine.workspace-mode";
-const workspaceLastOpenedTargetsStorageKey =
-  "angel-engine.workspace-last-opened-chat-ids";
-const rightSidebarWidthStorageKey = "angel-engine.right-sidebar-width";
 const defaultBrowserUrl = "about:blank";
+const rightSidebarWidthStorageKey = "angel-engine.right-sidebar-width";
 export const defaultWorkspaceRightSidebarWidth = 288;
 export const minWorkspaceRightSidebarWidth = 240;
 export const maxWorkspaceRightSidebarWidth = 520;
-const initialWorkspaceMode = readWorkspaceMode();
-const initialLastOpenedTargets = readLastOpenedTargets();
 const initialRightSidebarWidth = readRightSidebarWidth();
 
 export type SidebarChatDateGroupKey =
@@ -40,11 +21,6 @@ interface WorkspaceUiState {
   collapsedChatDateGroupKeys: Set<SidebarChatDateGroupKey>;
   collapsedWorktreeGroupKeys: Set<string>;
   expandedProjectIds: Set<string>;
-  lastOpenedTargets: WorkspaceLastOpenedTargets;
-  rememberLastOpenedTarget: (
-    workspaceMode: WorkspaceMode,
-    target: WorkspaceLastOpenedTarget,
-  ) => void;
   rightSidebarOpen: boolean;
   rightSidebarWidth: number;
   setBrowserUrl: (browserUrl: string) => void;
@@ -52,7 +28,6 @@ interface WorkspaceUiState {
   setRightSidebarWidth: (rightSidebarWidth: number) => void;
   setSidebarOpen: (sidebarOpen: boolean) => void;
   setSidebarOpenMobile: (sidebarOpenMobile: boolean) => void;
-  setWorkspaceMode: (workspaceMode: WorkspaceMode) => void;
   sidebarOpen: boolean;
   sidebarOpenMobile: boolean;
   sidebarProjectIds: Set<string>;
@@ -65,7 +40,6 @@ interface WorkspaceUiState {
   toggleSidebarChatDateGroup: (groupKey: SidebarChatDateGroupKey) => void;
   toggleSidebarProject: (projectId: string) => void;
   toggleSidebarWorktreeGroup: (groupKey: string) => void;
-  workspaceMode: WorkspaceMode;
 }
 
 export const useWorkspaceUiStore = create<WorkspaceUiState>()((set) => ({
@@ -73,30 +47,7 @@ export const useWorkspaceUiStore = create<WorkspaceUiState>()((set) => ({
   collapsedChatDateGroupKeys: new Set(),
   collapsedWorktreeGroupKeys: new Set(),
   expandedProjectIds: new Set(),
-  lastOpenedTargets: initialLastOpenedTargets,
-  rememberLastOpenedTarget: (workspaceMode, target) =>
-    set((current) => {
-      const nextWorkspaceMode = sanitizeWorkspaceMode(workspaceMode);
-      const nextTarget = sanitizeLastOpenedTarget(target);
-      if (nextTarget === undefined) return current;
-      if (
-        lastOpenedTargetsEqual(
-          current.lastOpenedTargets[nextWorkspaceMode],
-          nextTarget,
-        )
-      ) {
-        return current;
-      }
-
-      const lastOpenedTargets = {
-        ...current.lastOpenedTargets,
-        [nextWorkspaceMode]: nextTarget,
-      };
-      writeLastOpenedTargets(lastOpenedTargets);
-
-      return { lastOpenedTargets };
-    }),
-  rightSidebarOpen: isProjectWorkspaceMode(initialWorkspaceMode),
+  rightSidebarOpen: true,
   rightSidebarWidth: initialRightSidebarWidth,
   setBrowserUrl: (browserUrl) =>
     set({ browserUrl: sanitizeBrowserUrl(browserUrl) }),
@@ -109,11 +60,6 @@ export const useWorkspaceUiStore = create<WorkspaceUiState>()((set) => ({
   },
   setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
   setSidebarOpenMobile: (sidebarOpenMobile) => set({ sidebarOpenMobile }),
-  setWorkspaceMode: (workspaceMode) => {
-    const nextWorkspaceMode = sanitizeWorkspaceMode(workspaceMode);
-    writeWorkspaceMode(nextWorkspaceMode);
-    set({ workspaceMode: nextWorkspaceMode });
-  },
   sidebarOpen: true,
   sidebarOpenMobile: false,
   sidebarProjectIds: new Set(),
@@ -189,97 +135,7 @@ export const useWorkspaceUiStore = create<WorkspaceUiState>()((set) => ({
       }
       return { collapsedWorktreeGroupKeys };
     }),
-  workspaceMode: initialWorkspaceMode,
 }));
-
-function readWorkspaceMode(): WorkspaceMode {
-  try {
-    return sanitizeWorkspaceMode(
-      window.localStorage.getItem(workspaceModeStorageKey),
-    );
-  } catch {
-    return "chat";
-  }
-}
-
-function writeWorkspaceMode(workspaceMode: WorkspaceMode) {
-  window.localStorage.setItem(workspaceModeStorageKey, workspaceMode);
-}
-
-function readLastOpenedTargets(): WorkspaceLastOpenedTargets {
-  try {
-    return sanitizeLastOpenedTargets(
-      JSON.parse(
-        window.localStorage.getItem(workspaceLastOpenedTargetsStorageKey) ??
-          "{}",
-      ),
-    );
-  } catch {
-    return {};
-  }
-}
-
-function writeLastOpenedTargets(lastOpenedTargets: WorkspaceLastOpenedTargets) {
-  window.localStorage.setItem(
-    workspaceLastOpenedTargetsStorageKey,
-    JSON.stringify(sanitizeLastOpenedTargets(lastOpenedTargets)),
-  );
-}
-
-function sanitizeLastOpenedTargets(value: unknown): WorkspaceLastOpenedTargets {
-  if (value === null || typeof value !== "object") return {};
-  const record = value as Record<string, unknown>;
-
-  return {
-    chat: sanitizeLastOpenedTarget(record.chat),
-    power: sanitizeLastOpenedTarget(record.power),
-    work: sanitizeLastOpenedTarget(record.work),
-  };
-}
-
-function sanitizeLastOpenedTarget(
-  value: unknown,
-): WorkspaceLastOpenedTarget | undefined {
-  const legacyChatId = sanitizeOptionalString(value);
-  if (legacyChatId !== undefined) {
-    return { chatId: legacyChatId, type: "chat" };
-  }
-  if (value === null || typeof value !== "object") return undefined;
-  const record = value as Record<string, unknown>;
-
-  if (record.type === "chat") {
-    const chatId = sanitizeOptionalString(record.chatId);
-    return chatId === undefined ? undefined : { chatId, type: "chat" };
-  }
-  if (record.type === "draft") {
-    const projectId = sanitizeOptionalString(record.projectId);
-    return projectId === undefined
-      ? { type: "draft" }
-      : { projectId, type: "draft" };
-  }
-  return undefined;
-}
-
-function lastOpenedTargetsEqual(
-  left: WorkspaceLastOpenedTarget | undefined,
-  right: WorkspaceLastOpenedTarget,
-) {
-  if (left === undefined) return false;
-  if (left.type === "chat" || right.type === "chat") {
-    return left.type === "chat" && right.type === "chat"
-      ? left.chatId === right.chatId
-      : false;
-  }
-  return left.projectId === right.projectId;
-}
-
-function sanitizeWorkspaceMode(value: unknown): WorkspaceMode {
-  return value === "work" || value === "power" ? value : "chat";
-}
-
-function sanitizeOptionalString(value: unknown) {
-  return typeof value === "string" && value.trim() ? value.trim() : undefined;
-}
 
 function sanitizeBrowserUrl(value: unknown) {
   return typeof value === "string" && value.trim()
@@ -289,6 +145,7 @@ function sanitizeBrowserUrl(value: unknown) {
 
 function readRightSidebarWidth() {
   try {
+    if (typeof window === "undefined") return defaultWorkspaceRightSidebarWidth;
     const value = window.localStorage.getItem(rightSidebarWidthStorageKey);
     return value === null
       ? defaultWorkspaceRightSidebarWidth

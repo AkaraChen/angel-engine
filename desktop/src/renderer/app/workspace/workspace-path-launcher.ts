@@ -1,8 +1,6 @@
 import type { Chat } from "@angel-engine/daemon-api/chat";
 import type { Project } from "@angel-engine/daemon-api/projects";
 import type { PathLauncherTargetRef } from "@shared/path-launcher";
-import type { PowerDraftWorktree } from "@/features/chat/state/chat-tab-store";
-
 import is from "@sindresorhus/is";
 import { chatWorktreeGroupKey } from "@/features/chat/worktree-grouping";
 
@@ -11,7 +9,7 @@ interface WorkspacePathLauncherInput {
   draftProjectId?: string;
   projects: ReadonlyArray<Pick<Project, "id" | "path">>;
   selectedChat?: Pick<Chat, "id" | "projectId">;
-  worktree?: PowerDraftWorktree;
+  worktree?: { cwd?: string; groupKey: string; projectId: string };
 }
 
 export function resolveWorkspacePathLauncherTarget({

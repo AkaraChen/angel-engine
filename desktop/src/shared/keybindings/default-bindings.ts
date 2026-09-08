@@ -109,33 +109,9 @@ export function createDefaultKeybindingRules(
       source: "default",
     },
     {
-      key: "mod+t",
-      command: COMMAND_IDS.workspaceNewTab,
-      when: "workspace.powerMode",
-      source: "default",
-    },
-    {
-      key: "mod+w",
-      command: COMMAND_IDS.workspaceCloseTab,
-      when: "workspace.powerMode && workspace.hasClosableTab",
-      source: "default",
-    },
-    {
       key: "mod+w",
       command: COMMAND_IDS.settingsClose,
       when: "view.id == 'settings'",
-      source: "default",
-    },
-    {
-      key: "ctrl+tab",
-      command: COMMAND_IDS.workspaceNextTab,
-      when: "workspace.hasMultipleTabs",
-      source: "default",
-    },
-    {
-      key: "ctrl+shift+tab",
-      command: COMMAND_IDS.workspacePreviousTab,
-      when: "workspace.hasMultipleTabs",
       source: "default",
     },
     {

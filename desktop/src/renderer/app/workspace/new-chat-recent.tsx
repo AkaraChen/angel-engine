@@ -22,13 +22,11 @@ const RECENT_CHAT_LIMIT = 4;
 
 export function NewChatRecentSection({
   chats,
-  isProjectMode,
   onCreateProject,
   onOpenChat,
   projects,
 }: {
   chats: Chat[];
-  isProjectMode: boolean;
   onCreateProject: () => void;
   onOpenChat: (chat: Chat) => void;
   projects: Project[];
@@ -44,22 +42,19 @@ export function NewChatRecentSection({
       chats
         .filter((chat) => {
           if (chat.archived) return false;
-          // Chat mode only resumes standalone threads; project modes only
-          // resume project-bound ones so the list matches the surface.
-          const isProjectChat = is.nonEmptyString(chat.projectId);
-          return isProjectMode ? isProjectChat : !isProjectChat;
+          return true;
         })
         .toSorted((left, right) =>
           right.updatedAt.localeCompare(left.updatedAt),
         ),
-    [chats, isProjectMode],
+    [chats],
   );
   const recentChats = expanded
     ? allRecentChats
     : allRecentChats.slice(0, RECENT_CHAT_LIMIT);
   const hiddenCount = allRecentChats.length - RECENT_CHAT_LIMIT;
 
-  if (recentChats.length === 0 && !isProjectMode) return null;
+  if (recentChats.length === 0) return null;
 
   return (
     <section className="mt-10 w-full">

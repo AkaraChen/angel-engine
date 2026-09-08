@@ -634,10 +634,6 @@ export interface LocaleResourceTranslationSidebar {
   dateGroups: LocaleResourceTranslationSidebarDateGroups;
   loadingChats: string;
   loadingProjects: string;
-  modeChat: string;
-  modePower: string;
-  modeSwitcher: string;
-  modeWork: string;
   needsInput: string;
   newChat: string;
   newChatInProject: string;
@@ -934,10 +930,6 @@ export interface LocaleResourceTranslationCommands {
   paletteOpen: string;
   settingsClose: string;
   settingsOpen: string;
-  workspaceCloseTab: string;
-  workspaceNewTab: string;
-  workspaceNextTab: string;
-  workspacePreviousTab: string;
   workspaceToggleSidebar: string;
 }
 

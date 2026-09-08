@@ -10,7 +10,6 @@ describe("resolveProjectDraftRedirect", () => {
     expect(
       resolveProjectDraftRedirect({
         isDraftPage: true,
-        isProjectMode: true,
         projects,
         projectsQuerySucceeded: true,
       }),
@@ -21,7 +20,6 @@ describe("resolveProjectDraftRedirect", () => {
     expect(
       resolveProjectDraftRedirect({
         isDraftPage: true,
-        isProjectMode: true,
         projects,
         projectsQuerySucceeded: true,
         requestedProjectId: "removed-project",
@@ -33,7 +31,6 @@ describe("resolveProjectDraftRedirect", () => {
     expect(
       resolveProjectDraftRedirect({
         isDraftPage: true,
-        isProjectMode: true,
         projects,
         projectsQuerySucceeded: false,
       }),

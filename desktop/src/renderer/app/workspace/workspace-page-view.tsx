@@ -463,9 +463,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
               }
             />
             <main className="flex min-h-0 flex-1 overflow-hidden">
-              <section
-                className="flex min-h-0 min-w-0 flex-1 flex-col"
-              >
+              <section className="flex min-h-0 min-w-0 flex-1 flex-col">
                 {scheduleActive ? (
                   <SchedulePage projects={projects} />
                 ) : fleetActive ? (
