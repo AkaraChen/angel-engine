@@ -68,7 +68,9 @@ describe("active run boundary guards", () => {
       ],
       chatId: "chat-1",
       mode: null,
+      model: "gpt-5",
       permissionMode: "ask",
+      reasoningEffort: "medium",
       text: "Run the tests",
     };
 

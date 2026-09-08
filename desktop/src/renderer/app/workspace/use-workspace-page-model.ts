@@ -1,5 +1,5 @@
 import type { AgentRuntime } from "@angel-engine/daemon-api/agents";
-import type { Chat, ChatCreationLocation } from "@angel-engine/daemon-api/chat";
+import type { Chat } from "@angel-engine/daemon-api/chat";
 import type { Project } from "@angel-engine/daemon-api/projects";
 import type { useApi } from "@/platform/use-api";
 
@@ -42,10 +42,7 @@ import {
   useChatRunConfig,
   useChatRunIsRunning,
 } from "@/features/chat/state/chat-run-store";
-import {
-  projectGitStatusQueryOptions,
-  projectListQueryOptions,
-} from "@/features/projects/api/queries";
+import { projectListQueryOptions } from "@/features/projects/api/queries";
 import { useSettingsStore } from "@/features/settings/settings-store";
 import { useAgentSettings } from "@/features/settings/use-agent-settings";
 
@@ -223,9 +220,6 @@ export function useWorkspacePageModel({
   const draftRuntimeKey = isDraftPage
     ? draftRuntimeKeyFromProjectId(routeDraftProjectId)
     : undefined;
-  const draftCreationLocationKey = draftRuntimeKey ?? "standalone";
-  const requestedDraftCreationLocation =
-    draftState.draftCreationLocations[draftCreationLocationKey] ?? "project";
   const runtimePageKey = workspaceRuntimePageKey({
     chatRuntime,
     draftProjectId: routeDraftProjectId,
@@ -246,23 +240,6 @@ export function useWorkspacePageModel({
         availableAgentOptions,
       );
   const activeRuntime = chatRuntime ?? draftRuntime;
-  const draftProjectGitStatusQuery = useQuery({
-    ...projectGitStatusQueryOptions({
-      api,
-      enabled:
-        isDraftPage && draftProject.id !== undefined && draftCwd === undefined,
-      projectId: draftProject.id,
-    }),
-  });
-  const canCreateDraftWorktree =
-    isDraftPage &&
-    isProjectMode &&
-    pinnedDraftCwd === undefined &&
-    draftCwd === undefined &&
-    draftProjectGitStatusQuery.data?.isGitRepository === true;
-  const draftCreationLocation: ChatCreationLocation = canCreateDraftWorktree
-    ? requestedDraftCreationLocation
-    : "project";
   const shouldPrewarmChat =
     isDraftPage &&
     (!is.nonEmptyString(routeDraftProjectId) ||
@@ -270,10 +247,8 @@ export function useWorkspacePageModel({
   const prewarmQuery = useQuery({
     ...chatPrewarmQueryOptions({
       api,
-      creationLocation: draftCreationLocation,
       enabled:
         shouldPrewarmChat &&
-        draftCreationLocation !== "worktree" &&
         pinnedDraftCwd === undefined &&
         draftCwd === undefined,
       projectId: draftProject.id,
@@ -281,9 +256,7 @@ export function useWorkspacePageModel({
     }),
   });
   const inspectDraftRuntimeConfig =
-    draftCreationLocation === "worktree" ||
-    pinnedDraftCwd !== undefined ||
-    draftCwd !== undefined;
+    pinnedDraftCwd !== undefined || draftCwd !== undefined;
   const shouldInspectDraftRuntimeConfig =
     isDraftPage &&
     inspectDraftRuntimeConfig &&
@@ -357,15 +330,11 @@ export function useWorkspacePageModel({
     ...draftChatOptions,
     activeRuntime,
     api,
-    canCreateDraftWorktree,
     canShowRightSidebar,
     chatAttention,
     chats,
     chatsQuery,
     dockedWorkspaceToolContext,
-    draftCreationLocation,
-    draftCreationLocationKey,
-    draftProjectGitStatusQuery,
     draftProject,
     draftCwd,
     setDraftCwd,

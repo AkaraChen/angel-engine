@@ -22,6 +22,7 @@ const record: AutomationRow = {
 };
 const automation: Automation = {
   ...record,
+  workspaceKind: "project",
   runs: [],
   status: "active",
 };

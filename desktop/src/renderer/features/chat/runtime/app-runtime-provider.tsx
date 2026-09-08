@@ -1,6 +1,5 @@
 import type {
   Chat,
-  ChatCreationLocation,
   ChatHistoryMessage,
   ChatRuntimeConfig,
 } from "@angel-engine/daemon-api/chat";
@@ -34,7 +33,6 @@ import { engineMessagesToHistoryMessages } from "@/features/chat/state/chat-run-
 interface AppRuntimeProviderProps {
   chatId?: string;
   children: ReactNode;
-  creationLocation?: ChatCreationLocation;
   cwd?: string;
   historyMessages: ChatHistoryMessage[];
   historyRevision: number;
@@ -75,7 +73,6 @@ const mockFeedbackAdapter: FeedbackAdapter = {
 export function AppRuntimeProvider({
   chatId,
   children,
-  creationLocation,
   cwd,
   historyMessages,
   historyRevision,
@@ -111,7 +108,6 @@ export function AppRuntimeProvider({
   const assistantRuntime = useEngineRuntime({
     adapters,
     chatId,
-    creationLocation,
     historyMessages,
     historyRevision,
     model,
@@ -165,7 +161,6 @@ export function AppRuntimeProvider({
           onChatUpdated,
         },
         input: {
-          creationLocation,
           cwd,
           model: model ?? runtimeConfig?.currentModel ?? undefined,
           mode:
@@ -195,7 +190,6 @@ export function AppRuntimeProvider({
     };
   }, [
     chatId,
-    creationLocation,
     cwd,
     messages,
     mode,

@@ -58,23 +58,13 @@ describe("chatPrewarmMatches", () => {
       ),
     );
 
-  it("claims a prewarm whose runtime and location agree", async () => {
-    await expect(
-      matches(
-        { cwd: os.homedir(), input: { runtime: "codex" } },
-        { creationLocation: "project", runtime: "codex" },
-      ),
-    ).resolves.toBe(true);
-  });
-
-  it("treats a missing creationLocation as project on both sides", async () => {
+  it("matches a standalone prewarm with an empty claim", async () => {
     await expect(matches(standalonePrewarm, {})).resolves.toBe(true);
   });
 
   it.each([
     ["an explicit cwd override", { cwd: "/tmp/somewhere-else" }],
     ["a different runtime", { runtime: "claude" }],
-    ["a worktree chat", { creationLocation: "worktree" as const }],
   ])("refuses a prewarm with %s", async (_label, claimInput) => {
     await expect(matches(standalonePrewarm, claimInput)).resolves.toBe(false);
   });
@@ -116,18 +106,6 @@ describe("cwdForNewChat", () => {
         }).pipe(Effect.provide(dieDbLayer())),
       ),
     ).resolves.toBe("/tmp/source-session-cwd");
-  });
-
-  it("still refuses a worktree chat without a project", async () => {
-    // Chat creation now routes through here, so this guard is the only thing
-    // stopping a projectless worktree chat from being created.
-    await expect(
-      Effect.runPromise(
-        cwdForNewChat({ creationLocation: "worktree" }).pipe(
-          Effect.provide(dieDbLayer()),
-        ),
-      ),
-    ).rejects.toThrow(/project/i);
   });
 });
 

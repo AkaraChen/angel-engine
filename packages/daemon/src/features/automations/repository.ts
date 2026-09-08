@@ -278,6 +278,7 @@ function toAutomation(
     ...record,
     runs,
     status: automationStatus(record.enabled, runs),
+    workspaceKind: "project",
   };
 }
 

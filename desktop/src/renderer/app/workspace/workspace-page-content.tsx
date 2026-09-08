@@ -4,7 +4,6 @@ import { Redirect } from "wouter";
 import { useWorkspaceChatActions } from "@/app/workspace/use-workspace-chat-actions";
 import { useWorkspaceNavigation } from "@/app/workspace/use-workspace-navigation";
 import { useWorkspacePageModel } from "@/app/workspace/use-workspace-page-model";
-import { useWorktreeDraftGuard } from "@/app/workspace/use-worktree-draft-guard";
 import { WorkspacePageView } from "@/app/workspace/workspace-page-view";
 import { chatRoutePath } from "@/app/workspace/workspace-route-paths";
 import { resolveProjectDraftRedirect } from "@/app/workspace/workspace-project-route-normalization";
@@ -39,7 +38,6 @@ export function WorkspacePageContent({
     model,
     navigation,
   });
-  const draftGuard = useWorktreeDraftGuard(model);
 
   if (model.selectedChat) {
     const canonicalPath = chatRoutePath(model.selectedChat, {
@@ -75,7 +73,6 @@ export function WorkspacePageContent({
     <WorkspacePageView
       chatActions={chatActions}
       currentRoutePath={currentRoutePath}
-      draftGuard={draftGuard}
       scheduleActive={scheduleActive}
       model={model}
       navigation={navigation}

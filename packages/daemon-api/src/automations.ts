@@ -8,7 +8,7 @@ export type AutomationRunStatus =
   | "succeeded";
 export type AutomationStatus = "active" | "failing" | "paused" | "running";
 export type AutomationTrigger = "manual" | "scheduled";
-export type AutomationWorkspaceKind = "project" | "worktree";
+export type AutomationWorkspaceKind = "project";
 
 export interface AutomationRun {
   automationId: string;
@@ -66,7 +66,7 @@ export const createAutomationInputSchema = arkType({
   "enabled?": "boolean | undefined",
   "notifyOnFailure?": "boolean | undefined",
   "projectId?": "string > 0 | undefined",
-  "workspaceKind?": "'project' | 'worktree' | undefined",
+  "workspaceKind?": "'project' | undefined",
   cron: "string > 0",
   name: "string > 0",
   prompt: "string > 0",
@@ -82,5 +82,5 @@ export const updateAutomationInputSchema = arkType({
   "projectId?": "string > 0 | null | undefined",
   "prompt?": "string > 0 | undefined",
   "runtime?": "string > 0 | undefined",
-  "workspaceKind?": "'project' | 'worktree' | undefined",
+  "workspaceKind?": "'project' | undefined",
 });

@@ -246,7 +246,6 @@ export const chatRunActions: Omit<ChatRunStore, keyof ChatRunContext> = {
  */
 async function createChatForRun(input: StartRunOptions): Promise<Chat> {
   return getApiClient().chats.create({
-    creationLocation: input.creationLocation,
     cwd: input.cwd,
     model: input.model,
     mode: input.mode,
@@ -257,8 +256,6 @@ async function createChatForRun(input: StartRunOptions): Promise<Chat> {
     runtime: input.runtime,
     title: input.title,
     sourceLink: input.sourceLink,
-    worktreeRef: input.worktreeRef,
-    worktreeSetupApproval: input.worktreeSetupApproval,
   });
 }
 

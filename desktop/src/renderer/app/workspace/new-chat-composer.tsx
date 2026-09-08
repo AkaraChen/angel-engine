@@ -1,6 +1,5 @@
 import type {
   Chat,
-  ChatCreationLocation,
   ChatHistoryMessage,
   ChatRuntimeConfig,
 } from "@angel-engine/daemon-api/chat";
@@ -102,8 +101,6 @@ const projectSuggestionKeys = [
 
 interface NewChatComposerProps {
   chats: Chat[];
-  creationLocation?: ChatCreationLocation;
-  creationLocationAccessory?: ReactNode;
   cwd?: string;
   initialMarkdown?: string;
   model?: string;
@@ -137,8 +134,6 @@ interface NewChatComposerProps {
 
 export function NewChatComposer({
   chats,
-  creationLocation,
-  creationLocationAccessory,
   cwd,
   initialMarkdown,
   model,
@@ -171,7 +166,6 @@ export function NewChatComposer({
   useTerminalSelectionInsert(editor);
   const sendChatMessage = useSendChatMessage(slotKey, {
     chatId: undefined,
-    creationLocation,
     cwd,
     model,
     mode,

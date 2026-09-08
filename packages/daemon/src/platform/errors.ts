@@ -131,14 +131,6 @@ export class DaemonError extends Data.TaggedError(
     return new DaemonError({ code: "chat-cwd-invalid", message, status: 400 });
   }
 
-  static chatWorktreeCreationForbidden(message: string) {
-    return new DaemonError({
-      code: "chat-worktree-creation-forbidden",
-      message,
-      status: 400,
-    });
-  }
-
   static chatPrewarmFailed(message: string) {
     return new DaemonError({
       code: "chat-prewarm-failed",
@@ -236,22 +228,6 @@ export class DaemonError extends Data.TaggedError(
     });
   }
 
-  static projectNotGitRepository() {
-    return new DaemonError({
-      code: "project-not-git-repository",
-      message: "Project is not a git repository.",
-      status: 409,
-    });
-  }
-
-  static projectRequiredForWorktree() {
-    return new DaemonError({
-      code: "project-required-for-worktree",
-      message: "Project is required to create a git worktree.",
-      status: 400,
-    });
-  }
-
   static gitFailed(cause: unknown, fallback = "Git command failed.") {
     return new DaemonError({
       cause,
@@ -330,89 +306,6 @@ export class DaemonError extends Data.TaggedError(
     return new DaemonError({
       code: "pull-request-already-exists",
       message,
-      status: 409,
-    });
-  }
-
-  static prFromForkUnsupported() {
-    return new DaemonError({
-      code: "pr-from-fork-unsupported",
-      message: "Pull requests from forks are not supported yet.",
-      status: 400,
-    });
-  }
-
-  static worktreeBranchConflict(branch: string) {
-    return new DaemonError({
-      code: "worktree-branch-conflict",
-      message: `Local branch ${branch} has commits that are not in the pull request head. Rename or reconcile it before retrying.`,
-      status: 409,
-    });
-  }
-
-  static pullRequestNoCommits(message = "There are no commits to merge.") {
-    return new DaemonError({
-      code: "pull-request-no-commits",
-      message,
-      status: 409,
-    });
-  }
-
-  static worktreeBranchInUse(branch: string, relatedChatId?: string) {
-    return new DaemonError({
-      code: "worktree-branch-in-use",
-      message: `Branch ${branch} is already checked out in another worktree.`,
-      relatedChatId,
-      status: 409,
-    });
-  }
-
-  static worktreeCreateFailed(cause: unknown) {
-    return new DaemonError({
-      cause,
-      code: "worktree-create-failed",
-      message: gitMessageFromCause(cause, "Could not create git worktree."),
-      status: 500,
-    });
-  }
-
-  static worktreeNotManaged(worktreePath: string) {
-    return new DaemonError({
-      code: "worktree-not-managed",
-      message: `${worktreePath} is not an app-managed git worktree.`,
-      status: 400,
-    });
-  }
-
-  static worktreeChanged(worktreePath: string) {
-    return new DaemonError({
-      code: "worktree-changed",
-      message: `${worktreePath} changed since it was confirmed. Scan and confirm the cleanup again.`,
-      status: 409,
-    });
-  }
-
-  static worktreeHasActiveChats(worktreePath: string) {
-    return new DaemonError({
-      code: "worktree-has-active-chats",
-      message: `${worktreePath} still has active chats.`,
-      status: 409,
-    });
-  }
-
-  static worktreeRemoveFailed(cause: unknown) {
-    return new DaemonError({
-      cause,
-      code: "worktree-remove-failed",
-      message: gitMessageFromCause(cause, "Could not remove git worktree."),
-      status: 500,
-    });
-  }
-
-  static worktreeSetupApprovalRequired() {
-    return new DaemonError({
-      code: "worktree-setup-approval-required",
-      message: "Worktree setup requires approval for the current 2code.json.",
       status: 409,
     });
   }

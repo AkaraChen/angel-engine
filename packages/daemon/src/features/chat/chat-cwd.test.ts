@@ -22,14 +22,4 @@ describe("cwdForNewChat handoff workspace reuse", () => {
       ),
     ).resolves.toBe("/Users/dev/repo/.angel/worktrees/feat-auth");
   });
-
-  it("still refuses a worktree chat without a project", async () => {
-    await expect(
-      Effect.runPromise(
-        cwdForNewChat({ creationLocation: "worktree" }).pipe(
-          Effect.provide(dieDbLayer()),
-        ),
-      ),
-    ).rejects.toThrow(/project/i);
-  });
 });

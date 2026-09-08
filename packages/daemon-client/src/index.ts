@@ -20,12 +20,9 @@ import type {
   ChatAttentionListResult,
   ChatAttentionReadInput,
   ChatAttentionReadResult,
-  ChatArchivedDeleteImpact,
-  ChatArchivedDeleteImpactInput,
   ChatArchivedDeleteInput,
   ChatArchivedDeleteResult,
   ChatArchivedRestoreInput,
-  ChatArchiveWorkspaceResult,
   ChatAvailableSkill,
   ChatCreateInput,
   ChatLoadResult,
@@ -68,10 +65,6 @@ import type {
   ProcessRegistrySnapshotEntry,
 } from "@angel-engine/daemon-api/daemon";
 import type {
-  ManagedWorktreeDeleteInput,
-  ManagedWorktreeDeleteResult,
-  ManagedWorktreeScanInput,
-  ManagedWorktreeSummary,
   Project,
 } from "@angel-engine/daemon-api/projects";
 import type {
@@ -392,19 +385,9 @@ export function createDaemonClient(options: DaemonClientOptions) {
         request<Chat>(`/api/chats/${encodeURIComponent(id)}/archive`, {
           method: "POST",
         }),
-      archiveWorkspace: (id: string) =>
-        request<ChatArchiveWorkspaceResult>(
-          `/api/chats/${encodeURIComponent(id)}/archive-workspace`,
-          { method: "POST" },
-        ),
       archivedDelete: (input: ChatArchivedDeleteInput) =>
         request<ChatArchivedDeleteResult>(
           "/api/chats/archived/delete",
-          json("POST", input),
-        ),
-      archivedDeleteImpact: (input: ChatArchivedDeleteImpactInput) =>
-        request<ChatArchivedDeleteImpact>(
-          "/api/chats/archived/delete-impact",
           json("POST", input),
         ),
       archivedList: () => request<Chat[]>("/api/chats/archived"),
@@ -412,11 +395,6 @@ export function createDaemonClient(options: DaemonClientOptions) {
         request<Chat[]>("/api/chats/archived/restore", json("POST", input)),
       create: (input: ChatCreateInput = {}) =>
         request<Chat>("/api/chats", json("POST", input)),
-      cancelWorktreeCreation: (id: string) =>
-        request<Chat>(
-          `/api/chats/${encodeURIComponent(id)}/worktree-creation`,
-          { method: "DELETE" },
-        ),
       clearAmbiguousRun: (id: string) =>
         request<{ cleared: boolean }>(
           `/api/chats/${encodeURIComponent(id)}/ambiguous-run`,
@@ -427,10 +405,7 @@ export function createDaemonClient(options: DaemonClientOptions) {
           method: "DELETE",
         }),
       deleteAll: () =>
-        request<{ deletedCount: number; deletedWorktreeCount: number }>(
-          "/api/chats",
-          { method: "DELETE" },
-        ),
+        request<{ deletedCount: number }>("/api/chats", { method: "DELETE" }),
       get: (id: string) =>
         request<Chat | null>(`/api/chats/${encodeURIComponent(id)}`),
       inspectConfig: (input: ChatRuntimeConfigInput = {}) =>
@@ -452,11 +427,6 @@ export function createDaemonClient(options: DaemonClientOptions) {
         }),
       prewarm: (input: ChatPrewarmInput = {}) =>
         request<ChatPrewarmResult>("/api/chats/prewarm", json("POST", input)),
-      retryWorktreeCreation: (id: string) =>
-        request<Chat>(
-          `/api/chats/${encodeURIComponent(id)}/worktree-creation/retry`,
-          { method: "POST" },
-        ),
       rename: (input: ChatRenameInput) =>
         request<Chat>(
           `/api/chats/${encodeURIComponent(input.chatId)}`,
@@ -514,16 +484,7 @@ export function createDaemonClient(options: DaemonClientOptions) {
           `/api/projects/files/search?${query(input)}`,
         ),
     },
-    worktrees: {
-      deleteManaged: (input: ManagedWorktreeDeleteInput) =>
-        request<ManagedWorktreeDeleteResult>(
-          "/api/worktrees/managed/delete",
-          json("POST", input),
-        ),
-      listManaged: (input: ManagedWorktreeScanInput = {}) =>
-        request<ManagedWorktreeSummary[]>(
-          `/api/worktrees/managed?${query(input)}`,
-        ),
+    workspaceTools: {
       gitCommit: (input: WorkspaceToolGitCommitInput) =>
         request<WorkspaceToolGitCommitResult>(
           "/api/workspace/git-commit",

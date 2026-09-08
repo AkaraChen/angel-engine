@@ -30,22 +30,6 @@ describe("chat create input", () => {
     );
   });
 
-  it("carries a pinned cwd and a worktree location so create owns placement", () => {
-    // Desktop drafts can pin an existing worktree cwd; without these fields the
-    // create route would silently place the chat at the project root instead.
-    const input = chatCreateInputSchema({
-      creationLocation: "worktree",
-      cwd: "/repo/.worktrees/feature",
-      projectId: "project-1",
-    });
-
-    expect(input).not.toBeInstanceOf(arkType.errors);
-    expect(input).toMatchObject({
-      creationLocation: "worktree",
-      cwd: "/repo/.worktrees/feature",
-    });
-  });
-
   it("rejects an empty cwd instead of silently dropping it", () => {
     expect(chatCreateInputSchema({ cwd: "" })).toBeInstanceOf(arkType.errors);
   });
@@ -66,37 +50,11 @@ describe("chat create input", () => {
         provider: "github",
         url: "https://github.com/acme/widgets/pull/42",
       },
-      worktreeRef: {
-        remoteRef: "pull/42/head",
-        type: "existingBranch",
-        value: "fix/widgets",
-      },
     });
 
     expect(input).not.toBeInstanceOf(arkType.errors);
     expect(input).toMatchObject({
       sourceLink: { kind: "pullRequest", provider: "github" },
-      worktreeRef: { type: "existingBranch", value: "fix/widgets" },
-    });
-  });
-
-  it("carries provider-neutral change request source metadata", () => {
-    const input = chatCreateInputSchema({
-      sourceLink: {
-        kind: "changeRequest",
-        provider: "gitlab",
-        url: "https://gitlab.example/acme/widgets/-/merge_requests/42",
-      },
-      worktreeRef: {
-        type: "existingBranch",
-        value: "fix/widgets",
-      },
-    });
-
-    expect(input).not.toBeInstanceOf(arkType.errors);
-    expect(input).toMatchObject({
-      sourceLink: { kind: "changeRequest", provider: "gitlab" },
-      worktreeRef: { type: "existingBranch", value: "fix/widgets" },
     });
   });
 

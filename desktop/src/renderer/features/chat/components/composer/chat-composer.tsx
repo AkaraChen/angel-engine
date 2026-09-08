@@ -32,7 +32,6 @@ export interface ChatComposerSubmission {
   selectedSkills: ComposerMentionedSkill[];
   terminalSelections: ComposerTerminalSelection[];
   text: string;
-  worktreeSetupApproval?: string;
 }
 
 export type ChatComposerBeforeSubmitResult = boolean | string;
@@ -107,10 +106,6 @@ export function ChatComposer({
           appendPasteSourceUrls(message.text, pasteSourceUrls),
           terminalSnapshot,
         ),
-        worktreeSetupApproval:
-          typeof beforeSubmitResult === "string"
-            ? beforeSubmitResult
-            : undefined,
       };
       reset();
       await send(submission);

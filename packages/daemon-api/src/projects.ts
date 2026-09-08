@@ -17,86 +17,6 @@ export interface ProjectGitStatusResult {
   root?: string;
 }
 
-export interface ProjectWorktreeCreateInput {
-  /**
-   * Local branch name for the new worktree. When omitted, an `angel/*`
-   * branch is generated. Required with `startPoint` when reusing a PR head.
-   */
-  branchName?: string;
-  projectId: string;
-  ref?: {
-    remoteRef?: string;
-    type: "existingBranch" | "newBranchFrom";
-    value: string;
-  };
-  /**
-   * Git ref to check out (commit-ish or remote tracking ref). Defaults to HEAD.
-   */
-  startPoint?: string;
-  /**
-   * Optional fetch before creating the worktree. Used for PR heads:
-   * `git fetch <remote> <refspec>`.
-   */
-  startPointFetch?: {
-    refspec: string;
-    remote: string;
-  };
-}
-
-export interface ProjectWorktreeCreateResult {
-  branch: string;
-  createdBranch: boolean;
-  cwd: string;
-  projectId: string;
-  root: string;
-}
-
-export interface ManagedWorktreeSummary {
-  activeChatCount: number;
-  archivedChatCount: number;
-  chatCount: number;
-  chatIds: string[];
-  /** True when no active chat still uses the worktree. */
-  eligibleForCleanup: boolean;
-  existsOnDisk: boolean;
-  latestChatUpdatedAt: string | null;
-  path: string;
-  projectId: string | null;
-  projectSlug: string;
-}
-
-export interface ManagedWorktreeScanInput {
-  eligibleOnly?: boolean;
-}
-
-export interface ManagedWorktreeDeleteTarget {
-  expectedChatIds: string[];
-  expectedExistsOnDisk: boolean;
-  path: string;
-}
-
-export interface ManagedWorktreeDeleteInput {
-  targets: ManagedWorktreeDeleteTarget[];
-}
-
-/** A worktree whose chats were deleted but whose directory could not be removed. */
-export interface ManagedWorktreeDeleteFailure {
-  error: string;
-  path: string;
-}
-
-export interface ManagedWorktreeDeleteResult {
-  deletedChatCount: number;
-  deletedChatIds: string[];
-  deletedWorktreeCount: number;
-  deletedWorktrees: string[];
-  /**
-   * Per-path failures hit after deletion started. Validation and eligibility
-   * failures reject the whole request instead and never reach this list.
-   */
-  failedWorktrees: ManagedWorktreeDeleteFailure[];
-}
-
 export const projectGitStatusInputSchema = arkType({
   "+": "ignore",
   projectId: "string > 0",
@@ -107,16 +27,4 @@ export const projectFileSearchInputSchema = arkType({
   "limit?": "number",
   query: "string > 0",
   root: "string > 0",
-});
-
-const managedWorktreeDeleteTargetSchema = arkType({
-  "+": "ignore",
-  expectedChatIds: arkType("string > 0").array(),
-  expectedExistsOnDisk: "boolean",
-  path: "string > 0",
-});
-
-export const managedWorktreeDeleteInputSchema = arkType({
-  "+": "ignore",
-  targets: managedWorktreeDeleteTargetSchema.array(),
 });

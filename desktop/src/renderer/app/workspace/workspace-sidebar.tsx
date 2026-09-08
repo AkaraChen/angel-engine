@@ -2,7 +2,6 @@ import type { Chat } from "@angel-engine/daemon-api/chat";
 import type { Project } from "@angel-engine/daemon-api/projects";
 import type { ReactElement } from "react";
 
-import type { ProjectWorktreeChatGroup } from "@/features/chat/worktree-grouping";
 import type { ChatContextMenuAction } from "@/features/chat/api/queries";
 import { Plus, CalendarDots, GearSix as Settings } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
@@ -41,13 +40,11 @@ interface WorkspaceSidebarProps {
   isMacOS: boolean;
   isProjectsLoading: boolean;
   onArchiveChat: (chat: Chat) => MaybeAsync;
-  onCancelWorktreeCreation: (chat: Chat) => MaybeAsync;
   onCreateStandaloneChat: () => MaybeAsync;
   onImportSession: (project: Project) => void;
   onOpenChat: (chat: Chat) => MaybeAsync;
   onOpenSchedule: () => MaybeAsync;
   onOpenSettings: () => MaybeAsync;
-  onRetryWorktreeCreation: (chat: Chat) => MaybeAsync;
   onChatContextMenuAction: (chat: Chat, action: ChatContextMenuAction) => void;
   projectChatsByProjectId: Map<string, Chat[]>;
   projects: Project[];
@@ -180,13 +177,11 @@ function WorkspaceSidebarContent({
   isMacOS,
   isProjectsLoading,
   onArchiveChat,
-  onCancelWorktreeCreation,
   onCreateStandaloneChat,
   onImportSession,
   onOpenChat,
   onOpenSchedule,
   onOpenSettings,
-  onRetryWorktreeCreation,
   onChatContextMenuAction,
   projectChatsByProjectId,
   projects,
