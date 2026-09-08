@@ -19,18 +19,6 @@ export interface WorkspaceToolReadFileInput extends WorkspaceToolRootInput {
   path: string;
 }
 
-export interface WorkspaceToolWriteFileInput
-  extends WorkspaceToolReadFileInput {
-  content: string;
-}
-
-export const workspaceToolWriteFileInputSchema = arkType({
-  "+": "ignore",
-  content: "string",
-  path: "string > 0",
-  root: "string > 0",
-});
-
 export type WorkspaceToolGitStatus =
   | "added"
   | "deleted"
@@ -61,13 +49,6 @@ export interface WorkspaceGitBranchStatus {
   upstream?: string;
 }
 
-export interface WorkspaceFileTreeResult {
-  gitStatus: WorkspaceToolGitStatusEntry[];
-  paths: string[];
-  root: string;
-  truncated: boolean;
-}
-
 export type WorkspaceFileReadResult =
   | {
       content: string;
@@ -83,12 +64,6 @@ export type WorkspaceFileReadResult =
       size?: number;
       type: "unsupported";
     };
-
-export interface WorkspaceFileWriteResult {
-  path: string;
-  root: string;
-  size: number;
-}
 
 export interface WorkspaceGitSkippedFile {
   path: string;
@@ -149,5 +124,3 @@ export interface WorkspaceGitDiffResult {
   unstagedPatch: string;
   warnings: string[];
 }
-
-import { type as arkType } from "arktype";

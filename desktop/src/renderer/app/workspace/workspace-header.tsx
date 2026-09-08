@@ -18,7 +18,6 @@ import { PathLauncherContextMenu } from "@/features/path-launcher/components/pat
 interface WorkspaceHeaderProps {
   attention?: ChatAttentionState;
   breadcrumbProject?: string;
-  includeAngelTerminal?: boolean;
   onPathLauncherAction?: (action: PathLauncherActionId) => void;
   onToggleRightSidebar?: () => void;
   rightSidebarOpen?: boolean;
@@ -30,7 +29,6 @@ interface WorkspaceHeaderProps {
 export function WorkspaceHeader({
   attention,
   breadcrumbProject,
-  includeAngelTerminal,
   onPathLauncherAction,
   onToggleRightSidebar,
   rightSidebarOpen = false,
@@ -97,10 +95,7 @@ export function WorkspaceHeader({
       {onPathLauncherAction === undefined ? (
         titleElement
       ) : (
-        <PathLauncherContextMenu
-          includeAngelTerminal={includeAngelTerminal}
-          onSelect={onPathLauncherAction}
-        >
+        <PathLauncherContextMenu onSelect={onPathLauncherAction}>
           {titleElement}
         </PathLauncherContextMenu>
       )}

@@ -31,15 +31,6 @@ import { invokePathLauncherAction } from "./actions";
 const ref = { projectId: "project-1" };
 
 describe("path launcher actions", () => {
-  it("returns the main-verified target for Angel Terminal", async () => {
-    await expect(
-      invokePathLauncherAction(ref, "angelTerminal"),
-    ).resolves.toEqual({
-      action: "open_angel_terminal",
-      target: "/repo/.worktrees/功能",
-    });
-  });
-
   it("copies the resolved path", async () => {
     await expect(invokePathLauncherAction(ref, "copyPath")).resolves.toBe(
       "copied",

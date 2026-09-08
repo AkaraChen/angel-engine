@@ -237,7 +237,6 @@ export const zhCN = {
         dockInSidebar: "停靠到侧栏",
         empty: {
           checksUnavailable: "检查不可用",
-          fileTreeUnavailable: "文件树不可用",
           fileUnavailable: "文件不可用",
           gitUnavailable: "Git 不可用",
           noChanges: "没有更改",

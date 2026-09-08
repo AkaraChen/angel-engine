@@ -24,7 +24,6 @@ import {
   WorkspaceSidebarControl,
   WorkspaceSidebarControlPortalProvider,
 } from "@/app/workspace/workspace-sidebar-control";
-import { WorkspaceToolContextBridge } from "@/app/workspace/workspace-tool-host";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { RenameChatDialog } from "@/features/chat/components/rename-chat-dialog";
 import { SessionHandoffDialog } from "@/features/chat/components/session-handoff-dialog";
@@ -165,14 +164,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
             chat={handoffTargetChat}
             onClose={closeSessionHandoffDialog}
             runtimeOptions={runtimeOptions}
-          />
-          <WorkspaceToolContextBridge
-            chatId={selectedChatId ?? null}
-            contextKey={workspaceToolContextKey ?? null}
-            projectId={
-              selectedChat?.projectId ?? selectedProjectId ?? draftProject.id
-            }
-            root={workspaceToolRoot ?? null}
           />
           <SidebarInset className="h-svh min-w-0 max-h-svh overflow-hidden">
             <WorkspaceHeader

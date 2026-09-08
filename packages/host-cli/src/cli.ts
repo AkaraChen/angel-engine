@@ -336,7 +336,12 @@ async function dispatchProject(
     }
     case "git-status": {
       const id = requireArg(args, 0, "project git-status <id>");
-      return client.projects.gitStatus({ projectId: id });
+      const project = await client.projects.get(id);
+      if (project === null) throw new DomainError(`Project not found: ${id}`);
+      const status = await client.workspaceTools.gitDiff({
+        root: project.path,
+      });
+      return { branch: status.branch, isDirty: status.status.length > 0 };
     }
     default:
       throw new UsageError(`Unknown project command: ${action}`);

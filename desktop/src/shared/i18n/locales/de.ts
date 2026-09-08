@@ -241,7 +241,6 @@ export const de = {
         dockInSidebar: "In Seitenleiste andocken",
         empty: {
           checksUnavailable: "Checks nicht verfügbar",
-          fileTreeUnavailable: "Dateibaum nicht verfügbar",
           fileUnavailable: "Datei nicht verfügbar",
           gitUnavailable: "Git nicht verfügbar",
           noChanges: "Keine Änderungen",

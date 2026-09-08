@@ -242,7 +242,6 @@ export const es = {
         dockInSidebar: "Acoplar a la barra lateral",
         empty: {
           checksUnavailable: "Checks no disponibles",
-          fileTreeUnavailable: "Árbol de archivos no disponible",
           fileUnavailable: "Archivo no disponible",
           gitUnavailable: "Git no disponible",
           noChanges: "Sin cambios",

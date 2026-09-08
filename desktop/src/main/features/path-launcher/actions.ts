@@ -26,9 +26,6 @@ export async function invokePathLauncherAction(
 ): Promise<PathLauncherMenuResult> {
   const target = await resolvePathLauncherTarget(ref);
 
-  if (action === "angelTerminal") {
-    return { action: "open_angel_terminal", target };
-  }
   if (action === "copyPath") {
     pathLauncher.copyPath(target);
     return "copied";

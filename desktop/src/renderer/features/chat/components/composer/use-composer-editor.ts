@@ -7,7 +7,6 @@ import type {
   ComposerCatalog,
   ComposerInteractionRefs,
 } from "@/features/chat/components/composer/composer-editor-extensions";
-import type { ComposerTerminalSelection } from "@/features/chat/components/composer/terminal-selection-to-composer";
 import { useEditor, useEditorState } from "@tiptap/react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -26,7 +25,6 @@ export interface ComposerEditorInteractions {
 
 export interface ComposerEditorController {
   addPasteSourceUrl: (sourceUrl: string) => void;
-  addTerminalSelection: (selection: ComposerTerminalSelection) => void;
   editor: Editor | null;
   focus: () => void;
   getMarkdown: () => string;
@@ -34,11 +32,9 @@ export interface ComposerEditorController {
   mentionedFiles: ComposerMentionedFile[];
   pasteSourceUrls: string[];
   removeMention: (id: string) => void;
-  removeTerminalSelection: (id: string) => void;
   removePasteSourceUrl: (sourceUrl: string) => void;
   reset: () => void;
   selectedSkills: ComposerMentionedSkill[];
-  terminalSelections: ComposerTerminalSelection[];
   setInteractions: (interactions: ComposerEditorInteractions) => void;
   setTextInput: (setInput: (value: string) => void) => void;
 }
@@ -62,24 +58,6 @@ export function useComposerEditor({
   }, []);
   const removePasteSourceUrl = useCallback((sourceUrl: string) => {
     setPasteSourceUrls((current) => current.filter((url) => url !== sourceUrl));
-  }, []);
-  const [terminalSelections, setTerminalSelections] = useState<
-    ComposerTerminalSelection[]
-  >([]);
-  const addTerminalSelection = useCallback(
-    (selection: ComposerTerminalSelection) => {
-      setTerminalSelections((current) =>
-        current.some((item) => item.id === selection.id)
-          ? current
-          : [...current, selection],
-      );
-    },
-    [],
-  );
-  const removeTerminalSelection = useCallback((id: string) => {
-    setTerminalSelections((current) =>
-      current.filter((item) => item.id !== id),
-    );
   }, []);
   const [selectedSkills, setSelectedSkills] = useState<
     ComposerMentionedSkill[]
@@ -168,7 +146,6 @@ export function useComposerEditor({
       editor.commands.clearContent();
     }
     setPasteSourceUrls([]);
-    setTerminalSelections([]);
   }, [editor]);
   const removeMention = useCallback(
     (id: string) => {
@@ -206,7 +183,6 @@ export function useComposerEditor({
 
   return {
     addPasteSourceUrl,
-    addTerminalSelection,
     editor,
     focus,
     getMarkdown,
@@ -215,10 +191,8 @@ export function useComposerEditor({
     pasteSourceUrls,
     removeMention,
     removePasteSourceUrl,
-    removeTerminalSelection,
     reset,
     selectedSkills,
-    terminalSelections,
     setInteractions,
     setTextInput,
   };

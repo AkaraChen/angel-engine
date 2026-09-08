@@ -24,9 +24,7 @@ function fileManagerLabelKey(): string {
  * Availability is a host probe (installed editors, terminal), so it is fetched
  * once and shared by every path-launcher menu instead of per right-click.
  */
-export function usePathLauncherMenuItems(
-  options: { includeAngelTerminal?: boolean } = {},
-): PathLauncherMenuItem[] {
+export function usePathLauncherMenuItems(): PathLauncherMenuItem[] {
   const api = useApi();
   const { t } = useTranslation();
   const { data } = useQuery({
@@ -48,12 +46,6 @@ export function usePathLauncherMenuItems(
     items.push({
       action: "systemTerminal",
       label: t("pathLauncher.openInSystemTerminal"),
-    });
-  }
-  if (options.includeAngelTerminal === true) {
-    items.push({
-      action: "angelTerminal",
-      label: t("pathLauncher.openInAngelTerminal"),
     });
   }
   items.push({ action: "copyPath", label: t("pathLauncher.copyPath") });

@@ -11,7 +11,6 @@ import { PathLauncherMenuItems } from "./path-launcher-menu-items";
 interface PathLauncherContextMenuProps {
   asChild?: boolean;
   children: ReactNode;
-  includeAngelTerminal?: boolean;
   onSelect: (action: PathLauncherActionId) => void;
 }
 
@@ -19,17 +18,13 @@ interface PathLauncherContextMenuProps {
 export function PathLauncherContextMenu({
   asChild = true,
   children,
-  includeAngelTerminal,
   onSelect,
 }: PathLauncherContextMenuProps): ReactElement {
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild={asChild}>{children}</ContextMenuTrigger>
       <ContextMenuContent>
-        <PathLauncherMenuItems
-          includeAngelTerminal={includeAngelTerminal}
-          onSelect={onSelect}
-        />
+        <PathLauncherMenuItems onSelect={onSelect} />
       </ContextMenuContent>
     </ContextMenu>
   );

@@ -8,7 +8,6 @@ import type {
   ComposerMentionedSkill,
 } from "@/features/chat/components/composer/composer-attachments";
 import type { AttachmentInputError } from "@/features/chat/components/composer/composer-helpers";
-import type { ComposerTerminalSelection } from "@/features/chat/components/composer/terminal-selection-to-composer";
 import type { ComposerEditorController } from "@/features/chat/components/composer/use-composer-editor";
 import is from "@sindresorhus/is";
 import { useCallback } from "react";
@@ -24,13 +23,11 @@ import {
   attachmentErrorMessage,
   attachmentErrorTitle,
 } from "@/features/chat/components/composer/composer-helpers";
-import { appendTerminalSelections } from "@/features/chat/components/composer/terminal-selection-to-composer";
 
 export interface ChatComposerSubmission {
   files: PromptInputFile[];
   mentionedFiles: ComposerMentionedFile[];
   selectedSkills: ComposerMentionedSkill[];
-  terminalSelections: ComposerTerminalSelection[];
   text: string;
 }
 
@@ -73,13 +70,7 @@ export function ChatComposer({
 }: ChatComposerProps) {
   const { t } = useTranslation();
   const toast = useToast();
-  const {
-    mentionedFiles,
-    pasteSourceUrls,
-    reset,
-    selectedSkills,
-    terminalSelections,
-  } = controller;
+  const { mentionedFiles, pasteSourceUrls, reset, selectedSkills } = controller;
 
   const handleSubmit = useCallback(
     async (message: PromptInputMessage) => {
@@ -87,8 +78,7 @@ export function ChatComposer({
         message.text.length > 0 ||
         message.files.length > 0 ||
         mentionedFiles.length > 0 ||
-        selectedSkills.length > 0 ||
-        terminalSelections.length > 0;
+        selectedSkills.length > 0;
       if (!hasMessage) return;
       const beforeSubmitResult = onBeforeSubmit ? await onBeforeSubmit() : true;
       if (beforeSubmitResult === false) return;
@@ -96,16 +86,11 @@ export function ChatComposer({
       // Capture the submission, then clear right away: awaiting the whole
       // turn first would run reset() against an editor that may have been
       // unmounted mid-turn (draft composers navigate to the created chat).
-      const terminalSnapshot = [...terminalSelections];
       const submission: ChatComposerSubmission = {
         files: message.files as PromptInputFile[],
         mentionedFiles: [...mentionedFiles],
         selectedSkills: [...selectedSkills],
-        terminalSelections: terminalSnapshot,
-        text: appendTerminalSelections(
-          appendPasteSourceUrls(message.text, pasteSourceUrls),
-          terminalSnapshot,
-        ),
+        text: appendPasteSourceUrls(message.text, pasteSourceUrls),
       };
       reset();
       await send(submission);
@@ -117,7 +102,6 @@ export function ChatComposer({
       reset,
       selectedSkills,
       send,
-      terminalSelections,
     ],
   );
 

@@ -26,7 +26,6 @@ import {
   PromptAttachmentButton,
 } from "@/features/chat/components/composer/composer-menus";
 import { useComposerEditor } from "@/features/chat/components/composer/use-composer-editor";
-import { useTerminalSelectionInsert } from "@/features/chat/components/composer/use-terminal-selection-insert";
 import { SketchUnderline } from "@/features/chat/components/sketch-underline";
 import { useChatOptions } from "@/features/chat/runtime/chat-options-context";
 import { useSendChatMessage } from "@/features/chat/runtime/use-send-chat-message";
@@ -150,7 +149,6 @@ export function NewChatComposer({
   const projectRequired = false;
   const editor = useComposerEditor({ initialMarkdown });
   const suggestionKeys = chatSuggestionKeys;
-  useTerminalSelectionInsert(editor);
   const sendChatMessage = useSendChatMessage(slotKey, {
     chatId: undefined,
     cwd,
@@ -395,10 +393,7 @@ function NewChatComposerFooter({
   const { t } = useTranslation();
   const chatOptions = useChatOptions();
   const attachments = usePromptInputAttachments();
-  const isEmpty =
-    editorIsEmpty &&
-    attachments.files.length === 0 &&
-    editor.terminalSelections.length === 0;
+  const isEmpty = editorIsEmpty && attachments.files.length === 0;
 
   return (
     <PromptInputFooter className={newChatFooterClassName}>

@@ -270,14 +270,6 @@ export class DaemonError extends Data.TaggedError(
     });
   }
 
-  static workspaceNotGitRepository() {
-    return new DaemonError({
-      code: "workspace-not-git-repository",
-      message: "Workspace root is not a Git repository.",
-      status: 409,
-    });
-  }
-
   static processNotRegistered() {
     return new DaemonError({
       code: "process-not-registered",
@@ -307,48 +299,6 @@ function messageFromCause(cause: unknown, fallback: string) {
   return cause instanceof Error && cause.message.length > 0
     ? cause.message
     : fallback;
-}
-
-const gitAuthFailurePatterns = [
-  /authentication failed/i,
-  /could not read (?:username|password)/i,
-  /invalid username or password/i,
-  /permission denied/i,
-  /support for password authentication was removed/i,
-  /terminal prompts disabled/i,
-  /\bpublickey\b/i,
-  /remote: (?:forbidden|unauthorized)/i,
-  /\b(?:401|403)\b/,
-];
-
-const gitNetworkFailurePatterns = [
-  /could not resolve (?:host|hostname|proxy)/i,
-  /connection (?:refused|reset|timed out)/i,
-  /couldn't connect to server/i,
-  /failed to connect to/i,
-  /network is unreachable/i,
-  /operation timed out/i,
-  /ssl (?:certificate problem|connect error)/i,
-  /unable to access '/i,
-];
-
-const gitPushRejectedPatterns = [
-  /\[rejected\]/i,
-  /non-fast-forward/i,
-  /updates were rejected/i,
-  /fetch first/i,
-];
-
-function isGitAuthFailure(message: string) {
-  return gitAuthFailurePatterns.some((pattern) => pattern.test(message));
-}
-
-function isGitNetworkFailure(message: string) {
-  return gitNetworkFailurePatterns.some((pattern) => pattern.test(message));
-}
-
-function isGitPushRejected(message: string) {
-  return gitPushRejectedPatterns.some((pattern) => pattern.test(message));
 }
 
 function gitMessageFromCause(cause: unknown, fallback: string) {

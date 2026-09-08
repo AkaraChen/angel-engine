@@ -137,6 +137,45 @@ describe("runCli", () => {
     expect(fetchMock.mock.calls[0]?.[0]).toBe("http://127.0.0.1:9/api/chats");
   });
 
+  it("reads a historical project's Git status through its folder", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ id: "p1", path: "/saved/repo" }))
+      .mockResolvedValueOnce(
+        jsonResponse({ branch: "main", status: [{ path: "file.txt" }] }),
+      );
+    let stdout = "";
+    const code = await runCli(
+      [
+        "--url",
+        "http://127.0.0.1:9",
+        "--token",
+        "t",
+        "--json",
+        "project",
+        "git-status",
+        "p1",
+      ],
+      {
+        fetchImpl: fetchMock as typeof fetch,
+        stdout: {
+          write(chunk: string) {
+            stdout += chunk;
+            return true;
+          },
+        } as NodeJS.WritableStream,
+      },
+    );
+    expect(code).toBe(ExitCode.success);
+    expect(JSON.parse(stdout)).toEqual({ branch: "main", isDirty: true });
+    expect(String(fetchMock.mock.calls[1]?.[0])).toContain(
+      "/api/workspace/git-diff",
+    );
+    expect(String(fetchMock.mock.calls[1]?.[0])).toContain(
+      "root=%2Fsaved%2Frepo",
+    );
+  });
+
   it("redacts token in which output", async () => {
     let stdout = "";
     const code = await runCli(

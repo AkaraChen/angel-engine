@@ -1,8 +1,5 @@
-import type { Dirent } from "node:fs";
 import type {
   WorkspaceFileReadResult,
-  WorkspaceFileTreeResult,
-  WorkspaceFileWriteResult,
   WorkspaceGitBranchStatus,
   WorkspaceGitDiffBaseKind,
   WorkspaceGitDiffBaseOption,
@@ -29,51 +26,11 @@ import {
 } from "../source-control/local-git/workspace";
 import {
   absolutePathToTreePath,
-  isMissingPathError,
-  normalizeGitPath,
   pathIsInside,
   resolveWorkspaceTreePath,
-  toTreePath,
-  uniqueWorkspaceGitPaths,
 } from "./paths";
 
-const MAX_TREE_ENTRIES = 12_000;
 const MAX_FILE_PREVIEW_BYTES = 512 * 1024;
-const IGNORED_DIRECTORIES = new Set([
-  ".cache",
-  ".git",
-  ".next",
-  ".turbo",
-  ".venv",
-  "build",
-  "coverage",
-  "dist",
-  "node_modules",
-  "out",
-  "target",
-]);
-
-export function workspaceFileTree(
-  rootInput: string,
-): Effect.Effect<WorkspaceFileTreeResult, DaemonError> {
-  return Effect.gen(function* () {
-    const root = yield* resolveWorkspaceRoot(rootInput);
-    const scan = yield* Effect.promise(() => scanWorkspaceTree(root));
-    const gitRoot = yield* gitRootFor(root);
-    const gitStatus = is.nonEmptyString(gitRoot)
-      ? yield* gitStatusEntries({ gitRoot, root }).pipe(
-          Effect.orElseSucceed((): WorkspaceToolGitStatusEntry[] => []),
-        )
-      : [];
-
-    return {
-      gitStatus,
-      paths: scan.paths,
-      root,
-      truncated: scan.truncated,
-    };
-  });
-}
 
 export function workspaceGitDiff<R = never>(
   input:
@@ -588,85 +545,6 @@ export function workspaceReadFile(
   });
 }
 
-export function workspaceWriteFile(
-  rootInput: string,
-  treePathInput: string,
-  content: string,
-): Effect.Effect<WorkspaceFileWriteResult, DaemonError> {
-  return Effect.gen(function* () {
-    const root = yield* resolveWorkspaceRoot(rootInput);
-    const { absolutePath, treePath } = yield* Effect.try({
-      catch: (cause) => DaemonError.workspacePathInvalid(causeMessage(cause)),
-      try: () => {
-        const normalizedTreePath = normalizeGitPath(treePathInput);
-        return {
-          absolutePath: resolveWorkspaceTreePath(root, normalizedTreePath),
-          treePath: normalizedTreePath,
-        };
-      },
-    });
-    const { realPath, realRoot } = yield* Effect.tryPromise({
-      catch: (cause) => DaemonError.workspacePathInvalid(causeMessage(cause)),
-      try: async () => {
-        const resolvedRoot = await fs.realpath(root);
-        let resolvedPath: string;
-        try {
-          resolvedPath = await fs.realpath(absolutePath);
-        } catch {
-          resolvedPath = await realpathNearestExistingParent(absolutePath);
-        }
-        return { realPath: resolvedPath, realRoot: resolvedRoot };
-      },
-    });
-
-    if (!pathIsInside(realRoot, realPath)) {
-      return yield* Effect.fail(
-        DaemonError.workspacePathInvalid(
-          "Workspace file path must stay inside the workspace root.",
-        ),
-      );
-    }
-
-    yield* Effect.tryPromise({
-      catch: (cause) => DaemonError.workspacePathInvalid(causeMessage(cause)),
-      try: async () => {
-        await fs.mkdir(path.dirname(absolutePath), { recursive: true });
-        await fs.writeFile(absolutePath, content, "utf8");
-      },
-    });
-
-    return {
-      path: treePath,
-      root,
-      size: Buffer.byteLength(content, "utf8"),
-    };
-  });
-}
-
-async function realpathNearestExistingParent(absolutePath: string) {
-  let directory = path.dirname(absolutePath);
-
-  while (true) {
-    try {
-      const stat = await fs.stat(directory);
-      if (!stat.isDirectory()) {
-        throw new Error("Workspace file parent must be a directory.");
-      }
-      return await fs.realpath(directory);
-    } catch (error) {
-      if (!isMissingPathError(error)) {
-        throw error;
-      }
-    }
-
-    const parent = path.dirname(directory);
-    if (parent === directory) {
-      throw new Error("Workspace file parent must exist.");
-    }
-    directory = parent;
-  }
-}
-
 function resolveWorkspaceRoot(
   rootInput: string,
 ): Effect.Effect<string, DaemonError> {
@@ -681,59 +559,6 @@ function resolveWorkspaceRoot(
       return root;
     },
   });
-}
-
-async function scanWorkspaceTree(root: string) {
-  const paths: string[] = [];
-  const dirs = [root];
-  let visited = 0;
-  let truncated = false;
-
-  while (dirs.length > 0) {
-    const dir = dirs.shift();
-    if (!is.nonEmptyString(dir)) break;
-
-    let entries: Dirent<string>[];
-    try {
-      entries = await fs.readdir(dir, { withFileTypes: true });
-    } catch {
-      continue;
-    }
-
-    entries.sort((left, right) => {
-      if (left.isDirectory() !== right.isDirectory()) {
-        return left.isDirectory() ? -1 : 1;
-      }
-      return left.name.localeCompare(right.name);
-    });
-
-    for (const entry of entries) {
-      if (visited >= MAX_TREE_ENTRIES) {
-        truncated = true;
-        break;
-      }
-      visited += 1;
-
-      const absolutePath = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        if (IGNORED_DIRECTORIES.has(entry.name)) {
-          continue;
-        }
-        paths.push(toTreePath(root, absolutePath, true));
-        dirs.push(absolutePath);
-        continue;
-      }
-
-      if (!entry.isFile() && !entry.isSymbolicLink()) {
-        continue;
-      }
-      paths.push(toTreePath(root, absolutePath, false));
-    }
-
-    if (truncated) break;
-  }
-
-  return { paths, truncated };
 }
 
 function workspaceGitOutput(

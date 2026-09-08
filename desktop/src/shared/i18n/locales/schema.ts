@@ -170,7 +170,6 @@ export interface LocaleResourceTranslationWorkspaceToolsCreatePullRequest {
 
 export interface LocaleResourceTranslationWorkspaceToolsEmpty {
   checksUnavailable: string;
-  fileTreeUnavailable: string;
   fileUnavailable: string;
   gitUnavailable: string;
   noChanges: string;
@@ -326,12 +325,6 @@ export interface LocaleResourceTranslationWorkspaceTools {
   diffUnavailable: string;
   openInWindow: string;
   tabs: LocaleResourceTranslationWorkspaceToolsTabs;
-}
-
-export interface LocaleResourceTranslationWorkspaceBrowser {
-  back: string;
-  forward: string;
-  urlLabel: string;
 }
 
 export interface LocaleResourceTranslationWorkspaceFiles {

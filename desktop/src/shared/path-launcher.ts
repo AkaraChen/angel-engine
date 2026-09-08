@@ -14,7 +14,6 @@ export interface PathLauncherTargetRef {
  */
 export type PathLauncherActionId =
   | `editor:${PathLauncherEditorId}`
-  | "angelTerminal"
   | "copyPath"
   | "fileManager"
   | "systemTerminal";
@@ -36,13 +35,4 @@ export interface PathLauncherInvokeRequest {
   target: PathLauncherTargetRef;
 }
 
-export interface PathLauncherAngelTerminalResult {
-  action: "open_angel_terminal";
-  target: string;
-}
-
-export type PathLauncherMenuResult =
-  | PathLauncherAngelTerminalResult
-  | "cancelled"
-  | "copied"
-  | "opened";
+export type PathLauncherMenuResult = "cancelled" | "copied" | "opened";

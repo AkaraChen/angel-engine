@@ -26,12 +26,10 @@ export const queryKeys = {
   },
   projects: {
     all: () => ["projects"] as const,
-    config: (id: string | null) => ["projects", "config", id] as const,
     detail: (id: string | null) => ["projects", "detail", id] as const,
     details: () => ["projects", "detail"] as const,
     fileSearch: (root: string, query: string, limit: number) =>
       ["projects", "file-search", root, query, limit] as const,
-    gitStatus: (id: string | null) => ["projects", "git-status", id] as const,
     list: () => ["projects", "list"] as const,
   },
   urlPreviews: {
@@ -41,15 +39,7 @@ export const queryKeys = {
   usage: {
     snapshot: () => ["usage", "snapshot"] as const,
   },
-  worktrees: {
-    all: () => ["worktrees"] as const,
-    lifecycle: (chatId: string | null) =>
-      ["worktrees", "lifecycle", chatId] as const,
-    managedEligible: () => ["worktrees", "managed", "eligible"] as const,
-  },
   workspaceTools: {
-    fileTree: (root: string | null) =>
-      ["workspace-tools", "file-tree", root] as const,
     gitDiffRoot: (root: string | null) =>
       ["workspace-tools", "git-diff", root] as const,
     gitDiff: (

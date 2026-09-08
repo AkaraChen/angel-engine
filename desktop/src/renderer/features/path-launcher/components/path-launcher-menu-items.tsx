@@ -9,16 +9,14 @@ import {
 import { usePathLauncherMenuItems } from "@/features/path-launcher/use-path-launcher-menu";
 
 interface PathLauncherMenuItemsProps {
-  includeAngelTerminal?: boolean;
   onSelect: (action: PathLauncherActionId) => void;
 }
 
 /** "Open in …" / "Copy path" rows shared by every path-aware context menu. */
 export function PathLauncherMenuItems({
-  includeAngelTerminal,
   onSelect,
 }: PathLauncherMenuItemsProps): ReactElement {
-  const items = usePathLauncherMenuItems({ includeAngelTerminal });
+  const items = usePathLauncherMenuItems();
 
   return (
     <>

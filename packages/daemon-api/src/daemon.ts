@@ -76,7 +76,6 @@ export type DaemonErrorCode =
   | "project-not-git-repository"
   | "project-path-invalid"
   | "session-failed"
-  | "workspace-not-git-repository"
   | "workspace-path-invalid";
 
 /** Wire shape of a daemon error response body. */

@@ -61,13 +61,9 @@ import type {
 import type { Project } from "@angel-engine/daemon-api/projects";
 import type {
   WorkspaceFileReadResult,
-  WorkspaceFileTreeResult,
-  WorkspaceFileWriteResult,
   WorkspaceGitDiffInput,
   WorkspaceGitDiffResult,
   WorkspaceToolReadFileInput,
-  WorkspaceToolRootInput,
-  WorkspaceToolWriteFileInput,
 } from "@angel-engine/daemon-api/workspace-tools";
 
 import { DaemonRequestError } from "./errors";
@@ -433,13 +429,12 @@ export function createDaemonClient(options: DaemonClientOptions) {
         ),
     },
     workspaceTools: {
+      gitDiff: (input: WorkspaceGitDiffInput) =>
+        request<WorkspaceGitDiffResult>(
+          "/api/workspace/git-diff?" + query(input),
+        ),
       readFile: (input: WorkspaceToolReadFileInput) =>
         request<WorkspaceFileReadResult>(`/api/workspace/file?${query(input)}`),
-      writeFile: (input: WorkspaceToolWriteFileInput) =>
-        request<WorkspaceFileWriteResult>(
-          "/api/workspace/file",
-          json("PUT", input),
-        ),
     },
   };
 }

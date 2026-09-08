@@ -1,6 +1,5 @@
 import type { AgentRuntime } from "@angel-engine/daemon-api/agents";
 import type { Chat } from "@angel-engine/daemon-api/chat";
-import type { ProjectGitStatusResult } from "@angel-engine/daemon-api/projects";
 import type { ReactElement } from "react";
 
 import is from "@sindresorhus/is";
@@ -112,10 +111,12 @@ function SessionHandoffForm({
   });
 
   const dirtyQuery = useQuery({
-    enabled: is.nonEmptyString(chat.projectId),
-    queryFn: async (): Promise<ProjectGitStatusResult> =>
-      api.projects.gitStatus({ projectId: chat.projectId as string }),
-    queryKey: queryKeys.projects.gitStatus(chat.projectId ?? null),
+    enabled: is.nonEmptyString(chat.cwd),
+    queryFn: async () => {
+      if (!is.nonEmptyString(chat.cwd)) throw new Error("Chat cwd is required");
+      return api.workspaceTools.gitDiff({ root: chat.cwd });
+    },
+    queryKey: queryKeys.workspaceTools.gitDiff(chat.cwd),
     staleTime: 15_000,
   });
 
@@ -126,7 +127,7 @@ function SessionHandoffForm({
     if (!status) return null;
     return {
       branch: status.branch,
-      isDirty: status.isDirty,
+      isDirty: status.status.length > 0,
     };
   }, [dirtyQuery.data]);
 

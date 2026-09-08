@@ -17,8 +17,6 @@ export type SidebarChatDateGroupKey =
 
 interface WorkspaceUiState {
   collapsedChatDateGroupKeys: Set<SidebarChatDateGroupKey>;
-  collapsedWorktreeGroupKeys: Set<string>;
-  expandedProjectIds: Set<string>;
   rightSidebarOpen: boolean;
   rightSidebarWidth: number;
   setRightSidebarOpen: (rightSidebarOpen: boolean) => void;
@@ -27,22 +25,12 @@ interface WorkspaceUiState {
   setSidebarOpenMobile: (sidebarOpenMobile: boolean) => void;
   sidebarOpen: boolean;
   sidebarOpenMobile: boolean;
-  sidebarProjectIds: Set<string>;
-  sidebarProjectIdsWithChats: Set<string>;
-  syncSidebarProjects: (
-    projectIds: string[],
-    projectIdsWithChats: string[],
-  ) => void;
   toggleRightSidebar: () => void;
   toggleSidebarChatDateGroup: (groupKey: SidebarChatDateGroupKey) => void;
-  toggleSidebarProject: (projectId: string) => void;
-  toggleSidebarWorktreeGroup: (groupKey: string) => void;
 }
 
 export const useWorkspaceUiStore = create<WorkspaceUiState>()((set) => ({
   collapsedChatDateGroupKeys: new Set(),
-  collapsedWorktreeGroupKeys: new Set(),
-  expandedProjectIds: new Set(),
   rightSidebarOpen: true,
   rightSidebarWidth: initialRightSidebarWidth,
   setRightSidebarOpen: (rightSidebarOpen) => set({ rightSidebarOpen }),
@@ -56,43 +44,6 @@ export const useWorkspaceUiStore = create<WorkspaceUiState>()((set) => ({
   setSidebarOpenMobile: (sidebarOpenMobile) => set({ sidebarOpenMobile }),
   sidebarOpen: true,
   sidebarOpenMobile: false,
-  sidebarProjectIds: new Set(),
-  sidebarProjectIdsWithChats: new Set(),
-  syncSidebarProjects: (projectIds, projectIdsWithChats) =>
-    set((current) => {
-      const nextProjectIds = new Set(projectIds);
-      const nextProjectIdsWithChats = new Set(projectIdsWithChats);
-      const currentProjectIds = current.sidebarProjectIds;
-      const currentProjectIdsWithChats = current.sidebarProjectIdsWithChats;
-      if (
-        setsEqual(currentProjectIds, nextProjectIds) &&
-        setsEqual(currentProjectIdsWithChats, nextProjectIdsWithChats)
-      ) {
-        return current;
-      }
-
-      const nextExpandedProjectIds = new Set(current.expandedProjectIds);
-      for (const projectId of currentProjectIds) {
-        if (!nextProjectIds.has(projectId)) {
-          nextExpandedProjectIds.delete(projectId);
-        }
-      }
-      for (const projectId of nextProjectIds) {
-        if (
-          nextProjectIdsWithChats.has(projectId) &&
-          (!currentProjectIds.has(projectId) ||
-            !currentProjectIdsWithChats.has(projectId))
-        ) {
-          nextExpandedProjectIds.add(projectId);
-        }
-      }
-
-      return {
-        expandedProjectIds: nextExpandedProjectIds,
-        sidebarProjectIds: nextProjectIds,
-        sidebarProjectIdsWithChats: nextProjectIdsWithChats,
-      };
-    }),
   toggleSidebarChatDateGroup: (groupKey) =>
     set((current) => {
       const collapsedChatDateGroupKeys = new Set(
@@ -107,28 +58,6 @@ export const useWorkspaceUiStore = create<WorkspaceUiState>()((set) => ({
     }),
   toggleRightSidebar: () =>
     set((current) => ({ rightSidebarOpen: !current.rightSidebarOpen })),
-  toggleSidebarProject: (projectId) =>
-    set((current) => {
-      const expandedProjectIds = new Set(current.expandedProjectIds);
-      if (expandedProjectIds.has(projectId)) {
-        expandedProjectIds.delete(projectId);
-      } else {
-        expandedProjectIds.add(projectId);
-      }
-      return { expandedProjectIds };
-    }),
-  toggleSidebarWorktreeGroup: (groupKey) =>
-    set((current) => {
-      const collapsedWorktreeGroupKeys = new Set(
-        current.collapsedWorktreeGroupKeys,
-      );
-      if (collapsedWorktreeGroupKeys.has(groupKey)) {
-        collapsedWorktreeGroupKeys.delete(groupKey);
-      } else {
-        collapsedWorktreeGroupKeys.add(groupKey);
-      }
-      return { collapsedWorktreeGroupKeys };
-    }),
 }));
 
 function readRightSidebarWidth() {
@@ -169,16 +98,4 @@ function clampNumber(
     return fallback;
   }
   return Math.min(max, Math.max(min, Math.round(value)));
-}
-
-function setsEqual(left: Set<string>, right: Set<string>): boolean {
-  if (left.size !== right.size) {
-    return false;
-  }
-  for (const value of left) {
-    if (!right.has(value)) {
-      return false;
-    }
-  }
-  return true;
 }

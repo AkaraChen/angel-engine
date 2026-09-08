@@ -244,7 +244,6 @@ export const fr = {
         dockInSidebar: "Ancrer dans la barre latérale",
         empty: {
           checksUnavailable: "Checks indisponibles",
-          fileTreeUnavailable: "Arborescence indisponible",
           fileUnavailable: "Fichier indisponible",
           gitUnavailable: "Git indisponible",
           noChanges: "Aucune modification",

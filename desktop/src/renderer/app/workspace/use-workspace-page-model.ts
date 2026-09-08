@@ -50,8 +50,6 @@ const EMPTY_PROJECTS: Project[] = [];
 interface UseWorkspacePageModelOptions {
   api: ReturnType<typeof useApi>;
   draftProjectId?: string;
-  /** The Fleet overview owns the main pane; no draft composer is mounted. */
-  /** Schedule owns the main pane and must not prewarm a draft session. */
   routeProjectId?: string;
   selectedChatId?: string;
 }

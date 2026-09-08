@@ -15,7 +15,6 @@ import {
 const t = tipc.create();
 const actionSchema = arkType.enumerated(
   ...PATH_LAUNCHER_EDITOR_IDS.map(pathLauncherEditorActionId),
-  "angelTerminal",
   "copyPath",
   "fileManager",
   "systemTerminal",

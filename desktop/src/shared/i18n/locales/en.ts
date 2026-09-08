@@ -239,7 +239,6 @@ export const en = {
         dockInSidebar: "Dock in sidebar",
         empty: {
           checksUnavailable: "Checks unavailable",
-          fileTreeUnavailable: "File tree unavailable",
           fileUnavailable: "File unavailable",
           gitUnavailable: "Git unavailable",
           noChanges: "No changes",
