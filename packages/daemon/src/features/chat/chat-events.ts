@@ -14,7 +14,7 @@ export interface EventPublisher {
  *   runtime, `updatedAt`).
  * - `conversationChanged` — the contents of a chat moved (a run started or
  *   settled, history was appended, runtime settings changed).
- * - `activityChanged` — the Fleet projection for a chat moved. Attention rides
+ * - `activityChanged` — the activity projection for a chat moved. Attention rides
  *   along because it is derived from the same projection.
  *
  * All three are invalidation hints without a payload: consumers re-read from the

@@ -28,7 +28,7 @@ import { cn } from "@/platform/utils";
 
 /**
  * List plate shared by the archived-chat and removable-worktree lists. Same
- * shape as a Fleet section: a hairline card that insets its rows so each row
+ * shape as a settings section: a hairline card that insets its rows so each row
  * can carry its own rounded hover surface instead of a divider grid.
  */
 export function SettingsListPlate({ children }: { children: ReactNode }) {

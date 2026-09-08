@@ -106,7 +106,7 @@ describe("useWorkspaceNavigation", () => {
     const model = workspaceModel({ navigate, setWorkspaceMode });
     const { result } = renderHook(() => useWorkspaceNavigation(model));
 
-    act(() => result.current.openChatFromFleet(chat({ id: "standalone" })));
+    act(() => result.current.openChatFromAnyMode(chat({ id: "standalone" })));
     expect(setWorkspaceMode).toHaveBeenCalledWith("chat");
     expect(navigate).toHaveBeenCalledWith("/chat/standalone");
 
@@ -120,7 +120,7 @@ describe("useWorkspaceNavigation", () => {
       useWorkspaceNavigation(chatModeModel),
     );
     act(() =>
-      chatModeResult.current.openChatFromFleet(
+      chatModeResult.current.openChatFromAnyMode(
         chat({ id: "project-chat", projectId: "project-1" }),
       ),
     );

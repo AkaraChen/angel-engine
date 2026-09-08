@@ -471,34 +471,7 @@ export interface LocaleResourceTranslationSidebarDateGroups {
   yesterday: string;
 }
 
-export interface LocaleResourceTranslationFleetGroups {
-  attention: string;
-  done: string;
-  running: string;
-}
-
-export interface LocaleResourceTranslationFleetEmptySegments {
-  all: string;
-  attention: string;
-  done: string;
-  running: string;
-}
-
-export interface LocaleResourceTranslationFleetReasons {
-  approval: string;
-  processExited: string;
-  question: string;
-  runtimeError: string;
-}
-
-export interface LocaleResourceTranslationFleetSegments {
-  all: string;
-  attention: string;
-  done: string;
-  running: string;
-}
-
-export interface LocaleResourceTranslationFleetStatus {
+export interface LocaleResourceTranslationActivityStatus {
   done: string;
   failed: string;
   running: string;
@@ -506,28 +479,8 @@ export interface LocaleResourceTranslationFleetStatus {
   waitingForYou: string;
 }
 
-export interface LocaleResourceTranslationFleetViews {
-  board: string;
-  list: string;
-}
-
-export interface LocaleResourceTranslationFleet {
-  allProjects: string;
-  disconnected: string;
-  emptySegments: LocaleResourceTranslationFleetEmptySegments;
-  filterProject: string;
-  filterSegments: string;
-  groups: LocaleResourceTranslationFleetGroups;
-  loading: string;
-  noMatches: string;
-  reasons: LocaleResourceTranslationFleetReasons;
-  search: string;
-  segments: LocaleResourceTranslationFleetSegments;
-  standaloneProject: string;
-  status: LocaleResourceTranslationFleetStatus;
-  title: string;
-  viewMode: string;
-  views: LocaleResourceTranslationFleetViews;
+export interface LocaleResourceTranslationActivity {
+  status: LocaleResourceTranslationActivityStatus;
 }
 
 export interface LocaleResourceTranslationSchedule {
@@ -1460,7 +1413,7 @@ export interface LocaleResourceTranslation {
   common: LocaleResourceTranslationCommon;
   attachment: LocaleResourceTranslationAttachment;
   workspace: LocaleResourceTranslationWorkspace;
-  fleet: LocaleResourceTranslationFleet;
+  activity: LocaleResourceTranslationActivity;
   schedule: LocaleResourceTranslationSchedule;
   sidebar: LocaleResourceTranslationSidebar;
   settings: LocaleResourceTranslationSettings;

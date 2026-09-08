@@ -14,7 +14,6 @@ interface WorkspacePageContentProps {
   api: ReturnType<typeof useApi>;
   currentRoutePath: string;
   draftProjectId?: string;
-  fleetActive?: boolean;
   scheduleActive?: boolean;
   routeProjectId?: string;
   selectedChatId?: string;
@@ -24,7 +23,6 @@ export function WorkspacePageContent({
   api,
   currentRoutePath,
   draftProjectId,
-  fleetActive = false,
   scheduleActive = false,
   routeProjectId,
   selectedChatId,
@@ -32,7 +30,6 @@ export function WorkspacePageContent({
   const model = useWorkspacePageModel({
     api,
     draftProjectId,
-    fleetActive,
     scheduleActive,
     routeProjectId,
     selectedChatId,
@@ -81,7 +78,6 @@ export function WorkspacePageContent({
       chatActions={chatActions}
       currentRoutePath={currentRoutePath}
       draftGuard={draftGuard}
-      fleetActive={fleetActive}
       scheduleActive={scheduleActive}
       model={model}
       navigation={navigation}

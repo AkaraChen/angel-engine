@@ -64,17 +64,17 @@ export function sortTraySessions(
   });
 }
 
-export function fleetStatusI18nKey(status: TraySessionStatus): string {
+export function activityStatusI18nKey(status: TraySessionStatus): string {
   switch (status) {
     case "waiting_for_you":
-      return "fleet.status.waitingForYou";
+      return "activity.status.waitingForYou";
     case "running":
-      return "fleet.status.running";
+      return "activity.status.running";
     case "stuck":
-      return "fleet.status.stuck";
+      return "activity.status.stuck";
     case "failed":
-      return "fleet.status.failed";
+      return "activity.status.failed";
     case "done":
-      return "fleet.status.done";
+      return "activity.status.done";
   }
 }

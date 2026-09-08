@@ -45,7 +45,6 @@ import { ImportSessionDialog } from "@/features/chat/components/import-session-d
 import { RenameChatDialog } from "@/features/chat/components/rename-chat-dialog";
 import { SessionHandoffDialog } from "@/features/chat/components/session-handoff-dialog";
 import { WorkspaceCommandPalette } from "@/features/command-palette/workspace-command-palette";
-import { FleetPage } from "@/features/fleet/fleet-page";
 import { CloneProgressDialog } from "@/features/projects/components/clone-progress-dialog";
 import { CloneRepositoryDialog } from "@/features/projects/components/clone-repository-dialog";
 import { ProjectSettingsDialog } from "@/features/projects/components/project-settings-dialog";
@@ -56,7 +55,6 @@ interface WorkspacePageViewProps {
   chatActions: WorkspaceChatActions;
   currentRoutePath: string;
   draftGuard: WorktreeDraftGuard;
-  fleetActive: boolean;
   scheduleActive: boolean;
   model: WorkspacePageModel;
   navigation: WorkspaceNavigation;
@@ -67,7 +65,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
   chatActions,
   currentRoutePath,
   draftGuard,
-  fleetActive,
   scheduleActive,
   model,
   navigation,
@@ -182,9 +179,8 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     navigateToChat,
     navigateToDraft,
     openChat,
-    openChatFromFleet,
-    openFleet,
-    openSchedule,
+    openChatFromAnyMode,
+    openSchedule
     openPowerWorktree,
     openSettings,
     selectDraftProject,
@@ -349,7 +345,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
         <WorkspaceSidebarControlPortalProvider>
           <WorkspaceSidebar
             chats={chats}
-            fleetActive={fleetActive}
             scheduleActive={scheduleActive}
             isChatsLoading={chatsQuery.isPending}
             isMacOS={isMacOS}
@@ -362,7 +357,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
             onCreateStandaloneChat={createChatForSelection}
             onImportSession={openImportSessionForProject}
             onOpenChat={openChat}
-            onOpenFleet={openFleet}
             onOpenSchedule={openSchedule}
             onOpenSettings={openSettings}
             onOpenWorktree={openPowerWorktree}
@@ -379,7 +373,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           />
           <WorkspaceFloatingSidebar
             chats={chats}
-            fleetActive={fleetActive}
             scheduleActive={scheduleActive}
             isChatsLoading={chatsQuery.isPending}
             isMacOS={isMacOS}
@@ -392,7 +385,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
             onCreateStandaloneChat={createChatForSelection}
             onImportSession={openImportSessionForProject}
             onOpenChat={openChat}
-            onOpenFleet={openFleet}
             onOpenSchedule={openSchedule}
             onOpenSettings={openSettings}
             onOpenWorktree={openPowerWorktree}
@@ -416,7 +408,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
             chats={chats}
             onImportSession={importSessionForCurrentProject}
             onNewWorkspace={createStandaloneWorkspace}
-            onOpenSession={openChatFromFleet}
+            onOpenSession={openChatFromAnyMode}
             onOpenSettings={openSettings}
           />
           <RenameChatDialog
@@ -491,9 +483,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
               title={
                 scheduleActive
                   ? t("schedule.title")
-                  : fleetActive
-                    ? t("fleet.title")
-                    : workspaceTitle
+                  : workspaceTitle
               }
               includeAngelTerminal={canOpenAngelTerminal}
               onPathLauncherAction={
@@ -529,19 +519,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
               >
                 {scheduleActive ? (
                   <SchedulePage projects={projects} />
-                ) : fleetActive ? (
-                  <FleetPage
-                    chats={chats}
-                    isMetadataError={
-                      chatsQuery.isError || projectsQuery.isError
-                    }
-                    isMetadataPending={
-                      chatsQuery.isPending || projectsQuery.isPending
-                    }
-                    onNewChat={openDraftTabFromTabBar}
-                    onOpenChat={openChatFromFleet}
-                    projects={projects}
-                  />
                 ) : powerHomePageContext !== undefined ? (
                   <PowerWorktreeHistoryPage
                     chats={chats}

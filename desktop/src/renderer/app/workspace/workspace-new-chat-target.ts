@@ -6,8 +6,7 @@ import { isProjectWorkspaceMode } from "@/app/workspace/workspace-ui-store";
 
 /**
  * What the sidebar's New Chat button starts. A draft route already shows the
- * composer, so the button is a no-op there; every other chat-less route — Fleet
- * included — still has to open one.
+ * composer, so the button is a no-op there; Schedule still needs to open one.
  */
 export type WorkspaceNewChatTarget =
   | { project: Project; type: "project" }
@@ -15,19 +14,19 @@ export type WorkspaceNewChatTarget =
   | { type: "standalone" };
 
 export function resolveWorkspaceNewChatTarget({
-  fleetActive,
+  scheduleActive,
   projects,
   selectedChatId,
   selectedProjectId,
   workspaceMode,
 }: {
-  fleetActive: boolean;
+  scheduleActive: boolean;
   projects: Project[];
   selectedChatId?: string;
   selectedProjectId?: string;
   workspaceMode: WorkspaceMode;
 }): WorkspaceNewChatTarget {
-  if (!fleetActive && !is.nonEmptyString(selectedChatId)) {
+  if (!scheduleActive && !is.nonEmptyString(selectedChatId)) {
     return { type: "none" };
   }
 

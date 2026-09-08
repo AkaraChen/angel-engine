@@ -11,7 +11,7 @@ import { cn } from "@/platform/utils";
 
 /**
  * `search` is the one place the DNA capsule survives into app context: command
- * palette, sidebar filters and fleet search all read as a pill with a leading
+ * palette and sidebar search all read as a pill with a leading
  * `MagnifyingGlass` addon. Every other input group stays rectangular.
  */
 const inputGroupVariants = cva(
