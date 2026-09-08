@@ -49,19 +49,13 @@ interface WorkspaceSidebarProps {
   isMacOS: boolean;
   isProjectsLoading: boolean;
   onArchiveChat: (chat: Chat) => MaybeAsync;
-  onCloneRepository: () => MaybeAsync;
   onCancelWorktreeCreation: (chat: Chat) => MaybeAsync;
-  onCreateProject: () => MaybeAsync;
   onCreateProjectChat: (project: Project) => MaybeAsync;
   onCreateStandaloneChat: () => MaybeAsync;
   onImportSession: (project: Project) => void;
   onOpenChat: (chat: Chat) => MaybeAsync;
   onOpenSchedule: () => MaybeAsync;
   onOpenSettings: () => MaybeAsync;
-  onOpenWorktree: (
-    project: Project,
-    worktreeGroup: ProjectWorktreeChatGroup,
-  ) => MaybeAsync;
   onRetryWorktreeCreation: (chat: Chat) => MaybeAsync;
   onChatContextMenuAction: (chat: Chat, action: ChatContextMenuAction) => void;
   onProjectContextMenuAction: (
@@ -70,11 +64,6 @@ interface WorkspaceSidebarProps {
   ) => void;
   onProjectPathLauncherAction: (
     project: Project,
-    action: PathLauncherActionId,
-  ) => void;
-  onWorktreePathLauncherAction: (
-    project: Project,
-    worktreeGroup: ProjectWorktreeChatGroup,
     action: PathLauncherActionId,
   ) => void;
   projectChatsByProjectId: Map<string, Chat[]>;
@@ -212,21 +201,17 @@ function WorkspaceSidebarContent({
   isMacOS,
   isProjectsLoading,
   onArchiveChat,
-  onCloneRepository,
   onCancelWorktreeCreation,
-  onCreateProject,
   onCreateProjectChat,
   onCreateStandaloneChat,
   onImportSession,
   onOpenChat,
   onOpenSchedule,
   onOpenSettings,
-  onOpenWorktree,
   onRetryWorktreeCreation,
   onChatContextMenuAction,
   onProjectContextMenuAction,
   onProjectPathLauncherAction,
-  onWorktreePathLauncherAction,
   projectChatsByProjectId,
   projects,
   selectedChatId,
@@ -312,9 +297,7 @@ function WorkspaceSidebarContent({
         <ProjectSidebarSection
             isLoading={isProjectsLoading}
             onArchiveChat={onArchiveChat}
-            onCloneRepository={onCloneRepository}
             onCancelWorktreeCreation={onCancelWorktreeCreation}
-            onCreateProject={onCreateProject}
             onCreateProjectChat={onCreateProjectChat}
             onImportSession={onImportSession}
             onOpenChat={onOpenChat}

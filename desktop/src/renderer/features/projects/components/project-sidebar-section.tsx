@@ -35,7 +35,6 @@ import {
 import { ChatContextMenu } from "@/features/chat/components/chat-context-menu";
 import { ChatSidebarItem } from "@/features/chat/components/chat-sidebar-item";
 import { ProjectContextMenu } from "@/features/projects/components/project-context-menu";
-import { AddProjectMenu } from "@/features/projects/components/add-project-menu";
 import { WorktreeCreationActions } from "@/features/projects/components/worktree-creation-actions";
 
 type MaybeAsync = void | Promise<void>;
@@ -43,9 +42,7 @@ type MaybeAsync = void | Promise<void>;
 interface ProjectSidebarSectionProps {
   isLoading: boolean;
   onArchiveChat: (chat: Chat) => MaybeAsync;
-  onCloneRepository: () => MaybeAsync;
   onCancelWorktreeCreation: (chat: Chat) => MaybeAsync;
-  onCreateProject: () => MaybeAsync;
   onCreateProjectChat: (project: Project) => MaybeAsync;
   onImportSession: (project: Project) => void;
   onOpenChat: (chat: Chat) => MaybeAsync;
@@ -67,9 +64,7 @@ interface ProjectSidebarSectionProps {
 export function ProjectSidebarSection({
   isLoading,
   onArchiveChat,
-  onCloneRepository,
   onCancelWorktreeCreation,
-  onCreateProject,
   onCreateProjectChat,
   onImportSession,
   onOpenChat,
@@ -114,12 +109,7 @@ export function ProjectSidebarSection({
 
   return (
     <SidebarGroup className="py-1">
-      <SidebarSectionHeader label={t("sidebar.projects")}>
-        <AddProjectMenu
-          onChooseFolder={() => void onCreateProject()}
-          onCloneRepository={() => void onCloneRepository()}
-        />
-      </SidebarSectionHeader>
+      <SidebarSectionHeader label={t("sidebar.projects")} />
       <SidebarGroupContent>
         <SidebarMenu>
           <AnimatePresence initial={false}>

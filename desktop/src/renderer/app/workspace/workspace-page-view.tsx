@@ -329,9 +329,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
             isMacOS={isMacOS}
             isProjectsLoading={projectsQuery.isPending}
             onArchiveChat={archiveChat}
-            onCloneRepository={openCloneDialog}
             onCancelWorktreeCreation={cancelWorktreeCreation}
-            onCreateProject={() => void createProjectFromPicker()}
             onCreateProjectChat={createChatForProject}
             onCreateStandaloneChat={createChatForSelection}
             onImportSession={openImportSessionForProject}
@@ -513,6 +511,9 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                     onChatMessagesUpdated={setChatMessagesInCache}
                     onChatUpdated={updateChatFromRun}
                     onOpenChat={openChat}
+                    onSelectFolder={async () => {
+                      await createProjectFromPicker();
+                    }}
                     permissionMode={permissionModeOverride}
                     prewarmId={
                       draftCreationLocation === "worktree"

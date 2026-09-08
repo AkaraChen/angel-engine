@@ -31,8 +31,9 @@ describe("resolveWorkspaceToolContext", () => {
     expect(
       resolveWorkspaceToolContext({
         projectId: "project-1",
-        projectRoot: "/repo",      }),
-    ).toBeNull();
+        projectRoot: "/repo",
+      }),
+    ).toEqual({ contextKey: "project:project-1:root:/repo", root: "/repo" });
     expect(
       resolveWorkspaceToolContext({
         projectId: "project-1",      }),

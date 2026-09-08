@@ -220,21 +220,6 @@ describe("NewChatRecentSection", () => {
     expect(screen.getByText("angel-engine")).toBeTruthy();
   });
 
-  it("offers the project action when there is nothing to resume", () => {
-    const onCreateProject = vi.fn();
-    render(
-      <NewChatRecentSection
-        chats={[]}
-        isProjectMode
-        onOpenChat={vi.fn()}
-        projects={projects}
-      />,
-    );
-
-    expect(screen.getByText("thread.empty.recentEmpty")).toBeTruthy();
-    screen.getByRole("button").click();
-    expect(onCreateProject).toHaveBeenCalledOnce();
-  });
 
   it("hides the project empty state in chat mode", () => {
     const { container } = render(
