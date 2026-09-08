@@ -3,14 +3,12 @@ import { type as arkType } from "arktype";
 import {
   providerDiagnosticSchema,
   repositoryIdentitySchema,
-  workItemSchema,
 } from "./schemas";
 import type {
   ProviderAuthenticationState,
   ProviderDiagnostic,
   RepositoryIdentity,
   SourceControlCapabilityId,
-  WorkItem,
 } from "./types";
 
 export interface ProviderOperationContext {
@@ -112,9 +110,6 @@ export interface SourceControlOperationMap {
     input: UrlOperationInput;
     output: RepositoryIdentity | null;
   };
-  "workItems.get": { input: NumberedItemInput; output: WorkItem };
-  "workItems.getByUrl": { input: UrlOperationInput; output: WorkItem };
-  "workItems.list": { input: ListOperationInput; output: readonly WorkItem[] };
   "provider.clone": {
     input: CloneRepositoryInput;
     output: CloneRepositoryResult;
@@ -188,9 +183,6 @@ export const sourceControlOperationSchemas = {
     input: urlInputSchema,
     output: repositoryIdentitySchema.or("null"),
   },
-  "workItems.get": { input: numberedItemInputSchema, output: workItemSchema },
-  "workItems.getByUrl": { input: urlInputSchema, output: workItemSchema },
-  "workItems.list": { input: listInputSchema, output: workItemSchema.array() },
   "provider.clone": {
     input: arkType({
       "+": "reject",

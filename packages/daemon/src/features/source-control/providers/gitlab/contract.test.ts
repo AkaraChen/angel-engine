@@ -164,23 +164,9 @@ runProviderContractSuite(
 
 
 
-      {
-        capability: "workItems.get",
-        run: (plugin) =>
-          plugin.workItems!.get!({ id: "7", repository }, operationContext()),
-      },
-      {
-        capability: "workItems.getByUrl",
-        run: (plugin) =>
-          plugin.workItems!.getByUrl!(
-            { url: issue.web_url },
-            operationContext(),
-          ),
-      },
-      {
-        capability: "workItems.list",
-        run: (plugin) => plugin.workItems!.list!(listed, operationContext()),
-      },
+
+
+
       {
         capability: "provider.clone",
         run: (plugin) =>

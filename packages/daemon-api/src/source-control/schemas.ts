@@ -24,25 +24,6 @@ export const sourceControlActorSchema = arkType({
   "extensions?": extensionsSchema,
 });
 
-export const workItemSchema = arkType({
-  "+": "reject",
-  id: "string > 0",
-  number: "number | null",
-  repository: repositoryIdentitySchema,
-  kind: "'issue' | 'task' | 'bug' | 'feature' | 'other'",
-  title: "string > 0",
-  body: "string",
-  state: "'open' | 'closed'",
-  author: sourceControlActorSchema.or("null"),
-  assignees: sourceControlActorSchema.array(),
-  labels: "string[]",
-  webUrl: "string > 0",
-  createdAt: "string | null",
-  updatedAt: "string | null",
-  closedAt: "string | null",
-  "extensions?": extensionsSchema,
-});
-
 export const unsupportedReasonSchema = arkType({
   "+": "reject",
   kind: "'not-implemented' | 'out-of-scope' | 'requires-configuration' | 'unauthenticated' | 'cli-missing' | 'permission-denied' | 'plan-restricted' | 'unknown-capability'",
@@ -69,7 +50,7 @@ export const capabilityMatrixSchema = arkType({
 });
 
 const capabilityIdSchema = arkType(
-  "'provider.auth' | 'discovery.listNamespaces' | 'discovery.listRepositories' | 'repositoryIdentity' | 'workItems.get' | 'workItems.getByUrl' | 'workItems.list' | 'provider.clone'",
+  "'provider.auth' | 'discovery.listNamespaces' | 'discovery.listRepositories' | 'repositoryIdentity' | 'provider.clone'",
 );
 
 export const providerManifestSchema = arkType({

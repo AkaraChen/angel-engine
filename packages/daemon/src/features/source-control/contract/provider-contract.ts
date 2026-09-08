@@ -19,9 +19,6 @@ const ALL_CAPABILITIES: readonly SourceControlCapabilityId[] = [
   "discovery.listNamespaces",
   "discovery.listRepositories",
   "repositoryIdentity",
-  "workItems.get",
-  "workItems.getByUrl",
-  "workItems.list",
   "provider.clone",
 ];
 
@@ -234,9 +231,6 @@ function implementedCapabilities(
   ][] = [
     ["discovery.listNamespaces", plugin.discovery.listNamespaces],
     ["discovery.listRepositories", plugin.discovery.listRepositories],
-    ["workItems.get", plugin.workItems?.get],
-    ["workItems.getByUrl", plugin.workItems?.getByUrl],
-    ["workItems.list", plugin.workItems?.list],
     ["provider.clone", plugin.git.clone],
   ];
   for (const [capability, operation] of optional) {

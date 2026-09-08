@@ -1,7 +1,6 @@
 import type {
   ListOperationInput,
   ProviderOperationContext,
-  WorkItem,
 } from "@angel-engine/daemon-api/source-control";
 import is from "@sindresorhus/is";
 import { type as arkType } from "arktype";
@@ -16,7 +15,7 @@ import {
   normalizeText,
   runGhCli,
 } from "./gh-cli";
-import { normalizeGitHubWorkItemState, parseGitHubUrl } from "./resolve";
+import { parseGitHubUrl } from "./resolve";
 import type {
   GitHubItemKind,
   GitHubListItem,
@@ -47,48 +46,6 @@ const gitHubListPayloadSchema = arkType({
   updatedAt: "string > 0",
   url: "string > 0",
 }).array();
-const gitHubWorkItemListPayloadSchema = arkType({
-  "+": "ignore",
-  assignees: arkType({
-    "+": "ignore",
-    "avatarUrl?": "string | null",
-    "id?": "string | null",
-    login: "string > 0",
-    "name?": "string | null",
-    "url?": "string | null",
-  }).array(),
-  author: arkType({
-    "+": "ignore",
-    "avatarUrl?": "string | null",
-    "id?": "string | null",
-    login: "string > 0",
-    "name?": "string | null",
-    "url?": "string | null",
-  }).or("null"),
-  body: "string | null",
-  closedAt: "string | null",
-  createdAt: "string > 0",
-  labels: arkType({ "+": "ignore", name: "string > 0" }).array(),
-  number: positiveInteger,
-  state: "string > 0",
-  title: "string > 0",
-  updatedAt: "string > 0",
-  url: "string > 0",
-}).array();
-const WORK_ITEM_LIST_FIELDS = [
-  "assignees",
-  "author",
-  "body",
-  "closedAt",
-  "createdAt",
-  "labels",
-  "number",
-  "state",
-  "title",
-  "updatedAt",
-  "url",
-].join(",");
-
 export function listGitHubItems(
   input: GitHubListItemsInput,
   deps: {
@@ -129,100 +86,6 @@ export function listGitHubItems(
         right.number - left.number,
     );
     return { items: items.slice(0, limit) };
-  });
-}
-
-export async function listGitHubWorkItems(
-  input: ListOperationInput,
-  _context: ProviderOperationContext,
-  deps: {
-    runGh?: GhRunner;
-    whichGh?: () => Promise<string | null>;
-  } = {},
-): Promise<readonly WorkItem[]> {
-  if (
-    input.repository.providerId !== "github" ||
-    input.repository.namespace.length !== 1
-  ) {
-    throw DaemonError.invalidRequest("A GitHub repository is required.");
-  }
-  const ghPath = await (deps.whichGh ?? findGhPath)().catch((cause) => {
-    throw GitHubError.sourceControlFetchFailed(cause);
-  });
-  if (!is.nonEmptyString(ghPath)) throw GitHubError.sourceControlCliMissing();
-  const search = input.query?.trim() ?? "";
-  const args = [
-    "issue",
-    "list",
-    "--repo",
-    input.repository.displayPath,
-    "--state",
-    "all",
-    "--limit",
-    String(Math.min(input.limit, MAX_LIMIT)),
-    "--json",
-    WORK_ITEM_LIST_FIELDS,
-    "--search",
-    search.length > 0
-      ? `${search} ${UPDATED_SORT_QUALIFIER}`
-      : UPDATED_SORT_QUALIFIER,
-  ];
-  const output = await (deps.runGh ?? runGhCli)(args).catch((cause) => {
-    throw mapGhFailure(cause);
-  });
-  let json: unknown;
-  try {
-    json = JSON.parse(output.stdout);
-  } catch (cause) {
-    throw GitHubError.sourceControlFetchFailed(
-      cause,
-      "GitHub CLI returned invalid JSON.",
-    );
-  }
-  const payload = gitHubWorkItemListPayloadSchema(json);
-  if (payload instanceof arkType.errors) {
-    throw GitHubError.sourceControlFetchFailed(
-      new TypeError(`Unexpected GitHub CLI payload: ${payload.summary}`),
-    );
-  }
-  return payload.map((entry): WorkItem => {
-    const parsed = parseGitHubUrl(entry.url);
-    if (parsed?.kind !== "issue" || parsed.number !== entry.number) {
-      throw GitHubError.sourceControlFetchFailed(
-        new TypeError(`Unexpected GitHub CLI item URL: ${entry.url}`),
-      );
-    }
-    return {
-      id: String(entry.number),
-      number: entry.number,
-      repository: input.repository,
-      kind: "issue",
-      title: entry.title,
-      body: normalizeText(entry.body ?? ""),
-      state: normalizeGitHubWorkItemState(entry.state),
-      author: entry.author
-        ? {
-            id: entry.author.id ?? null,
-            login: entry.author.login,
-            displayName: entry.author.name ?? null,
-            avatarUrl: entry.author.avatarUrl ?? null,
-            webUrl: entry.author.url ?? null,
-          }
-        : null,
-      assignees: entry.assignees.map((assignee) => ({
-        id: assignee.id ?? null,
-        login: assignee.login,
-        displayName: assignee.name ?? null,
-        avatarUrl: assignee.avatarUrl ?? null,
-        webUrl: assignee.url ?? null,
-      })),
-      labels: entry.labels.map((label) => label.name),
-      webUrl: parsed.url,
-      createdAt: entry.createdAt,
-      updatedAt: entry.updatedAt,
-      closedAt: entry.closedAt,
-      extensions: { github: { state: entry.state } },
-    };
   });
 }
 

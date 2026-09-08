@@ -242,20 +242,9 @@ runProviderContractSuite(
 
 
 
-      {
-        capability: "workItems.get",
-        run: (plugin) =>
-          plugin.workItems!.get!({ id: "3", repository }, operationContext()),
-      },
-      {
-        capability: "workItems.getByUrl",
-        run: (plugin) =>
-          plugin.workItems!.getByUrl!({ url: issue.url }, operationContext()),
-      },
-      {
-        capability: "workItems.list",
-        run: (plugin) => plugin.workItems!.list!(listed, operationContext()),
-      },
+
+
+
       {
         capability: "provider.clone",
         run: (plugin) =>

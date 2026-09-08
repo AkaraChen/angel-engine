@@ -286,48 +286,5 @@ describe("GitHub source-control provider", () => {
     ]);
   });
 
-  it("gets and lists issues through the generic work-item capability", async () => {
-    const calls: string[][] = [];
-    const plugin = createGitHubPlugin({
-      findGh: async () => "/usr/bin/gh",
-      runGh: async (args) => {
-        calls.push(args);
-        return {
-          stderr: "",
-          stdout: JSON.stringify(args[1] === "list" ? [issue] : issue),
-        };
-      },
-    });
-
-    await expect(
-      plugin.workItems?.get?.({ id: "3", repository }, operationContext()),
-    ).resolves.toMatchObject({
-      assignees: [{ login: "carol" }],
-      author: { login: "alice" },
-      id: "3",
-      kind: "issue",
-      labels: ["bug"],
-      repository,
-      state: "open",
-    });
-    await expect(
-      plugin.workItems?.getByUrl?.({ url: issue.url }, operationContext()),
-    ).resolves.toMatchObject({ id: "3", title: "Broken widget" });
-    await expect(
-      plugin.workItems?.list?.(
-        { limit: 10, query: "broken", repository },
-        operationContext(),
-      ),
-    ).resolves.toEqual([
-      expect.objectContaining({ id: "3", title: "Broken widget" }),
-    ]);
-    const listCall = calls.at(-1);
-    expect(listCall).toContain("acme/widgets");
-    expect(listCall?.at((listCall?.indexOf("--search") ?? -1) + 1)).toBe(
-      "broken sort:updated-desc",
-    );
-  });
-
-
 
 });

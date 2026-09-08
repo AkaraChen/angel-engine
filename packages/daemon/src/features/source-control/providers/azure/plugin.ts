@@ -74,9 +74,6 @@ export function createAzureDevOpsPlugin(
       id: PROVIDER_ID,
       unsupportedCapabilities: Object.fromEntries(
         [
-                        "workItems.get",
-          "workItems.getByUrl",
-          "workItems.list",
           "provider.clone",
         ].map((capability) => [
           capability,

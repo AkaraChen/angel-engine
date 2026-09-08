@@ -21,29 +21,6 @@ export interface SourceControlActor {
   extensions?: SourceControlExtensions;
 }
 
-export type WorkItemKind = "issue" | "task" | "bug" | "feature" | "other";
-
-export interface WorkItem {
-  id: string;
-  number: number | null;
-  repository: RepositoryIdentity;
-  kind: WorkItemKind;
-  title: string;
-  body: string;
-  state: "open" | "closed";
-  author: SourceControlActor | null;
-  assignees: readonly SourceControlActor[];
-  labels: readonly string[];
-  webUrl: string;
-  createdAt: string | null;
-  updatedAt: string | null;
-  closedAt: string | null;
-  extensions?: SourceControlExtensions;
-}
-
-/** Provider-neutral result returned by the source-control link resolver. */
-export type ResolvedSourceControlLink = WorkItem;
-
 
 
 export type SourceControlCapabilityId =
@@ -51,9 +28,6 @@ export type SourceControlCapabilityId =
   | "discovery.listNamespaces"
   | "discovery.listRepositories"
   | "repositoryIdentity"
-  | "workItems.get"
-  | "workItems.getByUrl"
-  | "workItems.list"
   | "provider.clone";
 
 export type UnsupportedReasonKind =

@@ -7,7 +7,6 @@ import type {
   RepositoryIdentity,
   SourceControlActor,
   SourceControlProviderPlugin,
-  WorkItem,
 } from "@angel-engine/daemon-api/source-control";
 import { type as arkType } from "arktype";
 
@@ -47,20 +46,6 @@ const groupSchema = arkType({
   id: "number | string",
   name: "string > 0",
 });
-const issueSchema = arkType({
-  "+": "ignore",
-  assignees: actorSchema.array(),
-  author: actorSchema,
-  "closed_at?": "string | null",
-  created_at: "string > 0",
-  description: "string | null",
-  iid: positiveInteger,
-  labels: "string[]",
-  state: "'opened' | 'closed'",
-  title: "string > 0",
-  updated_at: "string > 0",
-  web_url: "string > 0",
-});
 interface GitLabDependencies {
   findGlab?: () => Promise<string | null>;
   getToken?: () => Promise<string | null>;
@@ -92,9 +77,6 @@ export function createGitLabPlugin(
         "discovery.listNamespaces",
         "discovery.listRepositories",
         "repositoryIdentity",
-        "workItems.get",
-        "workItems.getByUrl",
-        "workItems.list",
         "provider.clone",
       ],
       displayName: "GitLab",
@@ -181,42 +163,6 @@ export function createGitLabPlugin(
       },
     },
     repositories: { parseUrl: parseGitLabRepositoryUrl },
-    workItems: {
-      get: async (input, context) =>
-        mapIssue(
-          await api(
-            input.repository.host,
-            `${projectEndpoint(input.repository)}/issues/${encodeURIComponent(input.id)}`,
-            issueSchema,
-            context,
-          ),
-          input.repository,
-        ),
-      getByUrl: async (input, context) => {
-        const parsed = parseGitLabItemUrl(input.url);
-        if (parsed?.kind !== "issue") {
-          throw DaemonError.sourceControlUrlUnsupported(PROVIDER_ID);
-        }
-        return mapIssue(
-          await api(
-            parsed.repository.host,
-            `${projectEndpoint(parsed.repository)}/issues/${parsed.id}`,
-            issueSchema,
-            context,
-          ),
-          parsed.repository,
-        );
-      },
-      list: async (input, context) =>
-        (
-          await api(
-            input.repository.host,
-            `${projectEndpoint(input.repository)}/issues?scope=all&per_page=${input.limit}&search=${encodeURIComponent(input.query ?? "")}`,
-            issueSchema.array(),
-            context,
-          )
-        ).map((issue) => mapIssue(issue, input.repository)),
-    },
 };
 }
 
@@ -416,28 +362,6 @@ function mapActor(actor: typeof actorSchema.infer): SourceControlActor {
     id: actor.id === null || actor.id === undefined ? null : String(actor.id),
     login: actor.username,
     webUrl: actor.web_url ?? null,
-  };
-}
-
-function mapIssue(
-  issue: typeof issueSchema.infer,
-  repository: RepositoryIdentity,
-): WorkItem {
-  return {
-    assignees: issue.assignees.map(mapActor),
-    author: mapActor(issue.author),
-    body: issue.description ?? "",
-    closedAt: issue.closed_at ?? null,
-    createdAt: issue.created_at,
-    id: String(issue.iid),
-    kind: "issue",
-    labels: issue.labels,
-    number: issue.iid,
-    repository,
-    state: issue.state === "opened" ? "open" : "closed",
-    title: issue.title,
-    updatedAt: issue.updated_at,
-    webUrl: issue.web_url,
   };
 }
 

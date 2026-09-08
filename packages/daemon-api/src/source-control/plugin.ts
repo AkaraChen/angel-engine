@@ -32,12 +32,6 @@ export interface RepositoryCapability {
   parseUrl(url: string): RepositoryIdentity | null;
 }
 
-export interface WorkItemCapability {
-  get?: ProviderOperation<"workItems.get">;
-  getByUrl?: ProviderOperation<"workItems.getByUrl">;
-  list?: ProviderOperation<"workItems.list">;
-}
-
 export type AutomationCapability = Record<never, never>;
 export type ReleaseCapability = Record<never, never>;
 export interface SourceControlProviderPlugin {
@@ -46,7 +40,6 @@ export interface SourceControlProviderPlugin {
   auth: AuthCapability;
   git: GitWorkflowCapability;
   repositories?: RepositoryCapability;
-  workItems?: WorkItemCapability;
   automation?: AutomationCapability;
   releases?: ReleaseCapability;
 }

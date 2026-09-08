@@ -18,14 +18,11 @@ import {
   type GhRunner,
   runGhCli,
 } from "./internal/gh-cli";
-import { listGitHubWorkItems } from "./internal/list";
 import {
   listGitHubNamespaces,
   listGitHubRepositoryIdentities,
 } from "./internal/repos";
 import {
-  getGitHubWorkItem,
-  getGitHubWorkItemByUrl,
   parseGitHubRepositoryUrl,
   parseGitHubUrl,
 } from "./internal/resolve";
@@ -232,9 +229,6 @@ export function createGitHubPlugin(
         "discovery.listNamespaces",
         "discovery.listRepositories",
         "repositoryIdentity",
-        "workItems.get",
-        "workItems.getByUrl",
-        "workItems.list",
         "provider.clone",
       ],
     },
@@ -263,14 +257,7 @@ export function createGitHubPlugin(
     repositories: {
       parseUrl: parseGitHubRepositoryUrl,
     },
-workItems: {
-      get: (input, context) =>
-        getGitHubWorkItem(input, context, resolvedDependencies),
-      getByUrl: (input, context) =>
-        getGitHubWorkItemByUrl(input, context, resolvedDependencies),
-      list: (input, context) =>
-        listGitHubWorkItems(input, context, resolvedDependencies),
-    },
+
 
   };
 }

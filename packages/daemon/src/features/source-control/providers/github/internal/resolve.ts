@@ -3,7 +3,6 @@ import type {
   ProviderOperationContext,
   RepositoryIdentity,
   UrlOperationInput,
-  WorkItem,
 } from "@angel-engine/daemon-api/source-control";
 import is from "@sindresorhus/is";
 import { type as arkType } from "arktype";
@@ -64,35 +63,6 @@ const gitHubActorSchema = arkType({
   "name?": "string | null",
   "url?": "string | null",
 });
-const gitHubWorkItemPayloadSchema = arkType({
-  "+": "ignore",
-  assignees: gitHubActorSchema.array(),
-  author: gitHubActorSchema.or("null"),
-  body: "string | null",
-  closedAt: "string | null",
-  createdAt: "string > 0",
-  labels: arkType({ "+": "ignore", name: "string > 0" }).array(),
-  number: positiveInteger,
-  state: "string > 0",
-  title: "string > 0",
-  updatedAt: "string > 0",
-  url: "string > 0",
-});
-
-const WORK_ITEM_FIELDS = [
-  "assignees",
-  "author",
-  "body",
-  "closedAt",
-  "createdAt",
-  "labels",
-  "number",
-  "state",
-  "title",
-  "updatedAt",
-  "url",
-].join(",");
-
 export interface ParsedGitHubUrl {
   kind: GitHubItemKind;
   number: number;
@@ -298,118 +268,6 @@ export function resolveGitHubUrl(
       try: () => buildResolvedItem(parsed, json),
     });
   });
-}
-
-export async function getGitHubWorkItem(
-  input: NumberedItemInput,
-  _context: ProviderOperationContext,
-  deps: {
-    runGh?: GhRunner;
-    whichGh?: () => Promise<string | null>;
-  } = {},
-): Promise<WorkItem> {
-  const repository = requireGitHubRepository(input.repository);
-  return fetchGitHubWorkItem(
-    ["issue", "view", input.id, "--repo", repository.displayPath],
-    deps,
-    {
-      id: input.id,
-      owner: repository.namespace[0],
-      repo: repository.name,
-    },
-  );
-}
-
-export async function getGitHubWorkItemByUrl(
-  input: UrlOperationInput,
-  _context: ProviderOperationContext,
-  deps: {
-    runGh?: GhRunner;
-    whichGh?: () => Promise<string | null>;
-  } = {},
-): Promise<WorkItem> {
-  const parsed = parseGitHubUrl(input.url);
-  if (parsed?.kind !== "issue") {
-    throw GitHubError.sourceControlUrlUnsupported(
-      "Only GitHub issue URLs are supported for work items.",
-    );
-  }
-  return fetchGitHubWorkItem(["issue", "view", parsed.url], deps, {
-    id: String(parsed.number),
-    owner: parsed.owner,
-    repo: parsed.repo,
-  });
-}
-
-async function fetchGitHubWorkItem(
-  command: string[],
-  deps: {
-    runGh?: GhRunner;
-    whichGh?: () => Promise<string | null>;
-  },
-  expected: { id: string; owner: string; repo: string },
-): Promise<WorkItem> {
-  const ghPath = await (deps.whichGh ?? findGhPath)().catch((cause) => {
-    throw GitHubError.sourceControlFetchFailed(cause);
-  });
-  if (!is.nonEmptyString(ghPath)) throw GitHubError.sourceControlCliMissing();
-  const output = await (deps.runGh ?? runGhCli)([
-    ...command,
-    "--json",
-    WORK_ITEM_FIELDS,
-  ]).catch((cause) => {
-    throw mapGhFailure(cause);
-  });
-  let json: unknown;
-  try {
-    json = JSON.parse(output.stdout);
-  } catch (cause) {
-    throw GitHubError.sourceControlFetchFailed(
-      cause,
-      "GitHub CLI returned invalid JSON.",
-    );
-  }
-  const payload = gitHubWorkItemPayloadSchema(json);
-  if (payload instanceof arkType.errors) {
-    throw unexpectedGitHubPayload(payload.summary);
-  }
-  const parsed = parseGitHubUrl(payload.url);
-  if (
-    parsed?.kind !== "issue" ||
-    payload.number !== parsed.number ||
-    String(payload.number) !== expected.id ||
-    parsed.owner !== expected.owner ||
-    parsed.repo !== expected.repo
-  ) {
-    throw unexpectedGitHubPayload(
-      `received issue #${payload.number} at ${payload.url}`,
-    );
-  }
-  const repository = parseGitHubRepositoryUrl(payload.url);
-  if (repository === null) throw unexpectedGitHubPayload(payload.url);
-  return {
-    id: String(payload.number),
-    number: payload.number,
-    repository,
-    kind: "issue",
-    title: payload.title,
-    body: normalizeText(payload.body ?? ""),
-    state: normalizeGitHubWorkItemState(payload.state),
-    author: payload.author ? gitHubActor(payload.author) : null,
-    assignees: payload.assignees.map(gitHubActor),
-    labels: payload.labels.map((label) => label.name),
-    webUrl: parsed.url,
-    createdAt: payload.createdAt,
-    updatedAt: payload.updatedAt,
-    closedAt: payload.closedAt,
-    extensions: { github: { state: payload.state } },
-  };
-}
-
-export function normalizeGitHubWorkItemState(state: string): WorkItem["state"] {
-  if (state === "OPEN") return "open";
-  if (state === "CLOSED") return "closed";
-  throw unexpectedGitHubPayload(`unknown issue state ${state}`);
 }
 
 function requireGitHubRepository(
