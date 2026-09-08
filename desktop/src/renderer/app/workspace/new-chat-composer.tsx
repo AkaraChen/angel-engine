@@ -16,10 +16,6 @@ import { useCallback, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { NewChatRecentSection } from "@/app/workspace/new-chat-recent";
 import {
-  isProjectWorkspaceMode,
-  useWorkspaceUiStore,
-} from "@/app/workspace/workspace-ui-store";
-import {
   PromptInputFooter,
   PromptInputTools,
   usePromptInputAttachments,
@@ -163,10 +159,7 @@ export function NewChatComposer({
   const { t } = useTranslation();
   const isRunning = useChatRunIsRunning(slotKey);
   const cancelRun = useChatRunStore((state) => state.cancelRun);
-  const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
-  const suggestionKeys = isProjectWorkspaceMode(workspaceMode)
-    ? projectSuggestionKeys
-    : chatSuggestionKeys;
+  const suggestionKeys = chatSuggestionKeys;
 
   const editor = useComposerEditor({ initialMarkdown });
   useTerminalSelectionInsert(editor);
@@ -401,7 +394,6 @@ export function NewChatComposer({
             >
               <NewChatRecentSection
                 chats={chats}
-                isProjectMode={isProjectWorkspaceMode(workspaceMode)}
                 projects={projects}
                 onOpenChat={onOpenChat}
               />

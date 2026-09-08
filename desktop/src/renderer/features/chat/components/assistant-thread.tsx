@@ -8,7 +8,6 @@ import { Quotes as Quote } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
 import { Trans, useTranslation } from "react-i18next";
 
-import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
 import { AssistantComposer } from "@/features/chat/components/assistant-composer";
 import {
   AssistantMessage,
@@ -29,13 +28,9 @@ export function AssistantThread({
   usage?: ChatSessionUsage;
 }) {
   const { t } = useTranslation();
-  const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
 
   return (
-    <ThreadPrimitive.Root
-      className="flex h-full min-h-0 flex-col bg-background"
-      data-workspace-mode={workspaceMode}
-    >
+    <ThreadPrimitive.Root className="flex h-full min-h-0 flex-col bg-background">
       <ThreadPrimitive.Viewport
         className="
           relative flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4
@@ -106,7 +101,6 @@ function EmptyThread({ projectName }: { projectName?: string }) {
         ${workspaceContentColumnClass}
         flex flex-1 items-center justify-center py-8
       `}
-      data-workspace-mode="chat"
     >
       <div className="w-full max-w-136">
         <div className="min-w-0 text-center select-none">

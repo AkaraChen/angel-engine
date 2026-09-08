@@ -8,12 +8,8 @@ describe("resolveWorkspaceToolContext", () => {
         projectId: "project-1",
         projectRoot: "/repo",
       }),
-    ).toEqual({
-      contextKey: "project:project-1:root:/repo",
-      root: "/repo",
-    });
+    ).toEqual({ contextKey: "project:project-1:root:/repo", root: "/repo" });
   });
-
   it("keeps project chat tools scoped to the chat", () => {
     expect(
       resolveWorkspaceToolContext({
@@ -24,17 +20,8 @@ describe("resolveWorkspaceToolContext", () => {
       }),
     ).toEqual({ contextKey: "chat:chat-1", root: "/repo/worktree" });
   });
-
-  it("requires a project root", () => {
-    expect(
-      resolveWorkspaceToolContext({
-        projectId: "project-1",
-      }),
-    ).toBeNull();
-    expect(
-      resolveWorkspaceToolContext({
-        projectRoot: "/repo",
-      }),
-    ).toBeNull();
+  it("requires both a project and root", () => {
+    expect(resolveWorkspaceToolContext({ projectId: "project-1" })).toBeNull();
+    expect(resolveWorkspaceToolContext({ projectRoot: "/repo" })).toBeNull();
   });
 });

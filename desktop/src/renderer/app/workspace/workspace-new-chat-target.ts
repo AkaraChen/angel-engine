@@ -1,8 +1,6 @@
 import type { Project } from "@angel-engine/daemon-api/projects";
-import type { WorkspaceMode } from "@/app/workspace/workspace-ui-store";
 
 import is from "@sindresorhus/is";
-import { isProjectWorkspaceMode } from "@/app/workspace/workspace-ui-store";
 
 /**
  * What the sidebar's New Chat button starts. A draft route already shows the
@@ -18,19 +16,17 @@ export function resolveWorkspaceNewChatTarget({
   projects,
   selectedChatId,
   selectedProjectId,
-  workspaceMode,
 }: {
   scheduleActive: boolean;
   projects: Project[];
   selectedChatId?: string;
   selectedProjectId?: string;
-  workspaceMode: WorkspaceMode;
 }): WorkspaceNewChatTarget {
   if (!scheduleActive && !is.nonEmptyString(selectedChatId)) {
     return { type: "none" };
   }
 
-  if (isProjectWorkspaceMode(workspaceMode)) {
+  if (true) {
     const project =
       projects.find((candidate) => candidate.id === selectedProjectId) ??
       projects[0];

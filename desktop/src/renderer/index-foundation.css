@@ -271,57 +271,6 @@
   --workspace-user-bubble-text-size: 0.875rem;
 }
 
-[data-workspace-mode="work"],
-[data-workspace-mode="power"] {
-  --spacing: 0.21875rem;
-  --radius: 0.5rem;
-  --text-xs: 0.6875rem;
-  --text-xs--line-height: calc(1 / 0.6875);
-  --text-sm: 0.8125rem;
-  --text-sm--line-height: calc(1.125 / 0.8125);
-  --text-base: 0.9375rem;
-  --text-base--line-height: calc(1.375 / 0.9375);
-  --text-lg: 1.0625rem;
-  --text-lg--line-height: calc(1.5 / 1.0625);
-  --text-xl: 1.1875rem;
-  --text-xl--line-height: calc(1.625 / 1.1875);
-  --text-2xl: 1.375rem;
-  --text-2xl--line-height: calc(1.875 / 1.375);
-  --text-3xl: 1.6875rem;
-  --text-3xl--line-height: calc(2.125 / 1.6875);
-  --text-4xl: 2rem;
-  --text-4xl--line-height: calc(2.25 / 2);
-  --text-5xl: 2.625rem;
-  --text-5xl--line-height: 1;
-  --text-6xl: 3.25rem;
-  --text-6xl--line-height: 1;
-  --text-7xl: 4rem;
-  --text-7xl--line-height: 1;
-  --text-8xl: 5.25rem;
-  --text-8xl--line-height: 1;
-  --text-9xl: 7rem;
-  --text-9xl--line-height: 1;
-  --workspace-new-chat-description-size: 0.8125rem;
-  --workspace-new-chat-title-size: 1.75rem;
-  --workspace-composer-line-height: 1.375rem;
-  --workspace-composer-min-height: 3.65rem;
-  --workspace-composer-text-size: 0.875rem;
-  --workspace-content-max-width: 56rem;
-  --workspace-message-line-height: 1.6;
-  --workspace-message-text-size: 0.875rem;
-  --workspace-sidebar-label-text-size: 0.6875rem;
-  --workspace-user-bubble-line-height: 1.375rem;
-  --workspace-user-bubble-text-size: 0.8125rem;
-}
-
-[data-workspace-mode="work"][data-slot="sidebar"],
-[data-workspace-mode="power"][data-slot="sidebar"] {
-  --text-xs: 0.75rem;
-  --text-xs--line-height: calc(1 / 0.75);
-  --text-sm: 0.875rem;
-  --text-sm--line-height: calc(1.25 / 0.875);
-}
-
 :root[data-cjk-font="tc"],
 :root:lang(zh-Hant),
 :root:lang(zh-TW),

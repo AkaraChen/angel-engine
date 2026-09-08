@@ -22,12 +22,10 @@ const RECENT_CHAT_LIMIT = 4;
 
 export function NewChatRecentSection({
   chats,
-  isProjectMode,
   onOpenChat,
   projects,
 }: {
   chats: Chat[];
-  isProjectMode: boolean;
   onOpenChat: (chat: Chat) => void;
   projects: Project[];
 }): ReactElement | null {
@@ -45,12 +43,12 @@ export function NewChatRecentSection({
           // Chat mode only resumes standalone threads; project modes only
           // resume project-bound ones so the list matches the surface.
           const isProjectChat = is.nonEmptyString(chat.projectId);
-          return isProjectMode ? isProjectChat : !isProjectChat;
+          return true;
         })
         .toSorted((left, right) =>
           right.updatedAt.localeCompare(left.updatedAt),
         ),
-    [chats, isProjectMode],
+    [chats],
   );
   const recentChats = expanded
     ? allRecentChats
