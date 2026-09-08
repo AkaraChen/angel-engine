@@ -208,21 +208,10 @@ describe("GitHub source-control provider", () => {
     expect(plugin.repositories?.parseUrl("acme/widgets")).toEqual(repository);
   });
 
-  it("matches task links and clones through provider capabilities", async () => {
+  it("matches repositories and clones through provider capabilities", async () => {
     const runGh = vi.fn(async () => ({ stderr: "", stdout: "" }));
     const plugin = createGitHubPlugin({
       findGh: async () => "/usr/bin/gh",
-      runGh,
-    });
-
-    expect(
-      plugin.links?.parseUrl("https://github.com/acme/widgets/issues/3"),
-    ).toEqual({
-      id: "3",
-      kind: "work-item",
-      repository,
-      url: "https://github.com/acme/widgets/issues/3",
-    });
     await expect(
       plugin.git.clone?.(
         { repository, targetPath: "/tmp/widgets" },

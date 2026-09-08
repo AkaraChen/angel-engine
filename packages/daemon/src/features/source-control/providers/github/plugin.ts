@@ -356,19 +356,6 @@ export function createGitHubPlugin(
       list: (input, context) =>
         listGitHubWorkItems(input, context, resolvedDependencies),
     },
-    links: {
-      matchUrl: (url) => (parseGitHubUrl(url) === null ? null : 100),
-      parseUrl: (url) => {
-        const parsed = parseGitHubUrl(url);
-        const repository = parseGitHubRepositoryUrl(url);
-        if (parsed === null || repository === null) return null;
-        return {
-          id: String(parsed.number),
-          kind: parsed.kind === "pullRequest" ? "change-request" : "work-item",
-          repository,
-          url: parsed.url,
-        };
-      },
-    },
+
   };
 }

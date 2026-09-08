@@ -6,7 +6,6 @@ import {
   type ProviderHostMapping,
   type ProviderMatch,
   type ProviderReadiness,
-  type ProviderLinkDescriptor,
   type SourceControlCapabilityId,
   type SourceControlProviderPlugin,
   type UnsupportedReason,
@@ -33,15 +32,6 @@ export type ActivationResult =
       status: "unresolved";
       reason: "no-match" | "configured-provider-missing";
     };
-
-export type LinkResolutionResult =
-  | {
-      status: "resolved";
-      providerId: string;
-      descriptor: ProviderLinkDescriptor;
-    }
-  | { status: "ambiguous"; providerIds: readonly string[] }
-  | { status: "unresolved" };
 
 export type RepositoryUrlResolution =
   | {
@@ -200,36 +190,6 @@ export class SourceControlRegistry {
     }
   }
 
-  parseLink(url: string): LinkResolutionResult {
-    const matches = [...this.#plugins.values()]
-      .flatMap((plugin) => {
-        const score = plugin.links?.matchUrl(url) ?? null;
-        const descriptor = score === null ? null : plugin.links?.parseUrl(url);
-        return score === null || descriptor == null
-          ? []
-          : [{ descriptor, plugin, score }];
-      })
-      .sort(
-        (left, right) =>
-          right.score - left.score ||
-          left.plugin.manifest.id.localeCompare(right.plugin.manifest.id),
-      );
-    const first = matches[0];
-    if (!first) return { status: "unresolved" };
-    const tied = matches.filter((match) => match.score === first.score);
-    if (tied.length > 1) {
-      return {
-        status: "ambiguous",
-        providerIds: tied.map((match) => match.plugin.manifest.id),
-      };
-    }
-    return {
-      status: "resolved",
-      descriptor: first.descriptor,
-      providerId: first.plugin.manifest.id,
-    };
-  }
-
   parseRepositoryUrl(url: string): RepositoryUrlResolution {
     const matches = [...this.#plugins.values()].flatMap((plugin) => {
       const repository = plugin.repositories?.parseUrl(url) ?? null;
@@ -252,61 +212,6 @@ export class SourceControlRegistry {
       providerId: matches[0].plugin.manifest.id,
       repository: matches[0].repository,
     };
-  }
-
-  async resolveLink(url: string, signal?: AbortSignal) {
-    const resolution = this.parseLink(url);
-    if (resolution.status !== "resolved") return resolution;
-    const plugin = this.#plugins.get(resolution.providerId);
-    if (!plugin) return { status: "unresolved" as const };
-    const capability =
-      resolution.descriptor.kind === "change-request"
-        ? "changeRequests.getByUrl"
-        : "workItems.getByUrl";
-    if (!plugin.manifest.capabilities.includes(capability)) {
-      throw new ProviderRegistryError(
-        "source-control/capability-unsupported",
-        `${plugin.manifest.displayName} cannot resolve this link.`,
-      );
-    }
-    const common = {
-      log: this.#log,
-      providerId: plugin.manifest.id,
-      secrets: secretsFromUrl(url),
-      signal,
-      timeoutMs: this.#invocationTimeoutMs,
-    };
-    const item =
-      resolution.descriptor.kind === "change-request"
-        ? await invokeProvider({
-            ...common,
-            operation: capability,
-            run: (context) => {
-              const operation = plugin.changeRequests?.getByUrl;
-              if (!operation) {
-                throw new ProviderRegistryError(
-                  "source-control/capability-unsupported",
-                  `${plugin.manifest.displayName} cannot resolve change-request links.`,
-                );
-              }
-              return operation({ url }, context);
-            },
-          })
-        : await invokeProvider({
-            ...common,
-            operation: capability,
-            run: (context) => {
-              const operation = plugin.workItems?.getByUrl;
-              if (!operation) {
-                throw new ProviderRegistryError(
-                  "source-control/capability-unsupported",
-                  `${plugin.manifest.displayName} cannot resolve work-item links.`,
-                );
-              }
-              return operation({ url }, context);
-            },
-          });
-    return { ...resolution, item };
   }
 
   async cloneRepository(options: {

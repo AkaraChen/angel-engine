@@ -403,20 +403,7 @@ export function createGitLabPlugin(
       list: (input, context) => listChecks(api, input, context),
       snapshot: (input, context) => snapshotChecks(api, input, context),
     },
-    links: {
-      matchUrl: (url) => (parseGitLabItemUrl(url) ? 100 : null),
-      parseUrl: (url) => {
-        const parsed = parseGitLabItemUrl(url);
-        if (!parsed) return null;
-        return {
-          id: parsed.id,
-          kind:
-            parsed.kind === "merge-request" ? "change-request" : "work-item",
-          repository: parsed.repository,
-          url,
-        };
-      },
-    },
+
   };
 }
 

@@ -115,42 +115,6 @@ function activation(
 }
 
 describe("SourceControlRegistry", () => {
-  it("dispatches link parsing by provider score", () => {
-    const provider = fakePlugin({ host: "code.example", id: "forge" });
-    const identity = {
-      displayPath: "acme/app",
-      host: "code.example",
-      name: "app",
-      namespace: ["acme"],
-      providerId: "forge",
-      remoteId: null,
-      webUrl: "https://code.example/acme/app",
-    };
-    provider.links = {
-      matchUrl: (url) => (url.includes("code.example") ? 200 : null),
-      parseUrl: (url) => ({
-        id: "42",
-        kind: "work-item",
-        repository: identity,
-        url,
-      }),
-    };
-    const registry = new SourceControlRegistry();
-    registry.register(provider);
-
-    expect(
-      registry.parseLink("https://code.example/acme/app/issues/42"),
-    ).toEqual({
-      descriptor: {
-        id: "42",
-        kind: "work-item",
-        repository: identity,
-        url: "https://code.example/acme/app/issues/42",
-      },
-      providerId: "forge",
-      status: "resolved",
-    });
-  });
 
   it("does not guess when multiple providers match the same repository URL", () => {
     const registry = new SourceControlRegistry();

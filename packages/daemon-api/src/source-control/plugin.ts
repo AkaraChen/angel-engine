@@ -68,17 +68,6 @@ export interface ChecksCapability {
 
 export type AutomationCapability = Record<never, never>;
 export type ReleaseCapability = Record<never, never>;
-export interface ProviderLinkDescriptor {
-  id: string;
-  kind: "change-request" | "work-item";
-  repository: RepositoryIdentity;
-  url: string;
-}
-export interface LinkResolutionCapability {
-  matchUrl(url: string): number | null;
-  parseUrl(url: string): ProviderLinkDescriptor | null;
-}
-
 export interface SourceControlProviderPlugin {
   manifest: ProviderManifest;
   discovery: ProjectDiscoveryCapability;
@@ -91,5 +80,4 @@ export interface SourceControlProviderPlugin {
   checks?: ChecksCapability;
   automation?: AutomationCapability;
   releases?: ReleaseCapability;
-  links?: LinkResolutionCapability;
 }
