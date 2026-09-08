@@ -158,8 +158,7 @@ export function useWorkspacePageModel({
   const draftState = useWorkspaceDraftState();
   const draftSessionCounterRef = useRef(0);
   // Fleet is a chat-less route but not a draft.
-  const isDraftPage =
-    !fleetActive && !is.nonEmptyString(selectedChatId);
+  const isDraftPage = !fleetActive && !is.nonEmptyString(selectedChatId);
   const powerModeActive = workspaceMode === "power";
   const draftWorktree = useChatTabStore((state) => state.draftWorktree);
   const activePowerWorktree = useChatTabStore((state) => state.activeWorktree);

@@ -140,7 +140,6 @@ describe("daemonEventSync", () => {
     expect(reconciledChatIds()).toEqual(["chat-a", "chat-b"]);
   });
 
-
   it("invalidates shepherd sessions when the daemon publishes a change", () => {
     vi.stubGlobal("WebSocket", FakeWebSocket);
     const queryClient = new QueryClient();

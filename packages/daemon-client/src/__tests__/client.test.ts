@@ -319,7 +319,6 @@ describe("createDaemonClient", () => {
     );
   });
 
-
   it("lists and acknowledges daemon-owned chat attention", async () => {
     const attention = {
       chatId: "chat-1",

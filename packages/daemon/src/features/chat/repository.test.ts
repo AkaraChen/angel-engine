@@ -487,8 +487,6 @@ async function memoryDatabase(): Promise<AppDatabase> {
   `);
   return drizzle(client, {
     schema: {
-
-
       customAgents,
       projects,
       providerHostMappings,
