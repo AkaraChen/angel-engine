@@ -44,7 +44,6 @@ import {
   createProjectInputSchema,
   managedWorktreeDeleteInputSchema,
   projectCloneInputSchema,
-  projectSetupRetryInputSchema,
   updateProjectConfigInputSchema,
   updateProjectInputSchema,
 } from "@angel-engine/daemon-api/projects";
@@ -111,7 +110,6 @@ import {
   setChatPinned,
 } from "./features/chat/repository";
 import {
-  discardManagedCreatedWorktree,
   managedWorktreePath,
   removeManagedWorktree,
 } from "./features/source-control/local-git/projects";
@@ -126,8 +124,6 @@ import {
 import { SourceControlCoordinator } from "./features/source-control/registry/coordinator";
 import type { SourceControlRegistry } from "./features/source-control/registry/registry";
 import { registerSourceControlHttpApi } from "./features/source-control/http";
-import { projectSetupLifecycle } from "./features/projects/setup-lifecycle";
-import { readProjectLifecycleSnapshot } from "./features/projects/lifecycle";
 import {
   deleteManagedWorktrees,
   scanManagedWorktrees,
@@ -452,53 +448,6 @@ export function registerApi(
   app.get("/api/chats/:id", async (context) =>
     context.json(await run(getChat(context.req.param("id")))),
   );
-  app.get("/api/chats/:id/lifecycle", async (context) => {
-    const chat = await requireSetupChat(context.req.param("id"));
-    return context.json(await projectSetupLifecycle.view(chat.worktreePath));
-  });
-  app.post("/api/chats/:id/setup/retry", async (context) => {
-    const chat = await requireSetupChat(context.req.param("id"));
-    const input = projectSetupRetryInputSchema(await context.req.json());
-    if (input instanceof arkType.errors) {
-      throw DaemonError.invalidRequest("Setup approval is required.");
-    }
-    const status = await run(projectGitStatus({ projectId: chat.project.id }));
-    if (status.worktreeSetup?.digest !== input.setupApproval) {
-      throw DaemonError.worktreeSetupApprovalRequired();
-    }
-    projectSetupLifecycle.retry(chat.worktreePath, {
-      approvedDigest: input.setupApproval,
-    });
-    return context.json(await projectSetupLifecycle.view(chat.worktreePath));
-  });
-  app.post("/api/chats/:id/setup/continue", async (context) => {
-    const chat = await requireSetupChat(context.req.param("id"));
-    projectSetupLifecycle.continue(chat.worktreePath);
-    return context.json(await projectSetupLifecycle.view(chat.worktreePath));
-  });
-  app.post("/api/chats/:id/setup/cancel", async (context) => {
-    const chat = await requireSetupChat(context.req.param("id"));
-    await projectSetupLifecycle.cancel(chat.worktreePath);
-    return context.json(await projectSetupLifecycle.view(chat.worktreePath));
-  });
-  app.post("/api/chats/:id/setup/discard", async (context) => {
-    const chat = await requireSetupChat(context.req.param("id"));
-    const activeRun = chatRuns.active(chat.chat.id).run;
-    if (activeRun !== null) chatRuns.stop(activeRun.runId);
-    await projectSetupLifecycle.discard(chat.worktreePath);
-    await discardManagedCreatedWorktree(chat.project.path, chat.worktreePath);
-    await run(
-      engine((chatEngine) =>
-        Effect.gen(function* () {
-          yield* chatEngine.closeChatSession(chat.chat.id);
-          yield* deleteChat(chat.chat.id);
-        }),
-      ),
-    );
-    activity.clearChat(chat.chat.id);
-    chatEvents.metadataChanged([chat.chat.id]);
-    return context.json({ ok: true });
-  });
   app.post("/api/chats", async (context) => {
     const input = chatCreateInputSchema(await context.req.json());
     if (input instanceof arkType.errors)
@@ -532,27 +481,6 @@ export function registerApi(
     return context.json(chat);
   });
 
-  async function requireSetupChat(id: string) {
-    const chat = await run(getChat(id));
-    if (chat === null) throw DaemonError.chatNotFound();
-    const worktreePath = managedWorktreePath(chat.cwd);
-    if (worktreePath === undefined || chat.projectId === null) {
-      throw DaemonError.invalidRequest("Chat does not use a managed worktree.");
-    }
-    const project = await run(getProject(chat.projectId));
-    if (project === null) throw DaemonError.projectNotFound();
-    const snapshot = await readProjectLifecycleSnapshot(worktreePath);
-    if (snapshot.approvedDigest !== undefined) {
-      projectSetupLifecycle.restore({
-        approvedDigest: snapshot.approvedDigest,
-        context: snapshot.setupContext,
-        projectId: project.id,
-        projectRoot: project.path,
-        worktreePath,
-      });
-    }
-    return { chat, project, worktreePath };
-  }
   app.post("/api/sessions/importable", async (context) => {
     const input = listImportableSessionsInputSchema(await context.req.json());
     if (input instanceof arkType.errors)
