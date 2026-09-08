@@ -70,7 +70,7 @@ describe("countNeedsYou", () => {
     ).toBe(2);
   });
 
-  it("returns 0 for an empty fleet", () => {
+  it("returns 0 for an empty session summary", () => {
     expect(countNeedsYou([])).toBe(0);
   });
 });

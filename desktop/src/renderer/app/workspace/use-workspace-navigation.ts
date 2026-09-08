@@ -12,7 +12,6 @@ import {
 } from "@/app/workspace/workspace-draft-agent-config";
 import {
   chatRoutePath,
-  fleetRoutePath,
   lastOpenedTargetPath,
   projectDraftRoutePath,
   scheduleRoutePath,
@@ -282,20 +281,16 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
     [navigateToDraft],
   );
 
-  const openFleet = useCallback(() => {
-    if (location !== fleetRoutePath) navigate(fleetRoutePath);
-  }, [location, navigate]);
-
   const openSchedule = useCallback(() => {
     if (location !== scheduleRoutePath) navigate(scheduleRoutePath);
   }, [location, navigate]);
 
   /**
-   * Fleet spans every project, so a row can point at a chat the current
+   * A session can belong to a different workspace mode, so a row can point at a chat the current
    * workspace mode cannot reach. Switch to the mode that owns the chat before
    * navigating instead of dropping the user on a route its sidebar denies.
    */
-  const openChatFromFleet = useCallback(
+  const openChatFromAnyMode = useCallback(
     (chat: Chat) => {
       const nextWorkspaceMode = workspaceModeForChat(chat, workspaceMode);
       if (nextWorkspaceMode !== workspaceMode) {
@@ -329,8 +324,7 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
     navigateToChat,
     navigateToDraft,
     openChat,
-    openChatFromFleet,
-    openFleet,
+    openChatFromAnyMode,
     openSchedule,
     openPowerWorktree,
     openSettings,

@@ -31,7 +31,7 @@ interface ChatActivityStoreOptions {
 }
 
 /**
- * The daemon's process-local Fleet projection.
+ * The daemon's process-local chat activity projection.
  *
  * It stores one current run per chat. Legacy attention is derived from this
  * map so transports cannot disagree about user-visible run state.

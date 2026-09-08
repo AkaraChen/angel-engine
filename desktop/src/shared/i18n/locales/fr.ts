@@ -362,50 +362,13 @@ export const fr = {
         "Sans setup_script, les dépendances devront peut-être être réinstallées.",
       worktreeSetupMissingTitle: "Aucun script de configuration",
     },
-    fleet: {
-      allProjects: "Tous les projets",
-      disconnected: "Backend injoignable.",
-      emptySegments: {
-        all: "Aucun agent actif.",
-        attention: "Rien n'attend votre action pour le moment.",
-        done: "Rien n'est encore terminé.",
-        running: "Aucun agent en cours.",
-      },
-      filterProject: "Filtrer par projet",
-      filterSegments: "Filtrer la flotte",
-      groups: {
-        attention: "Votre action",
-        done: "Terminé",
-        running: "En cours",
-      },
-      loading: "Chargement de l'activité",
-      noMatches: "Aucune session ne correspond à votre recherche.",
-      reasons: {
-        approval: "En attente d'approbation",
-        processExited: "Processus terminé",
-        question: "A posé une question",
-        runtimeError: "Erreur d'exécution",
-      },
-      search: "Rechercher des sessions",
-      segments: {
-        all: "Tout",
-        attention: "Votre action",
-        done: "Terminé",
-        running: "En cours",
-      },
-      standaloneProject: "Sans projet",
+    activity: {
       status: {
         done: "Terminé",
         failed: "Échec",
         running: "En cours",
         stuck: "Bloqué",
         waitingForYou: "En attente de vous",
-      },
-      title: "Flotte",
-      viewMode: "Vue de la flotte",
-      views: {
-        board: "Vue en tableau",
-        list: "Vue en liste",
       },
     },
     schedule: scheduleFr,
@@ -734,8 +697,8 @@ export const fr = {
         trayEnabledDescription:
           "Affiche dans la barre de menus le nombre de sessions qui vous attendent et une liste pour les ouvrir sans chercher dans l'app.",
         trayEnabledSwitchLabel:
-          "Afficher le résumé de flotte dans la barre de menus",
-        trayEnabledTitle: "Résumé de flotte dans la barre de menus",
+          "Afficher le résumé des sessions dans la barre de menus",
+        trayEnabledTitle: "Résumé des sessions dans la barre de menus",
       },
     },
     usage: {

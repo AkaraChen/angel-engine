@@ -350,50 +350,13 @@ export const zhTW = {
         "沒有 setup_script 時，新 worktree 可能需要重新安裝相依套件。",
       worktreeSetupMissingTitle: "沒有 worktree 初始化腳本",
     },
-    fleet: {
-      allProjects: "全部專案",
-      disconnected: "無法連線後端。",
-      emptySegments: {
-        all: "目前沒有進行中的 Agent。",
-        attention: "目前沒有需要你處理的工作階段。",
-        done: "還沒有已完成的工作階段。",
-        running: "目前沒有執行中的 Agent。",
-      },
-      filterProject: "依專案篩選",
-      filterSegments: "篩選艦隊",
-      groups: {
-        attention: "需要你",
-        done: "已完成",
-        running: "執行中",
-      },
-      loading: "正在載入動態",
-      noMatches: "沒有符合的工作階段。",
-      reasons: {
-        approval: "等待授權",
-        processExited: "處理程序已結束",
-        question: "提出了問題",
-        runtimeError: "執行階段錯誤",
-      },
-      search: "搜尋工作階段",
-      segments: {
-        all: "全部",
-        attention: "需要我",
-        done: "已完成",
-        running: "執行中",
-      },
-      standaloneProject: "無專案",
+    activity: {
       status: {
         done: "已完成",
         failed: "失敗",
         running: "執行中",
         stuck: "卡住",
         waitingForYou: "等待你處理",
-      },
-      title: "艦隊",
-      viewMode: "艦隊檢視",
-      views: {
-        board: "看板檢視",
-        list: "列表檢視",
       },
     },
     schedule: scheduleZhTW,
@@ -698,8 +661,8 @@ export const zhTW = {
         sendWithModEnterTitle: "使用 {{shortcut}} 傳送訊息",
         trayEnabledDescription:
           "在選單列顯示需要你處理的工作階段數量與下拉清單，無需在應用程式中逐一翻找。",
-        trayEnabledSwitchLabel: "顯示選單列艦隊摘要",
-        trayEnabledTitle: "選單列艦隊摘要",
+        trayEnabledSwitchLabel: "顯示選單列セッション摘要",
+        trayEnabledTitle: "選單列セッション摘要",
       },
     },
     usage: {

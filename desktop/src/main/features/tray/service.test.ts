@@ -85,8 +85,8 @@ vi.mock("../../platform/i18n", () => ({
     if (key === "tray.tooltipNeedsYou") {
       return `Angel Engine — ${options?.count ?? 0} need you`;
     }
-    if (key === "fleet.status.waitingForYou") return "Waiting for you";
-    if (key === "fleet.status.running") return "Running";
+    if (key === "activity.status.waitingForYou") return "Waiting for you";
+    if (key === "activity.status.running") return "Running";
     return key;
   },
 }));
