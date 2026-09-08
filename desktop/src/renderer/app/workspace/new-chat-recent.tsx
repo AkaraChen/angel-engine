@@ -40,9 +40,6 @@ export function NewChatRecentSection({
       chats
         .filter((chat) => {
           if (chat.archived) return false;
-          // Chat mode only resumes standalone threads; project modes only
-          // resume project-bound ones so the list matches the surface.
-          const isProjectChat = is.nonEmptyString(chat.projectId);
           return true;
         })
         .toSorted((left, right) =>

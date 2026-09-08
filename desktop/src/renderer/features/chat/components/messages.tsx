@@ -18,8 +18,6 @@ import type { ReactNode } from "react";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Reasoning, ReasoningGroup } from "@/components/assistant-ui/reasoning";
-import { ToolGroup } from "@/components/assistant-ui/tool-group";
 import {
   Tooltip,
   TooltipContent,
@@ -45,7 +43,6 @@ import {
   messageActionFooterClass,
   workspaceContentColumnClass,
 } from "@/features/chat/components/thread-styles";
-import { ToolActionMessagePart } from "@/features/chat/components/tool-action-message";
 import { TurnActivity } from "@/features/chat/components/turn-activity";
 import { buildTurnActivityRenderPlan } from "@/features/chat/components/turn-activity-parts";
 import { useChatRuntimeActions } from "@/features/chat/runtime/use-chat-runtime-actions";
@@ -394,16 +391,6 @@ const assistantMessagePartBaseComponents = {
   },
 };
 
-const standardAssistantMessagePartComponents = {
-  ...assistantMessagePartBaseComponents,
-  Reasoning,
-  ReasoningGroup,
-  ToolGroup,
-  tools: {
-    Fallback: ToolActionMessagePart,
-  },
-};
-
 function UserMessageParts() {
   return <MessagePrimitive.Parts components={userMessagePartComponents} />;
 }
@@ -415,13 +402,7 @@ function UserMessageAttachmentParts() {
 }
 
 function AssistantMessageParts() {
-  if (true) return <ChatAssistantMessageParts />;
-
-  return (
-    <MessagePrimitive.Parts
-      components={standardAssistantMessagePartComponents}
-    />
-  );
+  return <ChatAssistantMessageParts />;
 }
 
 function ChatAssistantMessageParts() {
