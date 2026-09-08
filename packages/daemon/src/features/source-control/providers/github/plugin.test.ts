@@ -524,19 +524,6 @@ describe("GitHub source-control provider", () => {
         operationContext(),
       ),
     ).resolves.toMatchObject({ targetBranch: "main" });
-    await expect(
-      plugin.git.publishBranch?.(
-        {
-          forceWithLease: false,
-          localBranch: "feature",
-          projectPath: "/repos/widgets",
-          remoteName: "origin",
-          repository,
-        },
-        operationContext(),
-      ),
-    ).resolves.toEqual({ remoteName: "origin", remoteRef: "feature" });
-
     expect(ghCalls).toEqual(
       expect.arrayContaining([
         expect.arrayContaining(["pr", "create", "--repo", "acme/widgets"]),

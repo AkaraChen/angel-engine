@@ -28,7 +28,6 @@ export interface GitWorkflowCapability {
   parseChangeRequestUrl(
     url: string,
   ): { repository: RepositoryIdentity; id: string } | null;
-  publishBranch?: ProviderOperation<"branches.publish">;
   clone?: ProviderOperation<"provider.clone">;
 }
 

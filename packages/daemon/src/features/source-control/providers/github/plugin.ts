@@ -38,7 +38,6 @@ import {
   listGitHubChangeRequests,
   mergeGitHubChangeRequest,
   preflightGitHubChangeRequest,
-  publishGitHubBranch,
   resolveGitHubChangeRequestHead,
 } from "./internal/change-requests";
 import {
@@ -264,7 +263,6 @@ export function createGitHubPlugin(
         "changeRequests.comment",
         "changeRequests.merge",
         "changeRequests.preflight",
-        "branches.publish",
         "checks.list",
         "checks.snapshot",
         "checks.failureLog",
@@ -304,8 +302,6 @@ export function createGitHubPlugin(
           ? null
           : { repository, id: String(parsed.number) };
       },
-      publishBranch: (input, context) =>
-        publishGitHubBranch(input, context, resolvedDependencies),
       clone: (input, context) =>
         cloneGitHubRepository(input, context, resolvedDependencies),
     },

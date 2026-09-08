@@ -196,17 +196,6 @@ export interface ResolveReviewThreadInput extends RepositoryOperationInput {
   threadId: string;
 }
 
-export interface PublishBranchInput extends RepositoryOperationInput {
-  projectPath: string;
-  localBranch: string;
-  remoteName: string;
-  forceWithLease: boolean;
-}
-
-export interface PublishBranchResult {
-  remoteName: string;
-  remoteRef: string;
-}
 
 export interface CloneRepositoryInput extends RepositoryOperationInput {
   targetPath: string;
@@ -281,10 +270,6 @@ export interface SourceControlOperationMap {
   "workItems.get": { input: NumberedItemInput; output: WorkItem };
   "workItems.getByUrl": { input: UrlOperationInput; output: WorkItem };
   "workItems.list": { input: ListOperationInput; output: readonly WorkItem[] };
-  "branches.publish": {
-    input: PublishBranchInput;
-    output: PublishBranchResult;
-  };
   "provider.clone": {
     input: CloneRepositoryInput;
     output: CloneRepositoryResult;
@@ -471,21 +456,6 @@ export const sourceControlOperationSchemas = {
   "workItems.get": { input: numberedItemInputSchema, output: workItemSchema },
   "workItems.getByUrl": { input: urlInputSchema, output: workItemSchema },
   "workItems.list": { input: listInputSchema, output: workItemSchema.array() },
-  "branches.publish": {
-    input: arkType({
-      "+": "reject",
-      repository: repositoryIdentitySchema,
-      projectPath: "string > 0",
-      localBranch: "string > 0",
-      remoteName: "string > 0",
-      forceWithLease: "boolean",
-    }),
-    output: arkType({
-      "+": "reject",
-      remoteName: "string > 0",
-      remoteRef: "string > 0",
-    }),
-  },
   "provider.clone": {
     input: arkType({
       "+": "reject",

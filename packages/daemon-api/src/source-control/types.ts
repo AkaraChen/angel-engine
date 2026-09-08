@@ -228,7 +228,6 @@ export type SourceControlCapabilityId =
   | "workItems.get"
   | "workItems.getByUrl"
   | "workItems.list"
-  | "branches.publish"
   | "provider.clone";
 
 export type UnsupportedReasonKind =

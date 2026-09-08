@@ -121,7 +121,6 @@ export function createAzureDevOpsPlugin(
           "workItems.get",
           "workItems.getByUrl",
           "workItems.list",
-          "branches.publish",
           "provider.clone",
         ].map((capability) => [
           capability,

@@ -12,8 +12,6 @@ import type {
   MergeRequirement,
   NumberedItemInput,
   ProviderOperationContext,
-  PublishBranchInput,
-  PublishBranchResult,
   RepositoryIdentity,
   ReviewComment,
   ReviewDecision,
@@ -315,40 +313,6 @@ export async function preflightGitHubChangeRequest(
       },
     ],
   };
-}
-
-export async function publishGitHubBranch(
-  input: PublishBranchInput,
-  _context: ProviderOperationContext,
-  dependencies: GitHubChangeRequestDependencies = {},
-): Promise<PublishBranchResult> {
-  requireGitHubRepository(input.repository);
-  const args = ["push", "-u"];
-  if (input.forceWithLease) args.push("--force-with-lease");
-  args.push(input.remoteName, input.localBranch);
-  try {
-    await (dependencies.runGit ?? executeGit)(input.projectPath, args);
-  } catch (cause) {
-    const message =
-      cause instanceof Error
-        ? cause.message.toLowerCase()
-        : String(cause).toLowerCase();
-    if (
-      message.includes("non-fast-forward") ||
-      message.includes("fetch first")
-    ) {
-      throw DaemonError.gitPushNotFastForward();
-    }
-    if (
-      message.includes("permission denied") ||
-      message.includes("permission to") ||
-      message.includes("403")
-    ) {
-      throw DaemonError.gitPushDenied();
-    }
-    throw DaemonError.gitFailed(cause);
-  }
-  return { remoteName: input.remoteName, remoteRef: input.localBranch };
 }
 
 export async function getGitHubChangeRequest(

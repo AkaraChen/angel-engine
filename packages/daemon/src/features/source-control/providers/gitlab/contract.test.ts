@@ -233,20 +233,6 @@ runProviderContractSuite(
         run: (plugin) => plugin.workItems!.list!(listed, operationContext()),
       },
       {
-        capability: "branches.publish",
-        run: (plugin) =>
-          plugin.git.publishBranch!(
-            {
-              forceWithLease: false,
-              localBranch: "feature",
-              projectPath: "/contract",
-              remoteName: "origin",
-              repository,
-            },
-            operationContext(),
-          ),
-      },
-      {
         capability: "checks.list",
         run: (plugin) => plugin.checks!.list!(numbered, operationContext()),
       },

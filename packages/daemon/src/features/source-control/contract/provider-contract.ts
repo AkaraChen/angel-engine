@@ -37,7 +37,6 @@ const ALL_CAPABILITIES: readonly SourceControlCapabilityId[] = [
   "workItems.get",
   "workItems.getByUrl",
   "workItems.list",
-  "branches.publish",
   "provider.clone",
 ];
 
@@ -268,7 +267,6 @@ function implementedCapabilities(
     ["workItems.get", plugin.workItems?.get],
     ["workItems.getByUrl", plugin.workItems?.getByUrl],
     ["workItems.list", plugin.workItems?.list],
-    ["branches.publish", plugin.git.publishBranch],
     ["provider.clone", plugin.git.clone],
   ];
   for (const [capability, operation] of optional) {

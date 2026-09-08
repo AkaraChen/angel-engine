@@ -151,7 +151,6 @@ export function createGitLabPlugin(
         "workItems.get",
         "workItems.getByUrl",
         "workItems.list",
-        "branches.publish",
         "checks.list",
         "checks.snapshot",
         "provider.clone",
@@ -265,21 +264,6 @@ export function createGitLabPlugin(
           targetPath: input.targetPath,
         });
         return { projectPath: input.targetPath };
-      },
-      publishBranch: async (input, context) => {
-        assertGitLabRepository(input.repository);
-        const ref = `HEAD:refs/heads/${input.localBranch}`;
-        await runGit(
-          input.projectPath,
-          [
-            "push",
-            ...(input.forceWithLease ? ["--force-with-lease"] : []),
-            input.remoteName,
-            ref,
-          ],
-          { signal: context.signal, timeout: remaining(context) },
-        );
-        return { remoteName: input.remoteName, remoteRef: input.localBranch };
       },
     },
     repositories: { parseUrl: parseGitLabRepositoryUrl },
