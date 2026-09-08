@@ -12,7 +12,6 @@ export function chatRoutePath(
   return chatRoutePathId(chat.id);
 }
 
-export const fleetRoutePath = "/fleet";
 export const scheduleRoutePath = "/schedule";
 
 export function chatRoutePathId(chatId: string) {

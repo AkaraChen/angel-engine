@@ -14,6 +14,7 @@ export function AppRouter() {
         <Route path="/">
           <WorkspaceDraftPage />
         </Route>
+        <Route path="/fleet"><Redirect replace to="/" /></Route>
         <Route component={ChatRoutePage} path="/chat/:chatId" />
         <Route
           component={ProjectChatRoutePage}
