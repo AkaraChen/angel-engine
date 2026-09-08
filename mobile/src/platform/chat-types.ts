@@ -5,7 +5,6 @@ import type {
   ChatActivity as ApiChatActivity,
   ChatActivityStatus as ApiChatActivityStatus,
   ChatCreateInput as ApiChatCreateInput,
-  ChatCreationLocation as ApiChatCreationLocation,
   ChatElicitation as ApiChatElicitation,
   ChatElicitationAnswer as ApiChatElicitationAnswer,
   ChatElicitationQuestion as ApiChatElicitationQuestion,
@@ -36,15 +35,9 @@ export type DaemonAgentOption = Pick<
   ApiAgentOption,
   "description" | "id" | "label"
 >;
-export type ChatCreationLocation = ApiChatCreationLocation;
 export type CreateChatInput = Pick<
   ApiChatCreateInput,
-  | "creationLocation"
-  | "model"
-  | "projectId"
-  | "reasoningEffort"
-  | "runtime"
-  | "title"
+  "model" | "projectId" | "reasoningEffort" | "runtime" | "title"
 >;
 export type DaemonRuntimeConfigInput = ApiChatRuntimeConfigInput;
 export type DaemonRuntimeConfigOption = ApiChatRuntimeConfigOption;

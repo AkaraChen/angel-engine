@@ -3,6 +3,7 @@ import type { Db } from "../../platform/db";
 
 import is from "@sindresorhus/is";
 import os from "node:os";
+import fs from "node:fs";
 import { Effect } from "effect";
 import { DaemonError } from "../../platform/errors";
 import { getProject } from "../projects/repository";
@@ -12,7 +13,19 @@ export function cwdForChat(
   projectId?: string | null,
 ): Effect.Effect<string, DaemonError, Db> {
   return Effect.gen(function* () {
-    if (chat.cwd !== null) return chat.cwd;
+    if (chat.cwd !== null) {
+      if (!fs.existsSync(chat.cwd)) {
+        return yield* Effect.fail(
+          DaemonError.chatCwdInvalid(`Chat cwd does not exist.`),
+        );
+      }
+      if (!fs.statSync(chat.cwd).isDirectory()) {
+        return yield* Effect.fail(
+          DaemonError.chatCwdInvalid(`Chat cwd must be a directory.`),
+        );
+      }
+      return chat.cwd;
+    }
 
     const projectCwd = yield* cwdForProjectId(projectId ?? chat.projectId);
     return projectCwd ?? standaloneChatCwd();

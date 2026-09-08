@@ -1,5 +1,5 @@
 import type { AgentRuntime } from "@angel-engine/daemon-api/agents";
-import type { Chat, ChatCreationLocation } from "@angel-engine/daemon-api/chat";
+import type { Chat } from "@angel-engine/daemon-api/chat";
 import type { Project } from "@angel-engine/daemon-api/projects";
 import type { useApi } from "@/platform/use-api";
 
@@ -42,11 +42,7 @@ import {
   useChatRunConfig,
   useChatRunIsRunning,
 } from "@/features/chat/state/chat-run-store";
-import {
-  projectGitStatusQueryOptions,
-  projectListQueryOptions,
-} from "@/features/projects/api/queries";
-import { useSettingsStore } from "@/features/settings/settings-store";
+import { projectListQueryOptions } from "@/features/projects/api/queries";
 import { useAgentSettings } from "@/features/settings/use-agent-settings";
 
 const EMPTY_CHATS: Chat[] = [];
@@ -108,12 +104,6 @@ export function useWorkspacePageModel({
   const requestWorkspaceToolHost = useWorkspaceToolStore(
     (state) => state.requestWorkspaceToolHost,
   );
-  const worktreeDirtyPromptEnabled = useSettingsStore(
-    (state) => state.worktreeDirtyPromptEnabled,
-  );
-  const setWorktreeDirtyPromptEnabled = useSettingsStore(
-    (state) => state.setWorktreeDirtyPromptEnabled,
-  );
   const enabledAgentOptions = useMemo(
     () => getEnabledAgentOptions(agentSettings, availableAgentOptions),
     [agentSettings, availableAgentOptions],
@@ -134,7 +124,6 @@ export function useWorkspacePageModel({
   // Fleet and Schedule are chat-less routes but not drafts.
   const isDraftPage =
     !fleetActive && !scheduleActive && !is.nonEmptyString(selectedChatId);
-  const pinnedDraftCwd = undefined;
 
   const projectsQuery = useQuery({ ...projectListQueryOptions({ api }) });
   const chatsQuery = useQuery({ ...chatListQueryOptions({ api }) });
@@ -224,9 +213,6 @@ export function useWorkspacePageModel({
   const draftRuntimeKey = isDraftPage
     ? draftRuntimeKeyFromProjectId(routeDraftProjectId)
     : undefined;
-  const draftCreationLocationKey = draftRuntimeKey ?? "standalone";
-  const requestedDraftCreationLocation =
-    draftState.draftCreationLocations[draftCreationLocationKey] ?? "project";
   const runtimePageKey = workspaceRuntimePageKey({
     chatRuntime,
     draftProjectId: routeDraftProjectId,
@@ -247,20 +233,6 @@ export function useWorkspacePageModel({
         availableAgentOptions,
       );
   const activeRuntime = chatRuntime ?? draftRuntime;
-  const draftProjectGitStatusQuery = useQuery({
-    ...projectGitStatusQueryOptions({
-      api,
-      enabled: isDraftPage && draftProject.id !== undefined,
-      projectId: draftProject.id,
-    }),
-  });
-  const canCreateDraftWorktree =
-    isDraftPage &&
-    pinnedDraftCwd === undefined &&
-    draftProjectGitStatusQuery.data?.isGitRepository === true;
-  const draftCreationLocation: ChatCreationLocation = canCreateDraftWorktree
-    ? requestedDraftCreationLocation
-    : "project";
   const shouldPrewarmChat =
     isDraftPage &&
     (!is.nonEmptyString(routeDraftProjectId) ||
@@ -268,23 +240,18 @@ export function useWorkspacePageModel({
   const prewarmQuery = useQuery({
     ...chatPrewarmQueryOptions({
       api,
-      creationLocation: draftCreationLocation,
-      enabled:
-        shouldPrewarmChat &&
-        draftCreationLocation !== "worktree" &&
-        pinnedDraftCwd === undefined,
+      enabled: shouldPrewarmChat,
       projectId: draftProject.id,
       runtime: activeRuntime,
     }),
   });
-  const inspectDraftRuntimeConfig =
-    draftCreationLocation === "worktree" || pinnedDraftCwd !== undefined;
+  const inspectDraftRuntimeConfig = false;
   const shouldInspectDraftRuntimeConfig =
     isDraftPage && inspectDraftRuntimeConfig && draftProject.path !== undefined;
   const draftRuntimeConfigQuery = useQuery({
     ...chatRuntimeConfigQueryOptions({
       api,
-      cwd: pinnedDraftCwd ?? draftProject.path,
+      cwd: draftProject.path,
       enabled: shouldInspectDraftRuntimeConfig,
       runtime: activeRuntime,
     }),
@@ -350,15 +317,11 @@ export function useWorkspacePageModel({
     ...draftChatOptions,
     activeRuntime,
     api,
-    canCreateDraftWorktree,
     canShowRightSidebar,
     chatAttention,
     chats,
     chatsQuery,
     dockedWorkspaceToolContext,
-    draftCreationLocation,
-    draftCreationLocationKey,
-    draftProjectGitStatusQuery,
     draftProject,
     draftSessionCounterRef,
     isDraftPage,
@@ -366,7 +329,6 @@ export function useWorkspacePageModel({
     initialDraftPrompt: draftState.draftInitialPrompts[runtimePageKey] ?? "",
     location,
     navigate,
-    pinnedDraftCwd,
     prewarmQuery,
     projectChatsByProjectId,
     projects,
@@ -391,7 +353,6 @@ export function useWorkspacePageModel({
     setRightSidebarOpen,
     setSidebarOpen,
     setSidebarOpenMobile,
-    setWorktreeDirtyPromptEnabled,
     sidebarOpen,
     sidebarOpenMobile,
     t,
@@ -403,7 +364,6 @@ export function useWorkspacePageModel({
     workspaceToolRoot,
     workspaceTitle,
     workspaceToolsToggleLabel,
-    worktreeDirtyPromptEnabled,
   };
 }
 

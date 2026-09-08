@@ -1,7 +1,6 @@
 import type {
   Chat,
   ChatCreateInput,
-  ChatCreationLocation,
   ChatElicitationResponse,
   ChatHistoryMessage,
   ChatHistoryMessagePart,
@@ -97,7 +96,6 @@ export interface InitializeSlotInput {
  */
 export interface StartRunOptions {
   chatId?: string;
-  creationLocation?: ChatCreationLocation;
   cwd?: string;
   model?: string;
   mode?: string;
@@ -109,7 +107,6 @@ export interface StartRunOptions {
   /** Optional title for chats created by this run (e.g. session handoff). */
   title?: string;
   sourceLink?: ChatCreateInput["sourceLink"];
-  worktreeRef?: ChatCreateInput["worktreeRef"];
 }
 
 export interface StartRunInput {

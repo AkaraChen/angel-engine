@@ -45,7 +45,6 @@ Commands:
   project get <id>                Project detail
   project git-status <id>         Git status for project
 
-  worktree ls [--eligible-only]   Managed worktrees
 
   agent ls                        Available agent runtimes
   skill ls --runtime <id> [--project <path>]

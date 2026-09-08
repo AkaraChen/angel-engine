@@ -39,7 +39,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
-import { archiveWorkspaceMutationOptions } from "@/features/chat/api/queries";
+import { archiveChatMutationOptions } from "@/features/chat/api/queries";
 import { useSourceControlActivation } from "@/features/source-control/api/use-activation";
 import { capabilityState } from "@/features/source-control/model";
 import {
@@ -127,7 +127,7 @@ export const ChangeRequestPanel: FC<{
     }),
   );
   const archiveMutation = useMutation(
-    archiveWorkspaceMutationOptions({ api, queryClient }),
+    archiveChatMutationOptions({ api, queryClient }),
   );
   const status = statusQuery.data;
   const changeRequestId = status?.changeRequest.id ?? null;
@@ -267,7 +267,7 @@ export const ChangeRequestPanel: FC<{
               tone: "danger",
             });
             if (!confirmed) return;
-            await archiveMutation.mutateAsync(chatId);
+            await archiveMutation.mutateAsync({ id: chatId } as never);
           } catch (error) {
             toast({
               description:

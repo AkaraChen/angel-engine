@@ -1,7 +1,6 @@
 import type {
   Chat,
   ChatCreateInput,
-  ChatCreationLocation,
   ChatHistoryMessage,
   ChatRuntimeConfig,
 } from "@angel-engine/daemon-api/chat";
@@ -37,7 +36,6 @@ export interface SendChatMessageCallbacks {
 
 export interface SendChatMessageOptions extends SendChatMessageCallbacks {
   chatId?: string;
-  creationLocation?: ChatCreationLocation;
   cwd?: string;
   model?: string;
   mode?: string;
@@ -47,7 +45,6 @@ export interface SendChatMessageOptions extends SendChatMessageCallbacks {
   reasoningEffort?: string;
   runtime?: string;
   sourceLink?: ChatCreateInput["sourceLink"];
-  worktreeRef?: ChatCreateInput["worktreeRef"];
 }
 
 export interface SendPromptMessageInput {
@@ -80,7 +77,6 @@ export function useSendChatMessage(
         },
         input: {
           chatId: latestOptionsRef.current.chatId,
-          creationLocation: latestOptionsRef.current.creationLocation,
           cwd: latestOptionsRef.current.cwd,
           model: latestOptionsRef.current.model,
           mode: modeOverride ?? latestOptionsRef.current.mode,
@@ -90,7 +86,6 @@ export function useSendChatMessage(
           reasoningEffort: latestOptionsRef.current.reasoningEffort,
           runtime: latestOptionsRef.current.runtime,
           sourceLink: latestOptionsRef.current.sourceLink,
-          worktreeRef: latestOptionsRef.current.worktreeRef,
         },
         message,
         slotKey,

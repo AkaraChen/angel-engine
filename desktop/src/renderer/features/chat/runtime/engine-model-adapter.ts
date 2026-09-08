@@ -1,6 +1,5 @@
 import type {
   Chat,
-  ChatCreationLocation,
   ChatHistoryMessage,
   ChatRuntimeConfig,
 } from "@angel-engine/daemon-api/chat";
@@ -35,7 +34,6 @@ type EngineRuntimeAdapters = NonNullable<
 export interface EngineRuntimeOptions {
   adapters: EngineRuntimeAdapters;
   chatId?: string;
-  creationLocation?: ChatCreationLocation;
   historyMessages: ChatHistoryMessage[];
   historyRevision: number;
   model?: string;
@@ -63,7 +61,6 @@ export interface EngineRuntimeOptions {
 export function useEngineRuntime({
   adapters,
   chatId,
-  creationLocation,
   historyMessages,
   historyRevision,
   model,
@@ -90,7 +87,6 @@ export function useEngineRuntime({
 
   const sendChatMessage = useSendChatMessage(slotKey, {
     chatId,
-    creationLocation,
     model,
     mode,
     onChatCreated,

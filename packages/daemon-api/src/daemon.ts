@@ -58,7 +58,6 @@ export type DaemonErrorCode =
   | "chat-runtime-locked"
   | "chat-runtime-unknown"
   | "chat-title-required"
-  | "chat-worktree-creation-forbidden"
   | "custom-agent-field-required"
   | "custom-agent-id-required"
   | "custom-agent-not-found"
