@@ -994,7 +994,6 @@ export const zhCN = {
       stageCompleted: "完成",
       stagePreparing: "准备目标目录",
       stageRegistering: "注册项目",
-      tabSourceControl: "源代码控制",
       tabUrl: "Git 地址",
       title: "克隆仓库",
       urlHint: "https、ssh 或 owner/repo",

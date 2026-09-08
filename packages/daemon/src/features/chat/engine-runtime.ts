@@ -57,7 +57,6 @@ import {
 import { ChatProcessRegistry } from "./process-registry";
 import {
   createProjectWorktree,
-  managedWorktreePath,
   removeCreatedProjectWorktree,
 } from "../source-control/local-git/projects";
 import {
@@ -109,7 +108,6 @@ interface WorktreeCreationJob {
   chatId: string;
   projectId: string;
   promise: Promise<void>;
-  setupApproval?: string;
   worktreeRef?: ChatCreateInput["worktreeRef"];
   state: WorktreeCreationState;
 }
@@ -193,7 +191,6 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
       const persistWorktreeJob = (job: WorktreeCreationJob) =>
         updateWorktreeCreationJob({
           chatId: job.chatId,
-          setupApproval: job.setupApproval,
           worktreeRef: job.worktreeRef,
           state: job.state,
         });
@@ -213,7 +210,6 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
           createProjectWorktree(
             {
               projectId: job.projectId,
-              setupApproval: job.setupApproval,
               ref: job.worktreeRef,
             },
             job.abortController.signal,
@@ -756,7 +752,6 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
                 chatId: chat.id,
                 projectId: input.projectId,
                 promise: Promise.resolve(),
-                setupApproval: input.worktreeSetupApproval,
                 worktreeRef: input.worktreeRef,
                 state: {
                   jobId: randomUUID(),
@@ -767,7 +762,6 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
               };
               yield* createWorktreeCreationJob({
                 chatId: job.chatId,
-                setupApproval: job.setupApproval,
                 worktreeRef: job.worktreeRef,
                 state: job.state,
               });
@@ -895,7 +889,7 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
         cancelQueuedChatRun,
         completeQueuedChatRun,
         restoreQueuedChatRuns: () => listRecoverableQueuedChatRuns(),
-        retryWorktreeCreation: (chatId: string, setupApproval?: string) =>
+        retryWorktreeCreation: (chatId: string) =>
           Effect.gen(function* () {
             const persisted = yield* getWorktreeCreationJob(chatId);
             if (!persisted || persisted.state.status !== "failed") {
@@ -926,7 +920,6 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
               chatId,
               projectId: chat.projectId,
               promise: Promise.resolve(),
-              setupApproval,
               worktreeRef: persisted.worktreeRef,
               state: persisted.state,
             };

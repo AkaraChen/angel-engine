@@ -2,7 +2,6 @@ import type {
   DaemonErrorCode,
   DaemonErrorPayload,
 } from "@angel-engine/daemon-api/daemon";
-import type { SourceControlErrorDetails } from "@angel-engine/daemon-api/source-control";
 
 import { Data } from "effect";
 
@@ -15,7 +14,6 @@ interface DaemonErrorProps {
   code: DaemonErrorCode;
   message: string;
   relatedChatId?: string;
-  sourceControl?: SourceControlErrorDetails;
   status: DaemonErrorStatus;
 }
 
@@ -285,120 +283,6 @@ export class DaemonError extends Data.TaggedError(
     });
   }
 
-  static sourceControlCliMissing(
-    providerId: string,
-    message = "The source-control CLI is not installed or not on PATH.",
-  ) {
-    return new DaemonError({
-      code: "source-control/cli-missing",
-      message,
-      sourceControl: sourceControlDetails(providerId, "authenticate", false),
-      status: 400,
-    });
-  }
-
-  static sourceControlCapabilityUnsupported(
-    message = "This source-control provider does not support the requested operation.",
-    providerId = "unknown",
-  ) {
-    return new DaemonError({
-      code: "source-control/capability-unsupported",
-      message,
-      sourceControl: {
-        operation: "capability",
-        providerId,
-        retryable: false,
-      },
-      status: 400,
-    });
-  }
-
-  static sourceControlUnauthenticated(
-    providerId: string,
-    message = "The source-control provider is not authenticated.",
-  ) {
-    return new DaemonError({
-      code: "source-control/unauthenticated",
-      message,
-      sourceControl: sourceControlDetails(providerId, "authenticate", false),
-      status: 400,
-    });
-  }
-
-  static sourceControlUrlUnsupported(
-    providerId: string,
-    message = "The source-control provider does not support this URL.",
-  ) {
-    return new DaemonError({
-      code: "source-control/url-unsupported",
-      message,
-      sourceControl: sourceControlDetails(providerId, "resolve-url", false),
-      status: 400,
-    });
-  }
-
-  static sourceControlItemNotFound(
-    providerId: string,
-    message = "The source-control item was not found.",
-  ) {
-    return new DaemonError({
-      code: "source-control/item-not-found",
-      message,
-      sourceControl: sourceControlDetails(providerId, "get-item", false),
-      status: 404,
-    });
-  }
-
-  static sourceControlPermissionDenied(
-    providerId: string,
-    message = "You do not have permission to perform this source-control operation.",
-  ) {
-    return new DaemonError({
-      code: "source-control/permission-denied",
-      message,
-      sourceControl: sourceControlDetails(providerId, "merge", false),
-      status: 403,
-    });
-  }
-
-  static sourceControlMergeConflict(
-    providerId: string,
-    message = "The change request can no longer be merged. Refresh its status and try again.",
-  ) {
-    return new DaemonError({
-      code: "source-control/merge-conflict",
-      message,
-      sourceControl: sourceControlDetails(providerId, "merge", false),
-      status: 409,
-    });
-  }
-
-  static sourceControlFetchFailed(
-    providerId: string,
-    cause: unknown,
-    fallback = "Source-control fetch failed.",
-  ) {
-    return new DaemonError({
-      cause,
-      code: "source-control/fetch-failed",
-      message: gitMessageFromCause(cause, fallback),
-      sourceControl: sourceControlDetails(providerId, "fetch", true, cause),
-      status: 500,
-    });
-  }
-
-  static sourceControlNetworkUnavailable(
-    providerId: string,
-    message = "The source-control provider is unavailable. Check your network and retry.",
-  ) {
-    return new DaemonError({
-      code: "source-control/network-unavailable",
-      message,
-      sourceControl: sourceControlDetails(providerId, "network", true),
-      status: 500,
-    });
-  }
-
   static linkUnsupported() {
     return new DaemonError({
       code: "link-unsupported",
@@ -658,25 +542,6 @@ export function daemonErrorPayload(error: DaemonError): DaemonErrorPayload {
   return {
     code: error.code,
     error: error.message,
-    ...(error.sourceControl ? { sourceControl: error.sourceControl } : {}),
-  };
-}
-
-function sourceControlDetails(
-  providerId: string,
-  operation: string,
-  retryable: boolean,
-  cause?: unknown,
-): SourceControlErrorDetails {
-  return {
-    providerId,
-    operation,
-    retryable,
-    ...(cause instanceof Error
-      ? { providerMessage: cause.message }
-      : typeof cause === "string"
-        ? { providerMessage: cause }
-        : {}),
   };
 }
 

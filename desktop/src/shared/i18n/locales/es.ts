@@ -688,7 +688,8 @@ export const es = {
         sendWithModEnterTitle: "Enviar con {{shortcut}}",
         trayEnabledDescription:
           "Muestra en la barra de menús el recuento de sesiones que te necesitan y una lista para abrirlas sin buscar en la app.",
-        trayEnabledSwitchLabel: "Mostrar resumen de sesiones en la barra de menús",
+        trayEnabledSwitchLabel:
+          "Mostrar resumen de sesiones en la barra de menús",
         trayEnabledTitle: "Resumen de sesiones en la barra de menús",
       },
     },
@@ -1049,7 +1050,6 @@ export const es = {
       stageCompleted: "Listo",
       stagePreparing: "Preparando destino",
       stageRegistering: "Registrando proyecto",
-      tabSourceControl: "control de código fuente",
       tabUrl: "URL de Git",
       title: "Clonar un repositorio",
       urlHint: "https, ssh o owner/repo",

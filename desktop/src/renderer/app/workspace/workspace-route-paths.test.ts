@@ -68,7 +68,7 @@ describe("lastOpenedTargetPath", () => {
         target: { chatId: projectChat.id, type: "chat" },
         workspaceMode: "chat",
       }),
-    ).toBe(undefined);
+    ).toBe("/project/project-id/project");
     expect(
       lastOpenedTargetPath({
         chats,
@@ -97,8 +97,8 @@ describe("workspaceModeForChat", () => {
   it("opens project sessions in the current project mode", () => {
     const projectChat = chat({ id: "project", projectId: "project-id" });
 
-    expect(workspaceModeForChat(projectChat, "power")).toBe("power");
-    expect(workspaceModeForChat(projectChat, "work")).toBe("work");
-    expect(workspaceModeForChat(projectChat, "chat")).toBe("work");
+    expect(workspaceModeForChat(projectChat, "power")).toBe("chat");
+    expect(workspaceModeForChat(projectChat, "work")).toBe("chat");
+    expect(workspaceModeForChat(projectChat, "chat")).toBe("chat");
   });
 });

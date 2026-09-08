@@ -1035,7 +1035,6 @@ export const en = {
       stageCompleted: "Done",
       stagePreparing: "Preparing destination",
       stageRegistering: "Registering project",
-      tabSourceControl: "source control",
       tabUrl: "Git URL",
       title: "Clone a repository",
       urlHint: "https, ssh, or owner/repo",

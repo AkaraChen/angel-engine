@@ -1,20 +1,12 @@
 import type { ProjectFileSearchResult } from "@angel-engine/daemon-api/chat";
 import type {
   Project,
-  ProjectConfigResult,
   ProjectGitStatusResult,
-  UpdateProjectConfigInput,
 } from "@angel-engine/daemon-api/projects";
-import type {
-  RepositoryIdentity,
-  RepositoryNamespace,
-} from "@angel-engine/daemon-api/source-control";
 
-import type { QueryClient } from "@tanstack/react-query";
 import type { ApiClient } from "@/platform/api-client";
 import is from "@sindresorhus/is";
-import { mutationOptions, queryOptions } from "@tanstack/react-query";
-import { invalidateChatQueries } from "@/features/chat/api/queries";
+import { queryOptions } from "@tanstack/react-query";
 import { queryKeys } from "@/platform/query-keys";
 
 interface ProjectListQueryParams {
@@ -37,131 +29,6 @@ interface ProjectGitStatusQueryParams {
   enabled?: boolean;
   projectId?: string | null;
   staleTime?: number;
-}
-
-interface ProjectConfigQueryParams {
-  api: ApiClient;
-  enabled?: boolean;
-  projectId?: string | null;
-}
-
-interface UpdateProjectConfigMutationParams {
-  api: ApiClient;
-  queryClient: QueryClient;
-}
-
-interface CreateProjectMutationParams {
-  api: ApiClient;
-  onSuccess?: (data: Project, variables: string) => Promise<void> | void;
-  queryClient: QueryClient;
-}
-
-/** Items the project context menu offers beyond the path-launcher rows. */
-export type ProjectContextMenuAction = "delete" | "settings";
-
-export type ProjectContextMenuResult = "deleted" | "settings";
-
-export interface ProjectContextMenuVariables {
-  action: ProjectContextMenuAction;
-  project: Project;
-}
-
-interface ProjectContextMenuMutationParams {
-  api: ApiClient;
-  onSuccess?: (
-    data: ProjectContextMenuResult,
-    variables: Project,
-  ) => Promise<void> | void;
-  queryClient: QueryClient;
-}
-
-interface SourceControlDiscoveryQueryParams {
-  api: ApiClient;
-  enabled?: boolean;
-  limit?: number;
-  projectPath: string | null;
-  providerIdentity: string | null;
-  query?: string;
-  staleTime?: number;
-  supported: boolean;
-}
-
-interface SourceControlRepositoriesQueryParams
-  extends SourceControlDiscoveryQueryParams {
-  namespace: readonly string[] | null;
-}
-
-export function sourceControlNamespacesQueryOptions({
-  api,
-  enabled = true,
-  limit = 50,
-  projectPath,
-  providerIdentity,
-  query = "",
-  staleTime = 60_000,
-  supported,
-}: SourceControlDiscoveryQueryParams) {
-  return queryOptions({
-    enabled:
-      enabled &&
-      supported &&
-      is.nonEmptyString(projectPath) &&
-      is.nonEmptyString(providerIdentity),
-    queryFn: async (): Promise<readonly RepositoryNamespace[]> => {
-      if (!is.nonEmptyString(projectPath)) {
-        throw new Error("No source-control project is active");
-      }
-      return api.sourceControl.listNamespaces(projectPath, query, limit);
-    },
-    queryKey: queryKeys.sourceControl.namespaces(
-      providerIdentity,
-      is.nonEmptyString(query) ? query : null,
-      limit,
-    ),
-    retry: false,
-    staleTime,
-  });
-}
-
-export function sourceControlRepositoriesQueryOptions({
-  api,
-  enabled = true,
-  limit = 50,
-  namespace,
-  projectPath,
-  providerIdentity,
-  query = "",
-  staleTime = 60_000,
-  supported,
-}: SourceControlRepositoriesQueryParams) {
-  return queryOptions({
-    enabled:
-      enabled &&
-      supported &&
-      is.nonEmptyString(projectPath) &&
-      is.nonEmptyString(providerIdentity) &&
-      namespace !== null &&
-      namespace.length > 0,
-    queryFn: async (): Promise<readonly RepositoryIdentity[]> => {
-      if (!is.nonEmptyString(projectPath) || namespace === null) {
-        throw new Error("No source-control namespace is active");
-      }
-      return api.sourceControl.listRepositories(
-        projectPath,
-        namespace,
-        query,
-        limit,
-      );
-    },
-    queryKey: queryKeys.sourceControl.repositories(
-      providerIdentity,
-      namespace,
-      is.nonEmptyString(query) ? query : null,
-      limit,
-    ),
-    retry: false,
-    staleTime,
-  });
 }
 
 export function projectListQueryOptions({
@@ -216,91 +83,5 @@ export function projectGitStatusQueryOptions({
     queryKey: queryKeys.projects.gitStatus(projectId ?? null),
     retry: false,
     staleTime,
-  });
-}
-
-export function projectConfigQueryOptions({
-  api,
-  enabled = true,
-  projectId,
-}: ProjectConfigQueryParams) {
-  return queryOptions({
-    enabled: enabled && is.nonEmptyString(projectId),
-    queryFn: async (): Promise<ProjectConfigResult> => {
-      if (!is.nonEmptyString(projectId)) {
-        throw new Error("No project selected");
-      }
-      return api.projects.config({ projectId });
-    },
-    queryKey: queryKeys.projects.config(projectId ?? null),
-    retry: false,
-    // Settings live in a file the user can edit outside the app, so refetch on
-    // every dialog open instead of trusting a cached read.
-    staleTime: 0,
-  });
-}
-
-export function updateProjectConfigMutationOptions({
-  api,
-  queryClient,
-}: UpdateProjectConfigMutationParams) {
-  return mutationOptions({
-    mutationFn: async (input: UpdateProjectConfigInput) =>
-      api.projects.updateConfig(input),
-    onSuccess: (data) => {
-      queryClient.setQueryData<ProjectConfigResult>(
-        queryKeys.projects.config(data.projectId),
-        data,
-      );
-    },
-  });
-}
-
-export function createProjectMutationOptions({
-  api,
-  onSuccess,
-  queryClient,
-}: CreateProjectMutationParams) {
-  return mutationOptions({
-    mutationFn: async (path: string) => api.projects.create({ path }),
-    onSuccess: async (data, variables) => {
-      await invalidateProjectQueries(queryClient);
-      await onSuccess?.(data, variables);
-    },
-  });
-}
-
-export function projectContextMenuMutationOptions({
-  api,
-  onSuccess,
-  queryClient,
-}: ProjectContextMenuMutationParams) {
-  return mutationOptions({
-    mutationFn: async ({
-      action,
-      project,
-    }: ProjectContextMenuVariables): Promise<ProjectContextMenuResult> => {
-      if (action === "settings") return "settings";
-      await api.projects.delete(project.id);
-      return "deleted";
-    },
-    onSuccess: async (data, variables) => {
-      if (data === "deleted") {
-        await invalidateProjectQueries(queryClient);
-        await invalidateChatQueries(queryClient);
-      }
-      await onSuccess?.(data, variables.project);
-    },
-  });
-}
-
-export async function invalidateProjectQueries(queryClient: QueryClient) {
-  await queryClient.invalidateQueries({
-    queryKey: queryKeys.projects.all(),
-    refetchType: "none",
-  });
-  await queryClient.refetchQueries({
-    queryKey: queryKeys.projects.list(),
-    type: "active",
   });
 }

@@ -34,10 +34,6 @@
       "types": "./dist/projects.d.ts",
       "import": "./dist/projects.js"
     },
-    "./source-control": {
-      "types": "./dist/source-control/index.d.ts",
-      "import": "./dist/source-control/index.js"
-    },
     "./terminal": {
       "types": "./dist/terminal.d.ts",
       "import": "./dist/terminal.js"

@@ -9,7 +9,7 @@ import {
 } from "@angel-engine/daemon-api/agents";
 import is from "@sindresorhus/is";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
 import { useDraftChatOptions } from "@/app/workspace/use-draft-chat-options";
@@ -20,18 +20,14 @@ import {
   getWorkspaceTitle,
 } from "@/app/workspace/workspace-display";
 import { draftAgentConfigFromExplicitOverrides } from "@/app/workspace/workspace-draft-agent-config";
-import {
-  chatNotificationRoutePath,
-} from "@/app/workspace/workspace-route-paths";
+import { chatNotificationRoutePath } from "@/app/workspace/workspace-route-paths";
 import {
   draftRuntimeKeyFromProjectId,
   workspaceRuntimePageKey,
 } from "@/app/workspace/workspace-runtime-keys";
 import { useWorkspaceToolStore } from "@/app/workspace/workspace-tool-store";
 import { resolveWorkspaceToolContext } from "@/app/workspace/workspace-tool-context";
-import {
-  useWorkspaceUiStore,
-} from "@/app/workspace/workspace-ui-store";
+import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
 import { useToast } from "@/components/ui/toast";
 import { useAgentCatalog } from "@/features/agents/agent-catalog-context";
 import {
@@ -132,14 +128,12 @@ export function useWorkspacePageModel({
   const showRightSidebar = isProjectMode;
   const previousWorkspaceToolHostRef = useRef(workspaceToolHost);
 
-
   const draftState = useWorkspaceDraftState();
   const draftSessionCounterRef = useRef(0);
   // Fleet and Schedule are chat-less routes but not drafts.
-  const isDraftPage =
-    !scheduleActive && !is.nonEmptyString(selectedChatId);
+  const isDraftPage = !scheduleActive && !is.nonEmptyString(selectedChatId);
   const pinnedDraftCwd = undefined;
-  const draftCwd = undefined;
+  const [draftCwd, setDraftCwd] = useState<string | undefined>();
 
   const projectsQuery = useQuery({ ...projectListQueryOptions({ api }) });
   const chatsQuery = useQuery({ ...chatListQueryOptions({ api }) });
@@ -153,10 +147,9 @@ export function useWorkspacePageModel({
     projects,
     isDraftPage ? routeDraftProjectId : undefined,
   );
-  const selectedProjectId =
-    isDraftPage
-        ? draftProject.id
-        : (routeProjectId ?? selectedChat?.projectId ?? undefined);
+  const selectedProjectId = isDraftPage
+    ? draftProject.id
+    : (routeProjectId ?? selectedChat?.projectId ?? undefined);
   const selectedProject = is.nonEmptyString(selectedProjectId)
     ? projects.find((project) => project.id === selectedProjectId)
     : undefined;
@@ -170,8 +163,7 @@ export function useWorkspacePageModel({
       : undefined;
   const projectWorkspaceToolRoot = selectedProjectPath;
   const workspaceToolContext = resolveWorkspaceToolContext({
-    projectId:
-      selectedChat?.projectId ?? selectedProjectId,
+    projectId: selectedChat?.projectId ?? selectedProjectId,
     projectRoot:
       is.nonEmptyString(selectedChat?.projectId) &&
       is.nonEmptyString(selectedChatId)
@@ -257,7 +249,8 @@ export function useWorkspacePageModel({
   const draftProjectGitStatusQuery = useQuery({
     ...projectGitStatusQueryOptions({
       api,
-      enabled: isDraftPage && draftProject.id !== undefined && draftCwd === undefined,
+      enabled:
+        isDraftPage && draftProject.id !== undefined && draftCwd === undefined,
       projectId: draftProject.id,
     }),
   });
@@ -281,7 +274,8 @@ export function useWorkspacePageModel({
       enabled:
         shouldPrewarmChat &&
         draftCreationLocation !== "worktree" &&
-        pinnedDraftCwd === undefined && draftCwd === undefined,
+        pinnedDraftCwd === undefined &&
+        draftCwd === undefined,
       projectId: draftProject.id,
       runtime: activeRuntime,
     }),
@@ -291,7 +285,9 @@ export function useWorkspacePageModel({
     pinnedDraftCwd !== undefined ||
     draftCwd !== undefined;
   const shouldInspectDraftRuntimeConfig =
-    isDraftPage && inspectDraftRuntimeConfig && (draftCwd ?? draftProject.path) !== undefined;
+    isDraftPage &&
+    inspectDraftRuntimeConfig &&
+    (draftCwd ?? draftProject.path) !== undefined;
   const draftRuntimeConfigQuery = useQuery({
     ...chatRuntimeConfigQueryOptions({
       api,
@@ -330,7 +326,6 @@ export function useWorkspacePageModel({
     setActiveChatRunId(selectedChatId);
     window.desktopWindow.setActiveChatId(selectedChatId ?? null);
   }, [selectedChatId]);
-
 
   useEffect(
     () =>
@@ -373,6 +368,7 @@ export function useWorkspacePageModel({
     draftProjectGitStatusQuery,
     draftProject,
     draftCwd,
+    setDraftCwd,
     draftSessionCounterRef,
     isDraftPage,
     isMacOS,

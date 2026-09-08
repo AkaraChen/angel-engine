@@ -24,31 +24,6 @@ export const queryKeys = {
     runtimeConfig: (runtime: string | null, cwd: string | null) =>
       ["chats", "runtime-config", runtime, cwd] as const,
   },
-  sourceControl: {
-    all: () => ["source-control"] as const,
-    activation: (projectId: string | null) =>
-      ["source-control", "activation", projectId] as const,
-    namespaces: (
-      providerIdentity: string | null,
-      query: string | null = null,
-      limit = 50,
-    ) =>
-      ["source-control", providerIdentity, "namespaces", query, limit] as const,
-    repositories: (
-      providerIdentity: string | null,
-      namespace: readonly string[] | null,
-      query: string | null = null,
-      limit = 50,
-    ) =>
-      [
-        "source-control",
-        providerIdentity,
-        "repositories",
-        namespace,
-        query,
-        limit,
-      ] as const,
-  },
   pathLauncher: {
     availability: () => ["path-launcher", "availability"] as const,
   },

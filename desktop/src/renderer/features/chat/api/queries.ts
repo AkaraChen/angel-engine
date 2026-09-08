@@ -67,25 +67,6 @@ interface AgentSkillsQueryParams {
   staleTime?: number;
 }
 
-interface SourceControlItemsQueryParams {
-  api: ApiClient;
-  enabled?: boolean;
-  limit?: number;
-  projectPath: string | null;
-  providerIdentity: string | null;
-  query: string;
-  staleTime?: number;
-}
-
-interface SourceControlLinkResolveQueryParams {
-  api: ApiClient;
-  enabled?: boolean;
-  projectPath: string | null;
-  providerIdentity: string | null;
-  staleTime?: number;
-  url: string | null;
-}
-
 interface ChatPrewarmQueryParams {
   api: ApiClient;
   creationLocation?: ChatCreationLocation | null;
@@ -304,7 +285,6 @@ export function agentSkillsQueryOptions({
     staleTime,
   });
 }
-
 
 export function chatPrewarmQueryOptions({
   api,

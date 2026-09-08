@@ -68,30 +68,12 @@ import type {
   ProcessRegistrySnapshotEntry,
 } from "@angel-engine/daemon-api/daemon";
 import type {
-  CreateProjectInput,
-  ProjectCloneEvent,
-  ProjectCloneInput,
   ManagedWorktreeDeleteInput,
   ManagedWorktreeDeleteResult,
   ManagedWorktreeScanInput,
   ManagedWorktreeSummary,
   Project,
-  ProjectConfigInput,
-  ProjectConfigResult,
-  ProjectGitStatusInput,
-  ProjectGitStatusResult,
-  ProjectSetupLifecycleView,
-  ProjectSetupRetryInput,
-  UpdateProjectConfigInput,
-  UpdateProjectInput,
 } from "@angel-engine/daemon-api/projects";
-import type {
-  RepositoryIdentity,
-  RepositoryNamespace,
-  SourceControlActivationResult,
-  SourceControlProjectConfig,
-} from "@angel-engine/daemon-api/source-control";
-import { isProjectCloneEvent } from "@angel-engine/daemon-api/projects";
 import type {
   WorkspaceFileReadResult,
   WorkspaceFileTreeResult,
@@ -135,7 +117,6 @@ export interface DaemonClientOptions {
   token?: string | null;
 }
 
-
 export interface DaemonEventHandlers {
   onEvent: (event: DaemonGlobalEvent) => void;
   onInvalidEvent?: (error: DaemonRequestError) => void;
@@ -166,7 +147,8 @@ export function createDaemonClient(options: DaemonClientOptions) {
     const response = await send(path, init);
     if (!response.ok) {
       const payload = (await response.json().catch(() => undefined)) as
-        Partial<DaemonErrorPayload> | undefined;
+        | Partial<DaemonErrorPayload>
+        | undefined;
       throw DaemonRequestError.http(
         response.status,
         payload?.code,
@@ -245,49 +227,6 @@ export function createDaemonClient(options: DaemonClientOptions) {
     if (!sawSnapshot) {
       throw DaemonRequestError.invalidResponse(
         `Daemon returned a chat run stream without a snapshot for ${path}.`,
-        response.status,
-      );
-    }
-  }
-
-  async function* streamCloneEvents(
-    path: string,
-    init: RequestInit,
-  ): AsyncIterable<ProjectCloneEvent> {
-    const headers = new Headers(init.headers);
-    headers.set("accept", "text/event-stream");
-    const response = await send(path, { ...init, headers });
-    if (!response.ok) {
-      throw DaemonRequestError.http(
-        response.status,
-        undefined,
-        `Daemon request failed: ${init.method ?? "GET"} ${path}`,
-      );
-    }
-    if (response.body === null) {
-      throw DaemonRequestError.invalidResponse(
-        `Daemon returned an empty stream for ${path}.`,
-        response.status,
-      );
-    }
-
-    let terminalEventReceived = false;
-    for await (const message of readSseEvents(response.body)) {
-      if (!isProjectCloneEvent(message)) {
-        throw DaemonRequestError.invalidResponse(
-          `Daemon returned an invalid clone event for ${path}.`,
-          response.status,
-        );
-      }
-      terminalEventReceived =
-        terminalEventReceived ||
-        message.type === "completed" ||
-        message.type === "failed";
-      yield message;
-    }
-    if (!terminalEventReceived) {
-      throw DaemonRequestError.invalidResponse(
-        `Daemon clone stream ended without a terminal event for ${path}.`,
         response.status,
       );
     }
@@ -494,30 +433,6 @@ export function createDaemonClient(options: DaemonClientOptions) {
         ),
       get: (id: string) =>
         request<Chat | null>(`/api/chats/${encodeURIComponent(id)}`),
-      lifecycle: (id: string) =>
-        request<ProjectSetupLifecycleView>(
-          `/api/chats/${encodeURIComponent(id)}/lifecycle`,
-        ),
-      cancelSetup: (id: string) =>
-        request<ProjectSetupLifecycleView>(
-          `/api/chats/${encodeURIComponent(id)}/setup/cancel`,
-          { method: "POST" },
-        ),
-      continueSetup: (id: string) =>
-        request<ProjectSetupLifecycleView>(
-          `/api/chats/${encodeURIComponent(id)}/setup/continue`,
-          { method: "POST" },
-        ),
-      discardSetup: (id: string) =>
-        request<{ ok: boolean }>(
-          `/api/chats/${encodeURIComponent(id)}/setup/discard`,
-          { method: "POST" },
-        ),
-      retrySetup: (id: string, input: ProjectSetupRetryInput) =>
-        request<ProjectSetupLifecycleView>(
-          `/api/chats/${encodeURIComponent(id)}/setup/retry`,
-          json("POST", input),
-        ),
       inspectConfig: (input: ChatRuntimeConfigInput = {}) =>
         request<ChatRuntimeConfig>(
           "/api/chats/runtime-config",
@@ -537,10 +452,10 @@ export function createDaemonClient(options: DaemonClientOptions) {
         }),
       prewarm: (input: ChatPrewarmInput = {}) =>
         request<ChatPrewarmResult>("/api/chats/prewarm", json("POST", input)),
-      retryWorktreeCreation: (id: string, worktreeSetupApproval?: string) =>
+      retryWorktreeCreation: (id: string) =>
         request<Chat>(
           `/api/chats/${encodeURIComponent(id)}/worktree-creation/retry`,
-          json("POST", { worktreeSetupApproval }),
+          { method: "POST" },
         ),
       rename: (input: ChatRenameInput) =>
         request<Chat>(
@@ -570,47 +485,6 @@ export function createDaemonClient(options: DaemonClientOptions) {
           json("PUT", { runtime: input.runtime }),
         ),
     },
-    sourceControl: {
-      activation: (projectId: string) =>
-        request<SourceControlActivationResult>(
-          `/api/source-control/activation?${query({ projectId })}`,
-        ),
-      config: (projectId: string) =>
-        request<SourceControlProjectConfig>(
-          `/api/source-control/config?${query({ projectId })}`,
-        ),
-      updateConfig: (projectId: string, input: SourceControlProjectConfig) =>
-        request<SourceControlProjectConfig>(
-          `/api/source-control/config?${query({ projectId })}`,
-          json("PUT", input),
-        ),
-      listNamespaces: (
-        projectPath: string,
-        queryText?: string,
-        limit?: number,
-      ) =>
-        request<readonly RepositoryNamespace[]>(
-          `/api/source-control/namespaces?${query({
-            limit,
-            projectPath,
-            query: queryText,
-          })}`,
-        ),
-      listRepositories: (
-        projectPath: string,
-        namespace: readonly string[],
-        queryText?: string,
-        limit?: number,
-      ) =>
-        request<readonly RepositoryIdentity[]>(
-          `/api/source-control/repositories?${query({
-            limit,
-            namespace: namespace.join("/"),
-            projectPath,
-            query: queryText,
-          })}`,
-        ),
-    },
     health: () => request<DaemonHealth>("/api/health"),
     events: {
       subscribe: (handlers: DaemonEventHandlers) =>
@@ -632,47 +506,12 @@ export function createDaemonClient(options: DaemonClientOptions) {
         ),
     },
     projects: {
-      clone: (input: ProjectCloneInput, signal?: AbortSignal) =>
-        streamCloneEvents("/api/projects/clone", {
-          ...json("POST", input),
-          signal,
-        }),
-      config: (input: ProjectConfigInput) =>
-        request<ProjectConfigResult>(
-          `/api/projects/${encodeURIComponent(input.projectId)}/config`,
-        ),
-      create: (input: CreateProjectInput) =>
-        request<Project>("/api/projects", json("POST", input)),
-      delete: (id: string) =>
-        request<{ ok: boolean }>(`/api/projects/${encodeURIComponent(id)}`, {
-          method: "DELETE",
-        }),
       get: (id: string) =>
         request<Project | null>(`/api/projects/${encodeURIComponent(id)}`),
-      gitStatus: (input: ProjectGitStatusInput) =>
-        request<ProjectGitStatusResult>(
-          `/api/projects/${encodeURIComponent(input.projectId)}/git-status`,
-        ),
       list: () => request<Project[]>("/api/projects"),
       searchFiles: (input: ProjectFileSearchInput) =>
         request<ProjectFileSearchResult[]>(
           `/api/projects/files/search?${query(input)}`,
-        ),
-      update: (input: UpdateProjectInput) =>
-        request<Project>(
-          `/api/projects/${encodeURIComponent(input.id)}`,
-          json("PATCH", { path: input.path }),
-        ),
-      updateConfig: (input: UpdateProjectConfigInput) =>
-        request<ProjectConfigResult>(
-          `/api/projects/${encodeURIComponent(input.projectId)}/config`,
-          json("PUT", {
-            migrateLegacyInitScript: input.migrateLegacyInitScript,
-            runScript: input.runScript,
-            scriptShell: input.scriptShell,
-            setupScript: input.setupScript,
-            teardownScript: input.teardownScript,
-          }),
         ),
     },
     worktrees: {
@@ -684,21 +523,6 @@ export function createDaemonClient(options: DaemonClientOptions) {
       listManaged: (input: ManagedWorktreeScanInput = {}) =>
         request<ManagedWorktreeSummary[]>(
           `/api/worktrees/managed?${query(input)}`,
-        ),
-    },
-    workspaceTools: {
-      fileTree: (input: WorkspaceToolRootInput) =>
-        request<WorkspaceFileTreeResult>(
-          `/api/workspace/file-tree?${query(input)}`,
-        ),
-      gitBranches: (input: WorkspaceToolRootInput) =>
-        request<WorkspaceGitBranchesResult>(
-          `/api/workspace/git-branches?${query(input)}`,
-        ),
-      gitCheckout: (input: WorkspaceGitCheckoutInput) =>
-        request<WorkspaceGitCheckoutResult>(
-          "/api/workspace/git-checkout",
-          json("POST", input),
         ),
       gitCommit: (input: WorkspaceToolGitCommitInput) =>
         request<WorkspaceToolGitCommitResult>(

@@ -8,6 +8,7 @@ import type { ProjectWorktreeCreateInput } from "@angel-engine/daemon-api/projec
 
 import is from "@sindresorhus/is";
 import os from "node:os";
+import fs from "node:fs";
 import { Effect } from "effect";
 import { DaemonError } from "../../platform/errors";
 import { createProjectWorktree } from "../source-control/local-git/projects";
@@ -18,7 +19,19 @@ export function cwdForChat(
   projectId?: string | null,
 ): Effect.Effect<string, DaemonError, Db> {
   return Effect.gen(function* () {
-    if (chat.cwd !== null) return chat.cwd;
+    if (chat.cwd !== null) {
+      if (!fs.existsSync(chat.cwd)) {
+        return yield* Effect.fail(
+          DaemonError.chatCwdInvalid(`Chat cwd does not exist.`),
+        );
+      }
+      if (!fs.statSync(chat.cwd).isDirectory()) {
+        return yield* Effect.fail(
+          DaemonError.chatCwdInvalid(`Chat cwd must be a directory.`),
+        );
+      }
+      return chat.cwd;
+    }
 
     const projectCwd = yield* cwdForProjectId(projectId ?? chat.projectId);
     return projectCwd ?? standaloneChatCwd();
@@ -33,10 +46,8 @@ export function cwdForChat(
 export type ChatCwdResolutionInput = ChatCreationLocationInput &
   ChatCwdInput & {
     projectId?: string | null;
-    worktreeSetupApproval?: string;
     worktreeRef?: ProjectWorktreeCreateInput["ref"];
   };
-
 export function cwdForNewChat(
   input: ChatCwdResolutionInput,
   signal?: AbortSignal,
@@ -51,7 +62,6 @@ export function cwdForNewChat(
       const worktree = yield* createProjectWorktree(
         {
           projectId: input.projectId,
-          setupApproval: input.worktreeSetupApproval,
           ref: input.worktreeRef,
         },
         signal,

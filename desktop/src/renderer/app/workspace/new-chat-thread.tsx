@@ -13,7 +13,6 @@ import type {
 } from "./workspace-thread-types";
 import type { ChatComposerBeforeSubmitResult } from "@/features/chat/components/composer/chat-composer";
 import type { ChatOptionsContextValue } from "@/features/chat/runtime/chat-options-context";
-import type { ProjectsQueryStatus } from "@/app/workspace/project-requirement-notice";
 import is from "@sindresorhus/is";
 import { useLayoutEffect, useMemo } from "react";
 import { NewChatComposer } from "@/app/workspace/new-chat-composer";

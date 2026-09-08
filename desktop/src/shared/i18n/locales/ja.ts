@@ -1047,7 +1047,6 @@ export const ja = {
       stageCompleted: "完了",
       stagePreparing: "保存先を準備",
       stageRegistering: "プロジェクトを登録",
-      tabSourceControl: "ソース管理",
       tabUrl: "Git URL",
       title: "リポジトリをクローン",
       urlHint: "https、ssh、または owner/repo",

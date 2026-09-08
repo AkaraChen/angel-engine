@@ -1028,7 +1028,6 @@ export const ko = {
       stageCompleted: "완료",
       stagePreparing: "대상 경로 준비",
       stageRegistering: "프로젝트 등록",
-      tabSourceControl: "소스 제어",
       tabUrl: "Git URL",
       title: "저장소 클론",
       urlHint: "https, ssh 또는 owner/repo",

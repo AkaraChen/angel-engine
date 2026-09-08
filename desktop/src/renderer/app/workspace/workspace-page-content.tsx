@@ -39,7 +39,7 @@ export function WorkspacePageContent({
     model,
     navigation,
   });
-  const draftGuard = useWorktreeDraftGuard(model, navigation);
+  const draftGuard = useWorktreeDraftGuard(model);
 
   if (model.selectedChat) {
     const canonicalPath = chatRoutePath(model.selectedChat, {

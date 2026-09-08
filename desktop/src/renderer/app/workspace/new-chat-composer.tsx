@@ -192,7 +192,6 @@ export function NewChatComposer({
       mentionedFiles,
       selectedSkills,
       text,
-      worktreeSetupApproval,
     }: ChatComposerSubmission) => {
       await sendChatMessage.sendPromptMessage({
         attachments: files,
@@ -200,7 +199,6 @@ export function NewChatComposer({
         selectedSkills,
         t,
         text,
-        worktreeSetupApproval,
       });
     },
     [sendChatMessage, t],
@@ -412,9 +410,7 @@ function NewChatComposerFooter({
   const { t } = useTranslation();
   const chatOptions = useChatOptions();
   const attachments = usePromptInputAttachments();
-  const isEmpty =
-    editorIsEmpty &&
-    attachments.files.length === 0;
+  const isEmpty = editorIsEmpty && attachments.files.length === 0;
 
   return (
     <PromptInputFooter className={newChatFooterClassName}>

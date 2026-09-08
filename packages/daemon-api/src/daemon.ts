@@ -67,15 +67,6 @@ export type DaemonErrorCode =
   | "git-push-denied"
   | "git-push-not-fast-forward"
   | "git-remote-missing"
-  | "source-control/cli-missing"
-  | "source-control/capability-unsupported"
-  | "source-control/unauthenticated"
-  | "source-control/fetch-failed"
-  | "source-control/item-not-found"
-  | "source-control/merge-conflict"
-  | "source-control/permission-denied"
-  | "source-control/network-unavailable"
-  | "source-control/url-unsupported"
   | "internal"
   | "invalid-request"
   | "link-unsupported"
@@ -117,6 +108,4 @@ export type DaemonErrorCode =
 export interface DaemonErrorPayload {
   code: DaemonErrorCode;
   error: string;
-  sourceControl?: SourceControlErrorDetails;
 }
-import type { SourceControlErrorDetails } from "./source-control";

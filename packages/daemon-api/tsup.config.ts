@@ -14,7 +14,6 @@ export default defineConfig({
     "src/links.ts",
     "src/mime.ts",
     "src/projects.ts",
-    "src/source-control/index.ts",
     "src/terminal.ts",
     "src/workspace-tools.ts",
   ],

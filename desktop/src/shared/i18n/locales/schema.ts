@@ -1249,7 +1249,6 @@ export interface LocaleResourceTranslationProjectImport {
   stageCompleted: string;
   stagePreparing: string;
   stageRegistering: string;
-  tabSourceControl: string;
   tabUrl: string;
   title: string;
   urlHint: string;

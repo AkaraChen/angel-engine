@@ -1056,7 +1056,6 @@ export const de = {
       stageCompleted: "Fertig",
       stagePreparing: "Ziel vorbereiten",
       stageRegistering: "Projekt registrieren",
-      tabSourceControl: "Quellcodeverwaltung",
       tabUrl: "Git-URL",
       title: "Repository klonen",
       urlHint: "https, ssh oder owner/repo",

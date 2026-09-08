@@ -14,7 +14,6 @@ import { Effect } from "effect";
 
 import { DaemonError } from "../../../platform/errors";
 import { findActiveChatByCwd } from "../../chat/repository";
-import { loadProjectLifecycleConfig } from "../../projects/config";
 import { getProject } from "../../projects/repository";
 import { executeGit } from "./backend";
 
@@ -58,40 +57,14 @@ export function projectGitStatus(
       };
     }).pipe(Effect.orElseSucceed(() => baseResult));
 
-    const root = gitStatus.root;
-    if (!gitStatus.isGitRepository || !is.nonEmptyString(root)) {
-      return gitStatus;
-    }
-
-    const setupConfig = yield* Effect.tryPromise({
-      catch: (cause) => DaemonError.worktreeCreateFailed(cause),
-      try: () => loadProjectLifecycleConfig(root),
-    });
-
-    return {
-      ...gitStatus,
-      legacyInitScript:
-        setupConfig && setupConfig.legacyInitScript.length > 0
-          ? setupConfig.legacyInitScript
-          : undefined,
-      worktreeSetup:
-        setupConfig && setupConfig.setupScript.length > 0
-          ? {
-              commands: setupConfig.setupScript,
-              digest: setupConfig.digest,
-            }
-          : undefined,
-    };
+    return gitStatus;
   });
 }
 
 export function createProjectWorktree(
   input: ProjectWorktreeCreateInput,
   signal?: AbortSignal,
-  onProgress?: (
-    stage: "fetching" | "worktree" | "setup",
-    progress: number,
-  ) => void,
+  onProgress?: (stage: "fetching" | "worktree", progress: number) => void,
 ): Effect.Effect<ProjectWorktreeCreateResult, DaemonError, Db> {
   return Effect.gen(function* () {
     const status = yield* projectGitStatus(input);
@@ -99,10 +72,6 @@ export function createProjectWorktree(
       return yield* Effect.fail(DaemonError.projectNotGitRepository());
     }
     const root = status.root;
-    const setup = status.worktreeSetup;
-    if (setup && input.setupApproval !== setup.digest) {
-      return yield* Effect.fail(DaemonError.worktreeSetupApprovalRequired());
-    }
 
     onProgress?.("fetching", 10);
     const startPointFetch = input.startPointFetch;
@@ -258,7 +227,7 @@ export function createProjectWorktree(
             );
           }
         }
-        onProgress?.("setup", 75);
+        onProgress?.("worktree", 75);
         if (signal?.aborted) {
           yield* Effect.promise(() =>
             discardCreatedWorktree(
@@ -272,7 +241,7 @@ export function createProjectWorktree(
             DaemonError.worktreeCreateFailed(signal.reason),
           );
         }
-        onProgress?.("setup", 100);
+        onProgress?.("worktree", 100);
         return created;
       }
     }

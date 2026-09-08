@@ -995,7 +995,6 @@ export const zhTW = {
       stageCompleted: "完成",
       stagePreparing: "準備目標目錄",
       stageRegistering: "註冊專案",
-      tabSourceControl: "原始碼控制",
       tabUrl: "Git 網址",
       title: "複製儲存庫",
       urlHint: "https、ssh 或 owner/repo",

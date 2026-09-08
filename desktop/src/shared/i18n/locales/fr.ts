@@ -1056,7 +1056,6 @@ export const fr = {
       stageCompleted: "Terminé",
       stagePreparing: "Préparation de la destination",
       stageRegistering: "Enregistrement du projet",
-      tabSourceControl: "contrôle de code source",
       tabUrl: "URL Git",
       title: "Cloner un dépôt",
       urlHint: "https, ssh ou owner/repo",
