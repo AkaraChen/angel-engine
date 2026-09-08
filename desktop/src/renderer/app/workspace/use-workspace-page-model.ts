@@ -22,7 +22,6 @@ import {
 import { draftAgentConfigFromExplicitOverrides } from "@/app/workspace/workspace-draft-agent-config";
 import {
   chatNotificationRoutePath,
-  isChatOpenableInWorkspaceMode,
 } from "@/app/workspace/workspace-route-paths";
 import {
   draftRuntimeKeyFromProjectId,
@@ -31,7 +30,6 @@ import {
 import { useWorkspaceToolStore } from "@/app/workspace/workspace-tool-store";
 import { resolveWorkspaceToolContext } from "@/app/workspace/workspace-tool-context";
 import {
-  isProjectWorkspaceMode,
   useWorkspaceUiStore,
 } from "@/app/workspace/workspace-ui-store";
 import { useToast } from "@/components/ui/toast";
@@ -48,7 +46,6 @@ import {
   useChatRunConfig,
   useChatRunIsRunning,
 } from "@/features/chat/state/chat-run-store";
-import { useChatTabStore } from "@/features/chat/state/chat-tab-store";
 import {
   projectGitStatusQueryOptions,
   projectListQueryOptions,
@@ -62,6 +59,8 @@ const EMPTY_PROJECTS: Project[] = [];
 interface UseWorkspacePageModelOptions {
   api: ReturnType<typeof useApi>;
   draftProjectId?: string;
+  /** The Fleet overview owns the main pane; no draft composer is mounted. */
+  fleetActive?: boolean;
   /** Schedule owns the main pane and must not prewarm a draft session. */
   scheduleActive?: boolean;
   routeProjectId?: string;
@@ -71,6 +70,7 @@ interface UseWorkspacePageModelOptions {
 export function useWorkspacePageModel({
   api,
   draftProjectId: routeDraftProjectId,
+  fleetActive = false,
   scheduleActive = false,
   routeProjectId,
   selectedChatId,
@@ -91,16 +91,6 @@ export function useWorkspacePageModel({
   );
   const rightSidebarWidth = useWorkspaceUiStore(
     (state) => state.rightSidebarWidth,
-  );
-  const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
-  const lastOpenedTargets = useWorkspaceUiStore(
-    (state) => state.lastOpenedTargets,
-  );
-  const rememberLastOpenedTarget = useWorkspaceUiStore(
-    (state) => state.rememberLastOpenedTarget,
-  );
-  const setWorkspaceMode = useWorkspaceUiStore(
-    (state) => state.setWorkspaceMode,
   );
   const setRightSidebarOpen = useWorkspaceUiStore(
     (state) => state.setRightSidebarOpen,
@@ -142,51 +132,16 @@ export function useWorkspacePageModel({
   );
   const isProjectMode = true;
   const showRightSidebar = isProjectMode;
-  const previousWorkspaceModeRef = useRef(workspaceMode);
   const previousWorkspaceToolHostRef = useRef(workspaceToolHost);
 
-  useEffect(() => {
-    if (
-      !isProjectWorkspaceMode(previousWorkspaceModeRef.current) &&
-      isProjectWorkspaceMode(workspaceMode)
-    ) {
-      setRightSidebarOpen(true);
-    }
-    previousWorkspaceModeRef.current = workspaceMode;
-  }, [setRightSidebarOpen, workspaceMode]);
 
   const draftState = useWorkspaceDraftState();
   const draftSessionCounterRef = useRef(0);
-  // Schedule is a chat-less route but not a draft.
+  // Fleet and Schedule are chat-less routes but not drafts.
   const isDraftPage =
-    !scheduleActive && !is.nonEmptyString(selectedChatId);
-  const powerModeActive = workspaceMode === "power";
-  const draftWorktree = useChatTabStore((state) => state.draftWorktree);
-  const activePowerWorktree = useChatTabStore((state) => state.activeWorktree);
-  const powerWorktreeView = useChatTabStore(
-    (state) => state.activeWorktreeView,
-  );
-  const powerDraftContext =
-    powerModeActive &&
-    isDraftPage &&
-    draftWorktree !== undefined &&
-    routeDraftProjectId === draftWorktree.projectId
-      ? draftWorktree
-      : undefined;
-  const powerDraftTabActive =
-    powerWorktreeView === "draft" && powerDraftContext !== undefined;
-  const pinnedDraftCwd = powerDraftTabActive
-    ? powerDraftContext.cwd
-    : undefined;
-  const draftCwd = isDraftPage
-    ? draftState.draftCwds.create
-    : undefined;
-  const powerHomePageContext =
-    powerModeActive &&
-    powerWorktreeView === "home" &&
-    activePowerWorktree !== undefined
-      ? activePowerWorktree
-      : undefined;
+    !fleetActive && !scheduleActive && !is.nonEmptyString(selectedChatId);
+  const pinnedDraftCwd = undefined;
+  const draftCwd = isDraftPage ? draftState.draftCwds.create : undefined;
 
   const projectsQuery = useQuery({ ...projectListQueryOptions({ api }) });
   const chatsQuery = useQuery({ ...chatListQueryOptions({ api }) });
@@ -207,12 +162,6 @@ export function useWorkspacePageModel({
   const selectedProject = is.nonEmptyString(selectedProjectId)
     ? projects.find((project) => project.id === selectedProjectId)
     : undefined;
-  const activePowerWorktreeProject =
-    powerHomePageContext !== undefined
-      ? projects.find(
-          (project) => project.id === powerHomePageContext.projectId,
-        )
-      : undefined;
   const selectedProjectPath = isDraftPage
     ? draftProject.path
     : (selectedProject?.path ?? selectedChat?.cwd);
@@ -221,14 +170,10 @@ export function useWorkspacePageModel({
     : is.nonEmptyString(selectedProjectPath)
       ? getProjectDisplayName(selectedProjectPath)
       : undefined;
-  const projectWorkspaceToolRoot =
-    pinnedDraftCwd ?? powerHomePageContext?.cwd ?? selectedProjectPath;
+  const projectWorkspaceToolRoot = selectedProjectPath;
   const workspaceToolContext = resolveWorkspaceToolContext({
     projectId:
-      selectedChat?.projectId ??
-      powerDraftContext?.projectId ??
-      powerHomePageContext?.projectId ??
-      selectedProjectId,
+      selectedChat?.projectId ?? selectedProjectId,
     projectRoot:
       is.nonEmptyString(selectedChat?.projectId) &&
       is.nonEmptyString(selectedChatId)
@@ -236,7 +181,6 @@ export function useWorkspacePageModel({
         : (projectWorkspaceToolRoot ?? undefined),
     selectedChatId,
     selectedChatProjectId: selectedChat?.projectId ?? undefined,
-    workspaceMode,
   });
   const workspaceToolContextKey = workspaceToolContext?.contextKey;
   const workspaceToolRoot = workspaceToolContext?.root;
@@ -315,7 +259,7 @@ export function useWorkspacePageModel({
   const draftProjectGitStatusQuery = useQuery({
     ...projectGitStatusQueryOptions({
       api,
-      enabled: isDraftPage && draftProject.id !== undefined,
+      enabled: isDraftPage && draftProject.id !== undefined && draftCwd === undefined,
       projectId: draftProject.id,
     }),
   });
@@ -323,6 +267,7 @@ export function useWorkspacePageModel({
     isDraftPage &&
     isProjectMode &&
     pinnedDraftCwd === undefined &&
+    draftCwd === undefined &&
     draftProjectGitStatusQuery.data?.isGitRepository === true;
   const draftCreationLocation: ChatCreationLocation = canCreateDraftWorktree
     ? requestedDraftCreationLocation
@@ -338,8 +283,7 @@ export function useWorkspacePageModel({
       enabled:
         shouldPrewarmChat &&
         draftCreationLocation !== "worktree" &&
-        pinnedDraftCwd === undefined &&
-        draftCwd === undefined,
+        pinnedDraftCwd === undefined && draftCwd === undefined,
       projectId: draftProject.id,
       runtime: activeRuntime,
     }),
@@ -349,13 +293,11 @@ export function useWorkspacePageModel({
     pinnedDraftCwd !== undefined ||
     draftCwd !== undefined;
   const shouldInspectDraftRuntimeConfig =
-    isDraftPage &&
-    inspectDraftRuntimeConfig &&
-    (draftCwd !== undefined || draftProject.path !== undefined);
+    isDraftPage && inspectDraftRuntimeConfig && (draftCwd ?? draftProject.path) !== undefined;
   const draftRuntimeConfigQuery = useQuery({
     ...chatRuntimeConfigQueryOptions({
       api,
-      cwd: draftCwd ?? pinnedDraftCwd ?? draftProject.path,
+      cwd: pinnedDraftCwd ?? draftCwd ?? draftProject.path,
       enabled: shouldInspectDraftRuntimeConfig,
       runtime: activeRuntime,
     }),
@@ -391,33 +333,6 @@ export function useWorkspacePageModel({
     window.desktopWindow.setActiveChatId(selectedChatId ?? null);
   }, [selectedChatId]);
 
-  useEffect(() => {
-    if (
-      selectedChat &&
-      isChatOpenableInWorkspaceMode(selectedChat, workspaceMode)
-    ) {
-      rememberLastOpenedTarget(workspaceMode, {
-        chatId: selectedChat.id,
-        type: "chat",
-      });
-      return;
-    }
-    if (isDraftPage) {
-      rememberLastOpenedTarget(
-        workspaceMode,
-        isProjectWorkspaceMode(workspaceMode) &&
-          routeDraftProjectId !== undefined
-          ? { projectId: routeDraftProjectId, type: "draft" }
-          : { type: "draft" },
-      );
-    }
-  }, [
-    isDraftPage,
-    rememberLastOpenedTarget,
-    routeDraftProjectId,
-    selectedChat,
-    workspaceMode,
-  ]);
 
   useEffect(
     () =>
@@ -447,8 +362,6 @@ export function useWorkspacePageModel({
   return {
     ...draftState,
     ...draftChatOptions,
-    activePowerWorktree,
-    activePowerWorktreeProject,
     activeRuntime,
     api,
     canCreateDraftWorktree,
@@ -460,22 +373,16 @@ export function useWorkspacePageModel({
     draftCreationLocation,
     draftCreationLocationKey,
     draftProjectGitStatusQuery,
-    draftRuntimeKey,
     draftProject,
+    draftCwd,
     draftSessionCounterRef,
     isDraftPage,
     isMacOS,
     isProjectMode,
     initialDraftPrompt: draftState.draftInitialPrompts[runtimePageKey] ?? "",
-    lastOpenedTargets,
     location,
     navigate,
     pinnedDraftCwd,
-    draftCwd,
-    powerDraftContext,
-    powerDraftTabActive,
-    powerHomePageContext,
-    powerModeActive,
     prewarmQuery,
     projectChatsByProjectId,
     projects,
@@ -500,7 +407,6 @@ export function useWorkspacePageModel({
     setRightSidebarOpen,
     setSidebarOpen,
     setSidebarOpenMobile,
-    setWorkspaceMode,
     setWorktreeDirtyPromptEnabled,
     sidebarOpen,
     sidebarOpenMobile,
@@ -508,7 +414,6 @@ export function useWorkspacePageModel({
     toast,
     toggleWorkspaceTools,
     updateAgentSettings,
-    workspaceMode,
     workspaceToolHost,
     workspaceToolContextKey,
     workspaceToolRoot,

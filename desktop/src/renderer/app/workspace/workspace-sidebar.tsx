@@ -10,11 +10,13 @@ import {
   Plus,
   CalendarDots,
   GearSix as Settings,
+  SquaresFour,
 } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
 import { m } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { resolveWorkspaceNewChatTarget } from "@/app/workspace/workspace-new-chat-target";
 import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
 import {
   Sidebar,
@@ -28,6 +30,7 @@ import {
   WorkspaceSidebarMenuButton,
 } from "@/components/workspace-sidebar-primitives";
 import { SimpleChatSidebarSection } from "@/features/chat/components/simple-chat-sidebar-section";
+import { ProjectSidebarSection } from "@/features/projects/components/project-sidebar-section";
 
 type MaybeAsync = void | Promise<void>;
 const FLOATING_SIDEBAR_OPEN_DELAY_MS = 80;
@@ -42,6 +45,7 @@ const FLOATING_SIDEBAR_TRANSITION = {
 
 interface WorkspaceSidebarProps {
   chats: Chat[];
+  fleetActive: boolean;
   scheduleActive: boolean;
   isChatsLoading: boolean;
   isMacOS: boolean;
@@ -54,6 +58,7 @@ interface WorkspaceSidebarProps {
   onCreateStandaloneChat: () => MaybeAsync;
   onImportSession: (project: Project) => void;
   onOpenChat: (chat: Chat) => MaybeAsync;
+  onOpenFleet: () => MaybeAsync;
   onOpenSchedule: () => MaybeAsync;
   onOpenSettings: () => MaybeAsync;
   onOpenWorktree: (
@@ -205,6 +210,7 @@ export function WorkspaceFloatingSidebar(
 
 function WorkspaceSidebarContent({
   chats,
+  fleetActive,
   scheduleActive,
   isChatsLoading,
   isMacOS,
@@ -217,6 +223,7 @@ function WorkspaceSidebarContent({
   onCreateStandaloneChat,
   onImportSession,
   onOpenChat,
+  onOpenFleet,
   onOpenSchedule,
   onOpenSettings,
   onOpenWorktree,
@@ -238,7 +245,22 @@ function WorkspaceSidebarContent({
     (chat) => !is.nonEmptyString(chat.projectId),
   );
   const createChatFromNewButton = async () => {
-    return onCreateStandaloneChat();
+    const target = resolveWorkspaceNewChatTarget({
+      fleetActive: fleetActive || scheduleActive,
+      projects,
+      selectedChatId,
+      selectedProjectId,
+      workspaceMode: "work",
+    });
+
+    switch (target.type) {
+      case "none":
+        return;
+      case "project":
+        return onCreateProjectChat(target.project);
+      case "standalone":
+        return onCreateStandaloneChat();
+    }
   };
 
   return (
@@ -247,6 +269,7 @@ function WorkspaceSidebarContent({
         {isMacOS || reserveNativeSidebarControlSpace ? (
           <div aria-hidden className="h-8 shrink-0" />
         ) : null}
+
       </SidebarHeader>
 
       <SidebarContent className="gap-0 pb-1">
@@ -280,6 +303,15 @@ function WorkspaceSidebarContent({
               <span>{t("schedule.title")}</span>
             </WorkspaceSidebarMenuButton>
           </AnimatedSidebarMenuItem>
+          <AnimatedSidebarMenuItem>
+            <WorkspaceSidebarMenuButton
+              isActive={fleetActive}
+              onClick={() => void onOpenFleet()}
+            >
+              <SquaresFour weight="duotone" />
+              <span>{t("fleet.title")}</span>
+            </WorkspaceSidebarMenuButton>
+          </AnimatedSidebarMenuItem>
         </SidebarMenu>
 
         <SimpleChatSidebarSection
@@ -291,6 +323,23 @@ function WorkspaceSidebarContent({
             selectedChatId={selectedChatId}
           />
 
+        <ProjectSidebarSection
+            isLoading={isProjectsLoading}
+            onArchiveChat={onArchiveChat}
+            onCloneRepository={onCloneRepository}
+            onCancelWorktreeCreation={onCancelWorktreeCreation}
+            onCreateProject={onCreateProject}
+            onCreateProjectChat={onCreateProjectChat}
+            onImportSession={onImportSession}
+            onOpenChat={onOpenChat}
+            onRetryWorktreeCreation={onRetryWorktreeCreation}
+            onChatContextMenuAction={onChatContextMenuAction}
+            onProjectContextMenuAction={onProjectContextMenuAction}
+            onProjectPathLauncherAction={onProjectPathLauncherAction}
+            projectChatsByProjectId={projectChatsByProjectId}
+            projects={projects}
+            selectedChatId={selectedChatId}
+          />
       </SidebarContent>
 
       <SidebarFooter className="p-2">

@@ -1,7 +1,6 @@
 import type { useApi } from "@/platform/use-api";
 
 import { Redirect } from "wouter";
-import { usePowerWorktreeTabs } from "@/app/workspace/use-power-worktree-tabs";
 import { useWorkspaceChatActions } from "@/app/workspace/use-workspace-chat-actions";
 import { useWorkspaceNavigation } from "@/app/workspace/use-workspace-navigation";
 import { useWorkspacePageModel } from "@/app/workspace/use-workspace-page-model";
@@ -41,7 +40,6 @@ export function WorkspacePageContent({
     navigation,
   });
   const draftGuard = useWorktreeDraftGuard(model, navigation);
-  const powerTabs = usePowerWorktreeTabs(model, navigation);
 
   if (model.selectedChat) {
     const canonicalPath = chatRoutePath(model.selectedChat, {
@@ -81,7 +79,6 @@ export function WorkspacePageContent({
       scheduleActive={scheduleActive}
       model={model}
       navigation={navigation}
-      powerTabs={powerTabs}
     />
   );
 }
