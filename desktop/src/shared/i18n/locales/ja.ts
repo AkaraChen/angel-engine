@@ -319,6 +319,7 @@ export const ja = {
         },
         listeningPorts: "リスニングポート",
         resizeFileTree: "ファイルツリーの幅を調整",
+        resizeGitList: "変更リストの幅を調整",
         subprocesses: "サブプロセス",
         tabs: {
           checks: "チェック",

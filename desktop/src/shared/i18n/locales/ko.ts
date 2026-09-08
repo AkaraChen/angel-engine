@@ -315,6 +315,7 @@ export const ko = {
         },
         listeningPorts: "수신 대기 포트",
         resizeFileTree: "파일 트리 너비 조정",
+        resizeGitList: "변경 목록 너비 조정",
         subprocesses: "하위 프로세스",
         tabs: {
           checks: "검사",

@@ -317,6 +317,7 @@ export const en = {
         },
         listeningPorts: "Listening ports",
         resizeFileTree: "Resize file tree",
+        resizeGitList: "Resize Git change list",
         subprocesses: "Subprocesses",
         tabs: {
           checks: "Checks",

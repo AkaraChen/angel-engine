@@ -185,9 +185,3 @@ const PaletteEntry: FC<{
     </CommandItem>
   );
 };
-
-function unsupportedCapabilityReason(
-  state: ReturnType<typeof capabilityState>,
-): string | null {
-  return state.supported ? null : state.reason.message;
-}

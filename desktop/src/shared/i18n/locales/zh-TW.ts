@@ -311,6 +311,7 @@ export const zhTW = {
         },
         listeningPorts: "監聽連接埠",
         resizeFileTree: "調整檔案樹寬度",
+        resizeGitList: "調整變更清單寬度",
         subprocesses: "子處理程序",
         tabs: {
           checks: "檢查",

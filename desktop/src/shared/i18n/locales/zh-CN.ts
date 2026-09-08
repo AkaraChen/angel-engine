@@ -311,6 +311,7 @@ export const zhCN = {
         },
         listeningPorts: "监听端口",
         resizeFileTree: "调整文件树宽度",
+        resizeGitList: "调整更改列表宽度",
         subprocesses: "子进程",
         tabs: {
           checks: "检查",

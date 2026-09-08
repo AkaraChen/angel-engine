@@ -320,6 +320,7 @@ export const de = {
         },
         listeningPorts: "Lauschende Ports",
         resizeFileTree: "Dateibaumbreite anpassen",
+        resizeGitList: "Breite der Änderungsliste anpassen",
         subprocesses: "Unterprozesse",
         tabs: {
           checks: "Checks",

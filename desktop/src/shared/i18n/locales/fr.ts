@@ -322,6 +322,7 @@ export const fr = {
         },
         listeningPorts: "Ports en écoute",
         resizeFileTree: "Redimensionner l’arborescence",
+        resizeGitList: "Redimensionner la liste des changements",
         subprocesses: "Sous-processus",
         tabs: {
           checks: "Checks",
