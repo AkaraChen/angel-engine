@@ -18,11 +18,7 @@ export function resolveWorkspaceToolContext({
   selectedChatId,
   selectedChatProjectId,
 }: ResolveWorkspaceToolContextOptions): WorkspaceToolContext | null {
-  if (
-    workspaceMode === "chat" ||
-    !is.nonEmptyString(projectId) ||
-    !is.nonEmptyString(projectRoot)
-  ) {
+  if (!is.nonEmptyString(projectId) || !is.nonEmptyString(projectRoot)) {
     return null;
   }
 

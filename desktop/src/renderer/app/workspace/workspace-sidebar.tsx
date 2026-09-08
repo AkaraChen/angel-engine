@@ -2,7 +2,6 @@ import type { Chat } from "@angel-engine/daemon-api/chat";
 import type { Project } from "@angel-engine/daemon-api/projects";
 import type { ReactElement } from "react";
 
-import type { ProjectWorktreeChatGroup } from "@/features/chat/worktree-grouping";
 import type { PathLauncherActionId } from "@shared/path-launcher";
 import type { ChatContextMenuAction } from "@/features/chat/api/queries";
 import type { ProjectContextMenuAction } from "@/features/projects/api/queries";
@@ -42,7 +41,6 @@ const FLOATING_SIDEBAR_TRANSITION = {
   type: "spring",
 } as const;
 
-
 interface WorkspaceSidebarProps {
   chats: Chat[];
   fleetActive: boolean;
@@ -52,7 +50,6 @@ interface WorkspaceSidebarProps {
   isProjectsLoading: boolean;
   onArchiveChat: (chat: Chat) => MaybeAsync;
   onCloneRepository: () => MaybeAsync;
-  onCancelWorktreeCreation: (chat: Chat) => MaybeAsync;
   onCreateProject: () => MaybeAsync;
   onCreateProjectChat: (project: Project) => MaybeAsync;
   onCreateStandaloneChat: () => MaybeAsync;
@@ -61,11 +58,6 @@ interface WorkspaceSidebarProps {
   onOpenFleet: () => MaybeAsync;
   onOpenSchedule: () => MaybeAsync;
   onOpenSettings: () => MaybeAsync;
-  onOpenWorktree: (
-    project: Project,
-    worktreeGroup: ProjectWorktreeChatGroup,
-  ) => MaybeAsync;
-  onRetryWorktreeCreation: (chat: Chat) => MaybeAsync;
   onChatContextMenuAction: (chat: Chat, action: ChatContextMenuAction) => void;
   onProjectContextMenuAction: (
     project: Project,
@@ -73,11 +65,6 @@ interface WorkspaceSidebarProps {
   ) => void;
   onProjectPathLauncherAction: (
     project: Project,
-    action: PathLauncherActionId,
-  ) => void;
-  onWorktreePathLauncherAction: (
-    project: Project,
-    worktreeGroup: ProjectWorktreeChatGroup,
     action: PathLauncherActionId,
   ) => void;
   projectChatsByProjectId: Map<string, Chat[]>;
@@ -89,12 +76,8 @@ interface WorkspaceSidebarProps {
 export function WorkspaceSidebar({
   ...props
 }: WorkspaceSidebarProps): ReactElement {
-
   return (
-    <Sidebar
-      className="select-none"
-      variant="inset"
-    >
+    <Sidebar className="select-none" variant="inset">
       <WorkspaceSidebarContent {...props} />
     </Sidebar>
   );
@@ -217,7 +200,6 @@ function WorkspaceSidebarContent({
   isProjectsLoading,
   onArchiveChat,
   onCloneRepository,
-  onCancelWorktreeCreation,
   onCreateProject,
   onCreateProjectChat,
   onCreateStandaloneChat,
@@ -226,12 +208,9 @@ function WorkspaceSidebarContent({
   onOpenFleet,
   onOpenSchedule,
   onOpenSettings,
-  onOpenWorktree,
-  onRetryWorktreeCreation,
   onChatContextMenuAction,
   onProjectContextMenuAction,
   onProjectPathLauncherAction,
-  onWorktreePathLauncherAction,
   projectChatsByProjectId,
   projects,
   selectedChatId,
@@ -269,7 +248,6 @@ function WorkspaceSidebarContent({
         {isMacOS || reserveNativeSidebarControlSpace ? (
           <div aria-hidden className="h-8 shrink-0" />
         ) : null}
-
       </SidebarHeader>
 
       <SidebarContent className="gap-0 pb-1">
@@ -315,31 +293,29 @@ function WorkspaceSidebarContent({
         </SidebarMenu>
 
         <SimpleChatSidebarSection
-            chats={standaloneChats}
-            isLoading={isChatsLoading}
-            onArchiveChat={onArchiveChat}
-            onOpenChat={onOpenChat}
-            onChatContextMenuAction={onChatContextMenuAction}
-            selectedChatId={selectedChatId}
-          />
+          chats={standaloneChats}
+          isLoading={isChatsLoading}
+          onArchiveChat={onArchiveChat}
+          onOpenChat={onOpenChat}
+          onChatContextMenuAction={onChatContextMenuAction}
+          selectedChatId={selectedChatId}
+        />
 
         <ProjectSidebarSection
-            isLoading={isProjectsLoading}
-            onArchiveChat={onArchiveChat}
-            onCloneRepository={onCloneRepository}
-            onCancelWorktreeCreation={onCancelWorktreeCreation}
-            onCreateProject={onCreateProject}
-            onCreateProjectChat={onCreateProjectChat}
-            onImportSession={onImportSession}
-            onOpenChat={onOpenChat}
-            onRetryWorktreeCreation={onRetryWorktreeCreation}
-            onChatContextMenuAction={onChatContextMenuAction}
-            onProjectContextMenuAction={onProjectContextMenuAction}
-            onProjectPathLauncherAction={onProjectPathLauncherAction}
-            projectChatsByProjectId={projectChatsByProjectId}
-            projects={projects}
-            selectedChatId={selectedChatId}
-          />
+          isLoading={isProjectsLoading}
+          onArchiveChat={onArchiveChat}
+          onCloneRepository={onCloneRepository}
+          onCreateProject={onCreateProject}
+          onCreateProjectChat={onCreateProjectChat}
+          onImportSession={onImportSession}
+          onOpenChat={onOpenChat}
+          onChatContextMenuAction={onChatContextMenuAction}
+          onProjectContextMenuAction={onProjectContextMenuAction}
+          onProjectPathLauncherAction={onProjectPathLauncherAction}
+          projectChatsByProjectId={projectChatsByProjectId}
+          projects={projects}
+          selectedChatId={selectedChatId}
+        />
       </SidebarContent>
 
       <SidebarFooter className="p-2">

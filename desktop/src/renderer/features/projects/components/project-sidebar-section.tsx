@@ -7,7 +7,6 @@ import type { ProjectContextMenuAction } from "@/features/projects/api/queries";
 import {
   CaretDown as ChevronDown,
   Folder,
-  GitBranch,
   SpinnerGap as Loader2,
   Plus,
 } from "@phosphor-icons/react";
@@ -36,7 +35,6 @@ import { ChatContextMenu } from "@/features/chat/components/chat-context-menu";
 import { ChatSidebarItem } from "@/features/chat/components/chat-sidebar-item";
 import { ProjectContextMenu } from "@/features/projects/components/project-context-menu";
 import { AddProjectMenu } from "@/features/projects/components/add-project-menu";
-import { WorktreeCreationActions } from "@/features/projects/components/worktree-creation-actions";
 
 type MaybeAsync = void | Promise<void>;
 
@@ -44,12 +42,10 @@ interface ProjectSidebarSectionProps {
   isLoading: boolean;
   onArchiveChat: (chat: Chat) => MaybeAsync;
   onCloneRepository: () => MaybeAsync;
-  onCancelWorktreeCreation: (chat: Chat) => MaybeAsync;
   onCreateProject: () => MaybeAsync;
   onCreateProjectChat: (project: Project) => MaybeAsync;
   onImportSession: (project: Project) => void;
   onOpenChat: (chat: Chat) => MaybeAsync;
-  onRetryWorktreeCreation: (chat: Chat) => MaybeAsync;
   onChatContextMenuAction: (chat: Chat, action: ChatContextMenuAction) => void;
   onProjectContextMenuAction: (
     project: Project,
@@ -68,12 +64,10 @@ export function ProjectSidebarSection({
   isLoading,
   onArchiveChat,
   onCloneRepository,
-  onCancelWorktreeCreation,
   onCreateProject,
   onCreateProjectChat,
   onImportSession,
   onOpenChat,
-  onRetryWorktreeCreation,
   onChatContextMenuAction,
   onProjectContextMenuAction,
   onProjectPathLauncherAction,
@@ -220,38 +214,6 @@ export function ProjectSidebarSection({
                         <SidebarMenu>
                           {hasChats ? (
                             projectChats.map((chat) => {
-                              const creation = chat.worktreeCreation;
-                              if (creation) {
-                                const failed = creation.status === "failed";
-                                return (
-                                  <AnimatedSidebarMenuItem key={chat.id}>
-                                    <div
-                                      className="flex h-7 items-center gap-1.5 pr-1 pl-6 text-[11px]"
-                                      title={creation.error}
-                                    >
-                                      {failed ? (
-                                        <GitBranch className="size-3 shrink-0 text-destructive" />
-                                      ) : (
-                                        <Loader2 className="size-3 shrink-0 animate-spin" />
-                                      )}
-                                      <span className="min-w-0 flex-1 truncate text-sidebar-foreground/65">
-                                        {failed
-                                          ? t("sidebar.worktreeCreationFailed")
-                                          : t("sidebar.worktreeCreating", {
-                                              progress: creation.progress,
-                                            })}
-                                      </span>
-                                      <WorktreeCreationActions
-                                        chat={chat}
-                                        onCancel={onCancelWorktreeCreation}
-                                        onOpenChat={onOpenChat}
-                                        onRetry={onRetryWorktreeCreation}
-                                        projectChats={projectChats}
-                                      />
-                                    </div>
-                                  </AnimatedSidebarMenuItem>
-                                );
-                              }
                               return (
                                 <AnimatedSidebarMenuItem key={chat.id}>
                                   <ChatContextMenu

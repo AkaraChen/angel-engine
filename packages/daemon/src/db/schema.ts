@@ -1,8 +1,4 @@
-import type {
-  ChatSourceLink,
-  WorktreeCreationState,
-} from "@angel-engine/daemon-api/chat";
-import type { ProjectWorktreeCreateInput } from "@angel-engine/daemon-api/projects";
+import type { ChatSourceLink } from "@angel-engine/daemon-api/chat";
 import {
   index,
   integer,
@@ -80,23 +76,6 @@ export const chatDiffAnchors = sqliteTable(
     ),
   ],
 );
-
-export const worktreeCreationJobs = sqliteTable("worktree_creation_jobs", {
-  chatId: text("chat_id")
-    .primaryKey()
-    .references(() => chats.id, { onDelete: "cascade" }),
-  error: text("error"),
-  errorCode: text("error_code").$type<WorktreeCreationState["errorCode"]>(),
-  jobId: text("job_id").notNull(),
-  progress: integer("progress").notNull(),
-  relatedChatId: text("related_chat_id"),
-  setupApproval: text("setup_approval"),
-  worktreeRef: text("worktree_ref", { mode: "json" }).$type<
-    ProjectWorktreeCreateInput["ref"]
-  >(),
-  stage: text("stage").notNull(),
-  status: text("status").notNull(),
-});
 
 export const queuedChatRuns = sqliteTable(
   "queued_chat_runs",
@@ -209,7 +188,6 @@ export type NewCustomAgentRow = typeof customAgents.$inferInsert;
 export type ChatRow = typeof chats.$inferSelect;
 export type NewChatRow = typeof chats.$inferInsert;
 export type ChatDiffAnchorRow = typeof chatDiffAnchors.$inferSelect;
-export type WorktreeCreationJobRow = typeof worktreeCreationJobs.$inferSelect;
 export type QueuedChatRunRow = typeof queuedChatRuns.$inferSelect;
 export type PullRequestRow = typeof pullRequests.$inferSelect;
 export type NewPullRequestRow = typeof pullRequests.$inferInsert;

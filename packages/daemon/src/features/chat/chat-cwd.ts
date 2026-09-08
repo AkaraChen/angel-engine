@@ -1,16 +1,10 @@
-import type {
-  Chat,
-  ChatCreationLocationInput,
-  ChatCwdInput,
-} from "@angel-engine/daemon-api/chat";
+import type { Chat, ChatCwdInput } from "@angel-engine/daemon-api/chat";
 import type { Db } from "../../platform/db";
-import type { ProjectWorktreeCreateInput } from "@angel-engine/daemon-api/projects";
 
 import is from "@sindresorhus/is";
 import os from "node:os";
 import { Effect } from "effect";
 import { DaemonError } from "../../platform/errors";
-import { createProjectWorktree } from "../source-control/local-git/projects";
 import { getProject } from "../projects/repository";
 
 export function cwdForChat(
@@ -25,39 +19,15 @@ export function cwdForChat(
   });
 }
 
-/**
- * The fields that decide where a brand-new chat runs. Both `POST /api/chats`
- * and the legacy send route resolve through this one rule, so a worktree chat
- * materializes its worktree the same way whichever route created it.
- */
-export type ChatCwdResolutionInput = ChatCreationLocationInput &
-  ChatCwdInput & {
-    projectId?: string | null;
-    worktreeSetupApproval?: string;
-    worktreeRef?: ProjectWorktreeCreateInput["ref"];
-  };
+export type ChatCwdResolutionInput = ChatCwdInput & {
+  projectId?: string | null;
+};
 
 export function cwdForNewChat(
   input: ChatCwdResolutionInput,
-  signal?: AbortSignal,
 ): Effect.Effect<string, DaemonError, Db> {
   return Effect.gen(function* () {
     if (is.nonEmptyString(input.cwd)) return input.cwd;
-
-    if (input.creationLocation === "worktree") {
-      if (!is.nonEmptyString(input.projectId)) {
-        return yield* Effect.fail(DaemonError.projectRequiredForWorktree());
-      }
-      const worktree = yield* createProjectWorktree(
-        {
-          projectId: input.projectId,
-          setupApproval: input.worktreeSetupApproval,
-          ref: input.worktreeRef,
-        },
-        signal,
-      );
-      return worktree.cwd;
-    }
 
     return yield* cwdForProjectOrStandalone(input.projectId);
   });

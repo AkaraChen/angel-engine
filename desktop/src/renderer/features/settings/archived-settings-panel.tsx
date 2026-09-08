@@ -48,8 +48,6 @@ import {
   SettingsListNotice,
   SettingsListPlate,
 } from "./archived-settings-list";
-import { invalidateManagedWorktreeQueries } from "./api/managed-worktrees";
-import { RemovableWorktreesSection } from "./removable-worktrees-section";
 
 const EMPTY_CHATS: Chat[] = [];
 const EMPTY_PROJECTS: Project[] = [];
@@ -105,9 +103,6 @@ export function ArchivedSettingsPanel() {
         void queryClient.invalidateQueries({
           queryKey: queryKeys.chats.archived(),
         });
-        void queryClient.invalidateQueries({
-          queryKey: queryKeys.worktrees.all(),
-        });
       }),
     [queryClient],
   );
@@ -120,7 +115,6 @@ export function ArchivedSettingsPanel() {
         await restoreArchivedChatsMutation.mutateAsync({
           chatIds: chats.map((chat) => chat.id),
         });
-        await invalidateManagedWorktreeQueries(queryClient);
         broadcastChatsChanged();
         setSelectedIds(new Set());
         toast({
@@ -145,19 +139,12 @@ export function ArchivedSettingsPanel() {
 
       try {
         const chatIds = chats.map((chat) => chat.id);
-        const impact = await api.chats.archivedDeleteImpact({ chatIds });
         const confirmed = await confirmAction({
           cancelLabel: t("common.cancel"),
           confirmLabel: t("common.delete"),
-          description:
-            impact.managedWorktreeCount > 0
-              ? t("settings.archived.confirmDeleteWorktreeDetail", {
-                  chatCount: impact.chatCount,
-                  managedWorktreeCount: impact.managedWorktreeCount,
-                })
-              : t("settings.archived.confirmDeleteDetail", {
-                  chatCount: impact.chatCount,
-                }),
+          description: t("settings.archived.confirmDeleteDetail", {
+            chatCount: chats.length,
+          }),
           title: t("settings.archived.confirmDeleteTitle"),
           tone: "danger",
         });
@@ -166,7 +153,6 @@ export function ArchivedSettingsPanel() {
         const result = await deleteArchivedChatsMutation.mutateAsync({
           chatIds,
         });
-        await invalidateManagedWorktreeQueries(queryClient);
         broadcastChatsChanged();
         setSelectedIds(new Set());
         toast({
@@ -182,7 +168,7 @@ export function ArchivedSettingsPanel() {
         });
       }
     },
-    [api, deleteArchivedChatsMutation, queryClient, t, toast],
+    [deleteArchivedChatsMutation, t, toast],
   );
 
   const toggleBulkMode = useCallback(() => {
@@ -212,8 +198,6 @@ export function ArchivedSettingsPanel() {
 
   return (
     <div className="space-y-6">
-      <RemovableWorktreesSection projectsById={projectsById} />
-
       <section aria-labelledby="archived-sessions-title" className="space-y-3">
         <h2
           className={cn(sectionLabelClassName, "px-0.5 text-muted-foreground")}

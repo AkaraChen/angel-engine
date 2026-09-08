@@ -54,78 +54,18 @@ function workspaceModel(
     setDraftAgentConfigs: vi.fn(),
     setDraftRuntimes: vi.fn(),
     setDraftSessionIds: vi.fn(),
-    setWorkspaceMode: vi.fn(),
-    workspaceMode: "work",
     ...overrides,
   } as WorkspacePageModel;
 }
 
 describe("useWorkspaceNavigation", () => {
-  it.each([
-    "work",
-    "power",
-  ] as const)("opens the first project when switching to %s mode without a remembered target", (workspaceMode) => {
-    const navigate = vi.fn();
-    const setWorkspaceMode = vi.fn();
-    const model = workspaceModel({
-      location: "/",
-      navigate,
-      projects: [
-        {
-          id: "project-1",
-          path: "/Users/akrc/angel-engine",
-        } as Project,
-      ],
-      setWorkspaceMode,
-      workspaceMode: "chat",
-    });
-    const { result } = renderHook(() => useWorkspaceNavigation(model));
-
-    act(() => result.current.changeWorkspaceMode(workspaceMode));
-
-    expect(setWorkspaceMode).toHaveBeenCalledWith(workspaceMode);
-    expect(navigate).toHaveBeenCalledWith("/project/project-1", {
-      replace: true,
-    });
-  });
-
-  it("starts a standalone workspace in chat mode", () => {
+  it("starts a standalone workspace", () => {
     const model = workspaceModel();
     const { result } = renderHook(() => useWorkspaceNavigation(model));
 
     act(() => result.current.createStandaloneWorkspace());
 
-    expect(model.setWorkspaceMode).toHaveBeenCalledWith("chat");
     expect(model.navigate).toHaveBeenCalledWith("/", undefined);
     expect(model.setDraftSessionIds).toHaveBeenCalledTimes(1);
-  });
-
-  it("jumps between standalone and project session modes", () => {
-    const setWorkspaceMode = vi.fn();
-    const navigate = vi.fn();
-    const model = workspaceModel({ navigate, setWorkspaceMode });
-    const { result } = renderHook(() => useWorkspaceNavigation(model));
-
-    act(() => result.current.openChatFromFleet(chat({ id: "standalone" })));
-    expect(setWorkspaceMode).toHaveBeenCalledWith("chat");
-    expect(navigate).toHaveBeenCalledWith("/chat/standalone");
-
-    const chatModeModel = workspaceModel({
-      location: "/chat/standalone",
-      navigate,
-      setWorkspaceMode,
-      workspaceMode: "chat",
-    });
-    const { result: chatModeResult } = renderHook(() =>
-      useWorkspaceNavigation(chatModeModel),
-    );
-    act(() =>
-      chatModeResult.current.openChatFromFleet(
-        chat({ id: "project-chat", projectId: "project-1" }),
-      ),
-    );
-
-    expect(setWorkspaceMode).toHaveBeenCalledWith("work");
-    expect(navigate).toHaveBeenCalledWith("/project/project-1/project-chat");
   });
 });
