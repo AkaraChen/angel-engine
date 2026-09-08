@@ -601,10 +601,6 @@ export const zhTW = {
         unsupported: "自動更新目前僅在 macOS 上可用。",
       },
       workspace: {
-        dirtyPromptDescription:
-          "當所選專案存在未提交變更時，建立 worktree 前先詢問。",
-        dirtyPromptSwitchLabel: "倉庫存在未提交變更時，建立 worktree 前先提醒",
-        dirtyPromptTitle: "未提交變更提醒",
         osNotificationsDescription:
           "在背景工作階段完成、失敗或需要你處理時顯示系統通知。關閉後仍可在應用內查看歷史。",
         osNotificationsSwitchLabel: "顯示系統通知",

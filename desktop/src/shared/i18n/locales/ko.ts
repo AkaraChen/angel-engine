@@ -617,10 +617,6 @@ export const ko = {
         unsupported: "자동 업데이트는 현재 macOS에서만 지원됩니다.",
       },
       workspace: {
-        dirtyPromptDescription:
-          "선택한 프로젝트에 커밋되지 않은 변경 사항이 있을 때 worktree 생성 전에 확인합니다.",
-        dirtyPromptSwitchLabel: "dirty 저장소에서 worktree를 만들기 전에 경고",
-        dirtyPromptTitle: "dirty 저장소 경고",
         osNotificationsDescription:
           "백그라운드 채팅이 완료·실패하거나 입력이 필요할 때 OS 알림을 표시합니다. 꺼도 앱 내 기록은 유지됩니다.",
         osNotificationsSwitchLabel: "OS 알림 표시",
