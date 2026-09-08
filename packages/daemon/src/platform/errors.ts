@@ -363,56 +363,6 @@ export class DaemonError extends Data.TaggedError(
    * the transport hands back an actionable code instead of a generic
    * `git-failed` with stderr the UI can only print verbatim.
    */
-  static workspaceGitPushFailed(cause: unknown) {
-    const message = gitMessageFromCause(cause, "Git push failed.");
-    if (isGitAuthFailure(message)) {
-      return new DaemonError({
-        cause,
-        code: "workspace-git-auth-failed",
-        message,
-        status: 403,
-      });
-    }
-    if (isGitNetworkFailure(message)) {
-      return new DaemonError({
-        cause,
-        code: "workspace-git-network-failed",
-        message,
-        status: 500,
-      });
-    }
-    if (isGitPushRejected(message)) {
-      return new DaemonError({
-        cause,
-        code: "workspace-git-push-rejected",
-        message,
-        status: 409,
-      });
-    }
-    return DaemonError.gitFailed(cause, "Git push failed.");
-  }
-
-  static workspaceGitPullFailed(cause: unknown) {
-    const message = gitMessageFromCause(cause, "Git pull failed.");
-    if (isGitAuthFailure(message)) {
-      return new DaemonError({
-        cause,
-        code: "workspace-git-auth-failed",
-        message,
-        status: 403,
-      });
-    }
-    if (isGitNetworkFailure(message)) {
-      return new DaemonError({
-        cause,
-        code: "workspace-git-network-failed",
-        message,
-        status: 500,
-      });
-    }
-    return DaemonError.gitFailed(cause, "Git pull failed.");
-  }
-
   static processNotRegistered() {
     return new DaemonError({
       code: "process-not-registered",

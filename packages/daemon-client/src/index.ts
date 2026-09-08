@@ -71,20 +71,8 @@ import type {
   WorkspaceFileReadResult,
   WorkspaceFileTreeResult,
   WorkspaceFileWriteResult,
-  WorkspaceGitBranchesResult,
-  WorkspaceGitCheckoutInput,
-  WorkspaceGitCheckoutResult,
-  WorkspaceGitCommitShowInput,
-  WorkspaceGitCommitShowResult,
   WorkspaceGitDiffInput,
   WorkspaceGitDiffResult,
-  WorkspaceGitLogResult,
-  WorkspaceToolGitCommitInput,
-  WorkspaceToolGitCommitResult,
-  WorkspaceToolGitPullInput,
-  WorkspaceToolGitPullResult,
-  WorkspaceToolGitPushInput,
-  WorkspaceToolGitPushResult,
   WorkspaceToolReadFileInput,
   WorkspaceToolRootInput,
   WorkspaceToolWriteFileInput,
@@ -485,33 +473,6 @@ export function createDaemonClient(options: DaemonClientOptions) {
         ),
     },
     workspaceTools: {
-      gitCommit: (input: WorkspaceToolGitCommitInput) =>
-        request<WorkspaceToolGitCommitResult>(
-          "/api/workspace/git-commit",
-          json("POST", input),
-        ),
-      gitCommitShow: (input: WorkspaceGitCommitShowInput) =>
-        request<WorkspaceGitCommitShowResult>(
-          `/api/workspace/git-commit-show?${query(input)}`,
-        ),
-      gitDiff: (input: WorkspaceGitDiffInput) =>
-        request<WorkspaceGitDiffResult>(
-          `/api/workspace/git-diff?${query(input)}`,
-        ),
-      gitLog: (input: WorkspaceToolRootInput & { limit?: number }) =>
-        request<WorkspaceGitLogResult>(
-          `/api/workspace/git-log?${query(input)}`,
-        ),
-      gitPull: (input: WorkspaceToolGitPullInput) =>
-        request<WorkspaceToolGitPullResult>(
-          "/api/workspace/git-pull",
-          json("POST", input),
-        ),
-      gitPush: (input: WorkspaceToolGitPushInput) =>
-        request<WorkspaceToolGitPushResult>(
-          "/api/workspace/git-push",
-          json("POST", input),
-        ),
       readFile: (input: WorkspaceToolReadFileInput) =>
         request<WorkspaceFileReadResult>(`/api/workspace/file?${query(input)}`),
       writeFile: (input: WorkspaceToolWriteFileInput) =>
