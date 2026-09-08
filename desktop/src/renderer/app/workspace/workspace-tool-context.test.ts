@@ -10,7 +10,6 @@ describe("resolveWorkspaceToolContext", () => {
       resolveWorkspaceToolContext({
         projectId: "project-1",
         projectRoot: "/repo",
-        workspaceMode,
       }),
     ).toEqual({
       contextKey: "project:project-1:root:/repo",
@@ -24,9 +23,7 @@ describe("resolveWorkspaceToolContext", () => {
         projectId: "project-1",
         projectRoot: "/repo/worktree",
         selectedChatId: "chat-1",
-        selectedChatProjectId: "project-1",
-        workspaceMode: "power",
-      }),
+        selectedChatProjectId: "project-1",      }),
     ).toEqual({ contextKey: "chat:chat-1", root: "/repo/worktree" });
   });
 
@@ -34,21 +31,15 @@ describe("resolveWorkspaceToolContext", () => {
     expect(
       resolveWorkspaceToolContext({
         projectId: "project-1",
-        projectRoot: "/repo",
-        workspaceMode: "chat",
-      }),
+        projectRoot: "/repo",      }),
     ).toBeNull();
     expect(
       resolveWorkspaceToolContext({
-        projectId: "project-1",
-        workspaceMode: "work",
-      }),
+        projectId: "project-1",      }),
     ).toBeNull();
     expect(
       resolveWorkspaceToolContext({
-        projectRoot: "/repo",
-        workspaceMode: "power",
-      }),
+        projectRoot: "/repo",      }),
     ).toBeNull();
   });
 });

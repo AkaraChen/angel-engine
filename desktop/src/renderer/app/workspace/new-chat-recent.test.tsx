@@ -86,7 +86,6 @@ describe("NewChatRecentSection", () => {
           }),
         ]}
         isProjectMode
-        onCreateProject={vi.fn()}
         onOpenChat={vi.fn()}
         projects={projects}
       />,
@@ -128,7 +127,6 @@ describe("NewChatRecentSection", () => {
           }),
         ]}
         isProjectMode={false}
-        onCreateProject={vi.fn()}
         onOpenChat={vi.fn()}
         projects={projects}
       />,
@@ -179,7 +177,6 @@ describe("NewChatRecentSection", () => {
           }),
         ]}
         isProjectMode
-        onCreateProject={vi.fn()}
         onOpenChat={vi.fn()}
         projects={projects}
       />,
@@ -215,7 +212,6 @@ describe("NewChatRecentSection", () => {
           }),
         ]}
         isProjectMode
-        onCreateProject={vi.fn()}
         onOpenChat={vi.fn()}
         projects={projects}
       />,
@@ -230,7 +226,6 @@ describe("NewChatRecentSection", () => {
       <NewChatRecentSection
         chats={[]}
         isProjectMode
-        onCreateProject={onCreateProject}
         onOpenChat={vi.fn()}
         projects={projects}
       />,
@@ -246,7 +241,6 @@ describe("NewChatRecentSection", () => {
       <NewChatRecentSection
         chats={[]}
         isProjectMode={false}
-        onCreateProject={vi.fn()}
         onOpenChat={vi.fn()}
         projects={projects}
       />,

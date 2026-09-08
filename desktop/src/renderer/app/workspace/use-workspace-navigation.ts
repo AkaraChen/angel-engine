@@ -10,7 +10,6 @@ import {
 } from "@/app/workspace/workspace-draft-agent-config";
 import {
   chatRoutePath,
-  fleetRoutePath,
   projectDraftRoutePath,
   scheduleRoutePath,
 } from "@/app/workspace/workspace-route-paths";
@@ -164,10 +163,6 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
     [navigateToDraft],
   );
 
-  const openFleet = useCallback(() => {
-    if (location !== fleetRoutePath) navigate(fleetRoutePath);
-  }, [location, navigate]);
-
   const openSchedule = useCallback(() => {
     if (location !== scheduleRoutePath) navigate(scheduleRoutePath);
   }, [location, navigate]);
@@ -200,7 +195,6 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
     navigateToDraft,
     openChat,
     openChatFromFleet,
-    openFleet,
     openSchedule,
     openSettings,
     selectDraftProject,

@@ -39,7 +39,7 @@ function activation(
 
 describe("source-control renderer foundation", () => {
   it("treats a missing capability as unsupported", () => {
-    expect(capabilityState({ entries: {} }, "checks.snapshot")).toMatchObject({
+    expect(capabilityState({ entries: {} }, "provider.auth")).toMatchObject({
       supported: false,
       reason: { kind: "unknown-capability" },
     });
