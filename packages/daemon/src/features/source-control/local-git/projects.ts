@@ -16,7 +16,6 @@ import { DaemonError } from "../../../platform/errors";
 import { findActiveChatByCwd } from "../../chat/repository";
 import { loadProjectLifecycleConfig } from "../../projects/config";
 import { getProject } from "../../projects/repository";
-import { projectSetupLifecycle } from "../../projects/setup-lifecycle";
 import { executeGit } from "./backend";
 
 const GIT_OUTPUT_MAX_BUFFER = 1024 * 1024;
@@ -271,18 +270,6 @@ export function createProjectWorktree(
           );
           return yield* Effect.fail(
             DaemonError.worktreeCreateFailed(signal.reason),
-          );
-        }
-        if (setup) {
-          yield* Effect.sync(() =>
-            projectSetupLifecycle.start({
-              approvedDigest: setup.digest,
-              baseRef: startPoint,
-              branch: created.branch,
-              projectId: input.projectId,
-              projectRoot: root,
-              worktreePath: created.cwd,
-            }),
           );
         }
         onProgress?.("setup", 100);
