@@ -1,12 +1,10 @@
 import type { ApiClient } from "@/platform/api-client";
 
 import is from "@sindresorhus/is";
-import { useEffect, useRef } from "react";
+import {} from "react";
 import { useTranslation } from "react-i18next";
 
 import { WorkspaceToolContent } from "@/app/workspace/workspace-tool-content";
-import { createPullRequestAction } from "@/app/workspace/workspace-create-pr-action";
-import { WorkspaceCreatePullRequestController } from "@/app/workspace/workspace-git-create-pr";
 import { WorkspaceToolEmpty } from "@/app/workspace/workspace-tool-layout";
 import {
   useWorkspaceToolSurfaceModel,
@@ -34,41 +32,13 @@ export function WorkspaceToolSurface({
     root,
   });
   const { t } = useTranslation();
-  const surfaceRef = useRef<HTMLElement>(null);
-  useEffect(() => {
-    if (!active || !is.nonEmptyString(model.root)) return;
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (
-        (event.metaKey || event.ctrlKey) &&
-        event.shiftKey &&
-        !event.altKey &&
-        event.key.toLowerCase() === "p"
-      ) {
-        event.preventDefault();
-        createPullRequestAction.execute();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [active, model.root]);
-
   return (
     <WorkspaceToolSurfaceProvider model={model}>
-      {active && is.nonEmptyString(model.root) ? (
-        <WorkspaceCreatePullRequestController
-          api={api}
-          contextKey={model.contextKey}
-          key={model.root}
-          projectId={model.projectId}
-          root={model.root}
-        />
-      ) : null}
       <section
         className="
           flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden
           text-foreground select-none
         "
-        ref={surfaceRef}
         tabIndex={-1}
       >
         {!is.nonEmptyString(model.contextKey) ||

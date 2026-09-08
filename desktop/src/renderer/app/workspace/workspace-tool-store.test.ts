@@ -1,4 +1,3 @@
-import type { WorkspaceToolSurfaceSnapshot } from "@shared/workspace-tool-surface";
 import { describe, expect, it } from "vitest";
 import { currentWorkspaceToolSnapshot } from "./workspace-tool-store";
 
@@ -27,7 +26,7 @@ describe("workspace tool snapshot migration", () => {
       },
     } as never);
 
-    expect(snapshot.activeTabId).toBe("git");
+    expect(snapshot.activeTabId).toBe("dynamic");
     expect(snapshot.tabs).toEqual([]);
   });
 });

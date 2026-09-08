@@ -269,7 +269,6 @@ export const ja = {
         dockInSidebar: "サイドバーにドック",
         empty: {
           checksUnavailable: "チェックを利用できません",
-          fileTreeUnavailable: "ファイルツリーを利用できません",
           fileUnavailable: "ファイルを利用できません",
           gitUnavailable: "Git を利用できません",
           noChanges: "変更はありません",

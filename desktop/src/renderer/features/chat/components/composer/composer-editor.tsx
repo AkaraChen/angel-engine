@@ -11,7 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { EditorContent } from "@tiptap/react";
 import { useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { WorkspaceFileTreeIconSprite } from "@/app/workspace/workspace-file-tree";
+import { WorkspaceFileTreeIconSprite } from "@/app/workspace/workspace-file-icons";
 import {
   PromptInputBody,
   PromptInputHeader,

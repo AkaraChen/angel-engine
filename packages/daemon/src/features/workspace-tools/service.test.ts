@@ -1,11 +1,4 @@
-import {
-  access,
-  mkdtemp,
-  readFile,
-  rm,
-  symlink,
-  writeFile,
-} from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
@@ -20,14 +13,7 @@ import {
   parseAheadBehindCounts,
   parseGitStatusOutput,
 } from "../source-control/local-git/workspace";
-import {
-  workspaceGitBranches,
-  workspaceGitCheckout,
-  workspaceGitDiff,
-  workspaceGitLog,
-  workspaceGitPush,
-  workspaceWriteFile,
-} from "./service";
+import { workspaceGitDiff } from "./service";
 
 const tempRoots: string[] = [];
 const execFileAsync = promisify(execFile);
@@ -72,18 +58,6 @@ async function runWorkspaceGitDiff(
 // on a loaded machine.
 const gitTestTimeoutMs = 60_000;
 
-async function runWorkspaceWriteFile(
-  root: string,
-  treePath: string,
-  content: string,
-) {
-  const exit = await Effect.runPromiseExit(
-    workspaceWriteFile(root, treePath, content),
-  );
-  if (Exit.isSuccess(exit)) return exit.value;
-  throw Cause.squash(exit.cause);
-}
-
 async function makeTempDir() {
   const directory = await mkdtemp(path.join(os.tmpdir(), "workspace-tools-"));
   tempRoots.push(directory);
@@ -94,16 +68,6 @@ async function runEffect<A>(effect: Effect.Effect<A, DaemonError>) {
   const exit = await Effect.runPromiseExit(effect);
   if (Exit.isSuccess(exit)) return exit.value;
   throw Cause.squash(exit.cause);
-}
-
-async function runEffectFailure<A>(effect: Effect.Effect<A, DaemonError>) {
-  const exit = await Effect.runPromiseExit(effect);
-  if (Exit.isSuccess(exit)) {
-    throw new Error("Expected the effect to fail.");
-  }
-  const failure = Cause.squash(exit.cause);
-  if (!(failure instanceof DaemonError)) throw failure;
-  return failure;
 }
 
 async function configureGitIdentity(root: string) {
@@ -141,32 +105,6 @@ afterEach(async () => {
         rm(directory, { force: true, recursive: true }),
       ),
   );
-});
-
-describe("workspaceWriteFile", () => {
-  it("writes a new file inside the workspace", async () => {
-    const workspace = await makeTempDir();
-
-    await runWorkspaceWriteFile(workspace, "nested/file.txt", "x");
-
-    await expect(
-      readFile(path.join(workspace, "nested/file.txt"), "utf8"),
-    ).resolves.toBe("x");
-  });
-
-  it("rejects a new file under a symlinked parent outside the workspace", async () => {
-    const workspace = await makeTempDir();
-    const outside = await makeTempDir();
-    const escapedPath = path.join(outside, "escape.txt");
-    await symlink(outside, path.join(workspace, "link"));
-
-    await expect(
-      runWorkspaceWriteFile(workspace, "link/escape.txt", "x"),
-    ).rejects.toThrow(
-      "Workspace file path must stay inside the workspace root.",
-    );
-    await expect(access(escapedPath)).rejects.toThrow();
-  });
 });
 
 describe("buildUntrackedPatch", () => {
@@ -407,143 +345,6 @@ describe("workspaceGitDiff unborn branch status", () => {
         detached: false,
         unborn: true,
       });
-    },
-    gitTestTimeoutMs,
-  );
-});
-
-describe("workspaceGitPush", () => {
-  it(
-    "publishes a branch that has no upstream yet",
-    async () => {
-      const { remote, workspace } = await makeRepositoryWithRemote({
-        push: false,
-      });
-
-      const result = await runEffect(workspaceGitPush({ root: workspace }));
-
-      expect(result.remote).toBe("origin");
-      expect(result.branchStatus).toStrictEqual({
-        ahead: 0,
-        behind: 0,
-        branch: "main",
-        detached: false,
-        unborn: false,
-        upstream: "origin/main",
-      });
-      await expect(
-        gitOutput(remote, ["rev-parse", "refs/heads/main"]),
-      ).resolves.toBe(await gitOutput(workspace, ["rev-parse", "HEAD"]));
-    },
-    gitTestTimeoutMs,
-  );
-
-  it(
-    "rejects publishing a branch with no commits",
-    async () => {
-      const workspace = await makeTempDir();
-      await gitOutput(workspace, ["init", "--initial-branch=main"]);
-
-      const error = await runEffectFailure(
-        workspaceGitPush({ root: workspace }),
-      );
-
-      expect(error.code).toBe("workspace-git-no-commits");
-    },
-    gitTestTimeoutMs,
-  );
-
-  it(
-    "pushes new commits once an upstream is tracked",
-    async () => {
-      const { remote, workspace } = await makeRepositoryWithRemote();
-      await commitFile(workspace, "b.txt", "b");
-
-      const result = await runEffect(workspaceGitPush({ root: workspace }));
-
-      expect(result.branchStatus.ahead).toBe(0);
-      await expect(
-        gitOutput(remote, ["rev-parse", "refs/heads/main"]),
-      ).resolves.toBe(await gitOutput(workspace, ["rev-parse", "HEAD"]));
-    },
-    gitTestTimeoutMs,
-  );
-
-  it(
-    "fails with an actionable code when the repository has no remote",
-    async () => {
-      const workspace = await makeTempDir();
-      await gitOutput(workspace, ["init", "--initial-branch=main"]);
-      await configureGitIdentity(workspace);
-      await commitFile(workspace, "a.txt", "a");
-
-      const error = await runEffectFailure(
-        workspaceGitPush({ root: workspace }),
-      );
-
-      expect(error.code).toBe("workspace-git-no-remote");
-    },
-    gitTestTimeoutMs,
-  );
-
-  it(
-    "classifies a rejected push instead of leaking raw git output",
-    async () => {
-      const { remote, workspace } = await makeRepositoryWithRemote();
-      const other = await makeTempDir();
-      await gitOutput(other, ["clone", remote, "."]);
-      await configureGitIdentity(other);
-      await commitFile(other, "theirs.txt", "theirs");
-      await gitOutput(other, ["push"]);
-      await commitFile(workspace, "mine.txt", "mine");
-
-      const error = await runEffectFailure(
-        workspaceGitPush({ root: workspace }),
-      );
-
-      expect(error.code).toBe("workspace-git-push-rejected");
-    },
-    gitTestTimeoutMs,
-  );
-});
-
-describe("workspace git panel branches and history", () => {
-  it(
-    "lists local branches and checks out another branch",
-    async () => {
-      const workspace = await makeTempDir();
-      await gitOutput(workspace, ["init", "--initial-branch=main"]);
-      await configureGitIdentity(workspace);
-      await commitFile(workspace, "a.txt", "a");
-      await gitOutput(workspace, ["branch", "feature/panel"]);
-
-      const listed = await runEffect(workspaceGitBranches(workspace));
-      expect(listed.isGitRepository).toBe(true);
-      expect(listed.branchStatus.branch).toBe("main");
-      expect(listed.branches.map((branch) => branch.name)).toEqual(
-        expect.arrayContaining(["main", "feature/panel"]),
-      );
-
-      const checkout = await runEffect(
-        workspaceGitCheckout({ branch: "feature/panel", root: workspace }),
-      );
-      expect(checkout.branchStatus.branch).toBe("feature/panel");
-    },
-    gitTestTimeoutMs,
-  );
-
-  it(
-    "returns commit history",
-    async () => {
-      const workspace = await makeTempDir();
-      await gitOutput(workspace, ["init", "--initial-branch=main"]);
-      await configureGitIdentity(workspace);
-      await commitFile(workspace, "a.txt", "a");
-
-      const log = await runEffect(workspaceGitLog(workspace, 10));
-      expect(log.isGitRepository).toBe(true);
-      expect(log.commits.length).toBeGreaterThan(0);
-      expect(log.commits[0]?.subject).toContain("add a.txt");
     },
     gitTestTimeoutMs,
   );

@@ -134,7 +134,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     selectedProjectName,
     setAgentModel,
     setAgentReasoningEffort,
-    setRightSidebarOpen,
     setRightSidebarWidth,
     setSidebarOpen,
     setSidebarOpenMobile,

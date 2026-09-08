@@ -262,7 +262,6 @@ export const zhTW = {
         dockInSidebar: "停靠到側欄",
         empty: {
           checksUnavailable: "檢查不可用",
-          fileTreeUnavailable: "檔案樹不可用",
           fileUnavailable: "檔案不可用",
           gitUnavailable: "Git 不可用",
           noChanges: "沒有變更",

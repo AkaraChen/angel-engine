@@ -26,7 +26,6 @@ export function WorkspaceToolSidebarHeader({
   showRepositoryName?: boolean;
   trailingActions?: ReactNode;
 }) {
-  const { t } = useTranslation();
   return (
     <div
       className="

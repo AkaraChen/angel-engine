@@ -266,7 +266,6 @@ export const ko = {
         dockInSidebar: "사이드바에 고정",
         empty: {
           checksUnavailable: "검사를 사용할 수 없습니다",
-          fileTreeUnavailable: "파일 트리를 사용할 수 없습니다",
           fileUnavailable: "파일을 사용할 수 없습니다",
           gitUnavailable: "Git을 사용할 수 없습니다",
           noChanges: "변경 사항 없음",

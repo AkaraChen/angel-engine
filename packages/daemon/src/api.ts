@@ -49,14 +49,6 @@ import {
   updateProjectInputSchema,
 } from "@angel-engine/daemon-api/projects";
 import {
-  workspaceToolGitCheckoutInputSchema,
-  workspaceToolGitCommitInputSchema,
-  workspaceToolGitCommitShowInputSchema,
-  workspaceToolGitPullInputSchema,
-  workspaceToolGitPushInputSchema,
-  workspaceToolWriteFileInputSchema,
-} from "@angel-engine/daemon-api/workspace-tools";
-import {
   shepherdResumeInputSchema,
   shepherdStartInputSchema,
   shepherdStopInputSchema,
@@ -147,17 +139,8 @@ import {
 } from "./features/projects/repository";
 import { getChatDiffAnchor } from "./features/chat/diff-anchors";
 import {
-  workspaceFileTree,
-  workspaceGitBranches,
-  workspaceGitCheckout,
-  workspaceGitCommit,
-  workspaceGitCommitShow,
   workspaceGitDiff,
-  workspaceGitLog,
-  workspaceGitPull,
-  workspaceGitPush,
   workspaceReadFile,
-  workspaceWriteFile,
 } from "./features/workspace-tools/service";
 import { DaemonError } from "./platform/errors";
 import { runDaemonApi } from "./platform/runtime";
@@ -1140,13 +1123,6 @@ export function registerApi(
     return context.json(result);
   });
 
-  app.get("/api/workspace/file-tree", async (context) =>
-    context.json(
-      await run(
-        workspaceFileTree(requireQuery(context.req.query("root"), "root")),
-      ),
-    ),
-  );
   app.get("/api/workspace/git-diff", async (context) =>
     context.json(
       await run(
@@ -1169,59 +1145,6 @@ export function registerApi(
       ),
     ),
   );
-  app.post("/api/workspace/git-commit", async (context) => {
-    const input = workspaceToolGitCommitInputSchema(await context.req.json());
-    if (input instanceof arkType.errors)
-      throw DaemonError.invalidRequest("Git commit input is invalid.");
-    return context.json(await run(workspaceGitCommit(input)));
-  });
-  app.post("/api/workspace/git-push", async (context) => {
-    const input = workspaceToolGitPushInputSchema(await context.req.json());
-    if (input instanceof arkType.errors)
-      throw DaemonError.invalidRequest("Git push input is invalid.");
-    return context.json(await run(workspaceGitPush(input)));
-  });
-  app.post("/api/workspace/git-pull", async (context) => {
-    const input = workspaceToolGitPullInputSchema(await context.req.json());
-    if (input instanceof arkType.errors)
-      throw DaemonError.invalidRequest("Git pull input is invalid.");
-    return context.json(await run(workspaceGitPull(input)));
-  });
-  app.get("/api/workspace/git-branches", async (context) =>
-    context.json(
-      await run(
-        workspaceGitBranches(requireQuery(context.req.query("root"), "root")),
-      ),
-    ),
-  );
-  app.post("/api/workspace/git-checkout", async (context) => {
-    const input = workspaceToolGitCheckoutInputSchema(await context.req.json());
-    if (input instanceof arkType.errors)
-      throw DaemonError.invalidRequest("Git checkout input is invalid.");
-    return context.json(await run(workspaceGitCheckout(input)));
-  });
-  app.get("/api/workspace/git-log", async (context) => {
-    const limitRaw = context.req.query("limit");
-    const limit =
-      limitRaw === undefined ? undefined : Number.parseInt(limitRaw, 10);
-    return context.json(
-      await run(
-        workspaceGitLog(
-          requireQuery(context.req.query("root"), "root"),
-          Number.isFinite(limit) ? limit : undefined,
-        ),
-      ),
-    );
-  });
-  app.get("/api/workspace/git-commit-show", async (context) => {
-    const input = workspaceToolGitCommitShowInputSchema({
-      hash: context.req.query("hash"),
-      root: context.req.query("root"),
-    });
-    if (input instanceof arkType.errors)
-      throw DaemonError.invalidRequest("Git commit show input is invalid.");
-    return context.json(await run(workspaceGitCommitShow(input)));
-  });
   app.get("/api/workspace/file", async (context) =>
     context.json(
       await run(
@@ -1232,15 +1155,6 @@ export function registerApi(
       ),
     ),
   );
-  app.put("/api/workspace/file", async (context) => {
-    const body = workspaceToolWriteFileInputSchema(await context.req.json());
-    if (body instanceof arkType.errors)
-      throw DaemonError.invalidRequest("Workspace file input is invalid.");
-    return context.json(
-      await run(workspaceWriteFile(body.root, body.path, body.content)),
-    );
-  });
-
   app.post("/api/chat-runs/:runId", async (context) => {
     const runId = requirePath(context.req.param("runId"), "runId");
     const input = parseRunStartInput(await context.req.json());

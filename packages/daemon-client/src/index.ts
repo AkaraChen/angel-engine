@@ -113,25 +113,9 @@ import type {
 import { isProjectCloneEvent } from "@angel-engine/daemon-api/projects";
 import type {
   WorkspaceFileReadResult,
-  WorkspaceFileTreeResult,
-  WorkspaceFileWriteResult,
-  WorkspaceGitBranchesResult,
-  WorkspaceGitCheckoutInput,
-  WorkspaceGitCheckoutResult,
-  WorkspaceGitCommitShowInput,
-  WorkspaceGitCommitShowResult,
   WorkspaceGitDiffInput,
   WorkspaceGitDiffResult,
-  WorkspaceGitLogResult,
-  WorkspaceToolGitCommitInput,
-  WorkspaceToolGitCommitResult,
-  WorkspaceToolGitPullInput,
-  WorkspaceToolGitPullResult,
-  WorkspaceToolGitPushInput,
-  WorkspaceToolGitPushResult,
   WorkspaceToolReadFileInput,
-  WorkspaceToolRootInput,
-  WorkspaceToolWriteFileInput,
 } from "@angel-engine/daemon-api/workspace-tools";
 
 import { DaemonRequestError } from "./errors";
@@ -840,53 +824,12 @@ export function createDaemonClient(options: DaemonClientOptions) {
         ),
     },
     workspaceTools: {
-      fileTree: (input: WorkspaceToolRootInput) =>
-        request<WorkspaceFileTreeResult>(
-          `/api/workspace/file-tree?${query(input)}`,
-        ),
-      gitBranches: (input: WorkspaceToolRootInput) =>
-        request<WorkspaceGitBranchesResult>(
-          `/api/workspace/git-branches?${query(input)}`,
-        ),
-      gitCheckout: (input: WorkspaceGitCheckoutInput) =>
-        request<WorkspaceGitCheckoutResult>(
-          "/api/workspace/git-checkout",
-          json("POST", input),
-        ),
-      gitCommit: (input: WorkspaceToolGitCommitInput) =>
-        request<WorkspaceToolGitCommitResult>(
-          "/api/workspace/git-commit",
-          json("POST", input),
-        ),
-      gitCommitShow: (input: WorkspaceGitCommitShowInput) =>
-        request<WorkspaceGitCommitShowResult>(
-          `/api/workspace/git-commit-show?${query(input)}`,
-        ),
       gitDiff: (input: WorkspaceGitDiffInput) =>
         request<WorkspaceGitDiffResult>(
-          `/api/workspace/git-diff?${query(input)}`,
-        ),
-      gitLog: (input: WorkspaceToolRootInput & { limit?: number }) =>
-        request<WorkspaceGitLogResult>(
-          `/api/workspace/git-log?${query(input)}`,
-        ),
-      gitPull: (input: WorkspaceToolGitPullInput) =>
-        request<WorkspaceToolGitPullResult>(
-          "/api/workspace/git-pull",
-          json("POST", input),
-        ),
-      gitPush: (input: WorkspaceToolGitPushInput) =>
-        request<WorkspaceToolGitPushResult>(
-          "/api/workspace/git-push",
-          json("POST", input),
+          "/api/workspace/git-diff?" + query(input),
         ),
       readFile: (input: WorkspaceToolReadFileInput) =>
-        request<WorkspaceFileReadResult>(`/api/workspace/file?${query(input)}`),
-      writeFile: (input: WorkspaceToolWriteFileInput) =>
-        request<WorkspaceFileWriteResult>(
-          "/api/workspace/file",
-          json("PUT", input),
-        ),
+        request<WorkspaceFileReadResult>("/api/workspace/file?" + query(input)),
     },
   };
 }

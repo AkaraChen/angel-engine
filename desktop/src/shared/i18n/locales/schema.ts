@@ -170,7 +170,6 @@ export interface LocaleResourceTranslationWorkspaceToolsCreatePullRequest {
 
 export interface LocaleResourceTranslationWorkspaceToolsEmpty {
   checksUnavailable: string;
-  fileTreeUnavailable: string;
   fileUnavailable: string;
   gitUnavailable: string;
   noChanges: string;

@@ -2,30 +2,38 @@ import type { WorkspaceToolSurfaceSnapshot } from "@shared/workspace-tool-surfac
 
 import { describe, expect, it } from "vitest";
 
-import { redirectChecksTabToPullRequest } from "./workspace-tool-checks-focus";
 import {
   visibleActiveWorkspaceToolTabId,
   workspaceToolTabItems,
 } from "./workspace-tool-tab-model";
 
-describe("workspace tool pinned tabs", () => {
-  it("redirects a persisted checks tab to the pull request panel", () => {
+describe("workspace tool tabs", () => {
+  it("keeps dynamic file and diff tabs visible", () => {
     const snapshot: WorkspaceToolSurfaceSnapshot = {
-      activeTabId: "checks",
-      tabs: [],
+      activeTabId: "file-preview:README.md",
+      tabs: [
+        {
+          id: "file-preview:README.md",
+          kind: "file-preview",
+          path: "README.md",
+          root: "/workspace",
+          title: "README.md",
+        },
+        {
+          id: "git-diff:worktree",
+          kind: "git-diff",
+          root: "/workspace",
+          title: "Changes",
+        },
+      ],
     };
 
-    expect(visibleActiveWorkspaceToolTabId(snapshot)).toBe("pr");
-    expect(redirectChecksTabToPullRequest(snapshot)).toEqual({
-      ...snapshot,
-      activeTabId: "pr",
-      focusSection: "checks",
-    });
-    expect(
-      workspaceToolTabItems([], {
-        gitChanges: "Git changes",
-        pullRequest: "Pull request",
-      }).map((tab) => tab.id),
-    ).toEqual(["git", "pr"]);
+    expect(visibleActiveWorkspaceToolTabId(snapshot)).toBe(
+      "file-preview:README.md",
+    );
+    expect(workspaceToolTabItems(snapshot.tabs).map((tab) => tab.id)).toEqual([
+      "file-preview:README.md",
+      "git-diff:worktree",
+    ]);
   });
 });

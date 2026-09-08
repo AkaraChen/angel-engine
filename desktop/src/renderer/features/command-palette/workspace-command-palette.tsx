@@ -26,10 +26,7 @@ import {
 import { useToast } from "@/components/ui/toast";
 import { COMMAND_IDS } from "@shared/keybindings";
 import { displayChatTitle } from "@/app/workspace/workspace-display";
-import {
-  useWorkspaceToolStore,
-  workspaceToolPullRequestTabId,
-} from "@/app/workspace/workspace-tool-store";
+import { useWorkspaceToolStore } from "@/app/workspace/workspace-tool-store";
 import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
 import { createTitleSearch } from "@/features/command-palette/title-search";
 import {
@@ -78,9 +75,6 @@ export const WorkspaceCommandPalette: FC<WorkspaceCommandPaletteProps> = ({
   );
   const toolContext = useWorkspaceToolStore((state) => state.context);
   const sourceControl = useSourceControlActivation(toolContext.projectId);
-  const updateWorkspaceToolSnapshot = useWorkspaceToolStore(
-    (state) => state.updateWorkspaceToolSnapshot,
-  );
   const startMutation = useMutation(
     startShepherdMutationOptions({ api, queryClient }),
   );
@@ -98,10 +92,6 @@ export const WorkspaceCommandPalette: FC<WorkspaceCommandPaletteProps> = ({
     const contextKey = toolContext.contextKey;
     setRightSidebarOpen(true);
     if (is.nonEmptyString(contextKey)) {
-      updateWorkspaceToolSnapshot(contextKey, (snapshot) => ({
-        ...snapshot,
-        activeTabId: workspaceToolPullRequestTabId,
-      }));
     }
 
     if (!is.nonEmptyString(chatId) || !is.nonEmptyString(root)) {
@@ -245,7 +235,6 @@ export const WorkspaceCommandPalette: FC<WorkspaceCommandPaletteProps> = ({
     toolContext.chatId,
     toolContext.contextKey,
     toolContext.root,
-    updateWorkspaceToolSnapshot,
   ]);
 
   const entries = useMemo<CommandPaletteEntry[]>(

@@ -18,10 +18,6 @@ interface WorkspaceToolState {
   ) => void;
 }
 
-export const workspaceToolGitTabId = "git";
-export const workspaceToolChecksTabId = "checks";
-export const workspaceToolPullRequestTabId = "pr";
-
 export const useWorkspaceToolStore = create<WorkspaceToolState>()(
   (set, get) => ({
     context: {},
@@ -42,7 +38,7 @@ export const useWorkspaceToolStore = create<WorkspaceToolState>()(
 
 function createDefaultWorkspaceToolSnapshot(): WorkspaceToolSurfaceSnapshot {
   return {
-    activeTabId: workspaceToolGitTabId,
+    activeTabId: "dynamic",
     tabs: [],
   };
 }
@@ -56,10 +52,7 @@ function sanitizeWorkspaceToolSnapshot(
   );
   const activeTabId = tabs.some((tab) => tab.id === snapshot.activeTabId)
     ? snapshot.activeTabId
-    : snapshot.activeTabId === workspaceToolGitTabId ||
-        snapshot.activeTabId === workspaceToolPullRequestTabId
-      ? snapshot.activeTabId
-      : workspaceToolGitTabId;
+    : (tabs[0]?.id ?? "dynamic");
 
   return { ...snapshot, activeTabId, tabs };
 }
