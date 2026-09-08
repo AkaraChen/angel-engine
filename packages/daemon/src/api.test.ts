@@ -595,7 +595,6 @@ describe("daemon chat runs", () => {
       body: JSON.stringify({
         prewarmId: "prewarm-1",
         runtime: "codex",
-        worktreeSetupApproval: "approved",
       }),
       headers: { "content-type": "application/json" },
       method: "POST",
@@ -606,7 +605,6 @@ describe("daemon chat runs", () => {
       expect.objectContaining({
         prewarmId: "prewarm-1",
         runtime: "codex",
-        worktreeSetupApproval: "approved",
       }),
       expect.any(AbortSignal),
     );

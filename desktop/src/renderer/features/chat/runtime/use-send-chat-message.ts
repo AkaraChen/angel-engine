@@ -56,7 +56,6 @@ export interface SendPromptMessageInput {
   mentionedFiles: ComposerMentionedFile[];
   selectedSkills: ComposerMentionedSkill[];
   t: TFunction;
-  worktreeSetupApproval?: string;
 }
 
 export function useSendChatMessage(
@@ -68,7 +67,7 @@ export function useSendChatMessage(
   latestOptionsRef.current = options;
 
   const sendAppendMessage = useCallback(
-    async (message: AppendMessage, worktreeSetupApproval?: string) => {
+    async (message: AppendMessage) => {
       const runConfig = message.runConfig?.custom;
       const modeOverride =
         typeof runConfig?.mode === "string" ? runConfig.mode : undefined;
@@ -92,7 +91,6 @@ export function useSendChatMessage(
           runtime: latestOptionsRef.current.runtime,
           sourceLink: latestOptionsRef.current.sourceLink,
           worktreeRef: latestOptionsRef.current.worktreeRef,
-          worktreeSetupApproval,
         },
         message,
         slotKey,
@@ -133,7 +131,7 @@ export function useSendChatMessage(
         sourceId: null,
       };
 
-      await sendAppendMessage(message, input.worktreeSetupApproval);
+      await sendAppendMessage(message);
     },
     [sendAppendMessage],
   );

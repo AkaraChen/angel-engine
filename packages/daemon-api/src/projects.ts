@@ -1,3 +1,4 @@
+import { type as arkType } from "arktype";
 export interface Project {
   id: string;
   path: string;
@@ -7,11 +8,6 @@ export interface ProjectGitStatusInput {
   projectId: string;
 }
 
-export interface ProjectWorktreeSetup {
-  commands: string[];
-  digest: string;
-}
-
 export interface ProjectGitStatusResult {
   branch?: string;
   isDirty: boolean;
@@ -19,9 +15,6 @@ export interface ProjectGitStatusResult {
   path: string;
   projectId: string;
   root?: string;
-  /** Legacy commands are migration-only and are never executed directly. */
-  legacyInitScript?: string[];
-  worktreeSetup?: ProjectWorktreeSetup;
 }
 
 export interface ProjectWorktreeCreateInput {
@@ -36,7 +29,6 @@ export interface ProjectWorktreeCreateInput {
     type: "existingBranch" | "newBranchFrom";
     value: string;
   };
-  setupApproval?: string;
   /**
    * Git ref to check out (commit-ish or remote tracking ref). Defaults to HEAD.
    */
@@ -59,122 +51,6 @@ export interface ProjectWorktreeCreateResult {
   root: string;
 }
 
-export type ProjectLifecycleKind = "run" | "setup" | "teardown";
-export type ProjectScriptShell = "auto" | "bash" | "system";
-
-export type ProjectLifecycleFailureReason =
-  | "cancelled"
-  | "daemon_restart"
-  | "exit"
-  | "signal"
-  | "spawn"
-  | "timeout";
-
-export interface ProjectLifecycleFailure {
-  exitCode: number | null;
-  message: string;
-  reason: ProjectLifecycleFailureReason;
-  signal: string | null;
-}
-
-export type ProjectSetupLifecycleState =
-  | { status: "idle" }
-  | { command: string; step: number; stepCount: number; status: "running" }
-  | {
-      command: string;
-      failure: ProjectLifecycleFailure;
-      step: number;
-      stepCount: number;
-      status: "failed";
-    }
-  | { completedAt: string; status: "ready" };
-
-export type ProjectRunLifecycleState =
-  | { status: "stopped" }
-  | { port: number; status: "starting" }
-  | { pid: number; port: number; status: "running"; url?: string }
-  | { exitCode: number | null; signal: string | null; status: "exited" }
-  | { failure: ProjectLifecycleFailure; status: "failed" };
-
-export type ProjectTeardownLifecycleState =
-  | { status: "idle" }
-  | { command: string; step: number; stepCount: number; status: "running" }
-  | {
-      command: string;
-      failure: ProjectLifecycleFailure;
-      step: number;
-      stepCount: number;
-      status: "failed";
-    }
-  | { completedAt: string; status: "done" };
-
-export interface ProjectSetupLifecycleContext {
-  baseRef: string;
-  branch: string;
-  projectId: string;
-  projectRoot: string;
-}
-
-export interface ProjectLifecycleSnapshot {
-  approvedDigest?: string;
-  run: ProjectRunLifecycleState;
-  setup: ProjectSetupLifecycleState;
-  setupContext?: ProjectSetupLifecycleContext;
-  teardown: ProjectTeardownLifecycleState;
-  updatedAt: string;
-  version: 1;
-}
-
-export interface ProjectSetupLifecycleView {
-  continued: boolean;
-  log: string;
-  running: boolean;
-  snapshot: ProjectLifecycleSnapshot;
-}
-
-export interface ProjectSetupRetryInput {
-  setupApproval: string;
-}
-
-/**
- * Per-project settings persisted in the repository's `2code.json`. The file is
- * the single source of truth; the daemon never mirrors these values into its
- * database.
- */
-export interface ProjectConfig {
-  /** Long-running command used to start the workspace development server. */
-  runScript: string;
-  /** Shell selection for lifecycle commands. `auto` prefers bash semantics. */
-  scriptShell: ProjectScriptShell;
-  /** Commands run in a freshly created worktree, in order. */
-  setupScript: string[];
-  /** Commands run before an app-managed worktree is removed, in order. */
-  teardownScript: string[];
-}
-
-export interface ProjectConfigResult extends ProjectConfig {
-  /** Absolute path of the `2code.json` the values were read from. */
-  configPath: string;
-  /** `false` when no `2code.json` exists yet, so saving will create it. */
-  exists: boolean;
-  /** Commands from the retired `init_script` key, offered only for migration. */
-  legacyInitScript: string[];
-  projectId: string;
-}
-
-export interface ProjectConfigInput {
-  projectId: string;
-}
-
-export interface UpdateProjectConfigInput
-  extends Omit<ProjectConfig, "scriptShell"> {
-  /** Removes init_script only while explicitly migrating it to setup_script. */
-  migrateLegacyInitScript?: boolean;
-  projectId: string;
-  scriptShell?: ProjectScriptShell;
-}
-
-/** One app-managed git worktree under `~/.angel-engine/worktrees`. */
 export interface ManagedWorktreeSummary {
   activeChatCount: number;
   archivedChatCount: number;
@@ -221,75 +97,6 @@ export interface ManagedWorktreeDeleteResult {
   failedWorktrees: ManagedWorktreeDeleteFailure[];
 }
 
-export interface CreateProjectInput {
-  id?: string;
-  path: string;
-}
-
-export interface UpdateProjectInput {
-  id: string;
-  path: string;
-}
-
-export interface ProjectCloneInput {
-  /** Clone source: an https/ssh git remote or a bare `owner/repo` shorthand. */
-  url: string;
-}
-
-/** Ordered phases of a clone-and-register run, as reported to the UI. */
-export type ProjectCloneStage =
-  | "cloning"
-  | "completed"
-  | "preparing"
-  | "registering";
-
-export const projectCloneStages: readonly ProjectCloneStage[] = [
-  "preparing",
-  "cloning",
-  "registering",
-  "completed",
-];
-
-export interface ProjectCloneProgressEvent {
-  /** Git's own phase line, e.g. `Receiving objects`. Null outside cloning. */
-  detail: string | null;
-  /** 0-100 within the current stage, or null when git reports no percentage. */
-  percent: number | null;
-  stage: ProjectCloneStage;
-  /** Absolute destination, known from the `preparing` stage onward. */
-  targetPath: string | null;
-  type: "progress";
-}
-
-export interface ProjectCloneCompletedEvent {
-  project: Project;
-  /** True when an existing checkout of the same remote was reused as-is. */
-  reusedExistingCheckout: boolean;
-  type: "completed";
-}
-
-export interface ProjectCloneFailedEvent {
-  code: string;
-  message: string;
-  type: "failed";
-}
-
-export type ProjectCloneEvent =
-  | ProjectCloneCompletedEvent
-  | ProjectCloneFailedEvent
-  | ProjectCloneProgressEvent;
-
-export const createProjectInputSchema = arkType({
-  "+": "ignore",
-  "id?": "string",
-  path: "string > 0",
-});
-
-export const projectCloneInputSchema = arkType({
-  "+": "ignore",
-  url: "string > 0",
-});
-
 export const projectFileSearchInputSchema = arkType({
   "+": "ignore",
   "limit?": "number",
@@ -300,11 +107,6 @@ export const projectFileSearchInputSchema = arkType({
 export const projectGitStatusInputSchema = arkType({
   "+": "ignore",
   projectId: "string > 0",
-});
-
-export const projectSetupRetryInputSchema = arkType({
-  "+": "ignore",
-  setupApproval: "string > 0",
 });
 
 const managedWorktreeDeleteTargetSchema = arkType({
@@ -318,53 +120,3 @@ export const managedWorktreeDeleteInputSchema = arkType({
   "+": "ignore",
   targets: managedWorktreeDeleteTargetSchema.array(),
 });
-
-export const updateProjectConfigInputSchema = arkType({
-  "+": "ignore",
-  "migrateLegacyInitScript?": "boolean",
-  projectId: "string > 0",
-  runScript: "string",
-  "scriptShell?": "'auto' | 'bash' | 'system'",
-  setupScript: "string[]",
-  teardownScript: "string[]",
-});
-
-export const updateProjectInputSchema = arkType({
-  "+": "ignore",
-  id: "string > 0",
-  path: "string > 0",
-});
-
-export function isProjectCloneEvent(
-  value: unknown,
-): value is ProjectCloneEvent {
-  if (!is.plainObject(value)) return false;
-  switch (value.type) {
-    case "progress":
-      return (
-        isCloneStage(value.stage) &&
-        (value.percent === null || is.number(value.percent)) &&
-        (value.detail === null || is.string(value.detail)) &&
-        (value.targetPath === null || is.string(value.targetPath))
-      );
-    case "completed":
-      return (
-        is.plainObject(value.project) &&
-        is.nonEmptyString(value.project.id) &&
-        is.nonEmptyString(value.project.path) &&
-        is.boolean(value.reusedExistingCheckout)
-      );
-    case "failed":
-      return is.nonEmptyString(value.code) && is.nonEmptyString(value.message);
-    default:
-      return false;
-  }
-}
-
-function isCloneStage(value: unknown): value is ProjectCloneStage {
-  return (
-    is.string(value) && projectCloneStages.includes(value as ProjectCloneStage)
-  );
-}
-import is from "@sindresorhus/is";
-import { type as arkType } from "arktype";

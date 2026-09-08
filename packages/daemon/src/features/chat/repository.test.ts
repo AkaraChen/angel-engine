@@ -258,7 +258,6 @@ describe("worktree creation jobs", () => {
       database,
       createWorktreeCreationJob({
         chatId: "chat-1",
-        setupApproval: "old-digest",
         state: {
           jobId: "job-1",
           progress: 45,
@@ -273,7 +272,6 @@ describe("worktree creation jobs", () => {
     await expect(
       runWithDatabase(database, getWorktreeCreationJob("chat-1")),
     ).resolves.toMatchObject({
-      setupApproval: "old-digest",
       state: {
         error: expect.stringContaining("interrupted"),
         progress: 45,

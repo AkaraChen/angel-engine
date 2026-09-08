@@ -33,10 +33,8 @@ export function cwdForChat(
 export type ChatCwdResolutionInput = ChatCreationLocationInput &
   ChatCwdInput & {
     projectId?: string | null;
-    worktreeSetupApproval?: string;
     worktreeRef?: ProjectWorktreeCreateInput["ref"];
   };
-
 export function cwdForNewChat(
   input: ChatCwdResolutionInput,
   signal?: AbortSignal,
@@ -51,7 +49,6 @@ export function cwdForNewChat(
       const worktree = yield* createProjectWorktree(
         {
           projectId: input.projectId,
-          setupApproval: input.worktreeSetupApproval,
           ref: input.worktreeRef,
         },
         signal,

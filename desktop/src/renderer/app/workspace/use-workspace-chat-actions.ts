@@ -5,7 +5,6 @@ import type {
   ChatLoadResult,
   ChatRuntimeConfig,
 } from "@angel-engine/daemon-api/chat";
-import type { Project } from "@angel-engine/daemon-api/projects";
 import type {
   PathLauncherActionId,
   PathLauncherTargetRef,
@@ -30,7 +29,6 @@ import {
 } from "@/app/workspace/workspace-draft-agent-config";
 import { currentHashRoutePath } from "@/app/workspace/workspace-route-paths";
 import type { ChatContextMenuAction } from "@/features/chat/api/queries";
-import type { ProjectContextMenuAction } from "@/features/projects/api/queries";
 import {
   archiveChatMutationOptions,
   chatContextMenuMutationOptions,
@@ -60,10 +58,6 @@ import {
   type PendingChatArchive,
   type PendingChatArchiveQueue,
 } from "@/features/chat/state/pending-chat-archive";
-import {
-  createProjectMutationOptions,
-  projectContextMenuMutationOptions,
-} from "@/features/projects/api/queries";
 import { queryKeys } from "@/platform/query-keys";
 
 const EMPTY_CHATS: Chat[] = [];
@@ -101,11 +95,8 @@ export function useWorkspaceChatActions({
     modelOverride,
     navigate,
     permissionModeOverride,
-    projects,
     queryClient,
     reasoningEffortOverride,
-    routeDraftProjectId,
-    routeProjectId,
     runtimePageKey,
     selectedChatId,
     setDraftAgentConfigs,
@@ -132,12 +123,6 @@ export function useWorkspaceChatActions({
     : null;
   const handoffTargetChat = is.nonEmptyString(handoffChatId)
     ? (chats.find((chat) => chat.id === handoffChatId) ?? null)
-    : null;
-  const [settingsProjectId, setSettingsProjectId] = useState<string | null>(
-    null,
-  );
-  const settingsTargetProject = is.nonEmptyString(settingsProjectId)
-    ? (projects.find((project) => project.id === settingsProjectId) ?? null)
     : null;
 
   const setChatInCache = useCallback(
@@ -250,9 +235,6 @@ export function useWorkspaceChatActions({
     ],
   );
 
-  const createProjectMutation = useMutation({
-    ...createProjectMutationOptions({ api, queryClient }),
-  });
   const { mutateAsync: setChatRuntime } = useMutation({
     ...setChatRuntimeMutationOptions({ api, queryClient }),
   });
@@ -261,9 +243,6 @@ export function useWorkspaceChatActions({
   });
   const archiveChatMutation = useMutation({
     ...archiveChatMutationOptions({ api, queryClient }),
-  });
-  const showProjectContextMenuMutation = useMutation({
-    ...projectContextMenuMutationOptions({ api, queryClient }),
   });
   const showChatContextMenuMutation = useMutation({
     ...chatContextMenuMutationOptions({ api, queryClient }),
@@ -300,53 +279,6 @@ export function useWorkspaceChatActions({
     [applyAllChatsDeleted, queryClient],
   );
 
-  const createProjectFromPicker = useCallback(async () => {
-    try {
-      const selectedPath = await api.projects.chooseDirectory();
-      if (!is.nonEmptyString(selectedPath)) return undefined;
-      return await createProjectMutation.mutateAsync(selectedPath);
-    } catch (error) {
-      toast({
-        description: getErrorMessage(error),
-        title: t("notifications.couldNotAddProject"),
-        variant: "destructive",
-      });
-      return undefined;
-    }
-  }, [api, createProjectMutation, t, toast]);
-
-  const runProjectContextMenuAction = useCallback(
-    async (project: Project, action: ProjectContextMenuAction) => {
-      try {
-        const result = await showProjectContextMenuMutation.mutateAsync({
-          action,
-          project,
-        });
-        if (result === "settings") {
-          setSettingsProjectId(project.id);
-        } else if (
-          result === "deleted" &&
-          (routeProjectId ?? routeDraftProjectId) === project.id
-        ) {
-          navigate("/", { replace: true });
-        }
-      } catch (error) {
-        toast({
-          description: getErrorMessage(error),
-          title: t("notifications.projectActionFailed"),
-          variant: "destructive",
-        });
-      }
-    },
-    [
-      navigate,
-      routeDraftProjectId,
-      routeProjectId,
-      showProjectContextMenuMutation,
-      t,
-      toast,
-    ],
-  );
   const runPathLauncherAction = useCallback(
     async (ref: PathLauncherTargetRef, action: PathLauncherActionId) => {
       try {
@@ -415,10 +347,6 @@ export function useWorkspaceChatActions({
   const closeRenameChatDialog = useCallback(() => setRenameChatId(null), []);
   const closeSessionHandoffDialog = useCallback(
     () => setHandoffChatId(null),
-    [],
-  );
-  const closeProjectSettingsDialog = useCallback(
-    () => setSettingsProjectId(null),
     [],
   );
   const renameChat = useCallback(
@@ -566,10 +494,8 @@ export function useWorkspaceChatActions({
 
   return {
     archiveChat,
-    closeProjectSettingsDialog,
     closeRenameChatDialog,
     closeSessionHandoffDialog,
-    createProjectFromPicker,
     deleteAllChats,
     deleteAllChatsPending: deleteAllChatsMutation.isPending,
     handoffTargetChat,
@@ -578,10 +504,8 @@ export function useWorkspaceChatActions({
     renameTargetChat,
     setChatMessagesInCache,
     setPersistedChatRuntime,
-    settingsTargetProject,
     runChatContextMenuAction,
     runPathLauncherAction,
-    runProjectContextMenuAction,
     updateChatFromRun,
   };
 }

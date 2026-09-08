@@ -2,7 +2,6 @@ import { useTranslation } from "react-i18next";
 
 import { AppearanceSection } from "@/features/settings/appearance-section";
 import { CustomAgentsSection } from "@/features/settings/custom-agents-section";
-import { ProjectsSection } from "@/features/settings/projects-section";
 import {
   SettingsRow,
   SettingsSection,
@@ -19,10 +18,8 @@ export function SettingsPage() {
           pb-[max(1rem,env(safe-area-inset-bottom))]
         "
       >
-        <ProjectsSection />
         <CustomAgentsSection />
         <AppearanceSection />
-
         <SettingsSection
           description={t("settings.about.description")}
           title={t("settings.about.title")}

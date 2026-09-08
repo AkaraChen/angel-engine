@@ -197,23 +197,6 @@ export class DaemonError extends Data.TaggedError(
     });
   }
 
-  static projectConfigInvalid(message: string) {
-    return new DaemonError({
-      code: "project-config-invalid",
-      message,
-      status: 409,
-    });
-  }
-
-  static projectConfigWriteFailed(cause: unknown) {
-    return new DaemonError({
-      cause,
-      code: "project-config-write-failed",
-      message: messageFromCause(cause, "Could not write project settings."),
-      status: 500,
-    });
-  }
-
   static projectIdRequired() {
     return new DaemonError({
       code: "project-id-required",
@@ -522,14 +505,6 @@ export class DaemonError extends Data.TaggedError(
       code: "worktree-remove-failed",
       message: gitMessageFromCause(cause, "Could not remove git worktree."),
       status: 500,
-    });
-  }
-
-  static worktreeSetupApprovalRequired() {
-    return new DaemonError({
-      code: "worktree-setup-approval-required",
-      message: "Worktree setup requires approval for the current 2code.json.",
-      status: 409,
     });
   }
 

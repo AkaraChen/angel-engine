@@ -57,7 +57,6 @@ interface ActiveChatThreadProps {
   onForkChatCreated: (chat: Chat) => void;
   onChatMessagesUpdated: ChatMessagesUpdateHandler;
   onChatUpdated: ChatUpdateHandler;
-  onSetupDiscarded: (projectId?: string) => void;
   projects: Project[];
   routeProjectId?: string;
   runtimeOptions: Array<{
@@ -103,7 +102,6 @@ export function ActiveChatThread({
   onForkChatCreated,
   onChatMessagesUpdated,
   onChatUpdated,
-  onSetupDiscarded,
   projects,
   routeProjectId,
   runtimeOptions,
@@ -125,7 +123,6 @@ export function ActiveChatThread({
       onForkChatCreated={onForkChatCreated}
       onChatMessagesUpdated={onChatMessagesUpdated}
       onChatUpdated={onChatUpdated}
-      onSetupDiscarded={onSetupDiscarded}
       projects={projects}
       routeProjectId={routeProjectId}
       runtimeOptions={runtimeOptions}
@@ -148,7 +145,6 @@ export function RestoredChatThread({
   onForkChatCreated,
   onChatMessagesUpdated,
   onChatUpdated,
-  onSetupDiscarded,
   projects,
   routeProjectId,
   runtimeOptions,
@@ -191,7 +187,6 @@ export function RestoredChatThread({
       onForkChatCreated={onForkChatCreated}
       onChatMessagesUpdated={onChatMessagesUpdated}
       onChatUpdated={onChatUpdated}
-      onSetupDiscarded={onSetupDiscarded}
       projects={projects}
       routeProjectId={routeProjectId}
       runtimeOptions={runtimeOptions}
@@ -215,7 +210,6 @@ function ChatThreadRuntime({
   onForkChatCreated,
   onChatMessagesUpdated,
   onChatUpdated,
-  onSetupDiscarded,
   projects,
   routeProjectId,
   runtimeOptions,

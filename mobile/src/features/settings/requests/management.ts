@@ -3,10 +3,6 @@ import type {
   CustomAgentRuntime,
   UpdateCustomAgentInput,
 } from "@angel-engine/daemon-api/agents";
-import type {
-  CreateProjectInput,
-  UpdateProjectInput,
-} from "@angel-engine/daemon-api/projects";
 import type { DaemonClient } from "@angel-engine/daemon-client";
 import type { QueryClient } from "@tanstack/react-query";
 
@@ -20,10 +16,6 @@ interface QueryParams {
   staleTime?: number;
 }
 
-interface ProjectImpactQueryParams extends QueryParams {
-  projectId: string | null;
-}
-
 interface CustomAgentImpactQueryParams extends QueryParams {
   agentId: CustomAgentRuntime | null;
 }
@@ -31,19 +23,6 @@ interface CustomAgentImpactQueryParams extends QueryParams {
 interface MutationParams {
   daemon: DaemonClient;
   queryClient: QueryClient;
-}
-
-export function projectListQueryOptions({
-  daemon,
-  enabled = true,
-  staleTime = 30_000,
-}: QueryParams) {
-  return queryOptions({
-    enabled,
-    queryFn: async () => daemon.projects.list(),
-    queryKey: queryKeys.projects.list,
-    staleTime,
-  });
 }
 
 export function customAgentListQueryOptions({
@@ -55,32 +34,6 @@ export function customAgentListQueryOptions({
     enabled,
     queryFn: async () => daemon.agents.listCustom(),
     queryKey: queryKeys.agents.customList,
-    staleTime,
-  });
-}
-
-export function projectDeleteImpactQueryOptions({
-  daemon,
-  enabled = true,
-  projectId,
-  staleTime = 0,
-}: ProjectImpactQueryParams) {
-  return queryOptions({
-    enabled: enabled && projectId !== null,
-    queryFn: async () => {
-      if (projectId === null) throw new Error("No project selected.");
-      const [activeChats, archivedChats] = await Promise.all([
-        daemon.chats.list(),
-        daemon.chats.archivedList(),
-      ]);
-      return {
-        chatCount: [...activeChats, ...archivedChats].filter(
-          (chat) => chat.projectId === projectId,
-        ).length,
-      };
-    },
-    queryKey: queryKeys.projects.deleteImpact(projectId),
-    retry: false,
     staleTime,
   });
 }
@@ -100,47 +53,6 @@ export function customAgentDeleteImpactQueryOptions({
     queryKey: queryKeys.agents.customDeleteImpact(agentId),
     retry: false,
     staleTime,
-  });
-}
-
-export function createProjectMutationOptions({
-  daemon,
-  queryClient,
-}: MutationParams) {
-  return mutationOptions({
-    mutationFn: async (input: CreateProjectInput) =>
-      daemon.projects.create(input),
-    onSuccess: async () => {
-      await invalidateProjects(queryClient);
-    },
-  });
-}
-
-export function updateProjectMutationOptions({
-  daemon,
-  queryClient,
-}: MutationParams) {
-  return mutationOptions({
-    mutationFn: async (input: UpdateProjectInput) =>
-      daemon.projects.update(input),
-    onSuccess: async () => {
-      await invalidateProjects(queryClient);
-    },
-  });
-}
-
-export function deleteProjectMutationOptions({
-  daemon,
-  queryClient,
-}: MutationParams) {
-  return mutationOptions({
-    mutationFn: async (projectId: string) => daemon.projects.delete(projectId),
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: queryKeys.projects.all }),
-        queryClient.invalidateQueries({ queryKey: queryKeys.chats.all }),
-      ]);
-    },
   });
 }
 
@@ -188,11 +100,4 @@ export function deleteCustomAgentMutationOptions({
       ]);
     },
   });
-}
-
-async function invalidateProjects(queryClient: QueryClient) {
-  await Promise.all([
-    queryClient.invalidateQueries({ queryKey: queryKeys.projects.all }),
-    queryClient.invalidateQueries({ queryKey: queryKeys.chats.all }),
-  ]);
 }

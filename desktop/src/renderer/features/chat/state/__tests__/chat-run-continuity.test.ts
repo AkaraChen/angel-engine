@@ -158,7 +158,6 @@ describe("desktop chat run continuity", () => {
         prewarmId: "prewarm-1",
         projectId: "project-1",
         runtime: "codex",
-        worktreeSetupApproval: "setup-digest",
       },
       message: userPrompt("build it"),
       slotKey: "draft",
@@ -173,7 +172,6 @@ describe("desktop chat run continuity", () => {
         prewarmId: "prewarm-1",
         projectId: "project-1",
         runtime: "codex",
-        worktreeSetupApproval: "setup-digest",
       }),
     );
     expect(onChatCreated).toHaveBeenCalledWith(created);

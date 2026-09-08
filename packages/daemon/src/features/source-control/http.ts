@@ -609,10 +609,6 @@ export function registerSourceControlHttpApi(
             projectId: project.id,
             runtime:
               typeof input.runtime === "string" ? input.runtime : undefined,
-            setupApproval:
-              typeof input.setupApproval === "string"
-                ? input.setupApproval
-                : undefined,
             title: typeof input.title === "string" ? input.title : undefined,
           },
           resolved,

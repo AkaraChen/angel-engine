@@ -14,7 +14,6 @@ export interface CreateChangeRequestWorkspaceInput {
   number: number;
   projectId: string;
   runtime?: string;
-  setupApproval?: string;
   title?: string;
 }
 
@@ -36,7 +35,6 @@ export function createWorkspaceFromResolvedChangeRequest(
       {
         branchName,
         projectId: input.projectId,
-        setupApproval: input.setupApproval,
         startPoint: remoteRef,
         startPointFetch: {
           refspec: `${fetchTarget.ref}:${remoteRef}`,

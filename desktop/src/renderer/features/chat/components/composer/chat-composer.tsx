@@ -35,10 +35,9 @@ export interface ChatComposerSubmission {
   selectedSkills: ComposerMentionedSkill[];
   terminalSelections: ComposerTerminalSelection[];
   text: string;
-  worktreeSetupApproval?: string;
 }
 
-export type ChatComposerBeforeSubmitResult = boolean | string;
+export type ChatComposerBeforeSubmitResult = boolean;
 
 export interface ChatComposerProps {
   allowAttachments?: boolean;
@@ -117,10 +116,6 @@ export function ChatComposer({
           ),
           terminalSnapshot,
         ),
-        worktreeSetupApproval:
-          typeof beforeSubmitResult === "string"
-            ? beforeSubmitResult
-            : undefined,
       };
       reset();
       await send(submission);

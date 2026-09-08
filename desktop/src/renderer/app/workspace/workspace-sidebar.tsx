@@ -5,12 +5,7 @@ import type { ReactElement } from "react";
 import type { ProjectWorktreeChatGroup } from "@/features/chat/worktree-grouping";
 import type { PathLauncherActionId } from "@shared/path-launcher";
 import type { ChatContextMenuAction } from "@/features/chat/api/queries";
-import type { ProjectContextMenuAction } from "@/features/projects/api/queries";
-import {
-  Plus,
-  CalendarDots,
-  GearSix as Settings,
-} from "@phosphor-icons/react";
+import { Plus, CalendarDots, GearSix as Settings } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
 import { m } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
@@ -39,7 +34,6 @@ const FLOATING_SIDEBAR_TRANSITION = {
   type: "spring",
 } as const;
 
-
 interface WorkspaceSidebarProps {
   chats: Chat[];
   scheduleActive: boolean;
@@ -49,8 +43,6 @@ interface WorkspaceSidebarProps {
   onArchiveChat: (chat: Chat) => MaybeAsync;
   onCloneRepository?: () => MaybeAsync;
   onCancelWorktreeCreation: (chat: Chat) => MaybeAsync;
-  onCreateProject: () => MaybeAsync;
-  onCreateProjectChat: (project: Project) => MaybeAsync;
   onCreateStandaloneChat: () => MaybeAsync;
   onImportSession: (project: Project) => void;
   onOpenChat: (chat: Chat) => MaybeAsync;
@@ -62,14 +54,6 @@ interface WorkspaceSidebarProps {
   ) => MaybeAsync;
   onRetryWorktreeCreation: (chat: Chat) => MaybeAsync;
   onChatContextMenuAction: (chat: Chat, action: ChatContextMenuAction) => void;
-  onProjectContextMenuAction: (
-    project: Project,
-    action: ProjectContextMenuAction,
-  ) => void;
-  onProjectPathLauncherAction: (
-    project: Project,
-    action: PathLauncherActionId,
-  ) => void;
   onWorktreePathLauncherAction: (
     project: Project,
     worktreeGroup: ProjectWorktreeChatGroup,
@@ -84,12 +68,8 @@ interface WorkspaceSidebarProps {
 export function WorkspaceSidebar({
   ...props
 }: WorkspaceSidebarProps): ReactElement {
-
   return (
-    <Sidebar
-      className="select-none"
-      variant="inset"
-    >
+    <Sidebar className="select-none" variant="inset">
       <WorkspaceSidebarContent {...props} />
     </Sidebar>
   );
@@ -212,8 +192,6 @@ function WorkspaceSidebarContent({
   onArchiveChat,
   onCloneRepository,
   onCancelWorktreeCreation,
-  onCreateProject,
-  onCreateProjectChat,
   onCreateStandaloneChat,
   onImportSession,
   onOpenChat,
@@ -222,11 +200,6 @@ function WorkspaceSidebarContent({
   onOpenWorktree,
   onRetryWorktreeCreation,
   onChatContextMenuAction,
-  onProjectContextMenuAction,
-  onProjectPathLauncherAction,
-  onWorktreePathLauncherAction,
-  projectChatsByProjectId,
-  projects,
   selectedChatId,
   selectedProjectId,
 }: WorkspaceSidebarProps): ReactElement {
@@ -283,14 +256,13 @@ function WorkspaceSidebarContent({
         </SidebarMenu>
 
         <SimpleChatSidebarSection
-            chats={standaloneChats}
-            isLoading={isChatsLoading}
-            onArchiveChat={onArchiveChat}
-            onOpenChat={onOpenChat}
-            onChatContextMenuAction={onChatContextMenuAction}
-            selectedChatId={selectedChatId}
-          />
-
+          chats={standaloneChats}
+          isLoading={isChatsLoading}
+          onArchiveChat={onArchiveChat}
+          onOpenChat={onOpenChat}
+          onChatContextMenuAction={onChatContextMenuAction}
+          selectedChatId={selectedChatId}
+        />
       </SidebarContent>
 
       <SidebarFooter className="p-2">

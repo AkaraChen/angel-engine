@@ -343,22 +343,6 @@ export const de = {
       worktreeDirtyTitle: "Worktree aus dirty Repository erstellen?",
       worktreeNotGitRepository:
         "Dieses Projekt ist nicht mehr als Git-Repository verfügbar.",
-      worktreeSetupCommands: "Befehle aus 2code.json",
-      worktreeSetupContinue: "Ausführen und Worktree erstellen",
-      worktreeSetupDescription:
-        "Diese Shell-Befehle werden als lokaler Benutzer ausgeführt und können auf Dateien, Zugangsdaten und das Netzwerk zugreifen. Bitte vorher prüfen.",
-      worktreeSetupDirtyWarning:
-        "Dieses Repository hat außerdem nicht übernommene Änderungen. Der Worktree beginnt trotzdem beim aktuellen HEAD.",
-      worktreeSetupTitle: "Worktree-Setup-Befehle ausführen?",
-      worktreeSetupConfigure: "Konfigurieren lassen",
-      worktreeSetupDismiss: "Nicht mehr anzeigen",
-      worktreeSetupLegacyDescription:
-        "init_script ist veraltet und wird nicht automatisch ausgeführt. Migrieren Sie es zu setup_script und prüfen Sie es vor dem Erstellen.",
-      worktreeSetupMigrate: "init_script migrieren",
-      worktreeSetupMigrationDone: "init_script zur Prüfung migriert",
-      worktreeSetupMissingDescription:
-        "Ohne setup_script müssen Abhängigkeiten möglicherweise neu installiert werden.",
-      worktreeSetupMissingTitle: "Kein Worktree-Setup-Skript",
     },
     activity: {
       status: {
@@ -371,7 +355,6 @@ export const de = {
     },
     schedule: scheduleDe,
     sidebar: {
-      addProject: "Projekt hinzufügen",
       archiveChat: "Chat archivieren",
       chatAttention: "Chat benötigt Aufmerksamkeit",
       chats: "Chats",
@@ -1056,61 +1039,8 @@ export const de = {
       tooltip: "Angel Engine",
       tooltipNeedsYou: "Angel Engine — {{count}} brauchen dich",
     },
-    projectImport: {
-      addFromFolder: "Aus lokalem Ordner…",
-      addFromGit: "Aus Git klonen…",
-      archivedBadge: "Archiviert",
-      clone: "Klonen",
-      cloneTo: "Klonen nach {{path}}",
-      description:
-        "Wähle ein Repository auf Quellcodeverwaltung oder füge eine Git-URL ein.",
-      discoveryUnavailable:
-        "Zum Durchsuchen von Repositories ist ein aktiver Quellcodeverwaltungsanbieter erforderlich.",
-      failedTitle: "Klonen fehlgeschlagen",
-      forkBadge: "Fork",
-      loadingOwners: "Konten werden geladen…",
-      loadingRepositories: "Repositories werden geladen…",
-      noMatches: "Keine Repositories passen zu „{{query}}“",
-      noOwners: "Keine Quellcodeverwaltung-Konten verfügbar",
-      noRepositories: "Keine Repositories",
-      openProject: "Projekt öffnen",
-      owners: "Konten",
-      ownersFailed: "Quellcodeverwaltung-Konten konnten nicht geladen werden",
-      readyTitle: "Repository bereit",
-      privateBadge: "Privat",
-      progressTitle: "Repository wird geklont",
-      repositoriesFailed: "Repositories konnten nicht geladen werden",
-      retry: "Erneut versuchen",
-      reusedExisting:
-        "Ein vorhandener Checkout an diesem Pfad wurde weiterverwendet.",
-      searchPlaceholder: "Repositories durchsuchen",
-      stageCloning: "Repository klonen",
-      stageCompleted: "Fertig",
-      stagePreparing: "Ziel vorbereiten",
-      stageRegistering: "Projekt registrieren",
-      tabSourceControl: "Quellcodeverwaltung",
-      tabUrl: "Git-URL",
-      title: "Repository klonen",
-      urlHint: "https, ssh oder owner/repo",
-      urlLabel: "Repository-URL",
-      urlPlaceholder: "https://example.com/owner/repo",
-    },
     projects: {
       chooseFolder: "Projektordner auswählen",
-      importSession: "Sitzungen importieren…",
-      openInFinder: "Im Finder öffnen",
-      scriptShell: "Shell für Lebenszyklus-Skripte",
-      scriptShellAuto: "Automatisch (Bash-kompatibel)",
-      scriptShellBash: "Nur Bash-kompatibel",
-      scriptShellSystem: "System-Shell (Kompatibilität)",
-      settings: "Einstellungen",
-      settingsLoadFailed: "Projekteinstellungen konnten nicht geladen werden",
-      settingsSaveFailed:
-        "Projekteinstellungen konnten nicht gespeichert werden",
-      settingsSaved: "Projekteinstellungen gespeichert",
-      settingsTitle: "Einstellungen für {{project}}",
-      setupScript: "Worktree-Setup-Skript",
-      setupScriptPlaceholder: "bun install",
     },
     pathLauncher: {
       copyPath: "Pfad kopieren",

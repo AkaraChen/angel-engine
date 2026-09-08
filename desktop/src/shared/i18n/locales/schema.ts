@@ -447,18 +447,6 @@ export interface LocaleResourceTranslationWorkspace {
   worktreeDirtyRemember: string;
   worktreeDirtyTitle: string;
   worktreeNotGitRepository: string;
-  worktreeSetupCommands: string;
-  worktreeSetupContinue: string;
-  worktreeSetupDescription: string;
-  worktreeSetupDirtyWarning: string;
-  worktreeSetupTitle: string;
-  worktreeSetupConfigure: string;
-  worktreeSetupDismiss: string;
-  worktreeSetupLegacyDescription: string;
-  worktreeSetupMigrate: string;
-  worktreeSetupMigrationDone: string;
-  worktreeSetupMissingDescription: string;
-  worktreeSetupMissingTitle: string;
 }
 
 export interface LocaleResourceTranslationSidebarDateGroups {
@@ -579,7 +567,6 @@ export interface LocaleResourceTranslationSchedule {
 }
 
 export interface LocaleResourceTranslationSidebar {
-  addProject: string;
   archiveChat: string;
   chatAttention: string;
   chats: string;
@@ -1276,58 +1263,8 @@ export interface LocaleResourceTranslationNotifications {
   updateReadyDescription: string;
 }
 
-export interface LocaleResourceTranslationProjectImport {
-  readyTitle: string;
-  addFromFolder: string;
-  addFromGit: string;
-  archivedBadge: string;
-  clone: string;
-  cloneTo: string;
-  description: string;
-  discoveryUnavailable: string;
-  failedTitle: string;
-  forkBadge: string;
-  loadingOwners: string;
-  loadingRepositories: string;
-  noMatches: string;
-  noOwners: string;
-  noRepositories: string;
-  openProject: string;
-  owners: string;
-  ownersFailed: string;
-  privateBadge: string;
-  progressTitle: string;
-  repositoriesFailed: string;
-  retry: string;
-  reusedExisting: string;
-  searchPlaceholder: string;
-  stageCloning: string;
-  stageCompleted: string;
-  stagePreparing: string;
-  stageRegistering: string;
-  tabSourceControl: string;
-  tabUrl: string;
-  title: string;
-  urlHint: string;
-  urlLabel: string;
-  urlPlaceholder: string;
-}
-
 export interface LocaleResourceTranslationProjects {
   chooseFolder: string;
-  importSession: string;
-  openInFinder: string;
-  scriptShell: string;
-  scriptShellAuto: string;
-  scriptShellBash: string;
-  scriptShellSystem: string;
-  settings: string;
-  settingsLoadFailed: string;
-  settingsSaveFailed: string;
-  settingsSaved: string;
-  settingsTitle: string;
-  setupScript: string;
-  setupScriptPlaceholder: string;
 }
 
 export interface LocaleResourceTranslationPathLauncher {
@@ -1425,7 +1362,6 @@ export interface LocaleResourceTranslation {
   dialog: LocaleResourceTranslationDialog;
   notifications: LocaleResourceTranslationNotifications;
   pathLauncher: LocaleResourceTranslationPathLauncher;
-  projectImport: LocaleResourceTranslationProjectImport;
   projects: LocaleResourceTranslationProjects;
   tray: LocaleResourceTranslationTray;
   ui: LocaleResourceTranslationUi;

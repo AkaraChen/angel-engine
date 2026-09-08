@@ -110,7 +110,6 @@ export interface StartRunOptions {
   title?: string;
   sourceLink?: ChatCreateInput["sourceLink"];
   worktreeRef?: ChatCreateInput["worktreeRef"];
-  worktreeSetupApproval?: string;
 }
 
 export interface StartRunInput {

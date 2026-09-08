@@ -343,22 +343,6 @@ export const es = {
       worktreeDirtyTitle: "¿Crear worktree desde un repositorio dirty?",
       worktreeNotGitRepository:
         "Este proyecto ya no está disponible como repositorio Git.",
-      worktreeSetupCommands: "Comandos de 2code.json",
-      worktreeSetupContinue: "Ejecutar y crear worktree",
-      worktreeSetupDescription:
-        "Estos comandos de shell se ejecutarán como tu usuario local y podrán acceder a archivos, credenciales y red. Revísalos antes de permitirlos.",
-      worktreeSetupDirtyWarning:
-        "Este repositorio también tiene cambios sin confirmar. El worktree seguirá partiendo del HEAD actual.",
-      worktreeSetupTitle: "¿Ejecutar los comandos de configuración?",
-      worktreeSetupConfigure: "Ayúdame a configurar",
-      worktreeSetupDismiss: "No volver a mostrar",
-      worktreeSetupLegacyDescription:
-        "init_script está retirado y no se ejecutará automáticamente. Migra a setup_script y revísalo antes de crear el worktree.",
-      worktreeSetupMigrate: "Migrar init_script",
-      worktreeSetupMigrationDone: "init_script migrado para revisión",
-      worktreeSetupMissingDescription:
-        "Sin setup_script, quizá debas reinstalar las dependencias.",
-      worktreeSetupMissingTitle: "No hay script de configuración",
     },
     activity: {
       status: {
@@ -371,7 +355,6 @@ export const es = {
     },
     schedule: scheduleEs,
     sidebar: {
-      addProject: "Agregar proyecto",
       archiveChat: "Archivar chat",
       chatAttention: "Atención del chat",
       chats: "Chats",
@@ -692,7 +675,8 @@ export const es = {
         sendWithModEnterTitle: "Enviar con {{shortcut}}",
         trayEnabledDescription:
           "Muestra en la barra de menús el recuento de sesiones que te necesitan y una lista para abrirlas sin buscar en la app.",
-        trayEnabledSwitchLabel: "Mostrar resumen de sesiones en la barra de menús",
+        trayEnabledSwitchLabel:
+          "Mostrar resumen de sesiones en la barra de menús",
         trayEnabledTitle: "Resumen de sesiones en la barra de menús",
       },
     },
@@ -1049,60 +1033,8 @@ export const es = {
       tooltip: "Angel Engine",
       tooltipNeedsYou: "Angel Engine — {{count}} te necesitan",
     },
-    projectImport: {
-      addFromFolder: "Desde una carpeta local…",
-      addFromGit: "Clonar desde Git…",
-      archivedBadge: "Archivado",
-      clone: "Clonar",
-      cloneTo: "Clonando en {{path}}",
-      description:
-        "Elige un repositorio de control de código fuente o pega una URL de git.",
-      discoveryUnavailable:
-        "Para explorar repositorios se necesita un proveedor de control de código fuente activo.",
-      failedTitle: "Error al clonar",
-      forkBadge: "Bifurcación",
-      loadingOwners: "Cargando cuentas…",
-      loadingRepositories: "Cargando repositorios…",
-      noMatches: "Ningún repositorio coincide con «{{query}}»",
-      noOwners: "No hay cuentas de control de código fuente disponibles",
-      noRepositories: "Sin repositorios",
-      openProject: "Abrir proyecto",
-      owners: "Cuentas",
-      ownersFailed:
-        "No se pudieron cargar las cuentas de control de código fuente",
-      readyTitle: "Repositorio listo",
-      privateBadge: "Privado",
-      progressTitle: "Clonando repositorio",
-      repositoriesFailed: "No se pudieron cargar los repositorios",
-      retry: "Reintentar",
-      reusedExisting: "Se reutilizó la copia existente en esta ruta.",
-      searchPlaceholder: "Buscar repositorios",
-      stageCloning: "Clonando repositorio",
-      stageCompleted: "Listo",
-      stagePreparing: "Preparando destino",
-      stageRegistering: "Registrando proyecto",
-      tabSourceControl: "control de código fuente",
-      tabUrl: "URL de Git",
-      title: "Clonar un repositorio",
-      urlHint: "https, ssh o owner/repo",
-      urlLabel: "URL del repositorio",
-      urlPlaceholder: "https://example.com/owner/repo",
-    },
     projects: {
       chooseFolder: "Elegir carpeta del proyecto",
-      importSession: "Importar sesiones…",
-      openInFinder: "Abrir en Finder",
-      scriptShell: "Shell de scripts de ciclo de vida",
-      scriptShellAuto: "Automático (compatible con Bash)",
-      scriptShellBash: "Solo compatible con Bash",
-      scriptShellSystem: "Shell del sistema (compatibilidad)",
-      settings: "Ajustes",
-      settingsLoadFailed: "No se pudieron cargar los ajustes del proyecto",
-      settingsSaveFailed: "No se pudieron guardar los ajustes del proyecto",
-      settingsSaved: "Ajustes del proyecto guardados",
-      settingsTitle: "Ajustes de {{project}}",
-      setupScript: "Script de preparación del worktree",
-      setupScriptPlaceholder: "bun install",
     },
     pathLauncher: {
       copyPath: "Copiar ruta",

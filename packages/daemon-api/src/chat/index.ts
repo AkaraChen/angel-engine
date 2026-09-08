@@ -93,11 +93,7 @@ export interface ChatCwdInput {
 export interface ChatPrewarmIdInput {
   prewarmId?: string;
 }
-export interface WorktreeSetupApprovalInput {
-  worktreeSetupApproval?: string;
-}
-
-export type WorktreeCreationStage = "fetching" | "worktree" | "setup";
+export type WorktreeCreationStage = "fetching" | "worktree";
 export type WorktreeCreationStatus = "creating" | "failed";
 
 export interface WorktreeCreationState {
@@ -128,8 +124,7 @@ export interface ChatSourceLink {
 export type ChatCreateInput = JsChatCreateInput &
   ChatCreationLocationInput &
   ChatCwdInput &
-  ChatPrewarmIdInput &
-  WorktreeSetupApprovalInput & {
+  ChatPrewarmIdInput & {
     remoteThreadId?: string;
     sourceLink?: ChatSourceLink;
     worktreeRef?: {
@@ -191,8 +186,7 @@ export type ChatElicitation = JsChatElicitation;
 export type ChatAttachmentInput = JsChatAttachmentInput;
 export type ChatSendInput = JsChatSendInput &
   ChatCreationLocationInput &
-  ChatCwdInput &
-  WorktreeSetupApprovalInput;
+  ChatCwdInput;
 export type ChatStreamPart = "reasoning" | "text";
 
 export interface ChatAvailableCommand {
@@ -626,7 +620,6 @@ export const chatCreateInputSchema = arkType({
     url: "string > 0",
   },
   "title?": "string > 0 | undefined",
-  "worktreeSetupApproval?": "string > 0 | undefined",
   "worktreeRef?": {
     "remoteRef?": "string > 0",
     type: "'existingBranch' | 'newBranchFrom'",
@@ -690,7 +683,6 @@ export const chatSendInputSchema = arkType({
   "reasoningEffort?": "string > 0 | undefined",
   "runtime?": "string > 0 | undefined",
   text: "string",
-  "worktreeSetupApproval?": "string > 0 | undefined",
 });
 
 export const chatSetModeInputSchema = arkType({

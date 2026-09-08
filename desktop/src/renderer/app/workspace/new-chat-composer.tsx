@@ -211,7 +211,6 @@ export function NewChatComposer({
       mentionedFiles,
       selectedSkills,
       text,
-      worktreeSetupApproval,
     }: ChatComposerSubmission) => {
       await sendChatMessage.sendPromptMessage({
         attachments: files,
@@ -219,7 +218,6 @@ export function NewChatComposer({
         selectedSkills,
         t,
         text,
-        worktreeSetupApproval,
       });
     },
     [sendChatMessage, t],
