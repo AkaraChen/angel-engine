@@ -189,7 +189,6 @@ export interface LocaleResourceTranslationWorkspaceToolsTabs {
   files: string;
   gitChanges: string;
   newTab: string;
-  pullRequest: string;
   processes: string;
   tabs: string;
   tools: string;
@@ -320,7 +319,6 @@ export interface LocaleResourceTranslationWorkspaceTools {
   empty: LocaleResourceTranslationWorkspaceToolsEmpty;
   git: LocaleResourceTranslationWorkspaceToolsGit;
   listeningPorts: string;
-  pullRequest: LocaleResourceTranslationWorkspaceToolsChangeRequest;
   resizeFileTree: string;
   resizeGitList: string;
   subprocesses: string;
@@ -1055,14 +1053,6 @@ export interface LocaleResourceTranslationComposerToasts {
   tooManyFiles: string;
 }
 
-export interface LocaleResourceTranslationComposerSourceControlErrors {
-  cliMissing: string;
-  cliUnauthenticated: string;
-  fetchFailed: string;
-  notFound: string;
-  urlUnsupported: string;
-}
-
 export interface LocaleResourceTranslationComposerTaskLinkErrors {
   linearFetchFailed: string;
   linearNotFound: string;
@@ -1075,13 +1065,6 @@ export interface LocaleResourceTranslationComposer {
   agentMode: string;
   agentSettings: string;
   attachFiles: string;
-  attachChangeRequest: string;
-  attachChangeRequestConfirm: string;
-  attachChangeRequestEmpty: string;
-  attachChangeRequestLoading: string;
-  attachChangeRequestPlaceholder: string;
-  attachChangeRequestTitle: string;
-  attachChangeRequestUpdated: string;
   attachmentErrors: LocaleResourceTranslationComposerAttachmentErrors;
   commands: string;
   couldNotReadAttachment: string;
@@ -1090,13 +1073,8 @@ export interface LocaleResourceTranslationComposer {
   fileTypeBlocked: string;
   fileTooLarge: string;
   files: string;
-  configureSourceControl: string;
   fromLink: string;
   fromLinkPlaceholder: string;
-  sourceControlUnavailable: string;
-  sourceControlErrors: LocaleResourceTranslationComposerSourceControlErrors;
-  workItem: string;
-  changeRequest: string;
   linearConnectAction: string;
   linearConnectDescription: string;
   linearIssue: string;
@@ -1127,7 +1105,6 @@ export interface LocaleResourceTranslationComposer {
   switchToPlan: string;
   taskLinkErrors: LocaleResourceTranslationComposerTaskLinkErrors;
   taskLinkHintComplete: string;
-  taskLinkHintSourceControlPath: string;
   taskLinkHintLinearPath: string;
   taskLinkHintSupported: string;
   taskLinkStateClosed: string;

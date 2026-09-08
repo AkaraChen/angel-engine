@@ -13,10 +13,6 @@ export const workspaceToolFileTreeWidthStorageKey =
   "angel-engine.workspace-tool-file-tree-width";
 export const workspaceToolFileTreeWidthMin = 200;
 export const workspaceToolFileTreeWidthMax = 520;
-export const workspaceToolGitListWidthStorageKey =
-  "angel-engine.workspace-tool-git-list-width";
-export const workspaceToolGitListWidthMin = 240;
-export const workspaceToolGitListWidthMax = 520;
 
 function readStoredWorkspaceToolPanelWidth({
   fallback,
@@ -44,13 +40,6 @@ export const initialWorkspaceToolFileTreeWidth = () =>
     key: workspaceToolFileTreeWidthStorageKey,
     max: workspaceToolFileTreeWidthMax,
     min: workspaceToolFileTreeWidthMin,
-  });
-export const initialWorkspaceToolGitListWidth = () =>
-  readStoredWorkspaceToolPanelWidth({
-    fallback: 320,
-    key: workspaceToolGitListWidthStorageKey,
-    max: workspaceToolGitListWidthMax,
-    min: workspaceToolGitListWidthMin,
   });
 
 export function WorkspaceToolPanelSplitter({

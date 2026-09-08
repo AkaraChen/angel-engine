@@ -1,6 +1,5 @@
 import type { LocaleResource } from "./schema";
 import { scheduleFr } from "./schedule";
-import { changeRequestFr } from "./change-request";
 
 export const fr = {
   translation: {
@@ -321,18 +320,13 @@ export const fr = {
           },
           pushing: "Envoi en cours",
         },
-        pullRequest: changeRequestFr,
         listeningPorts: "Ports en écoute",
         resizeFileTree: "Redimensionner l’arborescence",
-        resizeGitList: "Redimensionner la liste des changements",
         subprocesses: "Sous-processus",
         tabs: {
-          checks: "Checks",
           files: "Fichiers",
-          gitChanges: "Changements Git",
           newTab: "Nouvel onglet",
           processes: "Processus",
-          pullRequest: "Demande de changement",
           tabs: "Onglets",
           tools: "Outils",
           workspaceTabs: "Onglets de l’espace de travail",
@@ -825,16 +819,6 @@ export const fr = {
       agentMode: "Mode agent",
       agentSettings: "Paramètres de l’agent",
       attachFiles: "Joindre des fichiers",
-      attachChangeRequest:
-        "Joindre une demande de changement ou un élément de travail",
-      attachChangeRequestConfirm: "Joindre",
-      attachChangeRequestEmpty:
-        "Aucun élément de travail ni demande de changement trouvé.",
-      attachChangeRequestLoading: "Récupération…",
-      attachChangeRequestPlaceholder:
-        "Rechercher des éléments de travail et des demandes de changement…",
-      attachChangeRequestTitle: "Joindre depuis le contrôle de code source",
-      attachChangeRequestUpdated: "mis à jour {{time}}",
       attachmentErrors: {
         accept: "Aucun fichier ne correspond aux types autorisés.",
         fileRead: "Le fichier sélectionné n’a pas pu être lu.",
@@ -861,25 +845,9 @@ export const fr = {
       fileTypeBlocked: "Type de fichier bloqué",
       fileTooLarge: "Le fichier est trop volumineux",
       files: "Fichiers",
-      configureSourceControl: "Configurer la gestion de code source",
       fromLink: "Depuis un lien",
       fromLinkPlaceholder:
         "Collez un lien du contrôle de code source ou de Linear, ou recherchez dans le contrôle de code source",
-      sourceControlUnavailable:
-        "Aucun fournisseur de gestion de code source n’est actif pour ce projet.",
-      sourceControlErrors: {
-        cliMissing:
-          "La CLI du contrôle de code source n'est pas installée ou absente du PATH.",
-        cliUnauthenticated:
-          "Le fournisseur de contrôle de code source n'est pas authentifié.",
-        fetchFailed:
-          "Impossible de récupérer cet élément du contrôle de code source.",
-        notFound: "Élément de travail ou demande de changement introuvable.",
-        urlUnsupported:
-          "Cette URL de contrôle de code source n'est pas prise en charge.",
-      },
-      workItem: "Élément de travail",
-      changeRequest: "Demande de changement",
       linearConnectAction: "Connecter Linear",
       linearConnectDescription:
         "Connectez Linear avant de résoudre cette issue.",
@@ -924,8 +892,6 @@ export const fr = {
       },
       taskLinkHintComplete:
         "Collez un lien complet vers un élément de travail, une demande de changement ou un élément Linear.",
-      taskLinkHintSourceControlPath:
-        "Ce lien de contrôle de code source ne pointe ni vers un élément de travail ni vers une demande de changement.",
       taskLinkHintLinearPath: "Ce lien Linear ne pointe pas vers une issue.",
       taskLinkHintSupported:
         "Liens pris en charge : éléments de travail et demandes de changement du contrôle de code source, et éléments Linear.",

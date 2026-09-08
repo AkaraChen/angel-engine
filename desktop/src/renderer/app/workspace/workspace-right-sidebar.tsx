@@ -14,10 +14,7 @@ import {
   WorkspaceToolHeaderButton,
   WorkspaceToolSidebarHeader,
 } from "@/app/workspace/workspace-tool-surface-header";
-import {
-  currentWorkspaceToolSnapshot,
-  useWorkspaceToolStore,
-} from "@/app/workspace/workspace-tool-store";
+import { useWorkspaceToolStore } from "@/app/workspace/workspace-tool-store";
 import {
   clampWorkspaceRightSidebarWidth,
   defaultWorkspaceRightSidebarWidth,
@@ -145,7 +142,7 @@ export function WorkspaceRightSidebar({
         <WorkspaceToolSidebarHeader
           api={api}
           root={root}
-          showRepositoryName
+          showRepositoryName={true}
           trailingActions={
             <WorkspaceToolHeaderButton
               icon={<SidebarFold className="scale-x-[-1]" weight="duotone" />}

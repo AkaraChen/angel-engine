@@ -1,6 +1,5 @@
 import type { LocaleResource } from "./schema";
 import { scheduleDe } from "./schedule";
-import { changeRequestDe } from "./change-request";
 
 export const de = {
   translation: {
@@ -319,18 +318,13 @@ export const de = {
           },
           pushing: "Wird gepusht",
         },
-        pullRequest: changeRequestDe,
         listeningPorts: "Lauschende Ports",
         resizeFileTree: "Dateibaumbreite anpassen",
-        resizeGitList: "Breite der Änderungsliste anpassen",
         subprocesses: "Unterprozesse",
         tabs: {
-          checks: "Checks",
           files: "Dateien",
-          gitChanges: "Git-Änderungen",
           newTab: "Neuer Tab",
           processes: "Prozesse",
-          pullRequest: "Änderungsanfrage",
           tabs: "Tabs",
           tools: "Werkzeuge",
           workspaceTabs: "Workspace-Tabs",
@@ -822,15 +816,6 @@ export const de = {
       agentMode: "Agent-Modus",
       agentSettings: "Agent-Einstellungen",
       attachFiles: "Dateien anhängen",
-      attachChangeRequest: "Änderungsanfrage oder Arbeitselement anhängen",
-      attachChangeRequestConfirm: "Anhängen",
-      attachChangeRequestEmpty:
-        "Keine Arbeitselemente oder Änderungsanfragen gefunden.",
-      attachChangeRequestLoading: "Wird geladen…",
-      attachChangeRequestPlaceholder:
-        "Arbeitselemente und Änderungsanfragen durchsuchen…",
-      attachChangeRequestTitle: "Aus der Quellcodeverwaltung anhängen",
-      attachChangeRequestUpdated: "aktualisiert {{time}}",
       attachmentErrors: {
         accept: "Keine Dateien entsprechen den erlaubten Typen.",
         fileRead: "Die ausgewählte Datei konnte nicht gelesen werden.",
@@ -857,26 +842,9 @@ export const de = {
       fileTypeBlocked: "Dateityp blockiert",
       fileTooLarge: "Datei ist zu groß",
       files: "Dateien",
-      configureSourceControl: "Quellcodeverwaltung konfigurieren",
       fromLink: "Aus Link",
       fromLinkPlaceholder:
         "Link aus der Quellcodeverwaltung oder von Linear einfügen oder die Quellcodeverwaltung durchsuchen",
-      sourceControlUnavailable:
-        "Für dieses Projekt ist kein Quellcodeverwaltungsanbieter aktiv.",
-      sourceControlErrors: {
-        cliMissing:
-          "Die CLI der Quellcodeverwaltung ist nicht installiert oder nicht im PATH.",
-        cliUnauthenticated:
-          "Der Anbieter der Quellcodeverwaltung ist nicht authentifiziert.",
-        fetchFailed:
-          "Das Element der Quellcodeverwaltung konnte nicht geladen werden.",
-        notFound:
-          "Das Arbeitselement oder die Änderungsanfrage wurde nicht gefunden.",
-        urlUnsupported:
-          "Diese URL der Quellcodeverwaltung wird nicht unterstützt.",
-      },
-      workItem: "Arbeitselement",
-      changeRequest: "Änderungsanfrage",
       linearConnectAction: "Linear verbinden",
       linearConnectDescription:
         "Verbinde Linear, bevor dieses Issue aufgelöst wird.",
@@ -921,8 +889,6 @@ export const de = {
       },
       taskLinkHintComplete:
         "Füge einen vollständigen Link zu einem Arbeitselement, einer Änderungsanfrage oder einem Linear-Arbeitselement ein.",
-      taskLinkHintSourceControlPath:
-        "Dies ist ein Link der Quellcodeverwaltung, aber kein Arbeitselement oder keine Änderungsanfrage.",
       taskLinkHintLinearPath: "Dies ist ein Linear-Link, aber kein Issue.",
       taskLinkHintSupported:
         "Unterstützt werden Arbeitselemente und Änderungsanfragen der Quellcodeverwaltung sowie Linear-Arbeitselemente.",

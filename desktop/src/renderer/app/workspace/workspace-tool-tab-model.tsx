@@ -10,7 +10,6 @@ import {
   FileText,
   Folder,
   GitBranch,
-  GitPullRequest,
   TerminalWindow as TerminalIcon,
 } from "@phosphor-icons/react";
 import { useCallback, useRef } from "react";

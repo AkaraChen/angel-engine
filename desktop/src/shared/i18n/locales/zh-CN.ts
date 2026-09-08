@@ -1,6 +1,5 @@
 import type { LocaleResource } from "./schema";
 import { scheduleZhCN } from "./schedule";
-import { changeRequestZhCN } from "./change-request";
 
 export const zhCN = {
   translation: {
@@ -310,18 +309,13 @@ export const zhCN = {
           },
           pushing: "推送中",
         },
-        pullRequest: changeRequestZhCN,
         listeningPorts: "监听端口",
         resizeFileTree: "调整文件树宽度",
-        resizeGitList: "调整更改列表宽度",
         subprocesses: "子进程",
         tabs: {
-          checks: "检查",
           files: "文件",
-          gitChanges: "Git 更改",
           newTab: "新建标签页",
           processes: "进程",
-          pullRequest: "变更请求",
           tabs: "标签页",
           tools: "工具",
           workspaceTabs: "工作区标签页",
@@ -780,13 +774,6 @@ export const zhCN = {
       agentMode: "Agent 模式",
       agentSettings: "Agent 设置",
       attachFiles: "附加文件",
-      attachChangeRequest: "附加变更请求或工作项",
-      attachChangeRequestConfirm: "附加",
-      attachChangeRequestEmpty: "未找到工作项或变更请求。",
-      attachChangeRequestLoading: "获取中…",
-      attachChangeRequestPlaceholder: "搜索工作项和变更请求…",
-      attachChangeRequestTitle: "从源代码控制附加",
-      attachChangeRequestUpdated: "更新于 {{time}}",
       attachmentErrors: {
         accept: "没有文件符合允许的类型。",
         fileRead: "无法读取所选文件。",
@@ -810,20 +797,9 @@ export const zhCN = {
       fileTypeBlocked: "文件类型被阻止",
       fileTooLarge: "文件过大",
       files: "文件",
-      configureSourceControl: "配置源代码控制",
       fromLink: "从链接",
       fromLinkPlaceholder:
         "粘贴源代码控制或 Linear 工作项链接，或搜索源代码控制",
-      sourceControlUnavailable: "此项目未激活源代码控制提供方。",
-      sourceControlErrors: {
-        cliMissing: "未安装源代码控制 CLI 或不在 PATH 中。请安装后重试。",
-        cliUnauthenticated: "源代码控制提供方未认证。请登录后重试。",
-        fetchFailed: "无法获取该源代码控制条目。",
-        notFound: "未找到该工作项或变更请求。",
-        urlUnsupported: "不支持该源代码控制链接。",
-      },
-      workItem: "工作项",
-      changeRequest: "变更请求",
       linearConnectAction: "连接 Linear",
       linearConnectDescription: "请先连接 Linear，再解析此 Issue。",
       linearIssue: "Linear Issue",
@@ -865,8 +841,6 @@ export const zhCN = {
       },
       taskLinkHintComplete:
         "请粘贴完整的源代码控制工作项、变更请求或 Linear 工作项链接。",
-      taskLinkHintSourceControlPath:
-        "这是源代码控制链接，但不是工作项或变更请求。",
       taskLinkHintLinearPath: "这是 Linear 链接，但不是 Issue。",
       taskLinkHintSupported:
         "支持源代码控制工作项、变更请求与 Linear 工作项链接。",

@@ -872,7 +872,6 @@ export function registerApi(
   );
   registerSourceControlHttpApi(app, {
     coordinator: sourceControl,
-    onWorkspaceCreated: (chatId) => chatEvents.metadataChanged([chatId]),
     runDb: runEffect,
   });
   app.get("/api/source-control/activation", async (context) => {

@@ -56,17 +56,6 @@ describe.each(translatedLanguages)("%s locale", (language) => {
       ),
     ).toEqual(intentionallySame[language] ?? []);
   });
-
-  it("does not silently reuse English pull request copy", () => {
-    const intentionallySame: Partial<Record<typeof language, string[]>> = {};
-
-    expect(
-      pathsMatchingEnglish(
-        resources.en.translation.workspace.tools.pullRequest,
-        resources[language].translation.workspace.tools.pullRequest,
-      ),
-    ).toEqual(intentionallySame[language] ?? []);
-  });
 });
 
 describe.each(supportedLanguages)(
@@ -83,10 +72,6 @@ describe.each(supportedLanguages)(
     it("uses the provider-neutral composer keys", () => {
       const composer = resources[language].translation.composer;
 
-      expect(composer).toHaveProperty("attachChangeRequest");
-      expect(composer).toHaveProperty("workItem");
-      expect(composer).toHaveProperty("changeRequest");
-      expect(composer).toHaveProperty("taskLinkHintSourceControlPath");
       expect(composer).not.toHaveProperty("attachGitHub");
       expect(composer).not.toHaveProperty("githubIssue");
       expect(composer).not.toHaveProperty("githubPullRequest");

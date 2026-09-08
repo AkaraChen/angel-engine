@@ -1,6 +1,5 @@
 import type { LocaleResource } from "./schema";
 import { scheduleKo } from "./schedule";
-import { changeRequestKo } from "./change-request";
 
 export const ko = {
   translation: {
@@ -314,18 +313,13 @@ export const ko = {
           },
           pushing: "푸시 중",
         },
-        pullRequest: changeRequestKo,
         listeningPorts: "수신 대기 포트",
         resizeFileTree: "파일 트리 너비 조정",
-        resizeGitList: "변경 목록 너비 조정",
         subprocesses: "하위 프로세스",
         tabs: {
-          checks: "검사",
           files: "파일",
-          gitChanges: "Git 변경",
           newTab: "새 탭",
           processes: "프로세스",
-          pullRequest: "변경 요청",
           tabs: "탭",
           tools: "도구",
           workspaceTabs: "워크스페이스 탭",
@@ -803,13 +797,6 @@ export const ko = {
       agentMode: "Agent 모드",
       agentSettings: "Agent 설정",
       attachFiles: "파일 첨부",
-      attachChangeRequest: "변경 요청 또는 작업 항목 첨부",
-      attachChangeRequestConfirm: "첨부",
-      attachChangeRequestEmpty: "작업 항목이나 변경 요청을 찾을 수 없습니다.",
-      attachChangeRequestLoading: "가져오는 중…",
-      attachChangeRequestPlaceholder: "작업 항목 및 변경 요청 검색…",
-      attachChangeRequestTitle: "소스 제어에서 첨부",
-      attachChangeRequestUpdated: "{{time}} 업데이트됨",
       attachmentErrors: {
         accept: "허용된 형식과 일치하는 파일이 없습니다.",
         fileRead: "선택한 파일을 읽을 수 없습니다.",
@@ -836,21 +823,9 @@ export const ko = {
       fileTypeBlocked: "파일 형식 차단됨",
       fileTooLarge: "파일이 너무 큽니다",
       files: "파일",
-      configureSourceControl: "소스 제어 구성",
       fromLink: "링크에서",
       fromLinkPlaceholder:
         "소스 제어 또는 Linear 작업 항목 링크를 붙여넣거나 소스 제어 검색",
-      sourceControlUnavailable:
-        "이 프로젝트에 활성화된 소스 제어 공급자가 없습니다.",
-      sourceControlErrors: {
-        cliMissing: "소스 제어 CLI가 설치되지 않았거나 PATH에 없습니다.",
-        cliUnauthenticated: "소스 제어 제공자가 인증되지 않았습니다.",
-        fetchFailed: "소스 제어 항목을 가져오지 못했습니다.",
-        notFound: "작업 항목 또는 변경 요청을 찾을 수 없습니다.",
-        urlUnsupported: "이 소스 제어 URL은 지원되지 않습니다.",
-      },
-      workItem: "작업 항목",
-      changeRequest: "변경 요청",
       linearConnectAction: "Linear 연결",
       linearConnectDescription: "이 이슈를 확인하기 전에 Linear에 연결하세요.",
       linearIssue: "Linear 이슈",
@@ -893,8 +868,6 @@ export const ko = {
       },
       taskLinkHintComplete:
         "소스 제어 작업 항목, 변경 요청 또는 Linear 작업 항목의 전체 링크를 붙여넣으세요.",
-      taskLinkHintSourceControlPath:
-        "소스 제어 링크이지만 작업 항목이나 변경 요청이 아닙니다.",
       taskLinkHintLinearPath: "Linear 링크이지만 이슈가 아닙니다.",
       taskLinkHintSupported:
         "소스 제어 작업 항목, 변경 요청 및 Linear 작업 항목 링크를 지원합니다.",

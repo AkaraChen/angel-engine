@@ -86,23 +86,10 @@ import type {
   UpdateProjectInput,
 } from "@angel-engine/daemon-api/projects";
 import type {
-  ChangeRequest,
-  ChangeRequestCreatePreflightResult,
-  ChangeRequestStatusResult,
-  ChangeRequestTemplateResult,
-  CheckRun,
-  CheckSummary,
-  ChecksFixPromptResult,
-  CreateChangeRequestWorkspaceResult,
-  MergeMethod,
-  PublishBranchResult,
   RepositoryIdentity,
   RepositoryNamespace,
-  ReviewThread,
-  ResolvedSourceControlLink,
   SourceControlActivationResult,
   SourceControlProjectConfig,
-  WorkItem,
 } from "@angel-engine/daemon-api/source-control";
 import { isProjectCloneEvent } from "@angel-engine/daemon-api/projects";
 import type {
@@ -148,28 +135,6 @@ export interface DaemonClientOptions {
   token?: string | null;
 }
 
-export interface SourceControlCreateChangeRequestInput {
-  body: string;
-  draft: boolean;
-  projectPath: string;
-  publish: boolean;
-  sourceBranch: string;
-  targetBranch: string;
-  title: string;
-}
-
-export interface SourceControlCreateWorkspaceInput {
-  projectPath: string;
-  runtime?: string;
-  setupApproval?: string;
-  title?: string;
-}
-
-export interface SourceControlMergeChangeRequestInput {
-  deleteSourceBranch: boolean;
-  method: MergeMethod;
-  projectPath: string;
-}
 
 export interface DaemonEventHandlers {
   onEvent: (event: DaemonGlobalEvent) => void;
@@ -619,43 +584,6 @@ export function createDaemonClient(options: DaemonClientOptions) {
           `/api/source-control/config?${query({ projectId })}`,
           json("PUT", input),
         ),
-      currentChangeRequest: (projectPath: string) =>
-        request<ChangeRequestStatusResult | null>(
-          `/api/source-control/change-requests/current?${query({ projectPath })}`,
-        ),
-      getChangeRequest: (projectPath: string, id: string) =>
-        request<ChangeRequest>(
-          `/api/source-control/change-requests/${encodeURIComponent(id)}?${query({ projectPath })}`,
-        ),
-      listWorkItems: (
-        projectPath: string,
-        queryText?: string,
-        limit?: number,
-      ) =>
-        request<WorkItem[]>(
-          `/api/source-control/work-items?${query({
-            limit,
-            projectPath,
-            query: queryText,
-          })}`,
-        ),
-      listChangeRequests: (
-        projectPath: string,
-        queryText?: string,
-        limit?: number,
-      ) =>
-        request<ChangeRequest[]>(
-          `/api/source-control/change-requests?${query({
-            limit,
-            projectPath,
-            query: queryText,
-          })}`,
-        ),
-      resolveLink: (projectPath: string, url: string) =>
-        request<ResolvedSourceControlLink>(
-          "/api/source-control/links/resolve",
-          json("POST", { projectPath, url }),
-        ),
       listNamespaces: (
         projectPath: string,
         queryText?: string,
@@ -681,62 +609,6 @@ export function createDaemonClient(options: DaemonClientOptions) {
             projectPath,
             query: queryText,
           })}`,
-        ),
-      changeRequestPreflight: (projectPath: string, targetBranch?: string) =>
-        request<ChangeRequestCreatePreflightResult>(
-          `/api/source-control/change-requests/preflight?${query({ projectPath, targetBranch })}`,
-        ),
-      changeRequestTemplate: (projectPath: string) =>
-        request<ChangeRequestTemplateResult>(
-          `/api/source-control/change-requests/template?${query({ projectPath })}`,
-        ),
-      createChangeRequest: (input: SourceControlCreateChangeRequestInput) =>
-        request<ChangeRequest>(
-          "/api/source-control/change-requests",
-          json("POST", input),
-        ),
-      mergeChangeRequest: (
-        id: string,
-        input: SourceControlMergeChangeRequestInput,
-      ) =>
-        request<ChangeRequest>(
-          `/api/source-control/change-requests/${encodeURIComponent(id)}/merge`,
-          json("POST", input),
-        ),
-      createChangeRequestWorkspace: (
-        id: string,
-        input: SourceControlCreateWorkspaceInput,
-      ) =>
-        request<CreateChangeRequestWorkspaceResult>(
-          `/api/source-control/change-requests/${encodeURIComponent(id)}/workspace`,
-          json("POST", input),
-        ),
-      publishBranch: (input: { localBranch: string; projectPath: string }) =>
-        request<PublishBranchResult>(
-          "/api/source-control/branches/publish",
-          json("POST", input),
-        ),
-      checks: (projectPath: string, id: string) =>
-        request<CheckRun[]>(
-          `/api/source-control/checks?${query({ id, projectPath })}`,
-        ),
-      checksSummary: (projectPath: string, id: string) =>
-        request<CheckSummary>(
-          `/api/source-control/checks/summary?${query({ id, projectPath })}`,
-        ),
-      checksFixPrompt: (projectPath: string, id: string) =>
-        request<ChecksFixPromptResult>(
-          "/api/source-control/checks/fix-prompt",
-          json("POST", { id, projectPath }),
-        ),
-      reviewThreads: (projectPath: string, id: string) =>
-        request<ReviewThread[]>(
-          `/api/source-control/reviews/threads?${query({ id, projectPath })}`,
-        ),
-      resolveReviewThread: (projectPath: string, threadId: string) =>
-        request<{ resolved: boolean }>(
-          `/api/source-control/reviews/threads/${encodeURIComponent(threadId)}/resolve`,
-          json("POST", { projectPath }),
         ),
     },
     health: () => request<DaemonHealth>("/api/health"),

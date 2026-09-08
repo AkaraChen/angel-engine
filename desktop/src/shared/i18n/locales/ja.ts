@@ -1,6 +1,5 @@
 import type { LocaleResource } from "./schema";
 import { scheduleJa } from "./schedule";
-import { changeRequestJa } from "./change-request";
 
 export const ja = {
   translation: {
@@ -318,18 +317,13 @@ export const ja = {
           },
           pushing: "プッシュ中",
         },
-        pullRequest: changeRequestJa,
         listeningPorts: "リスニングポート",
         resizeFileTree: "ファイルツリーの幅を調整",
-        resizeGitList: "変更リストの幅を調整",
         subprocesses: "サブプロセス",
         tabs: {
-          checks: "チェック",
           files: "ファイル",
-          gitChanges: "Git の変更",
           newTab: "新しいタブ",
           processes: "プロセス",
-          pullRequest: "変更リクエスト",
           tabs: "タブ",
           tools: "ツール",
           workspaceTabs: "ワークスペースタブ",
@@ -817,14 +811,6 @@ export const ja = {
       agentMode: "Agent モード",
       agentSettings: "Agent 設定",
       attachFiles: "ファイルを添付",
-      attachChangeRequest: "変更リクエストまたは作業項目を添付",
-      attachChangeRequestConfirm: "添付",
-      attachChangeRequestEmpty:
-        "作業項目または変更リクエストが見つかりません。",
-      attachChangeRequestLoading: "取得中…",
-      attachChangeRequestPlaceholder: "作業項目と変更リクエストを検索…",
-      attachChangeRequestTitle: "ソース管理から添付",
-      attachChangeRequestUpdated: "{{time}}に更新",
       attachmentErrors: {
         accept: "許可された種類に一致するファイルがありません。",
         fileRead: "選択したファイルを読み取れませんでした。",
@@ -850,22 +836,9 @@ export const ja = {
       fileTypeBlocked: "ファイル形式がブロックされました",
       fileTooLarge: "ファイルが大きすぎます",
       files: "ファイル",
-      configureSourceControl: "ソース管理を設定",
       fromLink: "リンクから",
       fromLinkPlaceholder:
         "ソース管理または Linear の作業項目リンクを貼り付けるか、ソース管理を検索",
-      sourceControlUnavailable:
-        "このプロジェクトではソース管理プロバイダーが有効ではありません。",
-      sourceControlErrors: {
-        cliMissing:
-          "ソース管理 CLI がインストールされていないか PATH にありません。",
-        cliUnauthenticated: "ソース管理プロバイダーが認証されていません。",
-        fetchFailed: "ソース管理の項目を取得できませんでした。",
-        notFound: "作業項目または変更リクエストが見つかりません。",
-        urlUnsupported: "このソース管理 URL はサポートされていません。",
-      },
-      workItem: "作業項目",
-      changeRequest: "変更リクエスト",
       linearConnectAction: "Linear に接続",
       linearConnectDescription:
         "この Issue を解決する前に Linear に接続してください。",
@@ -909,8 +882,6 @@ export const ja = {
       },
       taskLinkHintComplete:
         "ソース管理の作業項目、変更リクエスト、または Linear 作業項目の完全なリンクを貼り付けてください。",
-      taskLinkHintSourceControlPath:
-        "ソース管理のリンクですが、作業項目または変更リクエストではありません。",
       taskLinkHintLinearPath: "Linear のリンクですが、Issue ではありません。",
       taskLinkHintSupported:
         "ソース管理の作業項目、変更リクエスト、Linear 作業項目のリンクに対応しています。",

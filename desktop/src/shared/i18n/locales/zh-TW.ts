@@ -1,6 +1,5 @@
 import type { LocaleResource } from "./schema";
 import { scheduleZhTW } from "./schedule";
-import { changeRequestZhTW } from "./change-request";
 
 export const zhTW = {
   translation: {
@@ -310,18 +309,13 @@ export const zhTW = {
           },
           pushing: "推送中",
         },
-        pullRequest: changeRequestZhTW,
         listeningPorts: "監聽連接埠",
         resizeFileTree: "調整檔案樹寬度",
-        resizeGitList: "調整變更清單寬度",
         subprocesses: "子處理程序",
         tabs: {
-          checks: "檢查",
           files: "檔案",
-          gitChanges: "Git 變更",
           newTab: "新增分頁",
           processes: "處理程序",
-          pullRequest: "變更要求",
           tabs: "分頁",
           tools: "工具",
           workspaceTabs: "工作區分頁",
@@ -781,13 +775,6 @@ export const zhTW = {
       agentMode: "Agent 模式",
       agentSettings: "Agent 設定",
       attachFiles: "附加檔案",
-      attachChangeRequest: "附加變更要求或工作項目",
-      attachChangeRequestConfirm: "附加",
-      attachChangeRequestEmpty: "找不到工作項目或變更要求。",
-      attachChangeRequestLoading: "取得中…",
-      attachChangeRequestPlaceholder: "搜尋工作項目和變更要求…",
-      attachChangeRequestTitle: "從原始碼控制附加",
-      attachChangeRequestUpdated: "更新於 {{time}}",
       attachmentErrors: {
         accept: "沒有檔案符合允許的類型。",
         fileRead: "無法讀取所選檔案。",
@@ -811,20 +798,9 @@ export const zhTW = {
       fileTypeBlocked: "檔案類型被阻擋",
       fileTooLarge: "檔案過大",
       files: "檔案",
-      configureSourceControl: "設定原始碼控制",
       fromLink: "從連結",
       fromLinkPlaceholder:
         "貼上原始碼控制或 Linear 工作項目連結，或搜尋原始碼控制",
-      sourceControlUnavailable: "此專案未啟用原始碼控制提供者。",
-      sourceControlErrors: {
-        cliMissing: "未安裝原始碼控制 CLI 或不在 PATH 中。請安裝後重試。",
-        cliUnauthenticated: "原始碼控制提供者尚未驗證。請登入後重試。",
-        fetchFailed: "無法取得該原始碼控制項目。",
-        notFound: "找不到該工作項目或變更要求。",
-        urlUnsupported: "不支援該原始碼控制連結。",
-      },
-      workItem: "工作項目",
-      changeRequest: "變更要求",
       linearConnectAction: "連線 Linear",
       linearConnectDescription: "請先連線 Linear，再解析此 Issue。",
       linearIssue: "Linear Issue",
@@ -866,8 +842,6 @@ export const zhTW = {
       },
       taskLinkHintComplete:
         "請貼上完整的原始碼控制工作項目、變更要求或 Linear 工作項目連結。",
-      taskLinkHintSourceControlPath:
-        "這是原始碼控制連結，但不是工作項目或變更要求。",
       taskLinkHintLinearPath: "這是 Linear 連結，但不是 Issue。",
       taskLinkHintSupported:
         "支援原始碼控制工作項目、變更要求與 Linear 工作項目連結。",

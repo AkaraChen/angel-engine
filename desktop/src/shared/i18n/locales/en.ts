@@ -1,6 +1,5 @@
 import type { LocaleResource } from "./schema";
 import { scheduleEn } from "./schedule";
-import { changeRequestEn } from "./change-request";
 
 export const en = {
   translation: {
@@ -316,18 +315,13 @@ export const en = {
           },
           pushing: "Pushing",
         },
-        pullRequest: changeRequestEn,
         listeningPorts: "Listening ports",
         resizeFileTree: "Resize file tree",
-        resizeGitList: "Resize Git change list",
         subprocesses: "Subprocesses",
         tabs: {
-          checks: "Checks",
           files: "Files",
-          gitChanges: "Git changes",
           newTab: "New tab",
           processes: "Processes",
-          pullRequest: "Change request",
           tabs: "Tabs",
           tools: "Tools",
           workspaceTabs: "Workspace tabs",
@@ -809,13 +803,6 @@ export const en = {
       agentMode: "Agent Mode",
       agentSettings: "Agent settings",
       attachFiles: "Attach files",
-      attachChangeRequest: "Attach change request or work item",
-      attachChangeRequestConfirm: "Attach",
-      attachChangeRequestEmpty: "No work items or change requests found.",
-      attachChangeRequestLoading: "Fetching…",
-      attachChangeRequestPlaceholder: "Search work items and change requests…",
-      attachChangeRequestTitle: "Attach from source control",
-      attachChangeRequestUpdated: "updated {{time}}",
       attachmentErrors: {
         accept: "No files match the accepted types.",
         fileRead: "The selected file could not be read.",
@@ -842,23 +829,9 @@ export const en = {
       fileTypeBlocked: "File type blocked",
       fileTooLarge: "File is too large",
       files: "Files",
-      configureSourceControl: "Configure source control",
       fromLink: "From link",
       fromLinkPlaceholder:
         "Paste a source control or Linear work item link, or search source control",
-      sourceControlUnavailable:
-        "No source control provider is active for this project.",
-      sourceControlErrors: {
-        cliMissing:
-          "The source control CLI is not installed or not on PATH. Install it and try again.",
-        cliUnauthenticated:
-          "The source control provider is not authenticated. Sign in and try again.",
-        fetchFailed: "Could not fetch that source control item.",
-        notFound: "The work item or change request was not found.",
-        urlUnsupported: "That source control URL is not supported.",
-      },
-      workItem: "Work item",
-      changeRequest: "Change request",
       linearConnectAction: "Connect Linear",
       linearConnectDescription: "Connect Linear before resolving this issue.",
       linearIssue: "Linear issue",
@@ -900,8 +873,6 @@ export const en = {
       },
       taskLinkHintComplete:
         "Paste a complete source control work item, change request, or Linear work item link.",
-      taskLinkHintSourceControlPath:
-        "This is a source control link, but it is not a work item or change request.",
       taskLinkHintLinearPath: "This is a Linear link, but it is not an issue.",
       taskLinkHintSupported:
         "Supported links: source control work items, change requests, and Linear work items.",

@@ -5,7 +5,6 @@ import type {
   ChatPrewarmResult,
   ChatRuntimeConfig,
 } from "@angel-engine/daemon-api/chat";
-import type { ResolvedSourceControlLink } from "@angel-engine/daemon-api/source-control";
 
 import type { QueryClient } from "@tanstack/react-query";
 import type { ApiClient } from "@/platform/api-client";
@@ -306,85 +305,6 @@ export function agentSkillsQueryOptions({
   });
 }
 
-export function sourceControlWorkItemsQueryOptions({
-  api,
-  enabled = true,
-  limit,
-  projectPath,
-  providerIdentity,
-  query,
-  staleTime = 15_000,
-}: SourceControlItemsQueryParams) {
-  return queryOptions({
-    enabled:
-      enabled &&
-      is.nonEmptyString(projectPath) &&
-      is.nonEmptyString(providerIdentity),
-    placeholderData: (previous) => previous,
-    queryFn: async () =>
-      api.sourceControl.listWorkItems(
-        projectPath ?? "",
-        is.nonEmptyString(query) ? query : undefined,
-        limit,
-      ),
-    queryKey: queryKeys.sourceControl.workItems(providerIdentity, query, limit),
-    retry: false,
-    staleTime,
-  });
-}
-
-export function sourceControlChangeRequestsQueryOptions({
-  api,
-  enabled = true,
-  limit,
-  projectPath,
-  providerIdentity,
-  query,
-  staleTime = 15_000,
-}: SourceControlItemsQueryParams) {
-  return queryOptions({
-    enabled:
-      enabled &&
-      is.nonEmptyString(projectPath) &&
-      is.nonEmptyString(providerIdentity),
-    placeholderData: (previous) => previous,
-    queryFn: async () =>
-      api.sourceControl.listChangeRequests(
-        projectPath ?? "",
-        is.nonEmptyString(query) ? query : undefined,
-        limit,
-      ),
-    queryKey: queryKeys.sourceControl.changeRequests(
-      providerIdentity,
-      query,
-      limit,
-    ),
-    retry: false,
-    staleTime,
-  });
-}
-
-export function sourceControlLinkResolveQueryOptions({
-  api,
-  enabled = true,
-  projectPath,
-  providerIdentity,
-  staleTime = 30_000,
-  url,
-}: SourceControlLinkResolveQueryParams) {
-  return queryOptions({
-    enabled:
-      enabled &&
-      is.nonEmptyString(projectPath) &&
-      is.nonEmptyString(providerIdentity) &&
-      is.nonEmptyString(url),
-    queryFn: async (): Promise<ResolvedSourceControlLink> =>
-      api.sourceControl.resolveLink(projectPath ?? "", url ?? ""),
-    queryKey: queryKeys.sourceControl.links(providerIdentity, url),
-    retry: false,
-    staleTime,
-  });
-}
 
 export function chatPrewarmQueryOptions({
   api,

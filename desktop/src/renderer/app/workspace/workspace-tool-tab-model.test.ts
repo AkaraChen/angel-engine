@@ -2,34 +2,27 @@ import type { WorkspaceToolSurfaceSnapshot } from "@shared/workspace-tool-surfac
 
 import { describe, expect, it } from "vitest";
 
-import { redirectChecksTabToPullRequest } from "./workspace-tool-checks-focus";
 import {
   visibleActiveWorkspaceToolTabId,
   workspaceToolTabItems,
 } from "./workspace-tool-tab-model";
 
-describe("workspace tool pinned tabs", () => {
-  it("redirects a persisted checks tab to the pull request panel", () => {
+describe("workspace tool tabs", () => {
+  it("keeps unknown persisted tabs on files", () => {
     const snapshot: WorkspaceToolSurfaceSnapshot = {
-      activeTabId: "checks",
+      activeTabId: "legacy-git",
       nextBrowserOrdinal: 1,
       nextTerminalOrdinal: 1,
       tabs: [],
     };
+    expect(visibleActiveWorkspaceToolTabId(snapshot)).toBe("files");
+  });
 
-    expect(visibleActiveWorkspaceToolTabId(snapshot)).toBe("pr");
-    expect(redirectChecksTabToPullRequest(snapshot)).toEqual({
-      ...snapshot,
-      activeTabId: "pr",
-      focusSection: "checks",
-    });
+  it("keeps only the shared files and processes pinned tabs", () => {
     expect(
-      workspaceToolTabItems([], {
-        files: "Files",
-        gitChanges: "Git changes",
-        processes: "Processes",
-        pullRequest: "Pull request",
-      }).map((tab) => tab.id),
-    ).toEqual(["files", "git", "pr", "processes"]);
+      workspaceToolTabItems([], { files: "Files", processes: "Processes" }).map(
+        (tab) => tab.id,
+      ),
+    ).toEqual(["files", "processes"]);
   });
 });
