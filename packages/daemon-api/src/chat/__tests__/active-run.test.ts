@@ -75,6 +75,16 @@ describe("active run boundary guards", () => {
     expect(isChatRunStartInput(input)).toBe(true);
   });
 
+  it("accepts legacy shepherd origin in persisted input", () => {
+    expect(
+      isChatRunStartInput({
+        chatId: "chat-1",
+        origin: "shepherd",
+        text: "Continue the existing task",
+      }),
+    ).toBe(true);
+  });
+
   it.each([
     ["an empty chat id", { chatId: "", text: "hello" }],
     ["missing text", { chatId: "chat-1" }],
