@@ -5,7 +5,6 @@ import type {
   ChatSendInput,
   ChatStreamElicitationResolveInput,
 } from "@angel-engine/daemon-api/chat";
-import type { ProjectCloneEvent } from "@angel-engine/daemon-api/projects";
 import type { Context, Hono } from "hono";
 import type { ChatEventsApi } from "./features/chat/chat-events";
 import type { Db } from "./platform/db";
@@ -35,12 +34,6 @@ import {
   chatSetRuntimeInputSchema,
   normalizeChatAttachmentsInput,
 } from "@angel-engine/daemon-api/chat";
-import {
-  createProjectInputSchema,
-  projectCloneInputSchema,
-  updateProjectConfigInputSchema,
-  updateProjectInputSchema,
-} from "@angel-engine/daemon-api/projects";
 import {
   workspaceToolGitCheckoutInputSchema,
   workspaceToolGitCommitInputSchema,
@@ -97,19 +90,8 @@ import {
 import { SourceControlCoordinator } from "./features/source-control/registry/coordinator";
 import type { SourceControlRegistry } from "./features/source-control/registry/registry";
 import { registerSourceControlHttpApi } from "./features/source-control/http";
-import {
-  readProjectConfig,
-  updateProjectConfig,
-} from "./features/projects/settings";
-import { cloneProject } from "./features/projects/clone";
 import { searchProjectFiles } from "./features/projects/file-search";
-import {
-  createProject,
-  deleteProject,
-  getProject,
-  listProjects,
-  updateProject,
-} from "./features/projects/repository";
+import { getProject, listProjects } from "./features/projects/repository";
 import { getChatDiffAnchor } from "./features/chat/diff-anchors";
 import {
   workspaceFileTree,
@@ -585,45 +567,6 @@ export function registerApi(
     sourceControl.invalidateAll();
     return context.json({ ok: true });
   });
-  app.post("/api/projects/clone", async (context) => {
-    const input = projectCloneInputSchema(await context.req.json());
-    if (input instanceof arkType.errors)
-      throw DaemonError.invalidRequest("Repository URL is required.");
-    return streamSSE(context, async (stream) => {
-      // Progress arrives synchronously from the git process; chain the writes
-      // so no frame is dropped or reordered while an earlier one is in flight.
-      let writes = Promise.resolve();
-      const emit = (event: ProjectCloneEvent) => {
-        writes = writes.then(async () => {
-          await stream.writeSSE({
-            data: JSON.stringify(event),
-            event: event.type,
-          });
-        });
-      };
-
-      try {
-        const result = await run(
-          cloneProject(
-            input,
-            emit,
-            context.req.raw.signal,
-            sourceControl.registry,
-          ),
-        );
-        emit({
-          project: result.project,
-          reusedExistingCheckout: result.reusedExistingCheckout,
-          type: "completed",
-        });
-      } catch (cause) {
-        const error =
-          cause instanceof DaemonError ? cause : DaemonError.internal(cause);
-        emit({ code: error.code, message: error.message, type: "failed" });
-      }
-      await writes;
-    });
-  });
   app.get("/api/projects/files/search", async (context) =>
     context.json(
       await run(
@@ -638,64 +581,6 @@ export function registerApi(
   app.get("/api/projects/:id", async (context) =>
     context.json(await run(getProject(context.req.param("id")))),
   );
-  app.post("/api/projects", async (context) => {
-    const input = createProjectInputSchema(await context.req.json());
-    if (input instanceof arkType.errors)
-      throw DaemonError.invalidRequest("Project input is invalid.");
-    return context.json(await run(createProject(input)));
-  });
-  app.patch("/api/projects/:id", async (context) => {
-    const body = await context.req.json<Record<string, unknown>>();
-    const input = updateProjectInputSchema({
-      ...body,
-      id: context.req.param("id"),
-    });
-    if (input instanceof arkType.errors)
-      throw DaemonError.invalidRequest("Project input is invalid.");
-    return context.json(await run(updateProject(input)));
-  });
-  app.delete("/api/projects/:id", async (context) => {
-    const projectId = context.req.param("id");
-    const deletedChatIds = await run(
-      Effect.gen(function* () {
-        const targets = [
-          ...(yield* listChats()),
-          ...(yield* listArchivedChats()),
-        ].filter((chat) => chat.projectId === projectId);
-        const chatEngine = yield* ChatEngine;
-        for (const chat of targets) {
-          chatRuns.discardChat(chat.id);
-          yield* chatEngine.closeChatSession(chat.id);
-        }
-        const settledTargets = yield* Effect.all(
-          targets.map((chat) => requireChat(chat.id)),
-        );
-        yield* deleteProject(projectId);
-        for (const chat of settledTargets) {
-          yield* chatEngine.finishChatDeletion(chat.id);
-        }
-        return targets.map((chat) => chat.id);
-      }),
-    );
-    for (const chatId of deletedChatIds) activity.clearChat(chatId);
-    chatEvents.metadataChanged(deletedChatIds);
-    return context.json({ ok: true });
-  });
-  app.get("/api/projects/:id/config", async (context) =>
-    context.json(
-      await run(readProjectConfig({ projectId: context.req.param("id") })),
-    ),
-  );
-  app.put("/api/projects/:id/config", async (context) => {
-    const body = await context.req.json<Record<string, unknown>>();
-    const input = updateProjectConfigInputSchema({
-      ...body,
-      projectId: context.req.param("id"),
-    });
-    if (input instanceof arkType.errors)
-      throw DaemonError.invalidRequest("Project settings are invalid.");
-    return context.json(await run(updateProjectConfig(input)));
-  });
   app.get("/api/projects/:id/git-status", async (context) =>
     context.json(
       await run(projectGitStatus({ projectId: context.req.param("id") })),

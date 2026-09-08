@@ -342,6 +342,7 @@ export interface LocaleResourceTranslationWorkspaceToolsChangeRequest {
 
 export interface LocaleResourceTranslationWorkspaceTools {
   addToChat: string;
+  browser: string;
   checks: LocaleResourceTranslationWorkspaceToolsChecks;
   comments: LocaleResourceTranslationWorkspaceToolsComments;
   commit: LocaleResourceTranslationWorkspaceToolsCommit;
@@ -360,6 +361,12 @@ export interface LocaleResourceTranslationWorkspaceTools {
   diffUnavailable: string;
   openInWindow: string;
   tabs: LocaleResourceTranslationWorkspaceToolsTabs;
+}
+
+export interface LocaleResourceTranslationWorkspaceBrowser {
+  back: string;
+  forward: string;
+  urlLabel: string;
 }
 
 export interface LocaleResourceTranslationWorkspaceFiles {
@@ -413,6 +420,7 @@ export interface LocaleResourceTranslationWorkspaceAmbiguousSend {
 
 export interface LocaleResourceTranslationWorkspace {
   ambiguousSend: LocaleResourceTranslationWorkspaceAmbiguousSend;
+  browser: LocaleResourceTranslationWorkspaceBrowser;
   files: LocaleResourceTranslationWorkspaceFiles;
   backgroundChatCompleted: string;
   backgroundChatNeedsInput: string;
@@ -522,6 +530,101 @@ export interface LocaleResourceTranslationFleet {
   views: LocaleResourceTranslationFleetViews;
 }
 
+export interface LocaleResourceTranslationSchedule {
+  agent: string;
+  alreadyRunning: string;
+  createAction: string;
+  createDescription: string;
+  createTitle: string;
+  currentAgent: string;
+  customCron: string;
+  deleteConfirm: string;
+  discardConfirm: string;
+  disconnected: string;
+  invalidCron: string;
+  name: string;
+  newAutomation: string;
+  nextThreeRuns: string;
+  noProject: string;
+  notifyOnFailure: string;
+  pause: string;
+  paused: string;
+  project: string;
+  prompt: string;
+  recipes: {
+    ciHeartbeat: string;
+    ciHeartbeatDescription: string;
+    dependencyAudit: string;
+    dependencyAuditDescription: string;
+    nightlyTests: string;
+    nightlyTestsDescription: string;
+    title: string;
+  };
+  resume: string;
+  runNow: string;
+  runStatus: {
+    cancelled: string;
+    failed: string;
+    missed: string;
+    running: string;
+    succeeded: string;
+  };
+  schedule: string;
+  schedulePresets: {
+    custom: string;
+    daily: string;
+    "every-30-minutes": string;
+    hourly: string;
+    weekdays: string;
+    weekly: string;
+  };
+  startFromScratch: string;
+  status: {
+    active: string;
+    failing: string;
+    paused: string;
+    running: string;
+  };
+  subtitle: string;
+  title: string;
+  triggerType: {
+    manual: string;
+    scheduled: string;
+  };
+  wizard: {
+    advancedSettings: string;
+    back: string;
+    blankDescription: string;
+    blankName: string;
+    chooseRequired: string;
+    dailyAt: string;
+    edit: string;
+    next: string;
+    nextRun: string;
+    noExtraParameters: string;
+    requiredName: string;
+    requiredPrompt: string;
+    requiredTime: string;
+    stepCount: string;
+    weeklyAt: string;
+    steps: {
+      confirm: string;
+      parameters: string;
+      what: string;
+      when: string;
+    };
+    weekdays: {
+      friday: string;
+      monday: string;
+      saturday: string;
+      sunday: string;
+      thursday: string;
+      tuesday: string;
+      wednesday: string;
+    };
+  };
+}
+
 export interface LocaleResourceTranslationSidebar {
   addProject: string;
   archiveChat: string;
@@ -561,12 +664,30 @@ export interface LocaleResourceTranslationSettingsAgents {
   title: string;
 }
 
+export interface LocaleResourceTranslationSettingsArchivedRemovableWorktrees {
+  confirmDeleteDetail: string;
+  confirmDeleteTitle: string;
+  deleteFailed: string;
+  deletingToast: string;
+  deleteWorktree: string;
+  deletedToast: string;
+  empty: string;
+  missingOnDisk: string;
+  noSessions: string;
+  partialFailure: string;
+  scanAgain: string;
+  sessionCount_one: string;
+  sessionCount_other: string;
+  title: string;
+}
+
 export interface LocaleResourceTranslationSettingsArchived {
   allProjects: string;
   bulkSelect: string;
   clearSelection: string;
   confirmDeleteDetail: string;
   confirmDeleteTitle: string;
+  confirmDeleteWorktreeDetail: string;
   deletedToast: string;
   deletePermanently: string;
   deleteSelected: string;
@@ -575,6 +696,7 @@ export interface LocaleResourceTranslationSettingsArchived {
   filterProject: string;
   filterTime: string;
   noProject: string;
+  removableWorktrees: LocaleResourceTranslationSettingsArchivedRemovableWorktrees;
   restore: string;
   restoredToast: string;
   restoreSelected: string;
@@ -812,6 +934,9 @@ export interface LocaleResourceTranslationCommands {
 }
 
 export interface LocaleResourceTranslationSettingsWorkspace {
+  dirtyPromptDescription: string;
+  dirtyPromptSwitchLabel: string;
+  dirtyPromptTitle: string;
   osNotificationsDescription: string;
   osNotificationsSwitchLabel: string;
   osNotificationsTitle: string;
@@ -1328,6 +1453,7 @@ export interface LocaleResourceTranslation {
   attachment: LocaleResourceTranslationAttachment;
   workspace: LocaleResourceTranslationWorkspace;
   fleet: LocaleResourceTranslationFleet;
+  schedule: LocaleResourceTranslationSchedule;
   sidebar: LocaleResourceTranslationSidebar;
   settings: LocaleResourceTranslationSettings;
   updates: LocaleResourceTranslationUpdates;

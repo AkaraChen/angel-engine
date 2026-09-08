@@ -16,13 +16,11 @@ export type SidebarChatDateGroupKey =
   | "yesterday";
 
 interface WorkspaceUiState {
-  browserUrl: string;
   collapsedChatDateGroupKeys: Set<SidebarChatDateGroupKey>;
   collapsedWorktreeGroupKeys: Set<string>;
   expandedProjectIds: Set<string>;
   rightSidebarOpen: boolean;
   rightSidebarWidth: number;
-  setBrowserUrl: (browserUrl: string) => void;
   setRightSidebarOpen: (rightSidebarOpen: boolean) => void;
   setRightSidebarWidth: (rightSidebarWidth: number) => void;
   setSidebarOpen: (sidebarOpen: boolean) => void;
@@ -42,7 +40,6 @@ interface WorkspaceUiState {
 }
 
 export const useWorkspaceUiStore = create<WorkspaceUiState>()((set) => ({
-  browserUrl: defaultBrowserUrl,
   collapsedChatDateGroupKeys: new Set(),
   collapsedWorktreeGroupKeys: new Set(),
   expandedProjectIds: new Set(),
