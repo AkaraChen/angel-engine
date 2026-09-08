@@ -478,8 +478,6 @@ export const es = {
           "Esto eliminará permanentemente {{chatCount}} sesión(es) archivada(s). Esta acción no se puede deshacer.",
         confirmDeleteTitle:
           "¿Eliminar permanentemente las sesiones archivadas?",
-        confirmDeleteWorktreeDetail:
-          "Esto eliminará permanentemente {{chatCount}} sesión(es) archivada(s) y {{managedWorktreeCount}} worktree(s) administrado(s). Los directorios worktree no se podrán restaurar.",
         deletedToast: "{{count}} sesión(es) archivada(s) eliminada(s)",
         deletePermanently: "Eliminar permanentemente",
         deleteSelected: "Eliminar selección",
@@ -488,24 +486,6 @@ export const es = {
         filterProject: "Proyecto",
         filterTime: "Tiempo",
         noProject: "Sin proyecto",
-        removableWorktrees: {
-          confirmDeleteDetail:
-            "Esto eliminará permanentemente {{chatCount}} sesión(es) archivada(s) y {{managedWorktreeCount}} directorio(s) worktree. Esta acción no se puede deshacer.",
-          confirmDeleteTitle: "¿Eliminar los worktrees eliminables?",
-          deleteFailed: "Error al eliminar: {{message}}",
-          deletingToast: "Eliminando worktree…",
-          deleteWorktree:
-            "Eliminar permanentemente el worktree {{identifier}} de {{projectName}}",
-          deletedToast: "Worktree eliminado",
-          empty: "No hay worktrees para eliminar",
-          missingOnDisk: "No está en el disco",
-          noSessions: "Worktree huérfano · sin sesiones archivadas",
-          partialFailure: "No se pudieron eliminar {{count}} worktree(s).",
-          scanAgain: "Volver a analizar",
-          sessionCount_one: "{{count}} sesión(es) archivada(s)",
-          sessionCount_other: "{{count}} sesión(es) archivada(s)",
-          title: "Worktrees eliminables",
-        },
         restore: "Restaurar",
         restoredToast: "{{count}} sesión(es) archivada(s) restaurada(s)",
         restoreSelected: "Restaurar selección",
@@ -704,11 +684,6 @@ export const es = {
           "Las actualizaciones automáticas solo están disponibles en macOS.",
       },
       workspace: {
-        dirtyPromptDescription:
-          "Preguntar antes de crear un worktree cuando el proyecto seleccionado tenga cambios sin confirmar.",
-        dirtyPromptSwitchLabel:
-          "Avisar antes de crear worktrees desde repositorios dirty",
-        dirtyPromptTitle: "Aviso de repositorio dirty",
         osNotificationsDescription:
           "Muestra avisos del sistema cuando un chat en segundo plano termina, falla o te necesita. El historial en la app sigue disponible.",
         osNotificationsSwitchLabel: "Mostrar notificaciones del SO",

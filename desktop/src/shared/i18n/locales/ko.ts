@@ -472,8 +472,6 @@ export const ko = {
         confirmDeleteDetail:
           "보관된 세션 {{chatCount}}개를 영구 삭제합니다. 이 작업은 되돌릴 수 없습니다.",
         confirmDeleteTitle: "보관된 세션을 영구 삭제할까요?",
-        confirmDeleteWorktreeDetail:
-          "보관된 세션 {{chatCount}}개와 관리되는 worktree {{managedWorktreeCount}}개를 영구 삭제합니다. worktree 디렉터리는 복원할 수 없습니다.",
         deletedToast: "보관된 세션 {{count}}개를 삭제했습니다",
         deletePermanently: "영구 삭제",
         deleteSelected: "선택 항목 삭제",
@@ -482,23 +480,6 @@ export const ko = {
         filterProject: "프로젝트",
         filterTime: "시간",
         noProject: "프로젝트 없음",
-        removableWorktrees: {
-          confirmDeleteDetail:
-            "보관된 세션 {{chatCount}}개를 영구 삭제하고 worktree 디렉터리 {{managedWorktreeCount}}개를 제거합니다. 이 작업은 되돌릴 수 없습니다.",
-          confirmDeleteTitle: "삭제 가능한 worktree를 삭제할까요?",
-          deleteFailed: "삭제 실패: {{message}}",
-          deletingToast: "worktree 삭제 중…",
-          deleteWorktree: "{{projectName}}의 worktree {{identifier}} 영구 삭제",
-          deletedToast: "worktree를 삭제했습니다",
-          empty: "삭제할 수 있는 worktree가 없습니다",
-          missingOnDisk: "디스크에 없음",
-          noSessions: "분리된 worktree · 보관된 세션 없음",
-          partialFailure: "worktree {{count}}개를 삭제하지 못했습니다.",
-          scanAgain: "다시 검사",
-          sessionCount_one: "보관된 세션 {{count}}개",
-          sessionCount_other: "보관된 세션 {{count}}개",
-          title: "삭제 가능한 worktree",
-        },
         restore: "복원",
         restoredToast: "보관된 세션 {{count}}개를 복원했습니다",
         restoreSelected: "선택 항목 복원",
