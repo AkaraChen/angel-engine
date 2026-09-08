@@ -352,50 +352,13 @@ export const ko = {
         "setup_script가 없으면 종속성을 다시 설치해야 할 수 있습니다.",
       worktreeSetupMissingTitle: "Worktree 설정 스크립트 없음",
     },
-    fleet: {
-      allProjects: "모든 프로젝트",
-      disconnected: "백엔드에 연결할 수 없습니다.",
-      emptySegments: {
-        all: "활성 에이전트가 없습니다.",
-        attention: "지금 확인이 필요한 항목이 없습니다.",
-        done: "아직 완료된 항목이 없습니다.",
-        running: "실행 중인 에이전트가 없습니다.",
-      },
-      filterProject: "프로젝트로 필터",
-      filterSegments: "플릿 필터",
-      groups: {
-        attention: "확인 필요",
-        done: "완료",
-        running: "실행 중",
-      },
-      loading: "활동을 불러오는 중",
-      noMatches: "검색과 일치하는 세션이 없습니다.",
-      reasons: {
-        approval: "승인 대기 중",
-        processExited: "프로세스 종료됨",
-        question: "질문함",
-        runtimeError: "런타임 오류",
-      },
-      search: "세션 검색",
-      segments: {
-        all: "전체",
-        attention: "확인 필요",
-        done: "완료",
-        running: "실행 중",
-      },
-      standaloneProject: "프로젝트 없음",
+    activity: {
       status: {
         done: "완료",
         failed: "실패",
         running: "실행 중",
         stuck: "멈춤",
         waitingForYou: "응답 대기 중",
-      },
-      title: "플릿",
-      viewMode: "플릿 보기",
-      views: {
-        board: "보드 보기",
-        list: "목록 보기",
       },
     },
     schedule: scheduleKo,
@@ -710,8 +673,8 @@ export const ko = {
         sendWithModEnterTitle: "{{shortcut}}로 전송",
         trayEnabledDescription:
           "메뉴 막대에 확인이 필요한 세션 수와 목록을 표시해 앱을 뒤지지 않고 열 수 있습니다.",
-        trayEnabledSwitchLabel: "메뉴 막대 함대 요약 표시",
-        trayEnabledTitle: "메뉴 막대 함대 요약",
+        trayEnabledSwitchLabel: "메뉴 막대 세션 요약 표시",
+        trayEnabledTitle: "메뉴 막대 세션 요약",
       },
     },
     usage: {

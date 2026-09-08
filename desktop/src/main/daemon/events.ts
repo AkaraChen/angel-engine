@@ -76,7 +76,7 @@ export function stopDaemonEvents() {
  * clears too, so the authoritative status always comes from a pull. The main
  * process no longer mirrors run events of its own.
  *
- * `chat-activity-changed` drives the menu-bar fleet summary (badge + list).
+ * `chat-activity-changed` drives the menu-bar session summary (badge + list).
  */
 function handleEvent(message: DaemonGlobalEvent) {
   if (message.type === "chat-activity-changed") {

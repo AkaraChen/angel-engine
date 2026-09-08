@@ -356,50 +356,13 @@ export const ja = {
         "setup_script がない場合、依存関係の再インストールが必要になることがあります。",
       worktreeSetupMissingTitle: "Worktree セットアップスクリプトがありません",
     },
-    fleet: {
-      allProjects: "すべてのプロジェクト",
-      disconnected: "バックエンドに接続できません。",
-      emptySegments: {
-        all: "稼働中のエージェントはありません。",
-        attention: "今は対応が必要なものはありません。",
-        done: "まだ完了したものはありません。",
-        running: "実行中のエージェントはありません。",
-      },
-      filterProject: "プロジェクトで絞り込む",
-      filterSegments: "フリートを絞り込む",
-      groups: {
-        attention: "対応が必要",
-        done: "完了",
-        running: "実行中",
-      },
-      loading: "アクティビティを読み込み中",
-      noMatches: "検索条件に一致するセッションはありません。",
-      reasons: {
-        approval: "承認待ち",
-        processExited: "プロセスが終了",
-        question: "質問があります",
-        runtimeError: "ランタイムエラー",
-      },
-      search: "セッションを検索",
-      segments: {
-        all: "すべて",
-        attention: "対応が必要",
-        done: "完了",
-        running: "実行中",
-      },
-      standaloneProject: "プロジェクトなし",
+    activity: {
       status: {
         done: "完了",
         failed: "失敗",
         running: "実行中",
         stuck: "停止",
         waitingForYou: "あなたの入力待ち",
-      },
-      title: "フリート",
-      viewMode: "フリート表示",
-      views: {
-        board: "ボード表示",
-        list: "リスト表示",
       },
     },
     schedule: scheduleJa,
@@ -723,8 +686,8 @@ export const ja = {
         sendWithModEnterTitle: "{{shortcut}} で送信",
         trayEnabledDescription:
           "メニューバーに対応が必要なセッション数と一覧を表示し、アプリ内を探さずに開けます。",
-        trayEnabledSwitchLabel: "メニューバーの艦隊サマリーを表示",
-        trayEnabledTitle: "メニューバーの艦隊サマリー",
+        trayEnabledSwitchLabel: "メニューバーのセッションサマリーを表示",
+        trayEnabledTitle: "メニューバーのセッションサマリー",
       },
     },
     usage: {

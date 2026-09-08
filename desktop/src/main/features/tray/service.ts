@@ -13,7 +13,7 @@ import { ensureMainWindow } from "../../windows/main-window";
 import { openChatInMainWindow } from "../../windows/notifications";
 import {
   countNeedsYou,
-  fleetStatusI18nKey,
+  activityStatusI18nKey,
   selectTrayActivities,
   sortTraySessions,
   trayBadgeLabel,
@@ -57,7 +57,7 @@ export function setTrayEnabled(enabled: boolean): DesktopTrayPreferences {
   return getTrayPreferences();
 }
 
-/** Rebuild badge + menu after fleet activity changes or language updates. */
+/** Rebuild badge + menu after session activity changes or language updates. */
 export function scheduleTrayRefresh() {
   if (!currentPreferences().enabled) return;
   if (refreshTimer !== undefined) clearTimeout(refreshTimer);
@@ -211,7 +211,7 @@ function buildMenuTemplate(
 }
 
 function sessionMenuLabel(session: TraySessionItem) {
-  const status = translate(fleetStatusI18nKey(session.status));
+  const status = translate(activityStatusI18nKey(session.status));
   return `${session.title} — ${status}`;
 }
 

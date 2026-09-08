@@ -347,50 +347,13 @@ export const zhCN = {
         "没有 setup_script 时，新 worktree 可能需要重新安装依赖。",
       worktreeSetupMissingTitle: "没有 worktree 初始化脚本",
     },
-    fleet: {
-      allProjects: "全部项目",
-      disconnected: "无法连接后端。",
-      emptySegments: {
-        all: "当前没有活动的 Agent。",
-        attention: "当前没有需要你处理的会话。",
-        done: "还没有已完成的会话。",
-        running: "当前没有运行中的 Agent。",
-      },
-      filterProject: "按项目筛选",
-      filterSegments: "筛选舰队",
-      groups: {
-        attention: "需要你",
-        done: "已完成",
-        running: "运行中",
-      },
-      loading: "正在加载动态",
-      noMatches: "没有匹配的会话。",
-      reasons: {
-        approval: "等待授权",
-        processExited: "进程已退出",
-        question: "提出了问题",
-        runtimeError: "运行时错误",
-      },
-      search: "搜索会话",
-      segments: {
-        all: "全部",
-        attention: "需要我",
-        done: "已完成",
-        running: "运行中",
-      },
-      standaloneProject: "无项目",
+    activity: {
       status: {
         done: "已完成",
         failed: "失败",
         running: "运行中",
         stuck: "卡住",
         waitingForYou: "等待你处理",
-      },
-      title: "舰队",
-      viewMode: "舰队视图",
-      views: {
-        board: "看板视图",
-        list: "列表视图",
       },
     },
     schedule: scheduleZhCN,
@@ -694,8 +657,8 @@ export const zhCN = {
         sendWithModEnterTitle: "使用 {{shortcut}} 发送消息",
         trayEnabledDescription:
           "在菜单栏显示需要你处理的会话数量和下拉列表，无需在应用里逐个翻找。",
-        trayEnabledSwitchLabel: "显示菜单栏舰队摘要",
-        trayEnabledTitle: "菜单栏舰队摘要",
+        trayEnabledSwitchLabel: "显示菜单栏会话摘要",
+        trayEnabledTitle: "菜单栏会话摘要",
       },
     },
     usage: {

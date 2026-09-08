@@ -10,7 +10,6 @@ import {
   Plus,
   CalendarDots,
   GearSix as Settings,
-  SquaresFour,
 } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
 import { m } from "framer-motion";
@@ -45,7 +44,6 @@ const FLOATING_SIDEBAR_TRANSITION = {
 
 interface WorkspaceSidebarProps {
   chats: Chat[];
-  fleetActive: boolean;
   scheduleActive: boolean;
   isChatsLoading: boolean;
   isMacOS: boolean;
@@ -58,7 +56,6 @@ interface WorkspaceSidebarProps {
   onCreateStandaloneChat: () => MaybeAsync;
   onImportSession: (project: Project) => void;
   onOpenChat: (chat: Chat) => MaybeAsync;
-  onOpenFleet: () => MaybeAsync;
   onOpenSchedule: () => MaybeAsync;
   onOpenSettings: () => MaybeAsync;
   onOpenWorktree: (
@@ -210,7 +207,6 @@ export function WorkspaceFloatingSidebar(
 
 function WorkspaceSidebarContent({
   chats,
-  fleetActive,
   scheduleActive,
   isChatsLoading,
   isMacOS,
@@ -223,7 +219,6 @@ function WorkspaceSidebarContent({
   onCreateStandaloneChat,
   onImportSession,
   onOpenChat,
-  onOpenFleet,
   onOpenSchedule,
   onOpenSettings,
   onOpenWorktree,
@@ -246,7 +241,7 @@ function WorkspaceSidebarContent({
   );
   const createChatFromNewButton = async () => {
     const target = resolveWorkspaceNewChatTarget({
-      fleetActive: fleetActive || scheduleActive,
+      scheduleActive,
       projects,
       selectedChatId,
       selectedProjectId,
@@ -301,15 +296,6 @@ function WorkspaceSidebarContent({
             >
               <CalendarDots weight="duotone" />
               <span>{t("schedule.title")}</span>
-            </WorkspaceSidebarMenuButton>
-          </AnimatedSidebarMenuItem>
-          <AnimatedSidebarMenuItem>
-            <WorkspaceSidebarMenuButton
-              isActive={fleetActive}
-              onClick={() => void onOpenFleet()}
-            >
-              <SquaresFour weight="duotone" />
-              <span>{t("fleet.title")}</span>
             </WorkspaceSidebarMenuButton>
           </AnimatedSidebarMenuItem>
         </SidebarMenu>

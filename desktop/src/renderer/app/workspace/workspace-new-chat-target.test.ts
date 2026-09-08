@@ -13,10 +13,10 @@ const PROJECT: Project = {
 } as Project;
 
 describe("resolveWorkspaceNewChatTarget", () => {
-  it("starts a standalone chat from Fleet, which has no selected chat", () => {
+  it("starts a standalone chat from Schedule, which has no selected chat", () => {
     expect(
       resolveWorkspaceNewChatTarget({
-        fleetActive: true,
+        scheduleActive: true,
         projects: [],
         selectedChatId: undefined,
         selectedProjectId: undefined,
@@ -25,10 +25,10 @@ describe("resolveWorkspaceNewChatTarget", () => {
     ).toEqual({ type: "standalone" });
   });
 
-  it("starts a project chat from Fleet in a project mode", () => {
+  it("starts a project chat from Schedule in a project mode", () => {
     expect(
       resolveWorkspaceNewChatTarget({
-        fleetActive: true,
+        scheduleActive: true,
         projects: [PROJECT],
         selectedChatId: undefined,
         selectedProjectId: PROJECT.id,
@@ -40,7 +40,7 @@ describe("resolveWorkspaceNewChatTarget", () => {
   it("falls back to the first project when none is selected", () => {
     expect(
       resolveWorkspaceNewChatTarget({
-        fleetActive: true,
+        scheduleActive: true,
         projects: [PROJECT],
         selectedChatId: undefined,
         selectedProjectId: "missing",
@@ -52,7 +52,7 @@ describe("resolveWorkspaceNewChatTarget", () => {
   it("stays a no-op on a draft route, which already shows the composer", () => {
     expect(
       resolveWorkspaceNewChatTarget({
-        fleetActive: false,
+        scheduleActive: false,
         projects: [PROJECT],
         selectedChatId: undefined,
         selectedProjectId: PROJECT.id,
@@ -64,7 +64,7 @@ describe("resolveWorkspaceNewChatTarget", () => {
   it("starts a chat from an open chat route", () => {
     expect(
       resolveWorkspaceNewChatTarget({
-        fleetActive: false,
+        scheduleActive: false,
         projects: [],
         selectedChatId: "chat-1",
         selectedProjectId: undefined,

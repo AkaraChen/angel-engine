@@ -357,50 +357,13 @@ export const de = {
         "Ohne setup_script müssen Abhängigkeiten möglicherweise neu installiert werden.",
       worktreeSetupMissingTitle: "Kein Worktree-Setup-Skript",
     },
-    fleet: {
-      allProjects: "Alle Projekte",
-      disconnected: "Backend nicht erreichbar.",
-      emptySegments: {
-        all: "Keine Agenten aktiv.",
-        attention: "Gerade braucht dich nichts.",
-        done: "Noch ist nichts fertig.",
-        running: "Es läuft gerade kein Agent.",
-      },
-      filterProject: "Nach Projekt filtern",
-      filterSegments: "Flotte filtern",
-      groups: {
-        attention: "Wartet auf dich",
-        done: "Fertig",
-        running: "Läuft",
-      },
-      loading: "Aktivität wird geladen",
-      noMatches: "Keine Sitzung passt zu deiner Suche.",
-      reasons: {
-        approval: "Wartet auf Freigabe",
-        processExited: "Prozess beendet",
-        question: "Hat eine Frage gestellt",
-        runtimeError: "Laufzeitfehler",
-      },
-      search: "Sitzungen suchen",
-      segments: {
-        all: "Alle",
-        attention: "Wartet auf dich",
-        done: "Fertig",
-        running: "Läuft",
-      },
-      standaloneProject: "Ohne Projekt",
+    activity: {
       status: {
         done: "Fertig",
         failed: "Fehlgeschlagen",
         running: "Läuft",
         stuck: "Hängt",
         waitingForYou: "Wartet auf dich",
-      },
-      title: "Flotte",
-      viewMode: "Flottenansicht",
-      views: {
-        board: "Boardansicht",
-        list: "Listenansicht",
       },
     },
     schedule: scheduleDe,
@@ -726,8 +689,8 @@ export const de = {
         sendWithModEnterTitle: "Mit {{shortcut}} senden",
         trayEnabledDescription:
           "Zeigt in der Menüleiste die Anzahl der Sessions, die dich brauchen, und eine Liste zum Öffnen ohne in der App zu suchen.",
-        trayEnabledSwitchLabel: "Flottenübersicht in der Menüleiste anzeigen",
-        trayEnabledTitle: "Flottenübersicht in der Menüleiste",
+        trayEnabledSwitchLabel: "Sitzungsübersicht in der Menüleiste anzeigen",
+        trayEnabledTitle: "Sitzungsübersicht in der Menüleiste",
       },
     },
     usage: {

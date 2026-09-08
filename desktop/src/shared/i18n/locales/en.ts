@@ -354,50 +354,13 @@ export const en = {
         "Without setup_script, this worktree may need dependencies installed again.",
       worktreeSetupMissingTitle: "No worktree setup script",
     },
-    fleet: {
-      allProjects: "All projects",
-      disconnected: "Cannot reach the backend.",
-      emptySegments: {
-        all: "No agents are active.",
-        attention: "Nothing needs you right now.",
-        done: "Nothing has finished yet.",
-        running: "No agents are running.",
-      },
-      filterProject: "Filter by project",
-      filterSegments: "Filter fleet",
-      groups: {
-        attention: "Needs you",
-        done: "Done",
-        running: "Running",
-      },
-      loading: "Loading activity",
-      noMatches: "No sessions match your search.",
-      reasons: {
-        approval: "Waiting on approval",
-        processExited: "Process exited",
-        question: "Asked a question",
-        runtimeError: "Runtime error",
-      },
-      search: "Search sessions",
-      segments: {
-        all: "All",
-        attention: "Needs you",
-        done: "Done",
-        running: "Running",
-      },
-      standaloneProject: "No project",
+    activity: {
       status: {
         done: "Done",
         failed: "Failed",
         running: "Running",
         stuck: "Stuck",
         waitingForYou: "Waiting for you",
-      },
-      title: "Fleet",
-      viewMode: "Fleet view",
-      views: {
-        board: "Board view",
-        list: "List view",
       },
     },
     schedule: scheduleEn,
@@ -717,8 +680,8 @@ export const en = {
         sendWithModEnterTitle: "Send messages with {{shortcut}}",
         trayEnabledDescription:
           "Show a menu bar icon with a needs-you count and a session list you can open without hunting through the app.",
-        trayEnabledSwitchLabel: "Show menu bar fleet summary",
-        trayEnabledTitle: "Menu bar fleet summary",
+        trayEnabledSwitchLabel: "Show menu bar session summary",
+        trayEnabledTitle: "Menu bar session summary",
       },
     },
     usage: {

@@ -357,50 +357,13 @@ export const es = {
         "Sin setup_script, quizá debas reinstalar las dependencias.",
       worktreeSetupMissingTitle: "No hay script de configuración",
     },
-    fleet: {
-      allProjects: "Todos los proyectos",
-      disconnected: "No se puede conectar con el backend.",
-      emptySegments: {
-        all: "No hay agentes activos.",
-        attention: "Ahora mismo nada necesita tu atención.",
-        done: "Todavía no ha terminado nada.",
-        running: "No hay agentes en curso.",
-      },
-      filterProject: "Filtrar por proyecto",
-      filterSegments: "Filtrar la flota",
-      groups: {
-        attention: "Te necesita",
-        done: "Completado",
-        running: "En curso",
-      },
-      loading: "Cargando actividad",
-      noMatches: "Ninguna sesión coincide con tu búsqueda.",
-      reasons: {
-        approval: "Esperando aprobación",
-        processExited: "El proceso terminó",
-        question: "Hizo una pregunta",
-        runtimeError: "Error de ejecución",
-      },
-      search: "Buscar sesiones",
-      segments: {
-        all: "Todo",
-        attention: "Te necesita",
-        done: "Completado",
-        running: "En curso",
-      },
-      standaloneProject: "Sin proyecto",
+    activity: {
       status: {
         done: "Completado",
         failed: "Con error",
         running: "En curso",
         stuck: "Atascado",
         waitingForYou: "Esperándote",
-      },
-      title: "Flota",
-      viewMode: "Vista de la flota",
-      views: {
-        board: "Vista de tablero",
-        list: "Vista de lista",
       },
     },
     schedule: scheduleEs,
@@ -725,8 +688,8 @@ export const es = {
         sendWithModEnterTitle: "Enviar con {{shortcut}}",
         trayEnabledDescription:
           "Muestra en la barra de menús el recuento de sesiones que te necesitan y una lista para abrirlas sin buscar en la app.",
-        trayEnabledSwitchLabel: "Mostrar resumen de flota en la barra de menús",
-        trayEnabledTitle: "Resumen de flota en la barra de menús",
+        trayEnabledSwitchLabel: "Mostrar resumen de sesiones en la barra de menús",
+        trayEnabledTitle: "Resumen de sesiones en la barra de menús",
       },
     },
     usage: {
