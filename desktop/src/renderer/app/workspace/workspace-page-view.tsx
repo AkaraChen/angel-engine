@@ -178,7 +178,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     navigateToDraft,
     openChat,
     openChatFromAnyMode,
-    openSchedule
+    openSchedule,
     openPowerWorktree,
     openSettings,
     selectDraftProject,
@@ -478,11 +478,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                 (rightSidebarOpen || workspaceToolHost !== "sidebar")
               }
               rightSidebarToggleLabel={workspaceToolsToggleLabel}
-              title={
-                scheduleActive
-                  ? t("schedule.title")
-                  : workspaceTitle
-              }
+              title={scheduleActive ? t("schedule.title") : workspaceTitle}
               includeAngelTerminal={canOpenAngelTerminal}
               onPathLauncherAction={
                 currentLauncherTarget === undefined
