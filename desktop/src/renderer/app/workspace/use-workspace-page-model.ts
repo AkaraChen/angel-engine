@@ -119,7 +119,7 @@ export function useWorkspacePageModel({
 
   const draftState = useWorkspaceDraftState();
   const draftSessionCounterRef = useRef(0);
-  // Fleet and Schedule are chat-less routes but not drafts.
+  // Fleet is a chat-less route but not a draft.
   const isDraftPage = !fleetActive && !is.nonEmptyString(selectedChatId);
 
   const projectsQuery = useQuery({ ...projectListQueryOptions({ api }) });
