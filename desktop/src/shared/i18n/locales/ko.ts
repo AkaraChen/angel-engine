@@ -317,6 +317,8 @@ export const ko = {
         resizeFileTree: "파일 트리 너비 조정",
         subprocesses: "하위 프로세스",
         tabs: {
+          checks: "검사",
+          gitChanges: "Git 변경",
           files: "파일",
           newTab: "새 탭",
           processes: "프로세스",

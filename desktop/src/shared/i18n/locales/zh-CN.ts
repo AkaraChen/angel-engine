@@ -313,6 +313,8 @@ export const zhCN = {
         resizeFileTree: "调整文件树宽度",
         subprocesses: "子进程",
         tabs: {
+          checks: "检查",
+          gitChanges: "Git 更改",
           files: "文件",
           newTab: "新建标签页",
           processes: "进程",

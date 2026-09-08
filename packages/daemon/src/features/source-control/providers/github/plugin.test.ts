@@ -212,6 +212,8 @@ describe("GitHub source-control provider", () => {
     const runGh = vi.fn(async () => ({ stderr: "", stdout: "" }));
     const plugin = createGitHubPlugin({
       findGh: async () => "/usr/bin/gh",
+      runGh,
+    });
     await expect(
       plugin.git.clone?.(
         { repository, targetPath: "/tmp/widgets" },

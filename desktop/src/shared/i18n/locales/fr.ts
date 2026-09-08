@@ -324,6 +324,8 @@ export const fr = {
         resizeFileTree: "Redimensionner l’arborescence",
         subprocesses: "Sous-processus",
         tabs: {
+          checks: "Checks",
+          gitChanges: "Changements Git",
           files: "Fichiers",
           newTab: "Nouvel onglet",
           processes: "Processus",

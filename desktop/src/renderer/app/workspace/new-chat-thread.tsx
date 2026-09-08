@@ -82,7 +82,6 @@ export function NewChatThread({
   projectName,
   projectPath,
   projects,
-  projectsStatus,
   reasoningEffort,
   runOrigin,
   runtime,

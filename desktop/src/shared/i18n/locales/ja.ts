@@ -321,6 +321,8 @@ export const ja = {
         resizeFileTree: "ファイルツリーの幅を調整",
         subprocesses: "サブプロセス",
         tabs: {
+          checks: "チェック",
+          gitChanges: "Git の変更",
           files: "ファイル",
           newTab: "新しいタブ",
           processes: "プロセス",

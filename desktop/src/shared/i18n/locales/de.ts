@@ -322,6 +322,8 @@ export const de = {
         resizeFileTree: "Dateibaumbreite anpassen",
         subprocesses: "Unterprozesse",
         tabs: {
+          checks: "Checks",
+          gitChanges: "Git-Änderungen",
           files: "Dateien",
           newTab: "Neuer Tab",
           processes: "Prozesse",

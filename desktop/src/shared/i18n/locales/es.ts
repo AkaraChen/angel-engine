@@ -322,6 +322,8 @@ export const es = {
         resizeFileTree: "Redimensionar el árbol de archivos",
         subprocesses: "Subprocesos",
         tabs: {
+          checks: "Checks",
+          gitChanges: "Cambios de Git",
           files: "Archivos",
           newTab: "Nueva pestaña",
           processes: "Procesos",

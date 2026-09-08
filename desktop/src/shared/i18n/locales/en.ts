@@ -319,6 +319,8 @@ export const en = {
         resizeFileTree: "Resize file tree",
         subprocesses: "Subprocesses",
         tabs: {
+          checks: "Checks",
+          gitChanges: "Git changes",
           files: "Files",
           newTab: "New tab",
           processes: "Processes",

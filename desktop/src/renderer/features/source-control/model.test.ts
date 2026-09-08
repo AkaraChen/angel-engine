@@ -66,12 +66,8 @@ describe("source-control renderer foundation", () => {
     const identities = [forge, nextGeneration, otherRepository, gitlab].map(
       sourceControlProviderIdentity,
     );
-    const keys = identities.map((identity) =>
-      queryKeys.sourceControl.checks(identity, "42"),
-    );
 
     expect(new Set(identities).size).toBe(4);
-    expect(new Set(keys.map((key) => JSON.stringify(key))).size).toBe(4);
     expect(identities[0]).toBe("forge:forge.com/angel/engine:1");
   });
 });

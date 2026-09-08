@@ -313,6 +313,8 @@ export const zhTW = {
         resizeFileTree: "調整檔案樹寬度",
         subprocesses: "子處理程序",
         tabs: {
+          checks: "檢查",
+          gitChanges: "Git 變更",
           files: "檔案",
           newTab: "新增分頁",
           processes: "處理程序",
