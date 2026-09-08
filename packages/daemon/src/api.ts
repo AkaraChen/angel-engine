@@ -5,7 +5,7 @@ import type {
   ChatSendInput,
   ChatStreamElicitationResolveInput,
 } from "@angel-engine/daemon-api/chat";
-import type { AutomationRow } from "./db/schema";
+import type { ProjectCloneEvent } from "@angel-engine/daemon-api/projects";
 import type { Context, Hono } from "hono";
 import type { ChatEventsApi } from "./features/chat/chat-events";
 import type { Db } from "./platform/db";
@@ -21,10 +21,6 @@ import {
   updateCustomAgentInputSchema,
 } from "@angel-engine/daemon-api/agents";
 import {
-  createAutomationInputSchema,
-  updateAutomationInputSchema,
-} from "@angel-engine/daemon-api/automations";
-import {
   chatCreateInputSchema,
   chatPrewarmInputSchema,
   chatRuntimeConfigInputSchema,
@@ -39,7 +35,12 @@ import {
   chatSetRuntimeInputSchema,
   normalizeChatAttachmentsInput,
 } from "@angel-engine/daemon-api/chat";
-import { managedWorktreeDeleteInputSchema } from "@angel-engine/daemon-api/projects";
+import {
+  createProjectInputSchema,
+  projectCloneInputSchema,
+  updateProjectConfigInputSchema,
+  updateProjectInputSchema,
+} from "@angel-engine/daemon-api/projects";
 import {
   workspaceToolGitCheckoutInputSchema,
   workspaceToolGitCommitInputSchema,
@@ -68,23 +69,6 @@ import {
 } from "./features/agents/repository";
 import { listSkillsForAgent } from "./features/agents/skills";
 import { ChatActivityStore } from "./features/chat/activity";
-import { isValidCron, nextCronRun } from "./features/automations/cron";
-import {
-  attachAutomationRunChat,
-  createAutomationRecord,
-  createAutomationRun,
-  deleteAutomationRecord,
-  finishAutomationRun,
-  getAutomation,
-  hasActiveAutomationRun,
-  listAutomationRuns,
-  listAutomations,
-  listDueAutomationRecords,
-  requireAutomationRecord,
-  setAutomationNextRun,
-  updateAutomationRecord,
-} from "./features/automations/repository";
-import { AutomationRuntime } from "./features/automations/runtime";
 import { ChatEngine } from "./features/chat/engine-runtime";
 import { ChatRunRegistry } from "./features/chat/run-registry";
 import { ShepherdService } from "./features/shepherd/service";
@@ -102,10 +86,6 @@ import {
   restoreArchivedChats,
   setChatPinned,
 } from "./features/chat/repository";
-import {
-  managedWorktreePath,
-  removeManagedWorktree,
-} from "./features/source-control/local-git/projects";
 import { projectGitStatus } from "./features/source-control/local-git/projects";
 import {
   deleteProviderHostMapping,
@@ -118,11 +98,18 @@ import { SourceControlCoordinator } from "./features/source-control/registry/coo
 import type { SourceControlRegistry } from "./features/source-control/registry/registry";
 import { registerSourceControlHttpApi } from "./features/source-control/http";
 import {
-  deleteManagedWorktrees,
-  scanManagedWorktrees,
-} from "./features/projects/managed-worktrees";
+  readProjectConfig,
+  updateProjectConfig,
+} from "./features/projects/settings";
+import { cloneProject } from "./features/projects/clone";
 import { searchProjectFiles } from "./features/projects/file-search";
-import { getProject, listProjects } from "./features/projects/repository";
+import {
+  createProject,
+  deleteProject,
+  getProject,
+  listProjects,
+  updateProject,
+} from "./features/projects/repository";
 import { getChatDiffAnchor } from "./features/chat/diff-anchors";
 import {
   workspaceFileTree,
@@ -148,7 +135,6 @@ export function registerApi(
   options: {
     internalBridgeSecret?: string;
     sourceControlRegistry?: SourceControlRegistry;
-    startAutomationScheduler?: boolean;
   } = {},
 ) {
   const run = <A>(
@@ -159,7 +145,6 @@ export function registerApi(
       chatEngine: Effect.Effect.Success<typeof ChatEngine>,
     ) => Effect.Effect<A, DaemonError, Db>,
   ) => Effect.flatMap(ChatEngine, use);
-  let automationRuntime: AutomationRuntime | undefined;
   const sourceControl = new SourceControlCoordinator(
     options.sourceControlRegistry,
   );
@@ -173,7 +158,6 @@ export function registerApi(
   });
   const chatRuns = new ChatRunRegistry({
     execute: async (input, onEvent, signal, controls, runId) => {
-      await run(engine((e) => e.waitForChatSetup(input.chatId, signal)));
       const claim = await run(
         engine((e) => e.beginQueuedChatRunDispatch(runId)),
       );
@@ -201,9 +185,6 @@ export function registerApi(
       if (event.type === "result" || event.type === "error") {
         chatEvents.conversationChanged([chatId]);
       }
-      void automationRuntime
-        ?.handleChatRunEvent(runId, event)
-        .catch(() => undefined);
     },
   });
   shepherd = new ShepherdService({
@@ -236,176 +217,6 @@ export function registerApi(
 
   const runEffect = <A>(effect: Effect.Effect<A, DaemonError, Db>) =>
     runDaemonApi(runtime, effect);
-  automationRuntime = new AutomationRuntime({
-    attachRunChat: (runId, chatId) =>
-      runEffect(attachAutomationRunChat(runId, chatId)).then(() => undefined),
-    createChat: (automation: AutomationRow) =>
-      run(
-        engine((chatEngine) =>
-          chatEngine.createChatFromInput(
-            {
-              creationLocation: automation.workspaceKind,
-              projectId: automation.projectId ?? undefined,
-              runtime: automation.runtime,
-              title: automation.name,
-            },
-            new AbortController().signal,
-          ),
-        ),
-      ),
-    createRun: (input) => runEffect(createAutomationRun(input)),
-    finishRun: (runId, status, error) =>
-      runEffect(finishAutomationRun(runId, status, error)),
-    getAutomation: async (id) => {
-      const automation = await runEffect(getAutomation(id));
-      if (!automation) throw DaemonError.automationNotFound();
-      return automation;
-    },
-    getRecord: (id) => runEffect(requireAutomationRecord(id)),
-    hasActiveRun: (id) => runEffect(hasActiveAutomationRun(id)),
-    listDue: (now) => runEffect(listDueAutomationRecords(now)),
-    onChanged: (ids) => chatEvents.automationsChanged(ids),
-    setNextRun: (id, nextRunAt) =>
-      runEffect(setAutomationNextRun(id, nextRunAt)).then(() => undefined),
-    startChatRun: async (runId, input) => {
-      await queuedRunRecovery;
-      chatRuns.reserve(runId, input);
-      try {
-        await run(
-          engine((chatEngine) => chatEngine.queueChatRun(runId, input)),
-        );
-      } catch (error) {
-        chatRuns.stop(runId);
-        throw error;
-      }
-      activity.start(input.chatId, runId);
-      chatEvents.conversationChanged([input.chatId]);
-      chatRuns.begin(runId);
-    },
-    stopChatRun: async (runId) => {
-      try {
-        const snapshot = chatRuns.snapshot(runId);
-        activity.cancel(snapshot.chatId, runId);
-        chatRuns.stop(runId);
-        await run(
-          engine((chatEngine) => chatEngine.cancelQueuedChatRun(runId)),
-        );
-        chatEvents.conversationChanged([snapshot.chatId]);
-      } catch {
-        await run(
-          engine((chatEngine) => chatEngine.cancelQueuedChatRun(runId)),
-        );
-      }
-    },
-  });
-  if (options.startAutomationScheduler === true) automationRuntime.start();
-
-  const validateAutomation = (input: {
-    cron: string;
-    projectId?: string | null;
-    runtime: string;
-    workspaceKind?: "project" | "worktree";
-  }) => {
-    if (!isValidCron(input.cron))
-      throw DaemonError.invalidRequest("Cron expression is invalid.");
-    if (!isAgentRuntime(input.runtime)) throw DaemonError.chatRuntimeUnknown();
-    if (input.workspaceKind === "worktree" && !input.projectId)
-      throw DaemonError.projectRequiredForWorktree();
-  };
-  const validateAutomationProject = async (projectId?: string | null) => {
-    if (projectId && (await runEffect(getProject(projectId))) === null)
-      throw DaemonError.projectNotFound();
-  };
-
-  app.get("/api/automations", async (context) =>
-    context.json(await runEffect(listAutomations())),
-  );
-  app.get("/api/automations/:id/runs", async (context) =>
-    context.json(
-      await runEffect(
-        listAutomationRuns(
-          context.req.param("id"),
-          optionalNumber(context.req.query("limit")),
-        ),
-      ),
-    ),
-  );
-  app.post("/api/automations", async (context) => {
-    const input = createAutomationInputSchema(await context.req.json());
-    if (input instanceof arkType.errors)
-      throw DaemonError.invalidRequest("Automation input is invalid.");
-    validateAutomation(input);
-    await validateAutomationProject(input.projectId);
-    const enabled = input.enabled ?? true;
-    const nextRunAt = enabled
-      ? (nextCronRun(input.cron, new Date())?.toISOString() ?? null)
-      : null;
-    const automation = await runEffect(
-      createAutomationRecord(input, nextRunAt),
-    );
-    chatEvents.automationsChanged([automation.id]);
-    return context.json(automation, 201);
-  });
-  app.patch("/api/automations/:id", async (context) => {
-    const id = context.req.param("id");
-    const input = updateAutomationInputSchema(await context.req.json());
-    if (input instanceof arkType.errors)
-      throw DaemonError.invalidRequest("Automation input is invalid.");
-    const current = await runEffect(requireAutomationRecord(id));
-    validateAutomation({
-      cron: input.cron ?? current.cron,
-      projectId:
-        input.projectId === undefined ? current.projectId : input.projectId,
-      runtime: input.runtime ?? current.runtime,
-      workspaceKind: input.workspaceKind ?? current.workspaceKind,
-    });
-    await validateAutomationProject(
-      input.projectId === undefined ? current.projectId : input.projectId,
-    );
-    const enabled = input.enabled ?? current.enabled;
-    const recalculate = input.cron !== undefined || input.enabled !== undefined;
-    const nextRunAt = recalculate
-      ? enabled
-        ? (nextCronRun(input.cron ?? current.cron, new Date())?.toISOString() ??
-          null)
-        : null
-      : undefined;
-    const automation = await runEffect(
-      updateAutomationRecord(id, input, nextRunAt),
-    );
-    chatEvents.automationsChanged([id]);
-    return context.json(automation);
-  });
-  app.post("/api/automations/:id/pause", async (context) => {
-    const id = context.req.param("id");
-    const automation = await runEffect(
-      updateAutomationRecord(id, { enabled: false }, null),
-    );
-    chatEvents.automationsChanged([id]);
-    return context.json(automation);
-  });
-  app.post("/api/automations/:id/resume", async (context) => {
-    const id = context.req.param("id");
-    const current = await runEffect(requireAutomationRecord(id));
-    const nextRunAt =
-      nextCronRun(current.cron, new Date())?.toISOString() ?? null;
-    const automation = await runEffect(
-      updateAutomationRecord(id, { enabled: true }, nextRunAt),
-    );
-    chatEvents.automationsChanged([id]);
-    return context.json(automation);
-  });
-  app.post("/api/automations/:id/run", async (context) =>
-    context.json(await automationRuntime.runNow(context.req.param("id"))),
-  );
-  app.delete("/api/automations/:id", async (context) => {
-    const id = context.req.param("id");
-    await automationRuntime.cancelActiveRuns(id);
-    await runEffect(deleteAutomationRecord(id));
-    chatEvents.automationsChanged([id]);
-    return context.json({ ok: true });
-  });
-
   app.get("/api/chat-activity", (context) => context.json(activity.list()));
   app.get("/api/chat-attention", (context) =>
     context.json(activity.attentionList()),
@@ -422,7 +233,7 @@ export function registerApi(
 
   app.get("/api/chats", async (context) => {
     const chats = await run(listChats());
-    return context.json(await run(engine((e) => e.decorateChats(chats))));
+    return context.json(chats);
   });
   app.get("/api/chats/archived", async (context) =>
     context.json(await run(listArchivedChats())),
@@ -440,22 +251,6 @@ export function registerApi(
     chatEvents.metadataChanged([chat.id]);
     return context.json(chat);
   });
-  app.delete("/api/chats/:id/worktree-creation", async (context) => {
-    const chatId = requirePath(context.req.param("id"), "chatId");
-    chatRuns.discardChat(chatId);
-    const chat = await run(engine((e) => e.cancelWorktreeCreation(chatId)));
-    await run(removeWorktreesForDeletedChats([chat]));
-    activity.clearChat(chatId);
-    chatEvents.metadataChanged([chat.id]);
-    return context.json(chat);
-  });
-  app.post("/api/chats/:id/worktree-creation/retry", async (context) => {
-    const chatId = requirePath(context.req.param("id"), "chatId");
-    const chat = await run(engine((e) => e.retryWorktreeCreation(chatId)));
-    chatEvents.metadataChanged([chat.id]);
-    return context.json(chat);
-  });
-
   app.post("/api/sessions/importable", async (context) => {
     const input = listImportableSessionsInputSchema(await context.req.json());
     if (input instanceof arkType.errors)
@@ -470,9 +265,7 @@ export function registerApi(
     const input = importChatInputSchema(await context.req.json());
     if (input instanceof arkType.errors)
       throw DaemonError.invalidRequest("Import chat input is required.");
-    const result = await run(
-      engine((e) => e.importChat(input, context.req.raw.signal)),
-    );
+    const result = await run(engine((e) => e.importChat(input)));
     chatEvents.metadataChanged([result.chat.id]);
     chatEvents.conversationChanged([result.chat.id]);
     return context.json(result);
@@ -498,12 +291,8 @@ export function registerApi(
     await run(
       Effect.gen(function* () {
         const chatEngine = yield* ChatEngine;
-        yield* chatEngine.cancelWorktreeCreationForDelete(chatId);
-        const chat = yield* getChat(chatId);
-        if (chat !== null) yield* removeWorktreesForDeletedChats([chat]);
         yield* chatEngine.closeChatSession(chatId);
         yield* deleteChat(chatId);
-        yield* chatEngine.finishChatDeletion(chatId);
       }),
     );
     activity.clearChat(chatId);
@@ -515,29 +304,6 @@ export function registerApi(
     activity.clearChat(chat.id);
     chatEvents.metadataChanged([chat.id]);
     return context.json(chat);
-  });
-  app.post("/api/chats/:id/archive-workspace", async (context) => {
-    const result = await run(
-      Effect.gen(function* () {
-        const chat = yield* requireChat(context.req.param("id"));
-        const archived = yield* archiveChat(chat.id);
-        const worktree = managedWorktreePath(chat.cwd);
-        if (worktree === undefined) {
-          return { chat: archived, removedWorktree: null };
-        }
-        const activeChats = yield* listChats();
-        const worktreeStillActive = activeChats.some(
-          (candidate) => managedWorktreePath(candidate.cwd) === worktree,
-        );
-        const removedWorktree = worktreeStillActive
-          ? undefined
-          : yield* removeManagedWorktree(worktree);
-        return { chat: archived, removedWorktree: removedWorktree ?? null };
-      }),
-    );
-    activity.clearChat(result.chat.id);
-    chatEvents.metadataChanged([result.chat.id]);
-    return context.json(result);
   });
   app.post("/api/chats/:id/load", async (context) =>
     context.json(
@@ -606,45 +372,25 @@ export function registerApi(
     return context.json(result);
   });
   app.delete("/api/chats", async (context) => {
-    const { deletedCount, targets, worktrees } = await run(
+    const { deletedCount, targets } = await run(
       Effect.gen(function* () {
         const [activeChats, archivedChats] = yield* Effect.all([
           listChats(),
           listArchivedChats(),
         ]);
-        const allTargets = [...activeChats, ...archivedChats];
+        const targets = [...activeChats, ...archivedChats];
         const chatEngine = yield* ChatEngine;
-        for (const chat of allTargets) {
+        for (const chat of targets) {
           chatRuns.discardChat(chat.id);
-          yield* chatEngine.cancelWorktreeCreationForDelete(chat.id);
         }
-        const [settledActiveChats, settledArchivedChats] = yield* Effect.all([
-          listChats(),
-          listArchivedChats(),
-        ]);
-        const settledTargets = [...settledActiveChats, ...settledArchivedChats];
-        const removedWorktrees =
-          yield* removeWorktreesForDeletedChats(settledTargets);
         yield* chatEngine.closeChatSession();
         const deletedCount = yield* deleteAllChats();
-        for (const chat of settledTargets) {
-          yield* chatEngine.finishChatDeletion(chat.id);
-        }
-        return {
-          deletedCount,
-          targets: settledTargets,
-          worktrees: removedWorktrees,
-        };
+        return { deletedCount, targets };
       }),
     );
     chatEvents.metadataChanged(targets.map((chat) => chat.id));
-    for (const chat of targets) {
-      activity.clearChat(chat.id);
-    }
-    return context.json({
-      deletedCount,
-      deletedWorktreeCount: worktrees.length,
-    });
+    for (const chat of targets) activity.clearChat(chat.id);
+    return context.json({ deletedCount, deletedWorktreeCount: 0 });
   });
   app.post("/api/chats/archived/restore", async (context) => {
     const body = await context.req.json<ChatIdsInput>();
@@ -652,57 +398,15 @@ export function registerApi(
     chatEvents.metadataChanged(chats.map((chat) => chat.id));
     return context.json(chats);
   });
-  app.post("/api/chats/archived/delete-impact", async (context) => {
-    const body = await context.req.json<ChatIdsInput>();
-    const chatIds = readChatIds(body);
-    const targets = await run(
-      Effect.all(chatIds.map((id) => requireArchivedChat(id))),
-    );
-    const worktrees = managedWorktreesForChats(targets);
-    return context.json({
-      chatCount: targets.length,
-      managedWorktreeCount: worktrees.length,
-      managedWorktrees: worktrees,
-    });
-  });
   app.post("/api/chats/archived/delete", async (context) => {
     const chatIds = readChatIds(await context.req.json<ChatIdsInput>());
-    const { deletedChats, worktrees } = await run(
-      Effect.gen(function* () {
-        const targets = yield* Effect.all(
-          chatIds.map((id) => requireArchivedChat(id)),
-        );
-        const chatEngine = yield* ChatEngine;
-        for (const chat of targets) {
-          chatRuns.discardChat(chat.id);
-          yield* chatEngine.cancelWorktreeCreationForDelete(chat.id);
-        }
-        const settledTargets = yield* Effect.all(
-          chatIds.map((id) => requireArchivedChat(id)),
-        );
-        const removedWorktrees =
-          yield* removeWorktreesForDeletedChats(settledTargets);
-        for (const chat of targets) {
-          yield* chatEngine.closeChatSession(chat.id);
-        }
-        const deletedChats = yield* deleteArchivedChats(chatIds);
-        for (const chatId of chatIds) {
-          yield* chatEngine.finishChatDeletion(chatId);
-        }
-        return {
-          deletedChats,
-          worktrees: removedWorktrees,
-        };
-      }),
-    );
-    for (const chatId of chatIds) {
-      activity.clearChat(chatId);
-    }
+    const deletedChats = await run(deleteArchivedChats(chatIds));
+    for (const chatId of chatIds) activity.clearChat(chatId);
     chatEvents.metadataChanged(chatIds);
     return context.json({
       deletedCount: deletedChats.length,
-      deletedWorktreeCount: worktrees.length,
-      deletedWorktrees: worktrees,
+      deletedWorktreeCount: 0,
+      deletedWorktrees: [],
     });
   });
 
@@ -745,12 +449,10 @@ export function registerApi(
         const chatEngine = yield* ChatEngine;
         for (const chat of candidateChats) {
           chatRuns.discardChat(chat.id);
-          yield* chatEngine.cancelWorktreeCreationForDelete(chat.id);
         }
         const settledChats = yield* Effect.all(
           candidateChats.map((chat) => requireChat(chat.id)),
         );
-        yield* removeWorktreesForDeletedChats(settledChats);
         const chatIds = yield* deleteCustomAgentWithChats(runtimeId);
         for (const chatId of chatIds) {
           yield* chatEngine.closeChatSession(chatId);
@@ -883,6 +585,45 @@ export function registerApi(
     sourceControl.invalidateAll();
     return context.json({ ok: true });
   });
+  app.post("/api/projects/clone", async (context) => {
+    const input = projectCloneInputSchema(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Repository URL is required.");
+    return streamSSE(context, async (stream) => {
+      // Progress arrives synchronously from the git process; chain the writes
+      // so no frame is dropped or reordered while an earlier one is in flight.
+      let writes = Promise.resolve();
+      const emit = (event: ProjectCloneEvent) => {
+        writes = writes.then(async () => {
+          await stream.writeSSE({
+            data: JSON.stringify(event),
+            event: event.type,
+          });
+        });
+      };
+
+      try {
+        const result = await run(
+          cloneProject(
+            input,
+            emit,
+            context.req.raw.signal,
+            sourceControl.registry,
+          ),
+        );
+        emit({
+          project: result.project,
+          reusedExistingCheckout: result.reusedExistingCheckout,
+          type: "completed",
+        });
+      } catch (cause) {
+        const error =
+          cause instanceof DaemonError ? cause : DaemonError.internal(cause);
+        emit({ code: error.code, message: error.message, type: "failed" });
+      }
+      await writes;
+    });
+  });
   app.get("/api/projects/files/search", async (context) =>
     context.json(
       await run(
@@ -897,6 +638,64 @@ export function registerApi(
   app.get("/api/projects/:id", async (context) =>
     context.json(await run(getProject(context.req.param("id")))),
   );
+  app.post("/api/projects", async (context) => {
+    const input = createProjectInputSchema(await context.req.json());
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Project input is invalid.");
+    return context.json(await run(createProject(input)));
+  });
+  app.patch("/api/projects/:id", async (context) => {
+    const body = await context.req.json<Record<string, unknown>>();
+    const input = updateProjectInputSchema({
+      ...body,
+      id: context.req.param("id"),
+    });
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Project input is invalid.");
+    return context.json(await run(updateProject(input)));
+  });
+  app.delete("/api/projects/:id", async (context) => {
+    const projectId = context.req.param("id");
+    const deletedChatIds = await run(
+      Effect.gen(function* () {
+        const targets = [
+          ...(yield* listChats()),
+          ...(yield* listArchivedChats()),
+        ].filter((chat) => chat.projectId === projectId);
+        const chatEngine = yield* ChatEngine;
+        for (const chat of targets) {
+          chatRuns.discardChat(chat.id);
+          yield* chatEngine.closeChatSession(chat.id);
+        }
+        const settledTargets = yield* Effect.all(
+          targets.map((chat) => requireChat(chat.id)),
+        );
+        yield* deleteProject(projectId);
+        for (const chat of settledTargets) {
+          yield* chatEngine.finishChatDeletion(chat.id);
+        }
+        return targets.map((chat) => chat.id);
+      }),
+    );
+    for (const chatId of deletedChatIds) activity.clearChat(chatId);
+    chatEvents.metadataChanged(deletedChatIds);
+    return context.json({ ok: true });
+  });
+  app.get("/api/projects/:id/config", async (context) =>
+    context.json(
+      await run(readProjectConfig({ projectId: context.req.param("id") })),
+    ),
+  );
+  app.put("/api/projects/:id/config", async (context) => {
+    const body = await context.req.json<Record<string, unknown>>();
+    const input = updateProjectConfigInputSchema({
+      ...body,
+      projectId: context.req.param("id"),
+    });
+    if (input instanceof arkType.errors)
+      throw DaemonError.invalidRequest("Project settings are invalid.");
+    return context.json(await run(updateProjectConfig(input)));
+  });
   app.get("/api/projects/:id/git-status", async (context) =>
     context.json(
       await run(projectGitStatus({ projectId: context.req.param("id") })),
@@ -913,36 +712,6 @@ export function registerApi(
       ),
     ),
   );
-
-  app.get("/api/worktrees/managed", async (context) =>
-    context.json(
-      await run(
-        scanManagedWorktrees({
-          eligibleOnly: context.req.query("eligibleOnly") === "true",
-        }),
-      ),
-    ),
-  );
-  app.post("/api/worktrees/managed/delete", async (context) => {
-    const input = managedWorktreeDeleteInputSchema(await context.req.json());
-    if (input instanceof arkType.errors)
-      throw DaemonError.invalidRequest(
-        "Worktree deletion confirmation is required.",
-      );
-    const result = await run(
-      Effect.gen(function* () {
-        const chatEngine = yield* ChatEngine;
-        return yield* deleteManagedWorktrees(input, (chatId) =>
-          chatEngine.closeChatSession(chatId),
-        );
-      }),
-    );
-    for (const chatId of result.deletedChatIds) {
-      activity.clearChat(chatId);
-    }
-    chatEvents.metadataChanged(result.deletedChatIds);
-    return context.json(result);
-  });
 
   app.get("/api/workspace/file-tree", async (context) =>
     context.json(
@@ -1137,7 +906,6 @@ export function registerApi(
   });
 
   return () => {
-    automationRuntime?.stop();
     sourceControl.close();
   };
 }
@@ -1218,38 +986,6 @@ function readChatIds(input: ChatIdsInput) {
   if (!Array.isArray(input.chatIds) || input.chatIds.length === 0)
     throw DaemonError.invalidRequest("Chat ids are required.");
   return [...new Set(input.chatIds)];
-}
-
-function managedWorktreesForChats(chats: Chat[]) {
-  return [
-    ...new Set(
-      chats
-        .map((chat) => managedWorktreePath(chat.cwd))
-        .filter((cwd): cwd is string => cwd !== undefined),
-    ),
-  ];
-}
-
-function removeWorktreesForDeletedChats(targets: Chat[]) {
-  return Effect.gen(function* () {
-    const ids = new Set(targets.map((chat) => chat.id));
-    const [activeChats, archivedChats] = yield* Effect.all([
-      listChats(),
-      listArchivedChats(),
-    ]);
-    const survivors = [...activeChats, ...archivedChats].filter(
-      (chat) => !ids.has(chat.id),
-    );
-    const survivorPaths = new Set(managedWorktreesForChats(survivors));
-    const removed: string[] = [];
-    for (const worktree of managedWorktreesForChats(targets).filter(
-      (value) => !survivorPaths.has(value),
-    )) {
-      const result = yield* removeManagedWorktree(worktree);
-      if (result !== undefined) removed.push(result);
-    }
-    return removed;
-  });
 }
 
 function requireQuery(value: string | undefined, name: string) {

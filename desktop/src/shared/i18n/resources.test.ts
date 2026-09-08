@@ -42,21 +42,6 @@ describe.each(translatedLanguages)("%s locale", (language) => {
     expect(leafPaths(resources[language].translation)).toEqual(englishPaths);
   });
 
-  it("does not silently reuse English schedule copy", () => {
-    const intentionallySame: Partial<Record<typeof language, string[]>> = {
-      de: ["name"],
-      es: ["triggerType.manual"],
-      fr: ["status.active"],
-    };
-
-    expect(
-      pathsMatchingEnglish(
-        resources.en.translation.schedule,
-        resources[language].translation.schedule,
-      ),
-    ).toEqual(intentionallySame[language] ?? []);
-  });
-
   it("does not silently reuse English pull request copy", () => {
     const intentionallySame: Partial<Record<typeof language, string[]>> = {
       de: ["shepherd.rounds", "shepherd.title"],

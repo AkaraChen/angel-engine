@@ -1,5 +1,4 @@
 import type { LocaleResource } from "./schema";
-import { scheduleZhCN } from "./schedule";
 import { changeRequestZhCN } from "./change-request";
 
 export const zhCN = {
@@ -339,7 +338,6 @@ export const zhCN = {
         waitingForYou: "等待你处理",
       },
     },
-    schedule: scheduleZhCN,
     sidebar: {
       archiveChat: "归档聊天",
       chatAttention: "聊天提醒",

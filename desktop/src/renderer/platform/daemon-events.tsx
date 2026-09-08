@@ -8,7 +8,6 @@ import {
   mountedChatIds,
   reconcileChatConversation,
 } from "@/features/chat/state/chat-conversation-sync";
-import { scheduleQueryKeys } from "@/features/schedule/requests/keys";
 import { useDaemonClient } from "@/platform/daemon";
 import { queryKeys } from "@/platform/query-keys";
 
@@ -71,11 +70,6 @@ export function DaemonEventSync() {
 
     const handleEvent = (event: DaemonGlobalEvent) => {
       switch (event.type) {
-        case "automations-changed":
-          void queryClient.invalidateQueries({
-            queryKey: scheduleQueryKeys.automations.all(),
-          });
-          return;
         case "chat-activity-changed":
         case "chat-attention-changed":
           void queryClient.invalidateQueries({
@@ -128,9 +122,6 @@ export function DaemonEventSync() {
           queryKey: queryKeys.chatActivity.all(),
         });
         invalidateChatLists();
-        void queryClient.invalidateQueries({
-          queryKey: scheduleQueryKeys.automations.all(),
-        });
         void queryClient.invalidateQueries({
           queryKey: queryKeys.shepherd.all(),
         });

@@ -1,5 +1,4 @@
 import type { LocaleResource } from "./schema";
-import { scheduleKo } from "./schedule";
 import { changeRequestKo } from "./change-request";
 
 export const ko = {
@@ -344,7 +343,6 @@ export const ko = {
         waitingForYou: "응답 대기 중",
       },
     },
-    schedule: scheduleKo,
     sidebar: {
       archiveChat: "채팅 보관",
       chatAttention: "채팅 주의 필요",

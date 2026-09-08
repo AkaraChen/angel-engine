@@ -1,5 +1,4 @@
 import type { LocaleResource } from "./schema";
-import { scheduleZhTW } from "./schedule";
 import { changeRequestZhTW } from "./change-request";
 
 export const zhTW = {
@@ -339,7 +338,6 @@ export const zhTW = {
         waitingForYou: "等待你處理",
       },
     },
-    schedule: scheduleZhTW,
     sidebar: {
       archiveChat: "封存聊天",
       chatAttention: "聊天提醒",

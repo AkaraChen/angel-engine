@@ -1,5 +1,4 @@
 import type { LocaleResource } from "./schema";
-import { scheduleJa } from "./schedule";
 import { changeRequestJa } from "./change-request";
 
 export const ja = {
@@ -348,7 +347,6 @@ export const ja = {
         waitingForYou: "あなたの入力待ち",
       },
     },
-    schedule: scheduleJa,
     sidebar: {
       archiveChat: "チャットをアーカイブ",
       chatAttention: "チャットの注意",

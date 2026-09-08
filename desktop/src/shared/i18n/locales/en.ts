@@ -1,5 +1,4 @@
 import type { LocaleResource } from "./schema";
-import { scheduleEn } from "./schedule";
 import { changeRequestEn } from "./change-request";
 
 export const en = {
@@ -346,7 +345,6 @@ export const en = {
         waitingForYou: "Waiting for you",
       },
     },
-    schedule: scheduleEn,
     sidebar: {
       archiveChat: "Archive chat",
       chatAttention: "Chat attention",

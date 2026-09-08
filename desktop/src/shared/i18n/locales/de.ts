@@ -1,5 +1,4 @@
 import type { LocaleResource } from "./schema";
-import { scheduleDe } from "./schedule";
 import { changeRequestDe } from "./change-request";
 
 export const de = {
@@ -349,7 +348,6 @@ export const de = {
         waitingForYou: "Wartet auf dich",
       },
     },
-    schedule: scheduleDe,
     sidebar: {
       archiveChat: "Chat archivieren",
       chatAttention: "Chat benötigt Aufmerksamkeit",

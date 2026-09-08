@@ -21,15 +21,11 @@ export function WorkspaceDraftPage({ projectId }: { projectId?: string }) {
   );
 }
 
-export function WorkspaceSchedulePage() {
+export function WorkspaceFleetPage() {
   const api = useApi();
 
   return (
-    <WorkspacePageContent
-      api={api}
-      currentRoutePath="/schedule"
-      scheduleActive
-    />
+    <WorkspacePageContent api={api} currentRoutePath="/fleet" fleetActive />
   );
 }
 

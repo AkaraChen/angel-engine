@@ -36,14 +36,7 @@ export interface DaemonShepherdChangedEvent {
   type: "shepherd-changed";
 }
 
-/** Automation definitions or their persisted run history changed. */
-export interface DaemonAutomationsChangedEvent {
-  automationIds: string[];
-  type: "automations-changed";
-}
-
 export type DaemonGlobalEvent =
-  | DaemonAutomationsChangedEvent
   | DaemonChatActivityChangedEvent
   | DaemonChatAttentionChangedEvent
   | DaemonChatConversationChangedEvent
@@ -55,14 +48,6 @@ export function isDaemonGlobalEvent(
 ): value is DaemonGlobalEvent {
   if (!is.plainObject(value)) return false;
   switch (value.type) {
-    case "automations-changed":
-      return (
-        Array.isArray(value.automationIds) &&
-        value.automationIds.length > 0 &&
-        value.automationIds.every(
-          (id) => typeof id === "string" && id.length > 0,
-        )
-      );
     case "chat-activity-changed":
     case "chat-attention-changed":
     case "chat-conversation-changed":
