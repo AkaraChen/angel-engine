@@ -587,6 +587,7 @@ describe("createDaemon", () => {
   });
 });
 async function startDaemon() {
+  const dataDir = await mkdtemp(path.join(os.tmpdir(), "angel-daemon-"));
   const daemon = await createDaemon({
     dataDir,
     migrationsDir: path.resolve(
