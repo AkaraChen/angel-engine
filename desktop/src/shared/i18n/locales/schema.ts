@@ -342,7 +342,6 @@ export interface LocaleResourceTranslationWorkspaceToolsChangeRequest {
 
 export interface LocaleResourceTranslationWorkspaceTools {
   addToChat: string;
-  browser: string;
   checks: LocaleResourceTranslationWorkspaceToolsChecks;
   comments: LocaleResourceTranslationWorkspaceToolsComments;
   commit: LocaleResourceTranslationWorkspaceToolsCommit;
@@ -420,15 +419,11 @@ export interface LocaleResourceTranslationWorkspaceAmbiguousSend {
 
 export interface LocaleResourceTranslationWorkspace {
   ambiguousSend: LocaleResourceTranslationWorkspaceAmbiguousSend;
-  browser: LocaleResourceTranslationWorkspaceBrowser;
   files: LocaleResourceTranslationWorkspaceFiles;
   backgroundChatCompleted: string;
   backgroundChatNeedsInput: string;
   backgroundChatStatus: string;
   closeTab: string;
-  creationLocationProject: string;
-  creationLocationSelect: string;
-  creationLocationWorktree: string;
   newChat: string;
   newChatInProject: string;
   noProject: string;
@@ -436,29 +431,11 @@ export interface LocaleResourceTranslationWorkspace {
   processes: LocaleResourceTranslationWorkspaceProcesses;
   rightSidebar: LocaleResourceTranslationWorkspaceRightSidebar;
   settings: string;
-  setup: LocaleResourceTranslationWorkspaceSetup;
   statsBranch: string;
   statsChanges: string;
   statsLastActive: string;
   tools: LocaleResourceTranslationWorkspaceTools;
   title: string;
-  worktreeDirtyContinue: string;
-  worktreeDirtyDescription: string;
-  worktreeDirtyRemember: string;
-  worktreeDirtyTitle: string;
-  worktreeNotGitRepository: string;
-  worktreeSetupCommands: string;
-  worktreeSetupContinue: string;
-  worktreeSetupDescription: string;
-  worktreeSetupDirtyWarning: string;
-  worktreeSetupTitle: string;
-  worktreeSetupConfigure: string;
-  worktreeSetupDismiss: string;
-  worktreeSetupLegacyDescription: string;
-  worktreeSetupMigrate: string;
-  worktreeSetupMigrationDone: string;
-  worktreeSetupMissingDescription: string;
-  worktreeSetupMissingTitle: string;
 }
 
 export interface LocaleResourceTranslationSidebarDateGroups {
@@ -545,7 +522,6 @@ export interface LocaleResourceTranslationSchedule {
   name: string;
   newAutomation: string;
   nextThreeRuns: string;
-  noProject: string;
   notifyOnFailure: string;
   pause: string;
   paused: string;
@@ -626,7 +602,7 @@ export interface LocaleResourceTranslationSchedule {
 }
 
 export interface LocaleResourceTranslationSidebar {
-  addProject: string;
+  newChatInProject: string;
   archiveChat: string;
   chatAttention: string;
   chats: string;
@@ -636,7 +612,6 @@ export interface LocaleResourceTranslationSidebar {
   loadingProjects: string;
   needsInput: string;
   newChat: string;
-  newChatInProject: string;
   noChats: string;
   noProjects: string;
   noStandaloneChats: string;
@@ -682,12 +657,12 @@ export interface LocaleResourceTranslationSettingsArchivedRemovableWorktrees {
 }
 
 export interface LocaleResourceTranslationSettingsArchived {
+  noProject: string;
   allProjects: string;
   bulkSelect: string;
   clearSelection: string;
   confirmDeleteDetail: string;
   confirmDeleteTitle: string;
-  confirmDeleteWorktreeDetail: string;
   deletedToast: string;
   deletePermanently: string;
   deleteSelected: string;
@@ -695,8 +670,6 @@ export interface LocaleResourceTranslationSettingsArchived {
   empty: string;
   filterProject: string;
   filterTime: string;
-  noProject: string;
-  removableWorktrees: LocaleResourceTranslationSettingsArchivedRemovableWorktrees;
   restore: string;
   restoredToast: string;
   restoreSelected: string;
@@ -934,9 +907,6 @@ export interface LocaleResourceTranslationCommands {
 }
 
 export interface LocaleResourceTranslationSettingsWorkspace {
-  dirtyPromptDescription: string;
-  dirtyPromptSwitchLabel: string;
-  dirtyPromptTitle: string;
   osNotificationsDescription: string;
   osNotificationsSwitchLabel: string;
   osNotificationsTitle: string;
@@ -1354,19 +1324,6 @@ export interface LocaleResourceTranslationProjectImport {
 
 export interface LocaleResourceTranslationProjects {
   chooseFolder: string;
-  importSession: string;
-  openInFinder: string;
-  scriptShell: string;
-  scriptShellAuto: string;
-  scriptShellBash: string;
-  scriptShellSystem: string;
-  settings: string;
-  settingsLoadFailed: string;
-  settingsSaveFailed: string;
-  settingsSaved: string;
-  settingsTitle: string;
-  setupScript: string;
-  setupScriptPlaceholder: string;
 }
 
 export interface LocaleResourceTranslationPathLauncher {
@@ -1452,8 +1409,6 @@ export interface LocaleResourceTranslation {
   common: LocaleResourceTranslationCommon;
   attachment: LocaleResourceTranslationAttachment;
   workspace: LocaleResourceTranslationWorkspace;
-  fleet: LocaleResourceTranslationFleet;
-  schedule: LocaleResourceTranslationSchedule;
   sidebar: LocaleResourceTranslationSidebar;
   settings: LocaleResourceTranslationSettings;
   updates: LocaleResourceTranslationUpdates;
@@ -1464,7 +1419,6 @@ export interface LocaleResourceTranslation {
   dialog: LocaleResourceTranslationDialog;
   notifications: LocaleResourceTranslationNotifications;
   pathLauncher: LocaleResourceTranslationPathLauncher;
-  projectImport: LocaleResourceTranslationProjectImport;
   projects: LocaleResourceTranslationProjects;
   tray: LocaleResourceTranslationTray;
   ui: LocaleResourceTranslationUi;

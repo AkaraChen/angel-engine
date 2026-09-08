@@ -1,6 +1,5 @@
 import type {
   Chat,
-  ChatCreationLocation,
   ChatHistoryMessage,
   ChatRuntimeConfig,
 } from "@angel-engine/daemon-api/chat";
@@ -75,7 +74,7 @@ const newChatHeaderClassName = cn(
  * primitives, which stay rectangular in the chat surface. Matched on
  * `data-variant` rather than `data-slot=button` because a Radix trigger rendered
  * `asChild` replaces the slot but keeps the variant. Heights are left alone so
- * the compact workspace modes keep their own (still >= 28px) hit targets.
+ * the unified chat keep their own (still >= 28px) hit targets.
  */
 const newChatFooterClassName = cn(
   `
@@ -90,16 +89,8 @@ const chatSuggestionKeys = [
   "thread.empty.suggestionSummarize",
   "thread.empty.suggestionWrite",
 ] as const;
-const projectSuggestionKeys = [
-  "thread.empty.suggestionExplore",
-  "thread.empty.suggestionFix",
-  "thread.empty.suggestionTests",
-] as const;
-
 interface NewChatComposerProps {
   chats: Chat[];
-  creationLocation?: ChatCreationLocation;
-  creationLocationAccessory?: ReactNode;
   cwd?: string;
   initialMarkdown?: string;
   model?: string;
@@ -119,8 +110,8 @@ interface NewChatComposerProps {
     messages?: ChatHistoryMessage[],
     config?: ChatRuntimeConfig,
   ) => void;
-  onSelectFolder: () => void | Promise<void>;
   onOpenChat: (chat: Chat) => void;
+  onSelectFolder: () => void | Promise<void>;
   permissionMode?: string;
   prewarmId?: string;
   projectId?: string;
@@ -133,8 +124,6 @@ interface NewChatComposerProps {
 
 export function NewChatComposer({
   chats,
-  creationLocation,
-  creationLocationAccessory,
   cwd,
   initialMarkdown,
   model,
@@ -144,8 +133,8 @@ export function NewChatComposer({
   onChatCreated,
   onChatMessagesUpdated,
   onChatUpdated,
-  onSelectFolder,
   onOpenChat,
+  onSelectFolder,
   permissionMode,
   prewarmId,
   projectId,
@@ -158,14 +147,13 @@ export function NewChatComposer({
   const { t } = useTranslation();
   const isRunning = useChatRunIsRunning(slotKey);
   const cancelRun = useChatRunStore((state) => state.cancelRun);
-  const suggestionKeys = chatSuggestionKeys;
-
+  const projectRequired = false;
   const editor = useComposerEditor({ initialMarkdown });
+  const suggestionKeys = chatSuggestionKeys;
   const sourceAttachment = editor.sourceControlAttachments[0];
   const isChangeRequest = sourceAttachment?.kind === "changeRequest";
   const sendChatMessage = useSendChatMessage(slotKey, {
     chatId: undefined,
-    creationLocation: isChangeRequest ? "worktree" : creationLocation,
     cwd,
     model,
     mode,
@@ -185,14 +173,6 @@ export function NewChatComposer({
             provider: sourceAttachment.providerId,
             url: sourceAttachment.url,
           },
-    worktreeRef:
-      isChangeRequest && is.nonEmptyString(sourceAttachment.sourceBranch)
-        ? {
-            remoteRef: `heads/${sourceAttachment.sourceBranch}`,
-            type: "existingBranch",
-            value: sourceAttachment.sourceBranch,
-          }
-        : undefined,
   });
   const { isEmpty } = editor;
 
@@ -289,7 +269,13 @@ export function NewChatComposer({
             {t("thread.empty.description")}
           </p>
 
-          <>
+          {projectRequired ? (
+            <div className="mt-8 flex flex-col items-center gap-3 rounded-xl px-6 py-8 text-center">
+              <p className="text-sm text-muted-foreground">
+                {t("thread.empty.description")}
+              </p>
+            </div>
+          ) : (
             <div
               className="
             relative mt-8 animate-in duration-300 ease-standard fade-in-0
@@ -329,22 +315,21 @@ export function NewChatComposer({
                   isRunning={isRunning}
                   onCancel={handleCancel}
                   projectSelect={
-                    <>
-                      <button
-                        className="rounded-full border border-border-subtle px-3 py-1 text-xs text-muted-foreground hover:bg-overlay-hover"
-                        onClick={() => void onSelectFolder()}
-                        type="button"
-                      >
-                        {cwd ?? t("workspace.noProject")}
-                      </button>
-                    </>
+                    <Button
+                      onClick={() => void onSelectFolder()}
+                      size="sm"
+                      type="button"
+                      variant="ghost"
+                    >
+                      {t("projects.chooseFolder")}
+                    </Button>
                   }
                 />
               </ChatComposer>
             </div>
-          </>
+          )}
 
-          <>
+          {projectRequired ? null : (
             <div
               className="
             mt-4 flex animate-in flex-wrap justify-center gap-2 duration-300
@@ -380,9 +365,9 @@ export function NewChatComposer({
                 </button>
               ))}
             </div>
-          </>
+          )}
 
-          <>
+          {projectRequired ? null : (
             <div
               className="
             animate-in duration-300 ease-standard fade-in-0
@@ -392,11 +377,11 @@ export function NewChatComposer({
             >
               <NewChatRecentSection
                 chats={chats}
-                projects={projects}
                 onOpenChat={onOpenChat}
+                projects={projects}
               />
             </div>
-          </>
+          )}
         </div>
       </div>
     </div>

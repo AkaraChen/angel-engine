@@ -125,34 +125,12 @@ export const fr = {
         "La discussion en arrière-plan attend une saisie",
       backgroundChatStatus: "État de la discussion en arrière-plan",
       closeTab: "Fermer l'onglet",
-      creationLocationProject: "Projet",
-      creationLocationSelect: "Créer dans",
-      creationLocationWorktree: "Worktree",
       newChat: "Nouvelle discussion",
       newChatInProject: "Nouvelle discussion dans {{projectName}}",
       noProject: "Aucun projet",
       projectSelect: "Projet",
       settings: "Paramètres",
-      setup: {
-        approvalUnavailable:
-          "Vérifiez et approuvez le script de configuration actuel avant de réessayer.",
-        continueAnyway: "Continuer quand même",
-        discard: "Supprimer l’espace de travail",
-        discardConfirm: "Supprimer l’espace de travail",
-        discardConfirmDescription:
-          "Cette action supprime définitivement ce chat, son worktree et sa branche. Elle est irréversible.",
-        discardConfirmTitle: "Supprimer cet espace de travail ?",
-        failedStep:
-          "Échec de l’étape {{step}} sur {{total}} ({{exitCode}}) : {{command}}",
-        failedTitle: "Échec de la configuration de l’espace de travail",
-        noLog: "Aucune sortie de configuration pour le moment.",
-        ready: "Espace de travail prêt",
-        retry: "Réessayer la configuration",
-        running:
-          "Configuration de l’espace de travail… Le premier message sera envoyé automatiquement ensuite.",
-        runningStep: "Étape {{step}} sur {{total}} : {{command}}",
-        viewLog: "Afficher le journal de configuration",
-      },
+
       statsBranch: "Branche",
       statsChanges: "Modifications",
       statsLastActive: "Dernière activité",
@@ -331,23 +309,8 @@ export const fr = {
           workspaceTabs: "Onglets de l’espace de travail",
         },
       },
-      worktreeDirtyContinue: "Continuer",
-      worktreeDirtyDescription:
-        "Le projet sélectionné a des modifications non validées. Le nouveau worktree sera créé depuis le HEAD actuel, donc ces modifications ne seront pas incluses.",
-      worktreeDirtyRemember: "Ne plus m’avertir",
-      worktreeDirtyTitle: "Créer un worktree depuis un dépôt dirty ?",
-      worktreeNotGitRepository:
-        "Ce projet n’est plus disponible comme dépôt Git.",
     },
-    activity: {
-      status: {
-        done: "Terminé",
-        failed: "Échec",
-        running: "En cours",
-        stuck: "Bloqué",
-        waitingForYou: "En attente de vous",
-      },
-    },
+
     sidebar: {
       archiveChat: "Archiver la discussion",
       chatAttention: "Attention requise",

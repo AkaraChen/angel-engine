@@ -124,34 +124,12 @@ export const en = {
       backgroundChatNeedsInput: "Background chat needs input",
       backgroundChatStatus: "Background chat status",
       closeTab: "Close tab",
-      creationLocationProject: "Project",
-      creationLocationSelect: "Create in",
-      creationLocationWorktree: "Worktree",
       newChat: "New chat",
       newChatInProject: "New chat in {{projectName}}",
       noProject: "No project",
       projectSelect: "Project",
       settings: "Settings",
-      setup: {
-        approvalUnavailable:
-          "Review and approve the current setup script before retrying.",
-        continueAnyway: "Continue anyway",
-        discard: "Discard workspace",
-        discardConfirm: "Discard workspace",
-        discardConfirmDescription:
-          "This permanently deletes this chat, its worktree, and its branch. This action cannot be undone.",
-        discardConfirmTitle: "Discard this workspace?",
-        failedStep:
-          "Step {{step}} of {{total}} failed ({{exitCode}}): {{command}}",
-        failedTitle: "Workspace setup failed",
-        noLog: "No setup output yet.",
-        ready: "Workspace ready",
-        retry: "Retry setup",
-        running:
-          "Setting up workspace… Your first message will send automatically when it is ready.",
-        runningStep: "Step {{step}} of {{total}}: {{command}}",
-        viewLog: "View setup log",
-      },
+
       statsBranch: "Branch",
       statsChanges: "Changes",
       statsLastActive: "Last active",
@@ -326,23 +304,8 @@ export const en = {
           workspaceTabs: "Workspace tabs",
         },
       },
-      worktreeDirtyContinue: "Continue",
-      worktreeDirtyDescription:
-        "The selected project has uncommitted changes. The new worktree will be created from the current HEAD, so those changes will not be included.",
-      worktreeDirtyRemember: "Do not warn me again",
-      worktreeDirtyTitle: "Create worktree from dirty repository?",
-      worktreeNotGitRepository:
-        "This project is no longer available as a git repository.",
     },
-    activity: {
-      status: {
-        done: "Done",
-        failed: "Failed",
-        running: "Running",
-        stuck: "Stuck",
-        waitingForYou: "Waiting for you",
-      },
-    },
+
     sidebar: {
       archiveChat: "Archive chat",
       chatAttention: "Chat attention",

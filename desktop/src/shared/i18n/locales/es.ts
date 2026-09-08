@@ -124,34 +124,12 @@ export const es = {
       backgroundChatNeedsInput: "El chat en segundo plano necesita entrada",
       backgroundChatStatus: "Estado del chat en segundo plano",
       closeTab: "Cerrar pestaña",
-      creationLocationProject: "Proyecto",
-      creationLocationSelect: "Crear en",
-      creationLocationWorktree: "Worktree",
       newChat: "Nuevo chat",
       newChatInProject: "Nuevo chat en {{projectName}}",
       noProject: "Sin proyecto",
       projectSelect: "Proyecto",
       settings: "Configuración",
-      setup: {
-        approvalUnavailable:
-          "Revisa y aprueba el script de configuración actual antes de reintentarlo.",
-        continueAnyway: "Continuar de todos modos",
-        discard: "Descartar espacio de trabajo",
-        discardConfirm: "Descartar espacio de trabajo",
-        discardConfirmDescription:
-          "Esto elimina permanentemente este chat, su worktree y su rama. Esta acción no se puede deshacer.",
-        discardConfirmTitle: "¿Descartar este espacio de trabajo?",
-        failedStep:
-          "Falló el paso {{step}} de {{total}} ({{exitCode}}): {{command}}",
-        failedTitle: "Falló la configuración del espacio de trabajo",
-        noLog: "Aún no hay salida de configuración.",
-        ready: "Espacio de trabajo listo",
-        retry: "Reintentar configuración",
-        running:
-          "Configurando el espacio de trabajo… El primer mensaje se enviará automáticamente al terminar.",
-        runningStep: "Paso {{step}} de {{total}}: {{command}}",
-        viewLog: "Ver registro de configuración",
-      },
+
       statsBranch: "Rama",
       statsChanges: "Cambios",
       statsLastActive: "Última actividad",
@@ -329,23 +307,8 @@ export const es = {
           workspaceTabs: "Pestañas del espacio de trabajo",
         },
       },
-      worktreeDirtyContinue: "Continuar",
-      worktreeDirtyDescription:
-        "El proyecto seleccionado tiene cambios sin confirmar. El nuevo worktree se creará desde el HEAD actual, por lo que esos cambios no se incluirán.",
-      worktreeDirtyRemember: "No volver a avisarme",
-      worktreeDirtyTitle: "¿Crear worktree desde un repositorio dirty?",
-      worktreeNotGitRepository:
-        "Este proyecto ya no está disponible como repositorio Git.",
     },
-    activity: {
-      status: {
-        done: "Completado",
-        failed: "Con error",
-        running: "En curso",
-        stuck: "Atascado",
-        waitingForYou: "Esperándote",
-      },
-    },
+
     sidebar: {
       archiveChat: "Archivar chat",
       chatAttention: "Atención del chat",

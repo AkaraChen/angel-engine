@@ -13,6 +13,7 @@ export function chatRoutePath(
 }
 
 export const fleetRoutePath = "/fleet";
+export const scheduleRoutePath = "/schedule";
 
 export function chatRoutePathId(chatId: string) {
   return `/chat/${encodeURIComponent(chatId)}`;

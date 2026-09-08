@@ -1,16 +1,12 @@
 import type { Chat } from "@angel-engine/daemon-api/chat";
-import type { Project } from "@angel-engine/daemon-api/projects";
 import type { ReactElement } from "react";
 
-import type { PathLauncherActionId } from "@shared/path-launcher";
 import type { ChatContextMenuAction } from "@/features/chat/api/queries";
-import type { ProjectContextMenuAction } from "@/features/projects/api/queries";
-import { Plus, GearSix as Settings, SquaresFour } from "@phosphor-icons/react";
+import { Plus, GearSix as Settings } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
 import { m } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { resolveWorkspaceNewChatTarget } from "@/app/workspace/workspace-new-chat-target";
 import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
 import {
   Sidebar,
@@ -24,7 +20,6 @@ import {
   WorkspaceSidebarMenuButton,
 } from "@/components/workspace-sidebar-primitives";
 import { SimpleChatSidebarSection } from "@/features/chat/components/simple-chat-sidebar-section";
-import { ProjectSidebarSection } from "@/features/projects/components/project-sidebar-section";
 
 type MaybeAsync = void | Promise<void>;
 const FLOATING_SIDEBAR_OPEN_DELAY_MS = 80;
@@ -38,32 +33,14 @@ const FLOATING_SIDEBAR_TRANSITION = {
 
 interface WorkspaceSidebarProps {
   chats: Chat[];
-  fleetActive: boolean;
   isChatsLoading: boolean;
   isMacOS: boolean;
-  isProjectsLoading: boolean;
   onArchiveChat: (chat: Chat) => MaybeAsync;
-  onCloneRepository: () => MaybeAsync;
-  onCreateProject: () => MaybeAsync;
-  onCreateProjectChat: (project: Project) => MaybeAsync;
   onCreateStandaloneChat: () => MaybeAsync;
-  onImportSession: (project: Project) => void;
   onOpenChat: (chat: Chat) => MaybeAsync;
-  onOpenFleet: () => MaybeAsync;
   onOpenSettings: () => MaybeAsync;
   onChatContextMenuAction: (chat: Chat, action: ChatContextMenuAction) => void;
-  onProjectContextMenuAction: (
-    project: Project,
-    action: ProjectContextMenuAction,
-  ) => void;
-  onProjectPathLauncherAction: (
-    project: Project,
-    action: PathLauncherActionId,
-  ) => void;
-  projectChatsByProjectId: Map<string, Chat[]>;
-  projects: Project[];
   selectedChatId?: string;
-  selectedProjectId?: string;
 }
 
 export function WorkspaceSidebar({
@@ -186,51 +163,21 @@ export function WorkspaceFloatingSidebar(
 
 function WorkspaceSidebarContent({
   chats,
-  fleetActive,
   isChatsLoading,
   isMacOS,
-  isProjectsLoading,
   onArchiveChat,
-  onCloneRepository,
-  onCreateProject,
-  onCreateProjectChat,
   onCreateStandaloneChat,
-  onImportSession,
   onOpenChat,
-  onOpenFleet,
   onOpenSettings,
   onChatContextMenuAction,
-  onProjectContextMenuAction,
-  onProjectPathLauncherAction,
-  projectChatsByProjectId,
-  projects,
   selectedChatId,
-  selectedProjectId,
 }: WorkspaceSidebarProps): ReactElement {
   const { t } = useTranslation();
   const platform = window.desktopEnvironment.platform;
   const reserveNativeSidebarControlSpace =
     platform === "linux" || platform === "win32";
-  const standaloneChats = chats.filter(
-    (chat) => !is.nonEmptyString(chat.projectId),
-  );
-  const createChatFromNewButton = async () => {
-    const target = resolveWorkspaceNewChatTarget({
-      fleetActive,
-      projects,
-      selectedChatId,
-      selectedProjectId,
-    });
-
-    switch (target.type) {
-      case "none":
-        return;
-      case "project":
-        return onCreateProjectChat(target.project);
-      case "standalone":
-        return onCreateStandaloneChat();
-    }
-  };
+  const createChatFromNewButton = () => onCreateStandaloneChat();
+  const standaloneChats = chats;
 
   return (
     <>
@@ -262,15 +209,6 @@ function WorkspaceSidebarContent({
               <span>{t("sidebar.newChat")}</span>
             </WorkspaceSidebarMenuButton>
           </AnimatedSidebarMenuItem>
-          <AnimatedSidebarMenuItem>
-            <WorkspaceSidebarMenuButton
-              isActive={fleetActive}
-              onClick={() => void onOpenFleet()}
-            >
-              <SquaresFour weight="duotone" />
-              <span>{t("fleet.title")}</span>
-            </WorkspaceSidebarMenuButton>
-          </AnimatedSidebarMenuItem>
         </SidebarMenu>
 
         <SimpleChatSidebarSection
@@ -279,22 +217,6 @@ function WorkspaceSidebarContent({
           onArchiveChat={onArchiveChat}
           onOpenChat={onOpenChat}
           onChatContextMenuAction={onChatContextMenuAction}
-          selectedChatId={selectedChatId}
-        />
-
-        <ProjectSidebarSection
-          isLoading={isProjectsLoading}
-          onArchiveChat={onArchiveChat}
-          onCloneRepository={onCloneRepository}
-          onCreateProject={onCreateProject}
-          onCreateProjectChat={onCreateProjectChat}
-          onImportSession={onImportSession}
-          onOpenChat={onOpenChat}
-          onChatContextMenuAction={onChatContextMenuAction}
-          onProjectContextMenuAction={onProjectContextMenuAction}
-          onProjectPathLauncherAction={onProjectPathLauncherAction}
-          projectChatsByProjectId={projectChatsByProjectId}
-          projects={projects}
           selectedChatId={selectedChatId}
         />
       </SidebarContent>

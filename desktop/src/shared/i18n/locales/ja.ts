@@ -124,34 +124,12 @@ export const ja = {
       backgroundChatNeedsInput: "バックグラウンドチャットに入力が必要です",
       backgroundChatStatus: "バックグラウンドチャットの状態",
       closeTab: "タブを閉じる",
-      creationLocationProject: "プロジェクト",
-      creationLocationSelect: "作成先",
-      creationLocationWorktree: "Worktree",
       newChat: "新しいチャット",
       newChatInProject: "{{projectName}} の新しいチャット",
       noProject: "プロジェクトなし",
       projectSelect: "プロジェクト",
       settings: "設定",
-      setup: {
-        approvalUnavailable:
-          "再試行する前に、現在のセットアップスクリプトを確認して承認してください。",
-        continueAnyway: "このまま続行",
-        discard: "ワークスペースを破棄",
-        discardConfirm: "ワークスペースを破棄",
-        discardConfirmDescription:
-          "このチャット、worktree、ブランチを完全に削除します。この操作は元に戻せません。",
-        discardConfirmTitle: "このワークスペースを破棄しますか？",
-        failedStep:
-          "ステップ {{step}}/{{total}} が失敗しました ({{exitCode}}): {{command}}",
-        failedTitle: "ワークスペースのセットアップに失敗しました",
-        noLog: "セットアップ出力はまだありません。",
-        ready: "ワークスペースの準備ができました",
-        retry: "セットアップを再試行",
-        running:
-          "ワークスペースをセットアップ中… 完了後、最初のメッセージが自動送信されます。",
-        runningStep: "ステップ {{step}}/{{total}}: {{command}}",
-        viewLog: "セットアップログを表示",
-      },
+
       statsBranch: "ブランチ",
       statsChanges: "変更",
       statsLastActive: "最終アクティブ",
@@ -328,23 +306,8 @@ export const ja = {
           workspaceTabs: "ワークスペースタブ",
         },
       },
-      worktreeDirtyContinue: "続行",
-      worktreeDirtyDescription:
-        "選択したプロジェクトには未コミットの変更があります。新しい worktree は現在の HEAD から作成されるため、それらの変更は含まれません。",
-      worktreeDirtyRemember: "今後表示しない",
-      worktreeDirtyTitle: "dirty リポジトリから worktree を作成しますか？",
-      worktreeNotGitRepository:
-        "このプロジェクトは Git リポジトリとして利用できません。",
     },
-    activity: {
-      status: {
-        done: "完了",
-        failed: "失敗",
-        running: "実行中",
-        stuck: "停止",
-        waitingForYou: "あなたの入力待ち",
-      },
-    },
+
     sidebar: {
       archiveChat: "チャットをアーカイブ",
       chatAttention: "チャットの注意",

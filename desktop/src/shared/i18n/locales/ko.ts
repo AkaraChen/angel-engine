@@ -124,33 +124,12 @@ export const ko = {
       backgroundChatNeedsInput: "백그라운드 채팅에 입력 필요",
       backgroundChatStatus: "백그라운드 채팅 상태",
       closeTab: "탭 닫기",
-      creationLocationProject: "프로젝트",
-      creationLocationSelect: "생성 위치",
-      creationLocationWorktree: "Worktree",
       newChat: "새 채팅",
       newChatInProject: "{{projectName}}의 새 채팅",
       noProject: "프로젝트 없음",
       projectSelect: "프로젝트",
       settings: "설정",
-      setup: {
-        approvalUnavailable:
-          "다시 시도하기 전에 현재 설정 스크립트를 검토하고 승인하세요.",
-        continueAnyway: "그래도 계속",
-        discard: "작업 공간 삭제",
-        discardConfirm: "작업 공간 삭제",
-        discardConfirmDescription:
-          "이 채팅과 worktree, 브랜치를 영구적으로 삭제합니다. 이 작업은 되돌릴 수 없습니다.",
-        discardConfirmTitle: "이 작업 공간을 삭제할까요?",
-        failedStep:
-          "{{total}}단계 중 {{step}}단계 실패 ({{exitCode}}): {{command}}",
-        failedTitle: "작업 공간 설정 실패",
-        noLog: "아직 설정 출력이 없습니다.",
-        ready: "작업 공간 준비 완료",
-        retry: "설정 다시 시도",
-        running: "작업 공간 설정 중… 준비되면 첫 메시지가 자동으로 전송됩니다.",
-        runningStep: "{{total}}단계 중 {{step}}단계: {{command}}",
-        viewLog: "설정 로그 보기",
-      },
+
       statsBranch: "브랜치",
       statsChanges: "변경 사항",
       statsLastActive: "마지막 활동",
@@ -324,23 +303,8 @@ export const ko = {
           workspaceTabs: "워크스페이스 탭",
         },
       },
-      worktreeDirtyContinue: "계속",
-      worktreeDirtyDescription:
-        "선택한 프로젝트에 커밋되지 않은 변경 사항이 있습니다. 새 worktree는 현재 HEAD에서 생성되므로 해당 변경 사항은 포함되지 않습니다.",
-      worktreeDirtyRemember: "다시 경고하지 않기",
-      worktreeDirtyTitle: "dirty 저장소에서 worktree를 만들까요?",
-      worktreeNotGitRepository:
-        "이 프로젝트는 더 이상 Git 저장소로 사용할 수 없습니다.",
     },
-    activity: {
-      status: {
-        done: "완료",
-        failed: "실패",
-        running: "실행 중",
-        stuck: "멈춤",
-        waitingForYou: "응답 대기 중",
-      },
-    },
+
     sidebar: {
       archiveChat: "채팅 보관",
       chatAttention: "채팅 주의 필요",
