@@ -93,7 +93,6 @@ describe("WorkspacePullRequestPreviewDialog", () => {
     const request = deferred<ChangeRequest>();
     const viewPullRequest = vi.fn(() => request.promise);
     const onOpenExternal = vi.fn();
-    const openBrowserTab = vi.fn();
     const onOpenChange = vi.fn();
     const writeText = vi.fn(() => Promise.resolve());
     Object.defineProperty(navigator, "clipboard", {
@@ -131,7 +130,6 @@ describe("WorkspacePullRequestPreviewDialog", () => {
     );
     expect(onOpenChange).toHaveBeenCalledWith(false);
     expect(onOpenExternal).toHaveBeenCalledWith(detail.webUrl);
-    expect(openBrowserTab).not.toHaveBeenCalled();
   }, 10_000);
 
   it("retains the dialog on failure and retries the detail query", async () => {

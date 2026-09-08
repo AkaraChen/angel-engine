@@ -342,7 +342,6 @@ export interface LocaleResourceTranslationWorkspaceToolsChangeRequest {
 
 export interface LocaleResourceTranslationWorkspaceTools {
   addToChat: string;
-  browser: string;
   checks: LocaleResourceTranslationWorkspaceToolsChecks;
   comments: LocaleResourceTranslationWorkspaceToolsComments;
   commit: LocaleResourceTranslationWorkspaceToolsCommit;
@@ -361,12 +360,6 @@ export interface LocaleResourceTranslationWorkspaceTools {
   diffUnavailable: string;
   openInWindow: string;
   tabs: LocaleResourceTranslationWorkspaceToolsTabs;
-}
-
-export interface LocaleResourceTranslationWorkspaceBrowser {
-  back: string;
-  forward: string;
-  urlLabel: string;
 }
 
 export interface LocaleResourceTranslationWorkspaceFiles {
@@ -420,7 +413,6 @@ export interface LocaleResourceTranslationWorkspaceAmbiguousSend {
 
 export interface LocaleResourceTranslationWorkspace {
   ambiguousSend: LocaleResourceTranslationWorkspaceAmbiguousSend;
-  browser: LocaleResourceTranslationWorkspaceBrowser;
   files: LocaleResourceTranslationWorkspaceFiles;
   backgroundChatCompleted: string;
   backgroundChatNeedsInput: string;

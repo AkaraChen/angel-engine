@@ -95,7 +95,6 @@ export const zhCN = {
       open: "打开 {{name}}",
     },
     workspace: {
-      browser: { back: "后退", forward: "前进", urlLabel: "网址" },
       files: {
         fileUnavailable: "文件不可用",
         openFiles: "打开的文件",
@@ -160,7 +159,6 @@ export const zhCN = {
       statsLastActive: "最近活动",
 
       tools: {
-        browser: "浏览器",
         diffUnavailable: "差异不可用",
         openInWindow: "在窗口中打开",
         terminal: "终端",

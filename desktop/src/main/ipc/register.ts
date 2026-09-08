@@ -4,7 +4,6 @@ import { ipcMain } from "electron";
 import { DESKTOP_SETTINGS_OPEN_CHANNEL } from "../../shared/desktop-window";
 import { registerDaemonIpc } from "../daemon/supervisor";
 import { prewarmPathLauncher } from "../features/path-launcher/runtime";
-import { registerWorkspaceBrowserIpc } from "../features/workspace-browser/ipc";
 import { registerDesktopWindowAppearanceIpc } from "../windows/appearance";
 import { registerDesktopWindowContentReadyIpc } from "../windows/content-ready";
 import { registerDesktopWindowIpc } from "../windows/notifications";
@@ -24,7 +23,6 @@ export function registerAllIpc({ openSettingsWindow }: RegisterAllIpcOptions) {
   registerDesktopWindowContentReadyIpc();
   registerDesktopWindowIpc();
   registerWorkspaceToolWindowIpc();
-  registerWorkspaceBrowserIpc();
   registerWorkspaceDiffPreferencesIpc();
   ipcMain.on(DESKTOP_SETTINGS_OPEN_CHANNEL, openSettingsWindow);
   void prewarmPathLauncher().catch((error: unknown) => {

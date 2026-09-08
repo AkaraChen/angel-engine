@@ -29,7 +29,7 @@ vi.mock("@/app/workspace/workspace-tool-surface-model", () => ({
   useWorkspaceToolSurface: () => ({
     active: true,
     api: { sourceControl: { checksFixPrompt, checksSummary } },
-    openBrowserTab: vi.fn(),
+    openExternal: vi.fn(),
   }),
 }));
 

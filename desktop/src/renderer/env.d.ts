@@ -16,7 +16,6 @@ import type {
   DesktopUpdateChannelSetInput,
   DesktopUpdateStatus,
 } from "@shared/update-channel";
-import type { WorkspaceBrowserApi } from "@shared/workspace-browser";
 import type {
   WorkspaceToolContextSetInput,
   WorkspaceToolInstance,
@@ -141,7 +140,6 @@ declare global {
         input: WorkspaceDiffBasePreferenceInput,
       ) => Promise<void>;
     };
-    workspaceBrowser: WorkspaceBrowserApi;
     tipc: {
       invoke: (channel: string, input?: unknown) => Promise<unknown>;
     };

@@ -95,7 +95,6 @@ export const ja = {
       open: "{{name}} を開く",
     },
     workspace: {
-      browser: { back: "戻る", forward: "進む", urlLabel: "URL" },
       files: {
         fileUnavailable: "ファイルを利用できません",
         openFiles: "開いているファイル",
@@ -163,7 +162,6 @@ export const ja = {
       statsLastActive: "最終アクティブ",
 
       tools: {
-        browser: "ブラウザ",
         diffUnavailable: "差分を利用できません",
         openInWindow: "ウインドウで開く",
         terminal: "ターミナル",

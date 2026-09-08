@@ -45,7 +45,7 @@ export function WorkspaceChecksSection({
   projectPath: string | null;
   providerIdentity: string | null;
 }) {
-  const { active, api, openBrowserTab } = useWorkspaceToolSurface();
+  const { active, api, openExternal } = useWorkspaceToolSurface();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const chatId = useWorkspaceToolStore((state) => state.context.chatId);
@@ -271,7 +271,7 @@ export function WorkspaceChecksSection({
                   key={check.id}
                   onOpenLink={
                     check.detailsUrl
-                      ? () => openBrowserTab(check.detailsUrl as string)
+                      ? () => openExternal(check.detailsUrl as string)
                       : undefined
                   }
                 />

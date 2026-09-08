@@ -1,7 +1,6 @@
 export type WorkspaceToolHost = "sidebar" | "window";
 
 export type WorkspaceToolInstance =
-  | WorkspaceBrowserToolInstance
   | WorkspaceFilePreviewToolInstance
   | WorkspaceGitDiffToolInstance
   | WorkspaceTerminalToolInstance;
@@ -33,15 +32,7 @@ export interface WorkspaceTerminalToolInstance
   sessionId: string;
 }
 
-export interface WorkspaceBrowserToolInstance
-  extends WorkspaceToolInstanceBase {
-  browserViewId: string;
-  kind: "browser";
-  url: string;
-}
-
 export type WorkspaceToolInstanceInput =
-  | Omit<WorkspaceBrowserToolInstance, "host" | "id">
   | Omit<WorkspaceFilePreviewToolInstance, "host" | "id">
   | Omit<WorkspaceGitDiffToolInstance, "host" | "id">
   | Omit<WorkspaceTerminalToolInstance, "host" | "id">;

@@ -303,7 +303,7 @@ export const useWorkspaceToolStore = create<WorkspaceToolState>()(
           is.nonEmptyString(contextKey) && !is.falsy(state.snapshot)
             ? {
                 ...current.snapshots,
-                [contextKey]: state.snapshot,
+                [contextKey]: sanitizeWorkspaceToolSnapshot(state.snapshot),
               }
             : current.snapshots,
       }));
@@ -353,10 +353,28 @@ export function ensureWorkspaceToolSurfaceEvents() {
 function createDefaultWorkspaceToolSnapshot(): WorkspaceToolSurfaceSnapshot {
   return {
     activeTabId: workspaceToolFilesTabId,
-    nextBrowserOrdinal: 1,
     nextTerminalOrdinal: 1,
     tabs: [],
   };
+}
+
+function sanitizeWorkspaceToolSnapshot(
+  snapshot: WorkspaceToolSurfaceSnapshot,
+): WorkspaceToolSurfaceSnapshot {
+  const tabs = snapshot.tabs.filter(
+    (tab) => (tab.kind as string) !== "browser",
+  );
+  const activeTabId = tabs.some((tab) => tab.id === snapshot.activeTabId)
+    ? snapshot.activeTabId
+    : snapshot.activeTabId === workspaceToolFilesTabId ||
+        snapshot.activeTabId === workspaceToolGitTabId ||
+        snapshot.activeTabId === workspaceToolChecksTabId ||
+        snapshot.activeTabId === workspaceToolPullRequestTabId ||
+        snapshot.activeTabId === workspaceToolProcessesTabId
+      ? snapshot.activeTabId
+      : workspaceToolFilesTabId;
+
+  return { ...snapshot, activeTabId, tabs };
 }
 
 export function currentWorkspaceToolSnapshot(

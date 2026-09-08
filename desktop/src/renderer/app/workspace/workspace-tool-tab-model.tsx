@@ -5,7 +5,6 @@ import type {
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 
 import {
-  Globe as Browser,
   Cpu,
   FileText,
   Folder,
@@ -199,8 +198,6 @@ export function visibleActiveWorkspaceToolTabId(
 
 export function workspaceToolTabIcon(tab: WorkspaceToolSurfaceDynamicTab) {
   switch (tab.kind) {
-    case "browser":
-      return Browser;
     case "file-preview":
       return FileText;
     case "git-diff":

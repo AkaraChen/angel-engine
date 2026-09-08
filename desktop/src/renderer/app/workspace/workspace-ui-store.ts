@@ -18,7 +18,6 @@ const workspaceModeStorageKey = "angel-engine.workspace-mode";
 const workspaceLastOpenedTargetsStorageKey =
   "angel-engine.workspace-last-opened-chat-ids";
 const rightSidebarWidthStorageKey = "angel-engine.right-sidebar-width";
-const defaultBrowserUrl = "about:blank";
 export const defaultWorkspaceRightSidebarWidth = 288;
 export const minWorkspaceRightSidebarWidth = 240;
 export const maxWorkspaceRightSidebarWidth = 520;
@@ -36,7 +35,6 @@ export type SidebarChatDateGroupKey =
   | "yesterday";
 
 interface WorkspaceUiState {
-  browserUrl: string;
   collapsedChatDateGroupKeys: Set<SidebarChatDateGroupKey>;
   collapsedWorktreeGroupKeys: Set<string>;
   expandedProjectIds: Set<string>;
@@ -47,7 +45,6 @@ interface WorkspaceUiState {
   ) => void;
   rightSidebarOpen: boolean;
   rightSidebarWidth: number;
-  setBrowserUrl: (browserUrl: string) => void;
   setRightSidebarOpen: (rightSidebarOpen: boolean) => void;
   setRightSidebarWidth: (rightSidebarWidth: number) => void;
   setSidebarOpen: (sidebarOpen: boolean) => void;
@@ -69,7 +66,6 @@ interface WorkspaceUiState {
 }
 
 export const useWorkspaceUiStore = create<WorkspaceUiState>()((set) => ({
-  browserUrl: defaultBrowserUrl,
   collapsedChatDateGroupKeys: new Set(),
   collapsedWorktreeGroupKeys: new Set(),
   expandedProjectIds: new Set(),
@@ -98,8 +94,6 @@ export const useWorkspaceUiStore = create<WorkspaceUiState>()((set) => ({
     }),
   rightSidebarOpen: isProjectWorkspaceMode(initialWorkspaceMode),
   rightSidebarWidth: initialRightSidebarWidth,
-  setBrowserUrl: (browserUrl) =>
-    set({ browserUrl: sanitizeBrowserUrl(browserUrl) }),
   setRightSidebarOpen: (rightSidebarOpen) => set({ rightSidebarOpen }),
   setRightSidebarWidth: (rightSidebarWidth) => {
     const nextRightSidebarWidth =
@@ -279,12 +273,6 @@ function sanitizeWorkspaceMode(value: unknown): WorkspaceMode {
 
 function sanitizeOptionalString(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
-}
-
-function sanitizeBrowserUrl(value: unknown) {
-  return typeof value === "string" && value.trim()
-    ? value.trim()
-    : defaultBrowserUrl;
 }
 
 function readRightSidebarWidth() {
