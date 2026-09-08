@@ -8,22 +8,11 @@ import type { WorkspaceToolTabItem } from "@/app/workspace/workspace-tool-tab-mo
 import type { ApiClient } from "@/platform/api-client";
 
 import is from "@sindresorhus/is";
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-} from "react";
-import { useTranslation } from "react-i18next";
+import { createContext, useCallback, useContext, useMemo } from "react";
 
-import { redirectChecksTabToPullRequest } from "@/app/workspace/workspace-tool-checks-focus";
 import {
   currentWorkspaceToolSnapshot,
   useWorkspaceToolStore,
-  workspaceToolChecksTabId,
-  workspaceToolGitTabId,
-  workspaceToolPullRequestTabId,
 } from "@/app/workspace/workspace-tool-store";
 import {
   visibleActiveWorkspaceToolTabId,
@@ -41,7 +30,6 @@ export interface WorkspaceToolSurfaceModel {
   chatId: string | null;
   api: ApiClient;
   contextKey: string | null;
-  focusChecksSection: boolean;
   closeDynamicTab: (tab: WorkspaceToolSurfaceDynamicTab) => void;
   openExternal: (url: string) => void;
   projectId: string | null;
@@ -72,22 +60,6 @@ export function useWorkspaceToolSurfaceModel({
   const projectId = context.projectId ?? null;
   const root = propRoot ?? context.root ?? null;
   const snapshot = currentWorkspaceToolSnapshot(contextKey, snapshots);
-  // Immediately redirect a legacy/persisted `"checks"` tab to `"pr"` while
-  // parking the scroll/highlight intent on `focusSection` until Checks mounts.
-  useEffect(() => {
-    if (snapshot.activeTabId !== workspaceToolChecksTabId) {
-      return;
-    }
-    if (!is.nonEmptyString(contextKey)) {
-      return;
-    }
-    storeUpdateSnapshot(contextKey, (current) =>
-      redirectChecksTabToPullRequest(current),
-    );
-  }, [contextKey, snapshot.activeTabId, storeUpdateSnapshot]);
-  const focusChecksSection =
-    snapshot.focusSection === "checks" ||
-    snapshot.activeTabId === workspaceToolChecksTabId;
   const activeTabId = visibleActiveWorkspaceToolTabId(snapshot);
   const activeDynamicTab = snapshot.tabs.find((tab) => tab.id === activeTabId);
   const updateSnapshot = useCallback(
@@ -102,20 +74,7 @@ export function useWorkspaceToolSurfaceModel({
   );
   const selectTab = useCallback(
     async (tabId: WorkspaceToolTabId) => {
-      const resolvedTabId =
-        tabId === workspaceToolChecksTabId
-          ? workspaceToolPullRequestTabId
-          : tabId;
-      updateSnapshot((current) => ({
-        ...current,
-        activeTabId: resolvedTabId,
-        focusSection:
-          tabId === workspaceToolChecksTabId
-            ? "checks"
-            : resolvedTabId === workspaceToolPullRequestTabId
-              ? (current.focusSection ?? null)
-              : null,
-      }));
+      updateSnapshot((current) => ({ ...current, activeTabId: tabId }));
       return true;
     },
     [updateSnapshot],
@@ -135,7 +94,8 @@ export function useWorkspaceToolSurfaceModel({
         const nextActiveTab =
           current.activeTabId === tab.id
             ? (tabs[Math.max(0, Math.min(tabIndex, tabs.length - 1))]?.id ??
-              workspaceToolGitTabId)
+              tabs[0]?.id ??
+              "dynamic")
             : current.activeTabId;
 
         return {
@@ -147,14 +107,9 @@ export function useWorkspaceToolSurfaceModel({
     },
     [updateSnapshot],
   );
-  const { t } = useTranslation();
   const tabItems = useMemo(
-    () =>
-      workspaceToolTabItems(snapshot.tabs, {
-        gitChanges: t("workspace.tools.tabs.gitChanges"),
-        pullRequest: t("workspace.tools.tabs.pullRequest"),
-      }),
-    [snapshot.tabs, t],
+    () => workspaceToolTabItems(snapshot.tabs),
+    [snapshot.tabs],
   );
 
   return useMemo(
@@ -165,7 +120,6 @@ export function useWorkspaceToolSurfaceModel({
       api,
       chatId,
       contextKey,
-      focusChecksSection,
       closeDynamicTab,
       openExternal,
       projectId,
@@ -181,7 +135,6 @@ export function useWorkspaceToolSurfaceModel({
       api,
       chatId,
       contextKey,
-      focusChecksSection,
       closeDynamicTab,
       openExternal,
       projectId,

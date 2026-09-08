@@ -27,7 +27,6 @@ import {
   ComposerOptionSelect,
   PromptAttachmentButton,
 } from "@/features/chat/components/composer/composer-menus";
-import { PromptSourceControlAttachButton } from "@/features/chat/components/composer/source-control-attach-button";
 import { useComposerEditor } from "@/features/chat/components/composer/use-composer-editor";
 import { iconButtonClass } from "@/features/chat/components/thread-styles";
 import { useChatOptions } from "@/features/chat/runtime/chat-options-context";
@@ -145,10 +144,7 @@ function AssistantComposerFooter({
   const attachments = usePromptInputAttachments();
   const chatOptions = useChatOptions();
   const isRunning = useAuiState((state) => state.thread.isRunning);
-  const isEmpty =
-    editorIsEmpty &&
-    attachments.files.length === 0 &&
-    editor.sourceControlAttachments.length === 0;
+  const isEmpty = editorIsEmpty && attachments.files.length === 0;
 
   const stopRun = useCallback(() => {
     aui.composer().cancel();
@@ -158,10 +154,6 @@ function AssistantComposerFooter({
     <PromptInputFooter className="flex-wrap px-3! py-2!">
       <PromptInputTools className="flex-wrap">
         <PromptAttachmentButton />
-        <PromptSourceControlAttachButton
-          disabled={isRunning}
-          onAttached={editor.addSourceControlAttachment}
-        />
         <ComposerModelMenu
           disabled={isRunning}
           hideProvider

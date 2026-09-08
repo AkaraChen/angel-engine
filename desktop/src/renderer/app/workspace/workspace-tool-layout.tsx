@@ -9,50 +9,6 @@ import { cn } from "@/platform/utils";
 export type WorkspaceToolCssVariableStyle = CSSProperties &
   Record<`--${string}`, string | number>;
 
-export const workspaceToolFileTreeWidthStorageKey =
-  "angel-engine.workspace-tool-file-tree-width";
-export const workspaceToolFileTreeWidthMin = 200;
-export const workspaceToolFileTreeWidthMax = 520;
-export const workspaceToolGitListWidthStorageKey =
-  "angel-engine.workspace-tool-git-list-width";
-export const workspaceToolGitListWidthMin = 240;
-export const workspaceToolGitListWidthMax = 520;
-
-function readStoredWorkspaceToolPanelWidth({
-  fallback,
-  key,
-  max,
-  min,
-}: {
-  fallback: number;
-  key: string;
-  max: number;
-  min: number;
-}) {
-  const raw =
-    typeof window === "undefined" ? null : window.localStorage?.getItem(key);
-  const parsed = raw === null ? Number.NaN : Number.parseInt(raw, 10);
-  if (!Number.isFinite(parsed)) {
-    return fallback;
-  }
-  return Math.min(max, Math.max(min, parsed));
-}
-
-export const initialWorkspaceToolFileTreeWidth = () =>
-  readStoredWorkspaceToolPanelWidth({
-    fallback: 288,
-    key: workspaceToolFileTreeWidthStorageKey,
-    max: workspaceToolFileTreeWidthMax,
-    min: workspaceToolFileTreeWidthMin,
-  });
-export const initialWorkspaceToolGitListWidth = () =>
-  readStoredWorkspaceToolPanelWidth({
-    fallback: 320,
-    key: workspaceToolGitListWidthStorageKey,
-    max: workspaceToolGitListWidthMax,
-    min: workspaceToolGitListWidthMin,
-  });
-
 export function WorkspaceToolPanelSplitter({
   ariaLabel,
   max,

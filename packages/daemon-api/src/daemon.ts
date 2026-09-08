@@ -61,18 +61,6 @@ export type DaemonErrorCode =
   | "custom-agent-not-found"
   | "database-failed"
   | "git-failed"
-  | "git-push-denied"
-  | "git-push-not-fast-forward"
-  | "git-remote-missing"
-  | "source-control/cli-missing"
-  | "source-control/capability-unsupported"
-  | "source-control/unauthenticated"
-  | "source-control/fetch-failed"
-  | "source-control/item-not-found"
-  | "source-control/merge-conflict"
-  | "source-control/permission-denied"
-  | "source-control/network-unavailable"
-  | "source-control/url-unsupported"
   | "internal"
   | "invalid-request"
   | "link-unsupported"
@@ -80,7 +68,6 @@ export type DaemonErrorCode =
   | "linear-item-not-found"
   | "linear-token-missing"
   | "linear-unauthorized"
-  | "pr-from-fork-unsupported"
   | "process-not-registered"
   | "project-config-invalid"
   | "project-config-write-failed"
@@ -88,25 +75,7 @@ export type DaemonErrorCode =
   | "project-not-found"
   | "project-not-git-repository"
   | "project-path-invalid"
-  | "project-required-for-worktree"
-  | "pull-request-already-exists"
-  | "pull-request-no-commits"
   | "session-failed"
-  | "worktree-create-failed"
-  | "worktree-branch-conflict"
-  | "worktree-branch-in-use"
-  | "worktree-changed"
-  | "worktree-has-active-chats"
-  | "worktree-not-managed"
-  | "worktree-remove-failed"
-  | "worktree-setup-approval-required"
-  | "workspace-commit-input-invalid"
-  | "workspace-git-auth-failed"
-  | "workspace-git-detached-head"
-  | "workspace-git-network-failed"
-  | "workspace-git-no-commits"
-  | "workspace-git-no-remote"
-  | "workspace-git-push-rejected"
   | "workspace-not-git-repository"
   | "workspace-path-invalid";
 
@@ -114,6 +83,4 @@ export type DaemonErrorCode =
 export interface DaemonErrorPayload {
   code: DaemonErrorCode;
   error: string;
-  sourceControl?: SourceControlErrorDetails;
 }
-import type { SourceControlErrorDetails } from "./source-control";

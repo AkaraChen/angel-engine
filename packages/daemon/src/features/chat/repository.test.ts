@@ -13,9 +13,7 @@ import {
   chats,
   customAgents,
   projects,
-  providerHostMappings,
   queuedChatRuns,
-  pullRequests,
 } from "../../db/schema";
 import { Db } from "../../platform/db";
 import {
@@ -385,9 +383,7 @@ async function memoryDatabase(): Promise<AppDatabase> {
       chats,
       customAgents,
       projects,
-      providerHostMappings,
       queuedChatRuns,
-      pullRequests,
     },
   }) as AppDatabase;
 }

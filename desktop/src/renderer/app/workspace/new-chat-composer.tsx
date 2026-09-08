@@ -25,8 +25,8 @@ import {
   ComposerModelMenu,
   PromptAttachmentButton,
 } from "@/features/chat/components/composer/composer-menus";
-import { PromptSourceControlAttachButton } from "@/features/chat/components/composer/source-control-attach-button";
 import { useComposerEditor } from "@/features/chat/components/composer/use-composer-editor";
+import { useTerminalSelectionInsert } from "@/features/chat/components/composer/use-terminal-selection-insert";
 import { SketchUnderline } from "@/features/chat/components/sketch-underline";
 import { useChatOptions } from "@/features/chat/runtime/chat-options-context";
 import { useSendChatMessage } from "@/features/chat/runtime/use-send-chat-message";
@@ -150,8 +150,7 @@ export function NewChatComposer({
   const projectRequired = false;
   const editor = useComposerEditor({ initialMarkdown });
   const suggestionKeys = chatSuggestionKeys;
-  const sourceAttachment = editor.sourceControlAttachments[0];
-  const isChangeRequest = sourceAttachment?.kind === "changeRequest";
+  useTerminalSelectionInsert(editor);
   const sendChatMessage = useSendChatMessage(slotKey, {
     chatId: undefined,
     cwd,
@@ -165,14 +164,6 @@ export function NewChatComposer({
     projectId: projectId ?? null,
     reasoningEffort,
     runtime,
-    sourceLink:
-      sourceAttachment === undefined
-        ? undefined
-        : {
-            kind: sourceAttachment.kind,
-            provider: sourceAttachment.providerId,
-            url: sourceAttachment.url,
-          },
   });
   const { isEmpty } = editor;
 
@@ -407,17 +398,13 @@ function NewChatComposerFooter({
   const isEmpty =
     editorIsEmpty &&
     attachments.files.length === 0 &&
-    editor.sourceControlAttachments.length === 0;
+    editor.terminalSelections.length === 0;
 
   return (
     <PromptInputFooter className={newChatFooterClassName}>
       <PromptInputTools className="flex-wrap gap-1.5">
         {projectSelect}
         <PromptAttachmentButton />
-        <PromptSourceControlAttachButton
-          disabled={isRunning}
-          onAttached={editor.addSourceControlAttachment}
-        />
         <ComposerModelMenu disabled={isRunning} options={chatOptions} />
       </PromptInputTools>
       <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">

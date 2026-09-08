@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { resolveWorkspaceToolContext } from "./workspace-tool-context";
 
 describe("resolveWorkspaceToolContext", () => {
-  it("creates project context without a chat", () => {
+  it("keeps legacy project drafts scoped to their folder", () => {
     expect(
       resolveWorkspaceToolContext({
         projectId: "project-1",
@@ -10,18 +10,32 @@ describe("resolveWorkspaceToolContext", () => {
       }),
     ).toEqual({ contextKey: "project:project-1:root:/repo", root: "/repo" });
   });
-  it("keeps project chat tools scoped to the chat", () => {
+  it("supports chat previews without a project record", () => {
+    expect(
+      resolveWorkspaceToolContext({
+        selectedChatId: "chat-1",
+        projectRoot: "/folder",
+      }),
+    ).toEqual({ contextKey: "chat:chat-1", root: "/folder" });
+  });
+  it("keeps a restored project chat scoped to the chat", () => {
     expect(
       resolveWorkspaceToolContext({
         projectId: "project-1",
-        projectRoot: "/repo/worktree",
         selectedChatId: "chat-1",
-        selectedChatProjectId: "project-1",
+        projectRoot: "/repo/worktree",
       }),
     ).toEqual({ contextKey: "chat:chat-1", root: "/repo/worktree" });
   });
-  it("requires both a project and root", () => {
-    expect(resolveWorkspaceToolContext({ projectId: "project-1" })).toBeNull();
-    expect(resolveWorkspaceToolContext({ projectRoot: "/repo" })).toBeNull();
+  it("supports an optional folder on a standalone draft", () => {
+    expect(resolveWorkspaceToolContext({ projectRoot: "/folder" })).toEqual({
+      contextKey: "draft:root:/folder",
+      root: "/folder",
+    });
+  });
+  it("does not create a preview context without a root", () => {
+    expect(
+      resolveWorkspaceToolContext({ selectedChatId: "chat-1" }),
+    ).toBeNull();
   });
 });

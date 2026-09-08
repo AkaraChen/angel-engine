@@ -9,7 +9,7 @@ import {
 } from "@angel-engine/daemon-api/agents";
 import is from "@sindresorhus/is";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
 import { useDraftChatOptions } from "@/app/workspace/use-draft-chat-options";
@@ -25,7 +25,6 @@ import {
   draftRuntimeKeyFromProjectId,
   workspaceRuntimePageKey,
 } from "@/app/workspace/workspace-runtime-keys";
-import { useWorkspaceToolStore } from "@/app/workspace/workspace-tool-store";
 import { resolveWorkspaceToolContext } from "@/app/workspace/workspace-tool-context";
 import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
 import { useToast } from "@/components/ui/toast";
@@ -52,9 +51,7 @@ interface UseWorkspacePageModelOptions {
   api: ReturnType<typeof useApi>;
   draftProjectId?: string;
   /** The Fleet overview owns the main pane; no draft composer is mounted. */
-  fleetActive?: boolean;
   /** Schedule owns the main pane and must not prewarm a draft session. */
-  scheduleActive?: boolean;
   routeProjectId?: string;
   selectedChatId?: string;
 }
@@ -62,8 +59,6 @@ interface UseWorkspacePageModelOptions {
 export function useWorkspacePageModel({
   api,
   draftProjectId: routeDraftProjectId,
-  fleetActive = false,
-  scheduleActive = false,
   routeProjectId,
   selectedChatId,
 }: UseWorkspacePageModelOptions) {
@@ -97,7 +92,6 @@ export function useWorkspacePageModel({
   const toggleRightSidebar = useWorkspaceUiStore(
     (state) => state.toggleRightSidebar,
   );
-  const workspaceToolHost = "sidebar" as const;
   const enabledAgentOptions = useMemo(
     () => getEnabledAgentOptions(agentSettings, availableAgentOptions),
     [agentSettings, availableAgentOptions],
@@ -111,13 +105,10 @@ export function useWorkspacePageModel({
     [enabledAgentOptions],
   );
   const showRightSidebar = true;
-  const previousWorkspaceToolHostRef = useRef(workspaceToolHost);
 
   const draftState = useWorkspaceDraftState();
   const draftSessionCounterRef = useRef(0);
-  // Fleet and Schedule are chat-less routes but not drafts.
-  const isDraftPage =
-    !fleetActive && !scheduleActive && !is.nonEmptyString(selectedChatId);
+  const isDraftPage = !is.nonEmptyString(selectedChatId);
   const pinnedDraftCwd =
     draftState.draftCwds[
       draftRuntimeKeyFromProjectId(routeDraftProjectId) ?? "standalone"
@@ -165,39 +156,15 @@ export function useWorkspacePageModel({
   const canShowRightSidebar = showRightSidebar && workspaceToolContext !== null;
   const dockedWorkspaceToolContext =
     canShowRightSidebar &&
-    workspaceToolHost === "sidebar" &&
     is.nonEmptyString(workspaceToolContextKey) &&
     is.nonEmptyString(workspaceToolRoot)
       ? { contextKey: workspaceToolContextKey, root: workspaceToolRoot }
       : null;
 
-  useEffect(() => {
-    if (
-      previousWorkspaceToolHostRef.current !== "sidebar" &&
-      workspaceToolHost === "sidebar" &&
-      canShowRightSidebar &&
-      is.nonEmptyString(workspaceToolContextKey) &&
-      is.nonEmptyString(workspaceToolRoot)
-    ) {
-      setRightSidebarOpen(true);
-    }
-    previousWorkspaceToolHostRef.current = workspaceToolHost;
-  }, [
-    canShowRightSidebar,
-    setRightSidebarOpen,
-    workspaceToolHost,
-    workspaceToolContextKey,
-    workspaceToolRoot,
-  ]);
-  const toggleWorkspaceTools = useCallback(() => {
-    toggleRightSidebar();
-  }, [toggleRightSidebar]);
-  const workspaceToolsToggleLabel =
-    workspaceToolHost !== "sidebar"
-      ? t("workspace.rightSidebar.focus")
-      : rightSidebarOpen
-        ? t("workspace.rightSidebar.hide")
-        : t("workspace.rightSidebar.show");
+  const toggleWorkspaceTools = toggleRightSidebar;
+  const workspaceToolsToggleLabel = rightSidebarOpen
+    ? t("workspace.rightSidebar.hide")
+    : t("workspace.rightSidebar.show");
   const workspaceTitle = getWorkspaceTitle({
     selectedChat,
     selectedProjectName,
@@ -353,7 +320,6 @@ export function useWorkspacePageModel({
     toast,
     toggleWorkspaceTools,
     updateAgentSettings,
-    workspaceToolHost,
     workspaceToolContextKey,
     workspaceToolRoot,
     workspaceTitle,

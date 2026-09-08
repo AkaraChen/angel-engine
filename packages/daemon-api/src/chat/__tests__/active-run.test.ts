@@ -68,11 +68,23 @@ describe("active run boundary guards", () => {
       ],
       chatId: "chat-1",
       mode: null,
+      model: "gpt-5",
       permissionMode: "ask",
+      reasoningEffort: "medium",
       text: "Run the tests",
     };
 
     expect(isChatRunStartInput(input)).toBe(true);
+  });
+
+  it("accepts legacy shepherd origin in persisted input", () => {
+    expect(
+      isChatRunStartInput({
+        chatId: "chat-1",
+        origin: "shepherd",
+        text: "Continue the existing task",
+      }),
+    ).toBe(true);
   });
 
   it.each([

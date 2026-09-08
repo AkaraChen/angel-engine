@@ -16,17 +16,14 @@ export function resolveWorkspaceToolContext({
   projectId,
   projectRoot,
   selectedChatId,
-  selectedChatProjectId,
 }: ResolveWorkspaceToolContextOptions): WorkspaceToolContext | null {
-  if (!is.nonEmptyString(projectId) || !is.nonEmptyString(projectRoot)) {
-    return null;
-  }
+  if (!is.nonEmptyString(projectRoot)) return null;
 
-  const contextKey =
-    is.nonEmptyString(selectedChatId) &&
-    is.nonEmptyString(selectedChatProjectId)
-      ? `chat:${selectedChatId}`
-      : `project:${projectId}:root:${projectRoot}`;
+  const contextKey = is.nonEmptyString(selectedChatId)
+    ? `chat:${selectedChatId}`
+    : is.nonEmptyString(projectId)
+      ? `project:${projectId}:root:${projectRoot}`
+      : `draft:root:${projectRoot}`;
 
   return { contextKey, root: projectRoot };
 }

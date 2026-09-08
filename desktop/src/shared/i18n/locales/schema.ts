@@ -189,7 +189,6 @@ export interface LocaleResourceTranslationWorkspaceToolsTabs {
   files: string;
   gitChanges: string;
   newTab: string;
-  pullRequest: string;
   processes: string;
   tabs: string;
   tools: string;
@@ -304,38 +303,6 @@ export interface LocaleResourceTranslationWorkspaceToolsChangeRequest {
   ready: string;
   refresh: string;
   resolve: string;
-  shepherd: {
-    actionFailed: string;
-    hold: {
-      ambiguous: string;
-      queuedRun: string;
-      waitingForYou: string;
-    };
-    invalidUrl: string;
-    noChat: string;
-    queued: string;
-    resume: string;
-    resumeFailed: string;
-    rounds: string;
-    settled: {
-      blocked: { detail: string; title: string };
-      budget: { detail: string; title: string };
-      closed: { detail: string; title: string };
-      green: { detail: string; title: string };
-      stopped: { detail: string; title: string };
-    };
-    shepherdingStop: string;
-    sourceCollapse: string;
-    sourceExpand: string;
-    start: string;
-    startFailed: string;
-    started: string;
-    stopped: string;
-    title: string;
-    working: string;
-    yielded: string;
-    yieldedDetail: string;
-  };
   title: string;
   unresolvedTitle: string;
 }
@@ -351,7 +318,6 @@ export interface LocaleResourceTranslationWorkspaceTools {
   empty: LocaleResourceTranslationWorkspaceToolsEmpty;
   git: LocaleResourceTranslationWorkspaceToolsGit;
   listeningPorts: string;
-  pullRequest: LocaleResourceTranslationWorkspaceToolsChangeRequest;
   resizeFileTree: string;
   resizeGitList: string;
   subprocesses: string;
@@ -448,34 +414,7 @@ export interface LocaleResourceTranslationSidebarDateGroups {
   yesterday: string;
 }
 
-export interface LocaleResourceTranslationFleetGroups {
-  attention: string;
-  done: string;
-  running: string;
-}
-
-export interface LocaleResourceTranslationFleetEmptySegments {
-  all: string;
-  attention: string;
-  done: string;
-  running: string;
-}
-
-export interface LocaleResourceTranslationFleetReasons {
-  approval: string;
-  processExited: string;
-  question: string;
-  runtimeError: string;
-}
-
-export interface LocaleResourceTranslationFleetSegments {
-  all: string;
-  attention: string;
-  done: string;
-  running: string;
-}
-
-export interface LocaleResourceTranslationFleetStatus {
+export interface LocaleResourceTranslationActivityStatus {
   done: string;
   failed: string;
   running: string;
@@ -483,122 +422,8 @@ export interface LocaleResourceTranslationFleetStatus {
   waitingForYou: string;
 }
 
-export interface LocaleResourceTranslationFleetViews {
-  board: string;
-  list: string;
-}
-
-export interface LocaleResourceTranslationFleet {
-  allProjects: string;
-  disconnected: string;
-  emptySegments: LocaleResourceTranslationFleetEmptySegments;
-  filterProject: string;
-  filterSegments: string;
-  groups: LocaleResourceTranslationFleetGroups;
-  loading: string;
-  noMatches: string;
-  reasons: LocaleResourceTranslationFleetReasons;
-  search: string;
-  segments: LocaleResourceTranslationFleetSegments;
-  standaloneProject: string;
-  status: LocaleResourceTranslationFleetStatus;
-  title: string;
-  viewMode: string;
-  views: LocaleResourceTranslationFleetViews;
-}
-
-export interface LocaleResourceTranslationSchedule {
-  agent: string;
-  alreadyRunning: string;
-  createAction: string;
-  createDescription: string;
-  createTitle: string;
-  currentAgent: string;
-  customCron: string;
-  deleteConfirm: string;
-  discardConfirm: string;
-  disconnected: string;
-  invalidCron: string;
-  name: string;
-  newAutomation: string;
-  nextThreeRuns: string;
-  notifyOnFailure: string;
-  pause: string;
-  paused: string;
-  project: string;
-  prompt: string;
-  recipes: {
-    ciHeartbeat: string;
-    ciHeartbeatDescription: string;
-    dependencyAudit: string;
-    dependencyAuditDescription: string;
-    nightlyTests: string;
-    nightlyTestsDescription: string;
-    title: string;
-  };
-  resume: string;
-  runNow: string;
-  runStatus: {
-    cancelled: string;
-    failed: string;
-    missed: string;
-    running: string;
-    succeeded: string;
-  };
-  schedule: string;
-  schedulePresets: {
-    custom: string;
-    daily: string;
-    "every-30-minutes": string;
-    hourly: string;
-    weekdays: string;
-    weekly: string;
-  };
-  startFromScratch: string;
-  status: {
-    active: string;
-    failing: string;
-    paused: string;
-    running: string;
-  };
-  subtitle: string;
-  title: string;
-  triggerType: {
-    manual: string;
-    scheduled: string;
-  };
-  wizard: {
-    advancedSettings: string;
-    back: string;
-    blankDescription: string;
-    blankName: string;
-    chooseRequired: string;
-    dailyAt: string;
-    edit: string;
-    next: string;
-    nextRun: string;
-    noExtraParameters: string;
-    requiredName: string;
-    requiredPrompt: string;
-    requiredTime: string;
-    stepCount: string;
-    weeklyAt: string;
-    steps: {
-      confirm: string;
-      parameters: string;
-      what: string;
-      when: string;
-    };
-    weekdays: {
-      friday: string;
-      monday: string;
-      saturday: string;
-      sunday: string;
-      thursday: string;
-      tuesday: string;
-      wednesday: string;
-    };
-  };
+export interface LocaleResourceTranslationActivity {
+  status: LocaleResourceTranslationActivityStatus;
 }
 
 export interface LocaleResourceTranslationSidebar {
@@ -623,7 +448,6 @@ export interface LocaleResourceTranslationSidebar {
   refreshProjects: string;
   retryWorktreeCreation: string;
   settings: string;
-  shepherding: string;
   toggleChats: string;
   mobileDescription: string;
   title: string;
@@ -1050,14 +874,6 @@ export interface LocaleResourceTranslationComposerToasts {
   tooManyFiles: string;
 }
 
-export interface LocaleResourceTranslationComposerSourceControlErrors {
-  cliMissing: string;
-  cliUnauthenticated: string;
-  fetchFailed: string;
-  notFound: string;
-  urlUnsupported: string;
-}
-
 export interface LocaleResourceTranslationComposerTaskLinkErrors {
   linearFetchFailed: string;
   linearNotFound: string;
@@ -1070,13 +886,6 @@ export interface LocaleResourceTranslationComposer {
   agentMode: string;
   agentSettings: string;
   attachFiles: string;
-  attachChangeRequest: string;
-  attachChangeRequestConfirm: string;
-  attachChangeRequestEmpty: string;
-  attachChangeRequestLoading: string;
-  attachChangeRequestPlaceholder: string;
-  attachChangeRequestTitle: string;
-  attachChangeRequestUpdated: string;
   attachmentErrors: LocaleResourceTranslationComposerAttachmentErrors;
   commands: string;
   couldNotReadAttachment: string;
@@ -1085,13 +894,8 @@ export interface LocaleResourceTranslationComposer {
   fileTypeBlocked: string;
   fileTooLarge: string;
   files: string;
-  configureSourceControl: string;
   fromLink: string;
   fromLinkPlaceholder: string;
-  sourceControlUnavailable: string;
-  sourceControlErrors: LocaleResourceTranslationComposerSourceControlErrors;
-  workItem: string;
-  changeRequest: string;
   linearConnectAction: string;
   linearConnectDescription: string;
   linearIssue: string;
@@ -1122,7 +926,6 @@ export interface LocaleResourceTranslationComposer {
   switchToPlan: string;
   taskLinkErrors: LocaleResourceTranslationComposerTaskLinkErrors;
   taskLinkHintComplete: string;
-  taskLinkHintSourceControlPath: string;
   taskLinkHintLinearPath: string;
   taskLinkHintSupported: string;
   taskLinkStateClosed: string;
@@ -1314,7 +1117,6 @@ export interface LocaleResourceTranslationProjectImport {
   stageCompleted: string;
   stagePreparing: string;
   stageRegistering: string;
-  tabSourceControl: string;
   tabUrl: string;
   title: string;
   urlHint: string;
@@ -1328,7 +1130,6 @@ export interface LocaleResourceTranslationProjects {
 
 export interface LocaleResourceTranslationPathLauncher {
   copyPath: string;
-  openInAngelTerminal: string;
   openInEditor: string;
   openInFileExplorer: string;
   openInFileManager: string;
@@ -1344,7 +1145,6 @@ export interface LocaleResourceTranslationUi {
   commandPalette: string;
   commandSessions: string;
   commandImportSession: string;
-  commandShepherdChangeRequest: string;
 }
 
 export interface LocaleResourceTranslationPromptInput {
@@ -1409,6 +1209,7 @@ export interface LocaleResourceTranslation {
   common: LocaleResourceTranslationCommon;
   attachment: LocaleResourceTranslationAttachment;
   workspace: LocaleResourceTranslationWorkspace;
+  activity: LocaleResourceTranslationActivity;
   sidebar: LocaleResourceTranslationSidebar;
   settings: LocaleResourceTranslationSettings;
   updates: LocaleResourceTranslationUpdates;

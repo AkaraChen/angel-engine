@@ -139,29 +139,4 @@ describe("daemonEventSync", () => {
 
     expect(reconciledChatIds()).toEqual(["chat-a", "chat-b"]);
   });
-
-  it("invalidates shepherd sessions when the daemon publishes a change", () => {
-    vi.stubGlobal("WebSocket", FakeWebSocket);
-    const queryClient = new QueryClient();
-    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
-
-    render(
-      <QueryClientProvider client={queryClient}>
-        <DaemonEventSync />
-      </QueryClientProvider>,
-    );
-    FakeWebSocket.instances.at(0)?.emit("message", {
-      data: JSON.stringify({
-        chatIds: ["chat-a", "chat-b"],
-        type: "shepherd-changed",
-      }),
-    });
-
-    expect(invalidate).toHaveBeenCalledWith({
-      queryKey: queryKeys.shepherd.session("chat-a"),
-    });
-    expect(invalidate).toHaveBeenCalledWith({
-      queryKey: queryKeys.shepherd.session("chat-b"),
-    });
-  });
 });

@@ -123,7 +123,6 @@ export class ChatRunRegistry {
       chatId: input.chatId,
       mode: input.mode,
       model: input.model,
-      origin: input.origin,
       permissionMode: input.permissionMode,
       reasoningEffort: input.reasoningEffort,
       text: input.text,

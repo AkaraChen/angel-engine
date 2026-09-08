@@ -4,7 +4,6 @@ import type {
   ChatPrewarmResult,
   ChatRuntimeConfig,
 } from "@angel-engine/daemon-api/chat";
-import type { ResolvedSourceControlLink } from "@angel-engine/daemon-api/source-control";
 
 import type { QueryClient } from "@tanstack/react-query";
 import type { ApiClient } from "@/platform/api-client";
@@ -65,25 +64,6 @@ interface AgentSkillsQueryParams {
   projectPath?: string | null;
   runtime?: string | null;
   staleTime?: number;
-}
-
-interface SourceControlItemsQueryParams {
-  api: ApiClient;
-  enabled?: boolean;
-  limit?: number;
-  projectPath: string | null;
-  providerIdentity: string | null;
-  query: string;
-  staleTime?: number;
-}
-
-interface SourceControlLinkResolveQueryParams {
-  api: ApiClient;
-  enabled?: boolean;
-  projectPath: string | null;
-  providerIdentity: string | null;
-  staleTime?: number;
-  url: string | null;
 }
 
 interface ChatPrewarmQueryParams {
@@ -290,86 +270,6 @@ export function agentSkillsQueryOptions({
         runtime: runtime ?? "",
       }),
     queryKey: queryKeys.agents.skills(runtime ?? null, projectPath ?? null),
-    retry: false,
-    staleTime,
-  });
-}
-
-export function sourceControlWorkItemsQueryOptions({
-  api,
-  enabled = true,
-  limit,
-  projectPath,
-  providerIdentity,
-  query,
-  staleTime = 15_000,
-}: SourceControlItemsQueryParams) {
-  return queryOptions({
-    enabled:
-      enabled &&
-      is.nonEmptyString(projectPath) &&
-      is.nonEmptyString(providerIdentity),
-    placeholderData: (previous) => previous,
-    queryFn: async () =>
-      api.sourceControl.listWorkItems(
-        projectPath ?? "",
-        is.nonEmptyString(query) ? query : undefined,
-        limit,
-      ),
-    queryKey: queryKeys.sourceControl.workItems(providerIdentity, query, limit),
-    retry: false,
-    staleTime,
-  });
-}
-
-export function sourceControlChangeRequestsQueryOptions({
-  api,
-  enabled = true,
-  limit,
-  projectPath,
-  providerIdentity,
-  query,
-  staleTime = 15_000,
-}: SourceControlItemsQueryParams) {
-  return queryOptions({
-    enabled:
-      enabled &&
-      is.nonEmptyString(projectPath) &&
-      is.nonEmptyString(providerIdentity),
-    placeholderData: (previous) => previous,
-    queryFn: async () =>
-      api.sourceControl.listChangeRequests(
-        projectPath ?? "",
-        is.nonEmptyString(query) ? query : undefined,
-        limit,
-      ),
-    queryKey: queryKeys.sourceControl.changeRequests(
-      providerIdentity,
-      query,
-      limit,
-    ),
-    retry: false,
-    staleTime,
-  });
-}
-
-export function sourceControlLinkResolveQueryOptions({
-  api,
-  enabled = true,
-  projectPath,
-  providerIdentity,
-  staleTime = 30_000,
-  url,
-}: SourceControlLinkResolveQueryParams) {
-  return queryOptions({
-    enabled:
-      enabled &&
-      is.nonEmptyString(projectPath) &&
-      is.nonEmptyString(providerIdentity) &&
-      is.nonEmptyString(url),
-    queryFn: async (): Promise<ResolvedSourceControlLink> =>
-      api.sourceControl.resolveLink(projectPath ?? "", url ?? ""),
-    queryKey: queryKeys.sourceControl.links(providerIdentity, url),
     retry: false,
     staleTime,
   });

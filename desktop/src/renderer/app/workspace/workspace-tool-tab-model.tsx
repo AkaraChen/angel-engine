@@ -4,14 +4,10 @@ import type {
 } from "@shared/workspace-tool-surface";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 
-import { FileText, GitBranch, GitPullRequest } from "@phosphor-icons/react";
+import { FileText, GitBranch } from "@phosphor-icons/react";
 import { useCallback, useRef } from "react";
 
-import {
-  workspaceToolChecksTabId,
-  workspaceToolGitTabId,
-  workspaceToolPullRequestTabId,
-} from "@/app/workspace/workspace-tool-store";
+import {} from "@/app/workspace/workspace-tool-store";
 
 export type WorkspaceToolTabSelectHandler = (
   tabId: string,
@@ -121,54 +117,25 @@ export interface WorkspaceToolTabItem {
   title: string;
 }
 
-export interface WorkspaceToolPinnedTabLabels {
-  gitChanges: string;
-  pullRequest: string;
-}
-
 export function workspaceToolTabItems(
   dynamicTabs: WorkspaceToolSurfaceDynamicTab[],
-  labels: WorkspaceToolPinnedTabLabels,
 ): WorkspaceToolTabItem[] {
-  return [
-    {
-      icon: GitBranch,
-      id: workspaceToolGitTabId,
-      pinned: true,
-      title: labels.gitChanges,
-    },
-    {
-      icon: GitPullRequest,
-      id: workspaceToolPullRequestTabId,
-      pinned: true,
-      title: labels.pullRequest,
-    },
-    ...dynamicTabs.map((tab) => ({
-      dynamicTab: tab,
-      icon: workspaceToolTabIcon(tab),
-      id: tab.id,
-      pinned: false,
-      title: tab.title,
-    })),
-  ];
+  return dynamicTabs.map((tab) => ({
+    dynamicTab: tab,
+    icon: workspaceToolTabIcon(tab),
+    id: tab.id,
+    pinned: false,
+    title: tab.title,
+  }));
 }
 
 export function visibleActiveWorkspaceToolTabId(
   snapshot: WorkspaceToolSurfaceSnapshot,
 ) {
-  if (snapshot.activeTabId === workspaceToolChecksTabId) {
-    return workspaceToolPullRequestTabId;
-  }
-
-  if (
-    snapshot.activeTabId === workspaceToolGitTabId ||
-    snapshot.activeTabId === workspaceToolPullRequestTabId ||
-    snapshot.tabs.some((tab) => tab.id === snapshot.activeTabId)
-  ) {
+  if (snapshot.tabs.some((tab) => tab.id === snapshot.activeTabId)) {
     return snapshot.activeTabId;
   }
-
-  return workspaceToolGitTabId;
+  return snapshot.tabs[0]?.id ?? "dynamic";
 }
 
 export function workspaceToolTabIcon(tab: WorkspaceToolSurfaceDynamicTab) {

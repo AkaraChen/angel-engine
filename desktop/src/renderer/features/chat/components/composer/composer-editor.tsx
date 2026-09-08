@@ -2,8 +2,8 @@ import type { ReactNode } from "react";
 import type { ComposerEditorController } from "@/features/chat/components/composer/use-composer-editor";
 import {
   Globe,
-  LinkSimple,
   SpinnerGap as Loader2,
+  Terminal as TerminalIcon,
   WarningCircle,
 } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
@@ -11,7 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { EditorContent } from "@tiptap/react";
 import { useCallback, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { WorkspaceFileTreeIconSprite } from "@/app/workspace/workspace-file-tree";
+import { WorkspaceFileTreeIconSprite } from "@/app/workspace/workspace-file-icons";
 import {
   PromptInputBody,
   PromptInputHeader,
@@ -22,9 +22,9 @@ import { ChatAttachmentTile } from "@/features/chat/components/attachment-tile";
 import { urlPreviewQueryOptions } from "@/features/chat/api/url-preview-query";
 import { pasteSourceUrlPath } from "@/features/chat/components/composer/composer-helpers";
 import {
-  sourceControlAttachmentLabel,
-  type ComposerSourceControlAttachment,
-} from "@/features/chat/components/composer/source-control-attachments";
+  terminalSelectionLabel,
+  type ComposerTerminalSelection,
+} from "@/features/chat/components/composer/terminal-selection-to-composer";
 import { composerRichTextClassName } from "@/features/chat/components/composer/composer-rich-text";
 import { ComposerKeymapBridge } from "@/features/chat/components/composer/composer-keymap-bridge";
 import { handleComposerFilePaste } from "@/features/chat/components/composer/composer-paste";
@@ -62,12 +62,12 @@ export function ComposerEditor({
   const {
     addPasteSourceUrl,
     editor,
-    sourceControlAttachments,
     pasteSourceUrls,
-    removeSourceControlAttachment,
     removePasteSourceUrl,
+    removeTerminalSelection,
     setInteractions,
     setTextInput,
+    terminalSelections,
   } = controller;
 
   const handlePaste = useCallback(
@@ -128,12 +128,12 @@ export function ComposerEditor({
     >
       <WorkspaceFileTreeIconSprite />
       <ComposerEditorHeader
-        sourceControlAttachments={sourceControlAttachments}
         headerClassName={headerClassName}
         headerLeading={headerLeading}
-        onRemoveSourceControlAttachment={removeSourceControlAttachment}
         onRemovePasteSource={removePasteSourceUrl}
+        onRemoveTerminalSelection={removeTerminalSelection}
         pasteSourceUrls={pasteSourceUrls}
+        terminalSelections={terminalSelections}
       />
 
       <PromptInputBody>
@@ -147,19 +147,19 @@ export function ComposerEditor({
 }
 
 function ComposerEditorHeader({
-  sourceControlAttachments,
   headerClassName,
   headerLeading,
-  onRemoveSourceControlAttachment,
   onRemovePasteSource,
+  onRemoveTerminalSelection,
   pasteSourceUrls,
+  terminalSelections,
 }: {
-  sourceControlAttachments: ComposerSourceControlAttachment[];
   headerClassName?: string;
   headerLeading?: ReactNode;
-  onRemoveSourceControlAttachment: (id: string) => void;
   onRemovePasteSource: (sourceUrl: string) => void;
+  onRemoveTerminalSelection: (id: string) => void;
   pasteSourceUrls: string[];
+  terminalSelections: ComposerTerminalSelection[];
 }) {
   const { t } = useTranslation();
   const attachments = usePromptInputAttachments();
@@ -170,7 +170,7 @@ function ComposerEditorHeader({
     !hasHeaderLeading &&
     attachments.files.length === 0 &&
     pasteSourceUrls.length === 0 &&
-    sourceControlAttachments.length === 0
+    terminalSelections.length === 0
   ) {
     return null;
   }
@@ -187,24 +187,19 @@ function ComposerEditorHeader({
         />
       ))}
 
-      {sourceControlAttachments.map((item) => {
-        const name = sourceControlAttachmentLabel(item);
+      {terminalSelections.map((item) => {
+        const name = terminalSelectionLabel(item.selection);
         return (
           <ChatAttachmentTile
-            className="max-w-64"
-            fallbackIcon={<LinkSimple className="size-4" weight="duotone" />}
+            className="max-w-72"
+            contentType={item.cwd}
+            fallbackIcon={<TerminalIcon className="size-4" weight="duotone" />}
             key={item.id}
             name={name}
-            onRemove={() => onRemoveSourceControlAttachment(item.id)}
-            previewText={item.contextText}
+            onRemove={() => onRemoveTerminalSelection(item.id)}
+            previewText={item.selection}
             removeLabel={t("composer.removeAttachment", { name })}
-            typeLabel={
-              item.providerId === "linear"
-                ? t("composer.linearIssue")
-                : item.kind === "workItem"
-                  ? t("composer.workItem")
-                  : t("composer.changeRequest")
-            }
+            typeLabel={t("composer.terminalSelection")}
           />
         );
       })}

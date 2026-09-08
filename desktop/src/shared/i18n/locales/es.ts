@@ -1,5 +1,4 @@
 import type { LocaleResource } from "./schema";
-import { changeRequestEs } from "./change-request";
 
 export const es = {
   translation: {
@@ -290,25 +289,31 @@ export const es = {
           },
           pushing: "Enviando",
         },
-        pullRequest: changeRequestEs,
         listeningPorts: "Puertos en escucha",
         resizeFileTree: "Redimensionar el árbol de archivos",
         resizeGitList: "Redimensionar la lista de cambios",
         subprocesses: "Subprocesos",
         tabs: {
           checks: "Checks",
-          files: "Archivos",
           gitChanges: "Cambios de Git",
+          files: "Archivos",
           newTab: "Nueva pestaña",
           processes: "Procesos",
-          pullRequest: "Solicitud de cambio",
           tabs: "Pestañas",
           tools: "Herramientas",
           workspaceTabs: "Pestañas del espacio de trabajo",
         },
       },
     },
-
+    activity: {
+      status: {
+        done: "Completado",
+        failed: "Con error",
+        running: "En curso",
+        stuck: "Atascado",
+        waitingForYou: "Esperándote",
+      },
+    },
     sidebar: {
       archiveChat: "Archivar chat",
       chatAttention: "Atención del chat",
@@ -339,7 +344,6 @@ export const es = {
       refreshProjects: "Actualizar proyectos",
       retryWorktreeCreation: "Reintentar creación del worktree",
       settings: "Configuración",
-      shepherding: "Shepherding this session",
       toggleChats: "Alternar chats",
       mobileDescription: "Muestra la barra lateral móvil.",
       title: "Barra lateral",
@@ -693,15 +697,6 @@ export const es = {
       agentMode: "Modo Agent",
       agentSettings: "Configuración del Agent",
       attachFiles: "Adjuntar archivos",
-      attachChangeRequest: "Adjuntar solicitud de cambio o elemento de trabajo",
-      attachChangeRequestConfirm: "Adjuntar",
-      attachChangeRequestEmpty:
-        "No se encontraron elementos de trabajo ni solicitudes de cambio.",
-      attachChangeRequestLoading: "Obteniendo…",
-      attachChangeRequestPlaceholder:
-        "Buscar elementos de trabajo y solicitudes de cambio…",
-      attachChangeRequestTitle: "Adjuntar desde el control de código fuente",
-      attachChangeRequestUpdated: "actualizado {{time}}",
       attachmentErrors: {
         accept: "Ningún archivo coincide con los tipos permitidos.",
         fileRead: "No se pudo leer el archivo seleccionado.",
@@ -728,26 +723,9 @@ export const es = {
       fileTypeBlocked: "Tipo de archivo bloqueado",
       fileTooLarge: "El archivo es demasiado grande",
       files: "Archivos",
-      configureSourceControl: "Configurar control de código fuente",
       fromLink: "Desde un enlace",
       fromLinkPlaceholder:
         "Pega un enlace del control de código fuente o de Linear, o busca en el control de código fuente",
-      sourceControlUnavailable:
-        "No hay ningún proveedor de control de código fuente activo para este proyecto.",
-      sourceControlErrors: {
-        cliMissing:
-          "La CLI de control de código fuente no está instalada o no está en el PATH.",
-        cliUnauthenticated:
-          "El proveedor de control de código fuente no está autenticado.",
-        fetchFailed:
-          "No se pudo obtener ese elemento del control de código fuente.",
-        notFound:
-          "No se encontró el elemento de trabajo o la solicitud de cambio.",
-        urlUnsupported:
-          "Ese enlace de control de código fuente no es compatible.",
-      },
-      workItem: "Elemento de trabajo",
-      changeRequest: "Solicitud de cambio",
       linearConnectAction: "Conectar Linear",
       linearConnectDescription: "Conecta Linear antes de resolver este issue.",
       linearIssue: "Issue de Linear",
@@ -791,8 +769,6 @@ export const es = {
       },
       taskLinkHintComplete:
         "Pega un enlace completo a un elemento de trabajo, una solicitud de cambio o un elemento de Linear.",
-      taskLinkHintSourceControlPath:
-        "Es un enlace de control de código fuente, pero no es un elemento de trabajo ni una solicitud de cambio.",
       taskLinkHintLinearPath: "Es un enlace de Linear, pero no es un issue.",
       taskLinkHintSupported:
         "Se admiten elementos de trabajo y solicitudes de cambio del control de código fuente, y elementos de Linear.",
@@ -964,7 +940,6 @@ export const es = {
     },
     pathLauncher: {
       copyPath: "Copiar ruta",
-      openInAngelTerminal: "Abrir en la terminal de Angel",
       openInEditor: "Abrir en {{editor}}",
       openInFileExplorer: "Abrir en el Explorador de archivos",
       openInFileManager: "Abrir en el gestor de archivos",
@@ -979,7 +954,6 @@ export const es = {
       commandPalette: "Paleta de comandos",
       commandSessions: "Sesiones",
       commandImportSession: "Importar sesiones al proyecto",
-      commandShepherdChangeRequest: "Shepherd solicitud de cambio",
     },
     promptInput: {
       addPhotosOrFiles: "Agregar fotos o archivos",

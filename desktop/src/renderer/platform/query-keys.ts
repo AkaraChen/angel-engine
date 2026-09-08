@@ -21,95 +21,8 @@ export const queryKeys = {
     runtimeConfig: (runtime: string | null, cwd: string | null) =>
       ["chats", "runtime-config", runtime, cwd] as const,
   },
-  sourceControl: {
-    all: () => ["source-control"] as const,
-    activation: (projectId: string | null) =>
-      ["source-control", "activation", projectId] as const,
-    links: (providerIdentity: string | null, url: string | null) =>
-      ["source-control", providerIdentity, "links", url] as const,
-    namespaces: (
-      providerIdentity: string | null,
-      query: string | null = null,
-      limit = 50,
-    ) =>
-      ["source-control", providerIdentity, "namespaces", query, limit] as const,
-    repositories: (
-      providerIdentity: string | null,
-      namespace: readonly string[] | null,
-      query: string | null = null,
-      limit = 50,
-    ) =>
-      [
-        "source-control",
-        providerIdentity,
-        "repositories",
-        namespace,
-        query,
-        limit,
-      ] as const,
-    workItems: (
-      providerIdentity: string | null,
-      query: string | null = null,
-      limit = 50,
-    ) =>
-      ["source-control", providerIdentity, "work-items", query, limit] as const,
-    changeRequests: (
-      providerIdentity: string | null,
-      query: string | null = null,
-      limit = 50,
-    ) =>
-      [
-        "source-control",
-        providerIdentity,
-        "change-requests",
-        query,
-        limit,
-      ] as const,
-    changeRequest: (providerIdentity: string | null, id: string | null) =>
-      ["source-control", providerIdentity, "change-request", id] as const,
-    currentChangeRequest: (providerIdentity: string | null) =>
-      [
-        "source-control",
-        providerIdentity,
-        "change-request",
-        "current",
-      ] as const,
-    changeRequestPreflight: (
-      providerIdentity: string | null,
-      sourceBranch: string | null,
-      targetBranch: string | null,
-    ) =>
-      [
-        "source-control",
-        providerIdentity,
-        "change-request",
-        "preflight",
-        sourceBranch,
-        targetBranch,
-      ] as const,
-    changeRequestTemplate: (providerIdentity: string | null) =>
-      [
-        "source-control",
-        providerIdentity,
-        "change-request",
-        "template",
-      ] as const,
-    checks: (providerIdentity: string | null, id: string | null) =>
-      ["source-control", providerIdentity, "checks", id] as const,
-    checksSummary: (providerIdentity: string | null, id: string | null) =>
-      ["source-control", providerIdentity, "checks", id, "summary"] as const,
-    reviewThreadsRoot: (providerIdentity: string | null) =>
-      ["source-control", providerIdentity, "reviews"] as const,
-    reviewThreads: (providerIdentity: string | null, id: string | null) =>
-      ["source-control", providerIdentity, "reviews", id, "threads"] as const,
-  },
   pathLauncher: {
     availability: () => ["path-launcher", "availability"] as const,
-  },
-  shepherd: {
-    all: () => ["shepherd"] as const,
-    session: (chatId: string | null) =>
-      ["shepherd", "session", chatId] as const,
   },
   projects: {
     all: () => ["projects"] as const,
@@ -137,12 +50,6 @@ export const queryKeys = {
   workspaceTools: {
     fileTree: (root: string | null) =>
       ["workspace-tools", "file-tree", root] as const,
-    gitBranches: (root: string | null) =>
-      ["workspace-tools", "git-branches", root] as const,
-    gitCommitShow: (root: string | null, hash: string | null) =>
-      ["workspace-tools", "git-commit-show", root, hash] as const,
-    gitLog: (root: string | null) =>
-      ["workspace-tools", "git-log", root] as const,
     gitDiffRoot: (root: string | null) =>
       ["workspace-tools", "git-diff", root] as const,
     gitDiff: (

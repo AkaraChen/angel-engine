@@ -1,5 +1,4 @@
 import type { LocaleResource } from "./schema";
-import { changeRequestKo } from "./change-request";
 
 export const ko = {
   translation: {
@@ -286,25 +285,31 @@ export const ko = {
           },
           pushing: "푸시 중",
         },
-        pullRequest: changeRequestKo,
         listeningPorts: "수신 대기 포트",
         resizeFileTree: "파일 트리 너비 조정",
         resizeGitList: "변경 목록 너비 조정",
         subprocesses: "하위 프로세스",
         tabs: {
           checks: "검사",
-          files: "파일",
           gitChanges: "Git 변경",
+          files: "파일",
           newTab: "새 탭",
           processes: "프로세스",
-          pullRequest: "변경 요청",
           tabs: "탭",
           tools: "도구",
           workspaceTabs: "워크스페이스 탭",
         },
       },
     },
-
+    activity: {
+      status: {
+        done: "완료",
+        failed: "실패",
+        running: "실행 중",
+        stuck: "멈춤",
+        waitingForYou: "응답 대기 중",
+      },
+    },
     sidebar: {
       archiveChat: "채팅 보관",
       chatAttention: "채팅 주의 필요",
@@ -335,7 +340,6 @@ export const ko = {
       refreshProjects: "프로젝트 새로고침",
       retryWorktreeCreation: "Worktree 생성 다시 시도",
       settings: "설정",
-      shepherding: "Shepherding this session",
       toggleChats: "채팅 전환",
       mobileDescription: "모바일 사이드바를 표시합니다.",
       title: "사이드바",
@@ -679,13 +683,6 @@ export const ko = {
       agentMode: "Agent 모드",
       agentSettings: "Agent 설정",
       attachFiles: "파일 첨부",
-      attachChangeRequest: "변경 요청 또는 작업 항목 첨부",
-      attachChangeRequestConfirm: "첨부",
-      attachChangeRequestEmpty: "작업 항목이나 변경 요청을 찾을 수 없습니다.",
-      attachChangeRequestLoading: "가져오는 중…",
-      attachChangeRequestPlaceholder: "작업 항목 및 변경 요청 검색…",
-      attachChangeRequestTitle: "소스 제어에서 첨부",
-      attachChangeRequestUpdated: "{{time}} 업데이트됨",
       attachmentErrors: {
         accept: "허용된 형식과 일치하는 파일이 없습니다.",
         fileRead: "선택한 파일을 읽을 수 없습니다.",
@@ -712,21 +709,9 @@ export const ko = {
       fileTypeBlocked: "파일 형식 차단됨",
       fileTooLarge: "파일이 너무 큽니다",
       files: "파일",
-      configureSourceControl: "소스 제어 구성",
       fromLink: "링크에서",
       fromLinkPlaceholder:
         "소스 제어 또는 Linear 작업 항목 링크를 붙여넣거나 소스 제어 검색",
-      sourceControlUnavailable:
-        "이 프로젝트에 활성화된 소스 제어 공급자가 없습니다.",
-      sourceControlErrors: {
-        cliMissing: "소스 제어 CLI가 설치되지 않았거나 PATH에 없습니다.",
-        cliUnauthenticated: "소스 제어 제공자가 인증되지 않았습니다.",
-        fetchFailed: "소스 제어 항목을 가져오지 못했습니다.",
-        notFound: "작업 항목 또는 변경 요청을 찾을 수 없습니다.",
-        urlUnsupported: "이 소스 제어 URL은 지원되지 않습니다.",
-      },
-      workItem: "작업 항목",
-      changeRequest: "변경 요청",
       linearConnectAction: "Linear 연결",
       linearConnectDescription: "이 이슈를 확인하기 전에 Linear에 연결하세요.",
       linearIssue: "Linear 이슈",
@@ -769,8 +754,6 @@ export const ko = {
       },
       taskLinkHintComplete:
         "소스 제어 작업 항목, 변경 요청 또는 Linear 작업 항목의 전체 링크를 붙여넣으세요.",
-      taskLinkHintSourceControlPath:
-        "소스 제어 링크이지만 작업 항목이나 변경 요청이 아닙니다.",
       taskLinkHintLinearPath: "Linear 링크이지만 이슈가 아닙니다.",
       taskLinkHintSupported:
         "소스 제어 작업 항목, 변경 요청 및 Linear 작업 항목 링크를 지원합니다.",
@@ -940,7 +923,6 @@ export const ko = {
     },
     pathLauncher: {
       copyPath: "경로 복사",
-      openInAngelTerminal: "Angel 터미널에서 열기",
       openInEditor: "{{editor}}에서 열기",
       openInFileExplorer: "파일 탐색기에서 열기",
       openInFileManager: "파일 관리자에서 열기",
@@ -955,7 +937,6 @@ export const ko = {
       commandPalette: "명령 팔레트",
       commandSessions: "세션",
       commandImportSession: "프로젝트로 세션 가져오기",
-      commandShepherdChangeRequest: "Shepherd 변경 요청",
     },
     promptInput: {
       addPhotosOrFiles: "사진 또는 파일 추가",

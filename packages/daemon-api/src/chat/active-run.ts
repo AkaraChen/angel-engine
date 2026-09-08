@@ -87,8 +87,7 @@ export function isChatRunStartInput(
     isOptionalNonEmptyString(value.model) &&
     isOptionalNullableNonEmptyString(value.mode) &&
     isOptionalNullableNonEmptyString(value.permissionMode) &&
-    isOptionalNullableNonEmptyString(value.reasoningEffort) &&
-    (value.origin === undefined || value.origin === "shepherd")
+    isOptionalNullableNonEmptyString(value.reasoningEffort)
   );
 }
 

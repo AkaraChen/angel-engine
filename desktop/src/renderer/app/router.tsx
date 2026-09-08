@@ -19,7 +19,9 @@ export function AppRouter() {
           component={ProjectChatRoutePage}
           path="/project/:projectId/:chatId"
         />
-        <Route component={ProjectDraftRoutePage} path="/project/:projectId" />
+        <Route path="/project/:projectId">
+          <Redirect replace to="/" />
+        </Route>
         <Route>
           <Redirect replace to="/" />
         </Route>
@@ -30,12 +32,6 @@ export function AppRouter() {
 
 function ChatRoutePage({ params }: RouteComponentProps<{ chatId: string }>) {
   return <WorkspaceChatPage chatId={params.chatId} />;
-}
-
-function ProjectDraftRoutePage({
-  params,
-}: RouteComponentProps<{ projectId: string }>) {
-  return <WorkspaceDraftPage projectId={params.projectId} />;
 }
 
 function ProjectChatRoutePage({

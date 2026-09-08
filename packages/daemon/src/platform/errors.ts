@@ -2,7 +2,6 @@ import type {
   DaemonErrorCode,
   DaemonErrorPayload,
 } from "@angel-engine/daemon-api/daemon";
-import type { SourceControlErrorDetails } from "@angel-engine/daemon-api/source-control";
 
 import { Data } from "effect";
 
@@ -15,7 +14,6 @@ interface DaemonErrorProps {
   code: DaemonErrorCode;
   message: string;
   relatedChatId?: string;
-  sourceControl?: SourceControlErrorDetails;
   status: DaemonErrorStatus;
 }
 
@@ -173,6 +171,23 @@ export class DaemonError extends Data.TaggedError(
     });
   }
 
+  static projectConfigInvalid(message: string) {
+    return new DaemonError({
+      code: "project-config-invalid",
+      message,
+      status: 409,
+    });
+  }
+
+  static projectConfigWriteFailed(cause: unknown) {
+    return new DaemonError({
+      cause,
+      code: "project-config-write-failed",
+      message: messageFromCause(cause, "Could not write project settings."),
+      status: 500,
+    });
+  }
+
   static projectIdRequired() {
     return new DaemonError({
       code: "project-id-required",
@@ -197,163 +212,11 @@ export class DaemonError extends Data.TaggedError(
     });
   }
 
-  static projectNotGitRepository() {
-    return new DaemonError({
-      code: "project-not-git-repository",
-      message: "Project is not a git repository.",
-      status: 409,
-    });
-  }
-
-  static projectRequiredForWorktree() {
-    return new DaemonError({
-      code: "project-required-for-worktree",
-      message: "Project is required to create a git worktree.",
-      status: 400,
-    });
-  }
-
   static gitFailed(cause: unknown, fallback = "Git command failed.") {
     return new DaemonError({
       cause,
       code: "git-failed",
       message: gitMessageFromCause(cause, fallback),
-      status: 500,
-    });
-  }
-
-  static gitPushDenied(message = "No push access to this repository.") {
-    return new DaemonError({ code: "git-push-denied", message, status: 403 });
-  }
-
-  static gitPushNotFastForward(
-    message = "Remote branch has diverged. Pull and retry.",
-  ) {
-    return new DaemonError({
-      code: "git-push-not-fast-forward",
-      message,
-      status: 409,
-    });
-  }
-
-  static gitRemoteMissing(message = "Git remote origin is not configured.") {
-    return new DaemonError({
-      code: "git-remote-missing",
-      message,
-      status: 409,
-    });
-  }
-
-  static sourceControlCliMissing(
-    providerId: string,
-    message = "The source-control CLI is not installed or not on PATH.",
-  ) {
-    return new DaemonError({
-      code: "source-control/cli-missing",
-      message,
-      sourceControl: sourceControlDetails(providerId, "authenticate", false),
-      status: 400,
-    });
-  }
-
-  static sourceControlCapabilityUnsupported(
-    message = "This source-control provider does not support the requested operation.",
-    providerId = "unknown",
-  ) {
-    return new DaemonError({
-      code: "source-control/capability-unsupported",
-      message,
-      sourceControl: {
-        operation: "capability",
-        providerId,
-        retryable: false,
-      },
-      status: 400,
-    });
-  }
-
-  static sourceControlUnauthenticated(
-    providerId: string,
-    message = "The source-control provider is not authenticated.",
-  ) {
-    return new DaemonError({
-      code: "source-control/unauthenticated",
-      message,
-      sourceControl: sourceControlDetails(providerId, "authenticate", false),
-      status: 400,
-    });
-  }
-
-  static sourceControlUrlUnsupported(
-    providerId: string,
-    message = "The source-control provider does not support this URL.",
-  ) {
-    return new DaemonError({
-      code: "source-control/url-unsupported",
-      message,
-      sourceControl: sourceControlDetails(providerId, "resolve-url", false),
-      status: 400,
-    });
-  }
-
-  static sourceControlItemNotFound(
-    providerId: string,
-    message = "The source-control item was not found.",
-  ) {
-    return new DaemonError({
-      code: "source-control/item-not-found",
-      message,
-      sourceControl: sourceControlDetails(providerId, "get-item", false),
-      status: 404,
-    });
-  }
-
-  static sourceControlPermissionDenied(
-    providerId: string,
-    message = "You do not have permission to perform this source-control operation.",
-  ) {
-    return new DaemonError({
-      code: "source-control/permission-denied",
-      message,
-      sourceControl: sourceControlDetails(providerId, "merge", false),
-      status: 403,
-    });
-  }
-
-  static sourceControlMergeConflict(
-    providerId: string,
-    message = "The change request can no longer be merged. Refresh its status and try again.",
-  ) {
-    return new DaemonError({
-      code: "source-control/merge-conflict",
-      message,
-      sourceControl: sourceControlDetails(providerId, "merge", false),
-      status: 409,
-    });
-  }
-
-  static sourceControlFetchFailed(
-    providerId: string,
-    cause: unknown,
-    fallback = "Source-control fetch failed.",
-  ) {
-    return new DaemonError({
-      cause,
-      code: "source-control/fetch-failed",
-      message: gitMessageFromCause(cause, fallback),
-      sourceControl: sourceControlDetails(providerId, "fetch", true, cause),
-      status: 500,
-    });
-  }
-
-  static sourceControlNetworkUnavailable(
-    providerId: string,
-    message = "The source-control provider is unavailable. Check your network and retry.",
-  ) {
-    return new DaemonError({
-      code: "source-control/network-unavailable",
-      message,
-      sourceControl: sourceControlDetails(providerId, "network", true),
       status: 500,
     });
   }
@@ -399,91 +262,6 @@ export class DaemonError extends Data.TaggedError(
     });
   }
 
-  static pullRequestAlreadyExists(
-    message = "A pull request already exists for this branch.",
-  ) {
-    return new DaemonError({
-      code: "pull-request-already-exists",
-      message,
-      status: 409,
-    });
-  }
-
-  static prFromForkUnsupported() {
-    return new DaemonError({
-      code: "pr-from-fork-unsupported",
-      message: "Pull requests from forks are not supported yet.",
-      status: 400,
-    });
-  }
-
-  static worktreeBranchConflict(branch: string) {
-    return new DaemonError({
-      code: "worktree-branch-conflict",
-      message: `Local branch ${branch} has commits that are not in the pull request head. Rename or reconcile it before retrying.`,
-      status: 409,
-    });
-  }
-
-  static pullRequestNoCommits(message = "There are no commits to merge.") {
-    return new DaemonError({
-      code: "pull-request-no-commits",
-      message,
-      status: 409,
-    });
-  }
-
-  static worktreeBranchInUse(branch: string, relatedChatId?: string) {
-    return new DaemonError({
-      code: "worktree-branch-in-use",
-      message: `Branch ${branch} is already checked out in another worktree.`,
-      relatedChatId,
-      status: 409,
-    });
-  }
-
-  static worktreeCreateFailed(cause: unknown) {
-    return new DaemonError({
-      cause,
-      code: "worktree-create-failed",
-      message: gitMessageFromCause(cause, "Could not create git worktree."),
-      status: 500,
-    });
-  }
-
-  static worktreeNotManaged(worktreePath: string) {
-    return new DaemonError({
-      code: "worktree-not-managed",
-      message: `${worktreePath} is not an app-managed git worktree.`,
-      status: 400,
-    });
-  }
-
-  static worktreeChanged(worktreePath: string) {
-    return new DaemonError({
-      code: "worktree-changed",
-      message: `${worktreePath} changed since it was confirmed. Scan and confirm the cleanup again.`,
-      status: 409,
-    });
-  }
-
-  static worktreeHasActiveChats(worktreePath: string) {
-    return new DaemonError({
-      code: "worktree-has-active-chats",
-      message: `${worktreePath} still has active chats.`,
-      status: 409,
-    });
-  }
-
-  static worktreeRemoveFailed(cause: unknown) {
-    return new DaemonError({
-      cause,
-      code: "worktree-remove-failed",
-      message: gitMessageFromCause(cause, "Could not remove git worktree."),
-      status: 500,
-    });
-  }
-
   static workspacePathInvalid(message: string) {
     return new DaemonError({
       code: "workspace-path-invalid",
@@ -498,93 +276,6 @@ export class DaemonError extends Data.TaggedError(
       message: "Workspace root is not a Git repository.",
       status: 409,
     });
-  }
-
-  static workspaceCommitInputInvalid(message: string) {
-    return new DaemonError({
-      code: "workspace-commit-input-invalid",
-      message,
-      status: 400,
-    });
-  }
-
-  static workspaceGitDetachedHead() {
-    return new DaemonError({
-      code: "workspace-git-detached-head",
-      message: "Checkout a branch before pushing; HEAD is detached.",
-      status: 409,
-    });
-  }
-
-  static workspaceGitNoRemote() {
-    return new DaemonError({
-      code: "workspace-git-no-remote",
-      message: "The repository has no remote to push to.",
-      status: 409,
-    });
-  }
-
-  static workspaceGitNoCommits() {
-    return new DaemonError({
-      code: "workspace-git-no-commits",
-      message: "Create a commit before publishing this branch.",
-      status: 409,
-    });
-  }
-
-  /**
-   * A failed `git push` is the one git failure users must act on themselves, so
-   * the transport hands back an actionable code instead of a generic
-   * `git-failed` with stderr the UI can only print verbatim.
-   */
-  static workspaceGitPushFailed(cause: unknown) {
-    const message = gitMessageFromCause(cause, "Git push failed.");
-    if (isGitAuthFailure(message)) {
-      return new DaemonError({
-        cause,
-        code: "workspace-git-auth-failed",
-        message,
-        status: 403,
-      });
-    }
-    if (isGitNetworkFailure(message)) {
-      return new DaemonError({
-        cause,
-        code: "workspace-git-network-failed",
-        message,
-        status: 500,
-      });
-    }
-    if (isGitPushRejected(message)) {
-      return new DaemonError({
-        cause,
-        code: "workspace-git-push-rejected",
-        message,
-        status: 409,
-      });
-    }
-    return DaemonError.gitFailed(cause, "Git push failed.");
-  }
-
-  static workspaceGitPullFailed(cause: unknown) {
-    const message = gitMessageFromCause(cause, "Git pull failed.");
-    if (isGitAuthFailure(message)) {
-      return new DaemonError({
-        cause,
-        code: "workspace-git-auth-failed",
-        message,
-        status: 403,
-      });
-    }
-    if (isGitNetworkFailure(message)) {
-      return new DaemonError({
-        cause,
-        code: "workspace-git-network-failed",
-        message,
-        status: 500,
-      });
-    }
-    return DaemonError.gitFailed(cause, "Git pull failed.");
   }
 
   static processNotRegistered() {
@@ -609,25 +300,6 @@ export function daemonErrorPayload(error: DaemonError): DaemonErrorPayload {
   return {
     code: error.code,
     error: error.message,
-    ...(error.sourceControl ? { sourceControl: error.sourceControl } : {}),
-  };
-}
-
-function sourceControlDetails(
-  providerId: string,
-  operation: string,
-  retryable: boolean,
-  cause?: unknown,
-): SourceControlErrorDetails {
-  return {
-    providerId,
-    operation,
-    retryable,
-    ...(cause instanceof Error
-      ? { providerMessage: cause.message }
-      : typeof cause === "string"
-        ? { providerMessage: cause }
-        : {}),
   };
 }
 

@@ -49,8 +49,6 @@ import { ToolActionMessagePart } from "@/features/chat/components/tool-action-me
 import { TurnActivity } from "@/features/chat/components/turn-activity";
 import { buildTurnActivityRenderPlan } from "@/features/chat/components/turn-activity-parts";
 import { useChatRuntimeActions } from "@/features/chat/runtime/use-chat-runtime-actions";
-import { parseShepherdSourceCard } from "@/features/shepherd/parse-shepherd-source-card";
-import { ShepherdSourceCard } from "@/features/shepherd/shepherd-source-card";
 import { getErrorMessage } from "@/app/workspace/workspace-display";
 import { cn } from "@/platform/utils";
 
@@ -86,34 +84,18 @@ export function UserMessage() {
     state.message.parts.some(isUserBubblePart),
   );
   const isThreadRunning = useAuiState((state) => state.thread.isRunning);
-  const shepherdCard = useAuiState((state) => {
-    const text = state.message.parts
-      .filter(
-        (part): part is Extract<typeof part, { type: "text" }> =>
-          part.type === "text",
-      )
-      .map((part) => part.text)
-      .join("");
-    return parseShepherdSourceCard(text);
-  });
 
   return (
     <MessagePrimitive.Root
       className={cn(
         messageColumnClassName,
         "group flex",
-        shepherdCard ? "justify-start" : "justify-end",
+        "justify-end",
         isThreadRunning &&
           "animate-in duration-200 fade-in-0 slide-in-from-bottom-1",
       )}
     >
-      <div
-        className={
-          shepherdCard
-            ? "flex w-full min-w-0 flex-col items-start gap-1.5"
-            : userMessageColumnClassName
-        }
-      >
+      <div className={userMessageColumnClassName}>
         <MessagePrimitive.Attachments>
           {({ attachment }) => (
             <MessageAttachment attachment={attachment} key={attachment.id} />
@@ -121,18 +103,14 @@ export function UserMessage() {
         </MessagePrimitive.Attachments>
         <UserMessageAttachmentParts />
         {hasBubbleContent ? (
-          shepherdCard ? (
-            <ShepherdSourceCard parts={shepherdCard} />
-          ) : (
-            <div className={userMessageBubbleClassName}>
-              <CollapsibleMessageBody
-                fadeClassName="from-primary-soft"
-                toggleClassName="text-primary-soft-foreground"
-              >
-                <UserMessageParts />
-              </CollapsibleMessageBody>
-            </div>
-          )
+          <div className={userMessageBubbleClassName}>
+            <CollapsibleMessageBody
+              fadeClassName="from-primary-soft"
+              toggleClassName="text-primary-soft-foreground"
+            >
+              <UserMessageParts />
+            </CollapsibleMessageBody>
+          </div>
         ) : null}
         <div className={messageActionFooterClass}>
           <ActionBarPrimitive.Root
@@ -145,14 +123,12 @@ export function UserMessage() {
             "
             hideWhenRunning
           >
-            {shepherdCard ? null : (
-              <ActionTooltip label={t("common.edit")}>
-                <ActionBarPrimitive.Edit className={iconButtonClass}>
-                  <Pencil className="size-3.5" />
-                  <span className="sr-only">{t("common.edit")}</span>
-                </ActionBarPrimitive.Edit>
-              </ActionTooltip>
-            )}
+            <ActionTooltip label={t("common.edit")}>
+              <ActionBarPrimitive.Edit className={iconButtonClass}>
+                <Pencil className="size-3.5" />
+                <span className="sr-only">{t("common.edit")}</span>
+              </ActionBarPrimitive.Edit>
+            </ActionTooltip>
             <ActionTooltip label={t("common.copy")}>
               <ActionBarPrimitive.Copy
                 className={cn(iconButtonClass, "group/copy")}

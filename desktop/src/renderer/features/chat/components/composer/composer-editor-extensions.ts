@@ -21,7 +21,7 @@ import { Plugin, PluginKey, TextSelection } from "@tiptap/pm/state";
 import { ReactRenderer as TiptapReactRenderer } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { basename } from "pathe";
-import { workspaceFileIconResolver } from "@/app/workspace/workspace-file-tree";
+import { workspaceFileIconResolver } from "@/app/workspace/workspace-file-icons";
 import {
   filterSkills,
   filterSlashCommands,

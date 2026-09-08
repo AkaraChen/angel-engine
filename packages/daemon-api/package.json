@@ -30,14 +30,6 @@
       "types": "./dist/projects.d.ts",
       "import": "./dist/projects.js"
     },
-    "./source-control": {
-      "types": "./dist/source-control/index.d.ts",
-      "import": "./dist/source-control/index.js"
-    },
-    "./shepherd": {
-      "types": "./dist/shepherd.d.ts",
-      "import": "./dist/shepherd.js"
-    },
     "./workspace-tools": {
       "types": "./dist/workspace-tools.d.ts",
       "import": "./dist/workspace-tools.js"

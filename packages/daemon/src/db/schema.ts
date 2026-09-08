@@ -1,23 +1,10 @@
 import type { ChatSourceLink } from "@angel-engine/daemon-api/chat";
-import {
-  index,
-  integer,
-  sqliteTable,
-  text,
-  uniqueIndex,
-} from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const projects = sqliteTable("projects", {
   id: text("id").primaryKey(),
   path: text("path").notNull().unique(),
 });
-
-export const providerHostMappings = sqliteTable("provider_host_mappings", {
-  host: text("host").primaryKey(),
-  providerId: text("provider_id").notNull(),
-});
-
-export type ProviderHostMappingRow = typeof providerHostMappings.$inferSelect;
 
 export const customAgents = sqliteTable("custom_agents", {
   id: text("id").primaryKey(),
@@ -94,32 +81,6 @@ export const queuedChatRuns = sqliteTable(
   (table) => [index("queued_chat_runs_chat_id_idx").on(table.chatId)],
 );
 
-export const pullRequests = sqliteTable(
-  "pull_requests",
-  {
-    id: text("id").primaryKey(),
-    projectId: text("project_id").references(() => projects.id, {
-      onDelete: "cascade",
-    }),
-    chatId: text("chat_id").references(() => chats.id, {
-      onDelete: "set null",
-    }),
-    root: text("root").notNull(),
-    branch: text("branch").notNull(),
-    baseBranch: text("base_branch").notNull(),
-    number: integer("number").notNull(),
-    url: text("url").notNull(),
-    title: text("title").notNull(),
-    isDraft: integer("is_draft", { mode: "boolean" }).notNull().default(false),
-    state: text("state").notNull(),
-    createdAt: text("created_at").notNull(),
-    updatedAt: text("updated_at").notNull(),
-  },
-  (table) => [
-    uniqueIndex("pull_requests_root_branch_idx").on(table.root, table.branch),
-  ],
-);
-
 export type ProjectRow = typeof projects.$inferSelect;
 export type NewProjectRow = typeof projects.$inferInsert;
 export type CustomAgentRow = typeof customAgents.$inferSelect;
@@ -128,34 +89,3 @@ export type ChatRow = typeof chats.$inferSelect;
 export type NewChatRow = typeof chats.$inferInsert;
 export type ChatDiffAnchorRow = typeof chatDiffAnchors.$inferSelect;
 export type QueuedChatRunRow = typeof queuedChatRuns.$inferSelect;
-export type PullRequestRow = typeof pullRequests.$inferSelect;
-export type NewPullRequestRow = typeof pullRequests.$inferInsert;
-
-/** One active PR shepherd per chat (enforced by unique chatId). */
-export const shepherdSessions = sqliteTable("shepherd_sessions", {
-  id: text("id").primaryKey(),
-  chatId: text("chat_id")
-    .notNull()
-    .unique()
-    .references(() => chats.id, { onDelete: "cascade" }),
-  owner: text("owner").notNull(),
-  repo: text("repo").notNull(),
-  prNumber: integer("pr_number").notNull(),
-  headSha: text("head_sha"),
-  state: text("state").notNull(),
-  settledReason: text("settled_reason"),
-  round: integer("round").notNull().default(0),
-  maxRounds: integer("max_rounds").notNull().default(10),
-  consecutiveNoProgress: integer("consecutive_no_progress")
-    .notNull()
-    .default(0),
-  handledFingerprints: text("handled_fingerprints").notNull(),
-  baselineSnapshot: text("baseline_snapshot"),
-  pendingPrompt: text("pending_prompt"),
-  pendingFingerprints: text("pending_fingerprints").notNull(),
-  lastSentHeadSha: text("last_sent_head_sha"),
-  createdAt: text("created_at").notNull(),
-  updatedAt: text("updated_at").notNull(),
-});
-
-export type ShepherdSessionRow = typeof shepherdSessions.$inferSelect;

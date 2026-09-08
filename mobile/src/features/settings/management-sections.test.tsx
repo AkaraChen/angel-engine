@@ -1,9 +1,7 @@
 import type { CustomAgent } from "@angel-engine/daemon-api/agents";
 import type { ReactNode } from "react";
 
-import {
-  type DaemonClient,
-} from "@angel-engine/daemon-client";
+import { type DaemonClient } from "@angel-engine/daemon-client";
 import {
   cleanup,
   fireEvent,

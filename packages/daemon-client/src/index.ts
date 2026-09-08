@@ -58,54 +58,13 @@ import type {
   ProcessRegistryEntry,
   ProcessRegistrySnapshotEntry,
 } from "@angel-engine/daemon-api/daemon";
-import type {
-  ShepherdResumeInput,
-  ShepherdSession,
-  ShepherdStartInput,
-  ShepherdStopInput,
-} from "@angel-engine/daemon-api/shepherd";
-import type {
-  Project,
-  ProjectGitStatusInput,
-  ProjectGitStatusResult,
-} from "@angel-engine/daemon-api/projects";
-import type {
-  ChangeRequest,
-  ChangeRequestCreatePreflightResult,
-  ChangeRequestStatusResult,
-  ChangeRequestTemplateResult,
-  CheckRun,
-  CheckSummary,
-  ChecksFixPromptResult,
-  CreateChangeRequestWorkspaceResult,
-  MergeMethod,
-  PublishBranchResult,
-  RepositoryIdentity,
-  RepositoryNamespace,
-  ReviewThread,
-  ResolvedSourceControlLink,
-  SourceControlActivationResult,
-  SourceControlProjectConfig,
-  WorkItem,
-} from "@angel-engine/daemon-api/source-control";
+import type { Project } from "@angel-engine/daemon-api/projects";
 import type {
   WorkspaceFileReadResult,
   WorkspaceFileTreeResult,
   WorkspaceFileWriteResult,
-  WorkspaceGitBranchesResult,
-  WorkspaceGitCheckoutInput,
-  WorkspaceGitCheckoutResult,
-  WorkspaceGitCommitShowInput,
-  WorkspaceGitCommitShowResult,
   WorkspaceGitDiffInput,
   WorkspaceGitDiffResult,
-  WorkspaceGitLogResult,
-  WorkspaceToolGitCommitInput,
-  WorkspaceToolGitCommitResult,
-  WorkspaceToolGitPullInput,
-  WorkspaceToolGitPullResult,
-  WorkspaceToolGitPushInput,
-  WorkspaceToolGitPushResult,
   WorkspaceToolReadFileInput,
   WorkspaceToolRootInput,
   WorkspaceToolWriteFileInput,
@@ -129,29 +88,6 @@ export interface DaemonClientOptions {
   onUnauthorized?: () => void;
   /** Bearer token; omit when the transport injects authorization itself. */
   token?: string | null;
-}
-
-export interface SourceControlCreateChangeRequestInput {
-  body: string;
-  draft: boolean;
-  projectPath: string;
-  publish: boolean;
-  sourceBranch: string;
-  targetBranch: string;
-  title: string;
-}
-
-export interface SourceControlCreateWorkspaceInput {
-  projectPath: string;
-  runtime?: string;
-  setupApproval?: string;
-  title?: string;
-}
-
-export interface SourceControlMergeChangeRequestInput {
-  deleteSourceBranch: boolean;
-  method: MergeMethod;
-  projectPath: string;
 }
 
 export interface DaemonEventHandlers {
@@ -467,158 +403,6 @@ export function createDaemonClient(options: DaemonClientOptions) {
           json("PUT", { runtime: input.runtime }),
         ),
     },
-    shepherd: {
-      get: (chatId: string) =>
-        request<{ session: ShepherdSession | null }>(
-          `/api/shepherd?${query({ chatId })}`,
-        ),
-      resume: (input: ShepherdResumeInput) =>
-        request<ShepherdSession>(
-          `/api/shepherd/${encodeURIComponent(input.id)}/resume`,
-          json("POST", {}),
-        ),
-      start: (input: ShepherdStartInput) =>
-        request<ShepherdSession>("/api/shepherd/start", json("POST", input)),
-      stop: (input: ShepherdStopInput) =>
-        request<ShepherdSession>(
-          `/api/shepherd/${encodeURIComponent(input.id)}/stop`,
-          json("POST", {}),
-        ),
-    },
-    sourceControl: {
-      activation: (projectId: string) =>
-        request<SourceControlActivationResult>(
-          `/api/source-control/activation?${query({ projectId })}`,
-        ),
-      config: (projectId: string) =>
-        request<SourceControlProjectConfig>(
-          `/api/source-control/config?${query({ projectId })}`,
-        ),
-      updateConfig: (projectId: string, input: SourceControlProjectConfig) =>
-        request<SourceControlProjectConfig>(
-          `/api/source-control/config?${query({ projectId })}`,
-          json("PUT", input),
-        ),
-      currentChangeRequest: (projectPath: string) =>
-        request<ChangeRequestStatusResult | null>(
-          `/api/source-control/change-requests/current?${query({ projectPath })}`,
-        ),
-      getChangeRequest: (projectPath: string, id: string) =>
-        request<ChangeRequest>(
-          `/api/source-control/change-requests/${encodeURIComponent(id)}?${query({ projectPath })}`,
-        ),
-      listWorkItems: (
-        projectPath: string,
-        queryText?: string,
-        limit?: number,
-      ) =>
-        request<WorkItem[]>(
-          `/api/source-control/work-items?${query({
-            limit,
-            projectPath,
-            query: queryText,
-          })}`,
-        ),
-      listChangeRequests: (
-        projectPath: string,
-        queryText?: string,
-        limit?: number,
-      ) =>
-        request<ChangeRequest[]>(
-          `/api/source-control/change-requests?${query({
-            limit,
-            projectPath,
-            query: queryText,
-          })}`,
-        ),
-      resolveLink: (projectPath: string, url: string) =>
-        request<ResolvedSourceControlLink>(
-          "/api/source-control/links/resolve",
-          json("POST", { projectPath, url }),
-        ),
-      listNamespaces: (
-        projectPath: string,
-        queryText?: string,
-        limit?: number,
-      ) =>
-        request<readonly RepositoryNamespace[]>(
-          `/api/source-control/namespaces?${query({
-            limit,
-            projectPath,
-            query: queryText,
-          })}`,
-        ),
-      listRepositories: (
-        projectPath: string,
-        namespace: readonly string[],
-        queryText?: string,
-        limit?: number,
-      ) =>
-        request<readonly RepositoryIdentity[]>(
-          `/api/source-control/repositories?${query({
-            limit,
-            namespace: namespace.join("/"),
-            projectPath,
-            query: queryText,
-          })}`,
-        ),
-      changeRequestPreflight: (projectPath: string, targetBranch?: string) =>
-        request<ChangeRequestCreatePreflightResult>(
-          `/api/source-control/change-requests/preflight?${query({ projectPath, targetBranch })}`,
-        ),
-      changeRequestTemplate: (projectPath: string) =>
-        request<ChangeRequestTemplateResult>(
-          `/api/source-control/change-requests/template?${query({ projectPath })}`,
-        ),
-      createChangeRequest: (input: SourceControlCreateChangeRequestInput) =>
-        request<ChangeRequest>(
-          "/api/source-control/change-requests",
-          json("POST", input),
-        ),
-      mergeChangeRequest: (
-        id: string,
-        input: SourceControlMergeChangeRequestInput,
-      ) =>
-        request<ChangeRequest>(
-          `/api/source-control/change-requests/${encodeURIComponent(id)}/merge`,
-          json("POST", input),
-        ),
-      createChangeRequestWorkspace: (
-        id: string,
-        input: SourceControlCreateWorkspaceInput,
-      ) =>
-        request<CreateChangeRequestWorkspaceResult>(
-          `/api/source-control/change-requests/${encodeURIComponent(id)}/workspace`,
-          json("POST", input),
-        ),
-      publishBranch: (input: { localBranch: string; projectPath: string }) =>
-        request<PublishBranchResult>(
-          "/api/source-control/branches/publish",
-          json("POST", input),
-        ),
-      checks: (projectPath: string, id: string) =>
-        request<CheckRun[]>(
-          `/api/source-control/checks?${query({ id, projectPath })}`,
-        ),
-      checksSummary: (projectPath: string, id: string) =>
-        request<CheckSummary>(
-          `/api/source-control/checks/summary?${query({ id, projectPath })}`,
-        ),
-      checksFixPrompt: (projectPath: string, id: string) =>
-        request<ChecksFixPromptResult>(
-          "/api/source-control/checks/fix-prompt",
-          json("POST", { id, projectPath }),
-        ),
-      reviewThreads: (projectPath: string, id: string) =>
-        request<ReviewThread[]>(
-          `/api/source-control/reviews/threads?${query({ id, projectPath })}`,
-        ),
-      resolveReviewThread: (projectPath: string, threadId: string) =>
-        request<{ resolved: boolean }>(
-          `/api/source-control/reviews/threads/${encodeURIComponent(threadId)}/resolve`,
-          json("POST", { projectPath }),
-        ),
-    },
     health: () => request<DaemonHealth>("/api/health"),
     events: {
       subscribe: (handlers: DaemonEventHandlers) =>
@@ -642,10 +426,6 @@ export function createDaemonClient(options: DaemonClientOptions) {
     projects: {
       get: (id: string) =>
         request<Project | null>(`/api/projects/${encodeURIComponent(id)}`),
-      gitStatus: (input: ProjectGitStatusInput) =>
-        request<ProjectGitStatusResult>(
-          `/api/projects/${encodeURIComponent(input.projectId)}/git-status`,
-        ),
       list: () => request<Project[]>("/api/projects"),
       searchFiles: (input: ProjectFileSearchInput) =>
         request<ProjectFileSearchResult[]>(
@@ -653,46 +433,6 @@ export function createDaemonClient(options: DaemonClientOptions) {
         ),
     },
     workspaceTools: {
-      fileTree: (input: WorkspaceToolRootInput) =>
-        request<WorkspaceFileTreeResult>(
-          `/api/workspace/file-tree?${query(input)}`,
-        ),
-      gitBranches: (input: WorkspaceToolRootInput) =>
-        request<WorkspaceGitBranchesResult>(
-          `/api/workspace/git-branches?${query(input)}`,
-        ),
-      gitCheckout: (input: WorkspaceGitCheckoutInput) =>
-        request<WorkspaceGitCheckoutResult>(
-          "/api/workspace/git-checkout",
-          json("POST", input),
-        ),
-      gitCommit: (input: WorkspaceToolGitCommitInput) =>
-        request<WorkspaceToolGitCommitResult>(
-          "/api/workspace/git-commit",
-          json("POST", input),
-        ),
-      gitCommitShow: (input: WorkspaceGitCommitShowInput) =>
-        request<WorkspaceGitCommitShowResult>(
-          `/api/workspace/git-commit-show?${query(input)}`,
-        ),
-      gitDiff: (input: WorkspaceGitDiffInput) =>
-        request<WorkspaceGitDiffResult>(
-          `/api/workspace/git-diff?${query(input)}`,
-        ),
-      gitLog: (input: WorkspaceToolRootInput & { limit?: number }) =>
-        request<WorkspaceGitLogResult>(
-          `/api/workspace/git-log?${query(input)}`,
-        ),
-      gitPull: (input: WorkspaceToolGitPullInput) =>
-        request<WorkspaceToolGitPullResult>(
-          "/api/workspace/git-pull",
-          json("POST", input),
-        ),
-      gitPush: (input: WorkspaceToolGitPushInput) =>
-        request<WorkspaceToolGitPushResult>(
-          "/api/workspace/git-push",
-          json("POST", input),
-        ),
       readFile: (input: WorkspaceToolReadFileInput) =>
         request<WorkspaceFileReadResult>(`/api/workspace/file?${query(input)}`),
       writeFile: (input: WorkspaceToolWriteFileInput) =>

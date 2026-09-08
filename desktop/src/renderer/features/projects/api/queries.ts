@@ -3,10 +3,6 @@ import type {
   Project,
   ProjectGitStatusResult,
 } from "@angel-engine/daemon-api/projects";
-import type {
-  RepositoryIdentity,
-  RepositoryNamespace,
-} from "@angel-engine/daemon-api/source-control";
 
 import type { ApiClient } from "@/platform/api-client";
 import is from "@sindresorhus/is";
@@ -33,95 +29,6 @@ interface ProjectGitStatusQueryParams {
   enabled?: boolean;
   projectId?: string | null;
   staleTime?: number;
-}
-
-interface SourceControlDiscoveryQueryParams {
-  api: ApiClient;
-  enabled?: boolean;
-  limit?: number;
-  projectPath: string | null;
-  providerIdentity: string | null;
-  query?: string;
-  staleTime?: number;
-  supported: boolean;
-}
-
-interface SourceControlRepositoriesQueryParams
-  extends SourceControlDiscoveryQueryParams {
-  namespace: readonly string[] | null;
-}
-
-export function sourceControlNamespacesQueryOptions({
-  api,
-  enabled = true,
-  limit = 50,
-  projectPath,
-  providerIdentity,
-  query = "",
-  staleTime = 60_000,
-  supported,
-}: SourceControlDiscoveryQueryParams) {
-  return queryOptions({
-    enabled:
-      enabled &&
-      supported &&
-      is.nonEmptyString(projectPath) &&
-      is.nonEmptyString(providerIdentity),
-    queryFn: async (): Promise<readonly RepositoryNamespace[]> => {
-      if (!is.nonEmptyString(projectPath)) {
-        throw new Error("No source-control project is active");
-      }
-      return api.sourceControl.listNamespaces(projectPath, query, limit);
-    },
-    queryKey: queryKeys.sourceControl.namespaces(
-      providerIdentity,
-      is.nonEmptyString(query) ? query : null,
-      limit,
-    ),
-    retry: false,
-    staleTime,
-  });
-}
-
-export function sourceControlRepositoriesQueryOptions({
-  api,
-  enabled = true,
-  limit = 50,
-  namespace,
-  projectPath,
-  providerIdentity,
-  query = "",
-  staleTime = 60_000,
-  supported,
-}: SourceControlRepositoriesQueryParams) {
-  return queryOptions({
-    enabled:
-      enabled &&
-      supported &&
-      is.nonEmptyString(projectPath) &&
-      is.nonEmptyString(providerIdentity) &&
-      namespace !== null &&
-      namespace.length > 0,
-    queryFn: async (): Promise<readonly RepositoryIdentity[]> => {
-      if (!is.nonEmptyString(projectPath) || namespace === null) {
-        throw new Error("No source-control namespace is active");
-      }
-      return api.sourceControl.listRepositories(
-        projectPath,
-        namespace,
-        query,
-        limit,
-      );
-    },
-    queryKey: queryKeys.sourceControl.repositories(
-      providerIdentity,
-      namespace,
-      is.nonEmptyString(query) ? query : null,
-      limit,
-    ),
-    retry: false,
-    staleTime,
-  });
 }
 
 export function projectListQueryOptions({

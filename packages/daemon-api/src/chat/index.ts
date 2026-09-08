@@ -339,7 +339,6 @@ export type ChatRunStartInput = Pick<
   | "attachments"
   | "mode"
   | "model"
-  | "origin"
   | "permissionMode"
   | "reasoningEffort"
   | "text"

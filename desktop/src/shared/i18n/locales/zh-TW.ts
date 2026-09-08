@@ -1,5 +1,4 @@
 import type { LocaleResource } from "./schema";
-import { changeRequestZhTW } from "./change-request";
 
 export const zhTW = {
   translation: {
@@ -284,22 +283,29 @@ export const zhTW = {
           },
           pushing: "推送中",
         },
-        pullRequest: changeRequestZhTW,
         listeningPorts: "監聽連接埠",
         resizeFileTree: "調整檔案樹寬度",
         resizeGitList: "調整變更清單寬度",
         subprocesses: "子處理程序",
         tabs: {
           checks: "檢查",
-          files: "檔案",
           gitChanges: "Git 變更",
+          files: "檔案",
           newTab: "新增分頁",
           processes: "處理程序",
-          pullRequest: "變更要求",
           tabs: "分頁",
           tools: "工具",
           workspaceTabs: "工作區分頁",
         },
+      },
+    },
+    activity: {
+      status: {
+        done: "已完成",
+        failed: "失敗",
+        running: "執行中",
+        stuck: "卡住",
+        waitingForYou: "等待你處理",
       },
     },
 
@@ -333,14 +339,10 @@ export const zhTW = {
       refreshProjects: "重新整理專案",
       retryWorktreeCreation: "重試建立 worktree",
       settings: "設定",
-      shepherding: "正在 Shepherd 此對話",
       toggleChats: "切換聊天",
       mobileDescription: "顯示行動版側邊欄。",
       title: "側邊欄",
       toggleSidebar: "切換側邊欄",
-      worktreeMain: "主目錄",
-      worktreeCreating: "正在建立 worktree… {{progress}}%",
-      worktreeCreationFailed: "Worktree 建立失敗",
     },
     settings: {
       agents: {
@@ -660,13 +662,6 @@ export const zhTW = {
       agentMode: "Agent 模式",
       agentSettings: "Agent 設定",
       attachFiles: "附加檔案",
-      attachChangeRequest: "附加變更要求或工作項目",
-      attachChangeRequestConfirm: "附加",
-      attachChangeRequestEmpty: "找不到工作項目或變更要求。",
-      attachChangeRequestLoading: "取得中…",
-      attachChangeRequestPlaceholder: "搜尋工作項目和變更要求…",
-      attachChangeRequestTitle: "從原始碼控制附加",
-      attachChangeRequestUpdated: "更新於 {{time}}",
       attachmentErrors: {
         accept: "沒有檔案符合允許的類型。",
         fileRead: "無法讀取所選檔案。",
@@ -690,20 +685,9 @@ export const zhTW = {
       fileTypeBlocked: "檔案類型被阻擋",
       fileTooLarge: "檔案過大",
       files: "檔案",
-      configureSourceControl: "設定原始碼控制",
       fromLink: "從連結",
       fromLinkPlaceholder:
         "貼上原始碼控制或 Linear 工作項目連結，或搜尋原始碼控制",
-      sourceControlUnavailable: "此專案未啟用原始碼控制提供者。",
-      sourceControlErrors: {
-        cliMissing: "未安裝原始碼控制 CLI 或不在 PATH 中。請安裝後重試。",
-        cliUnauthenticated: "原始碼控制提供者尚未驗證。請登入後重試。",
-        fetchFailed: "無法取得該原始碼控制項目。",
-        notFound: "找不到該工作項目或變更要求。",
-        urlUnsupported: "不支援該原始碼控制連結。",
-      },
-      workItem: "工作項目",
-      changeRequest: "變更要求",
       linearConnectAction: "連線 Linear",
       linearConnectDescription: "請先連線 Linear，再解析此 Issue。",
       linearIssue: "Linear Issue",
@@ -745,8 +729,6 @@ export const zhTW = {
       },
       taskLinkHintComplete:
         "請貼上完整的原始碼控制工作項目、變更要求或 Linear 工作項目連結。",
-      taskLinkHintSourceControlPath:
-        "這是原始碼控制連結，但不是工作項目或變更要求。",
       taskLinkHintLinearPath: "這是 Linear 連結，但不是 Issue。",
       taskLinkHintSupported:
         "支援原始碼控制工作項目、變更要求與 Linear 工作項目連結。",
@@ -910,7 +892,6 @@ export const zhTW = {
     },
     pathLauncher: {
       copyPath: "複製路徑",
-      openInAngelTerminal: "在 Angel 終端機中開啟",
       openInEditor: "在 {{editor}} 中開啟",
       openInFileExplorer: "在檔案總管中開啟",
       openInFileManager: "在檔案管理員中開啟",
@@ -925,7 +906,6 @@ export const zhTW = {
       commandPalette: "命令面板",
       commandSessions: "工作階段",
       commandImportSession: "匯入對話到專案",
-      commandShepherdChangeRequest: "Shepherd 變更要求",
     },
     promptInput: {
       addPhotosOrFiles: "新增圖片或檔案",

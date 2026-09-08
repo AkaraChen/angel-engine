@@ -80,7 +80,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     sidebarOpen,
     sidebarOpenMobile,
     toggleWorkspaceTools,
-    workspaceToolHost,
     workspaceToolContextKey,
     workspaceToolRoot,
     workspaceTitle,
@@ -182,10 +181,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                 selectedChat?.projectId ? selectedProjectName : undefined
               }
               running={selectedChatIsRunning}
-              rightSidebarOpen={
-                canShowRightSidebar &&
-                (rightSidebarOpen || workspaceToolHost !== "sidebar")
-              }
+              rightSidebarOpen={canShowRightSidebar && rightSidebarOpen}
               rightSidebarToggleLabel={workspaceToolsToggleLabel}
               title={workspaceTitle}
               onToggleRightSidebar={
@@ -280,7 +276,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
           </SidebarInset>
           {dockedWorkspaceToolContext ? (
             <WorkspaceRightSidebar
-              active={workspaceToolHost === "sidebar"}
+              active={true}
               api={api}
               contextKey={dockedWorkspaceToolContext.contextKey}
               open={rightSidebarOpen}
