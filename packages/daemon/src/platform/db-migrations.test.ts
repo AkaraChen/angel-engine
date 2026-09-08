@@ -32,6 +32,7 @@ it("repairs automation tables skipped by the out-of-order migration", async () =
           "0010_odd_midnight",
           "0012_repair_automation_tables",
           "0013_pink_marrow",
+          "0014_drop_shepherd_sessions",
         ].includes(tag),
     );
 
@@ -64,7 +65,9 @@ it("preserves existing automation data when applying the repair", async () => {
   try {
     await copyMigrations(
       historicalMigrationsDir,
-      (tag) => tag !== "0012_repair_automation_tables",
+      (tag) =>
+        tag !== "0012_repair_automation_tables" &&
+        tag !== "0014_drop_shepherd_sessions",
     );
     const client = createClient({
       url: `file:${path.join(temporaryDir, "database.sqlite")}`,
@@ -139,7 +142,8 @@ it("adds provider mappings after the released automation repair", async () => {
   try {
     await copyMigrations(
       historicalMigrationsDir,
-      (tag) => tag !== "0013_pink_marrow",
+      (tag) =>
+        tag !== "0013_pink_marrow" && tag !== "0014_drop_shepherd_sessions",
     );
     const client = createClient({
       url: `file:${path.join(temporaryDir, "database.sqlite")}`,
