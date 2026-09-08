@@ -358,7 +358,7 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
       mobileToken !== undefined &&
       protocol === `angel-engine-token.${mobileToken}`;
     const isEvents = url.pathname === "/api/events";
-    if ((!isEvents && !isPrimary) || (!isPrimary && isMobile)) {
+    if ((!isEvents && !isPrimary) || (isEvents && !isPrimary && !isMobile)) {
       socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
       socket.destroy();
       return;
