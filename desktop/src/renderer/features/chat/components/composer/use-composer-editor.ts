@@ -8,7 +8,6 @@ import type {
   ComposerInteractionRefs,
 } from "@/features/chat/components/composer/composer-editor-extensions";
 import type { ComposerTerminalSelection } from "@/features/chat/components/composer/terminal-selection-to-composer";
-import type { ComposerSourceControlAttachment } from "@/features/chat/components/composer/source-control-attachments";
 import { useEditor, useEditorState } from "@tiptap/react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -26,19 +25,14 @@ export interface ComposerEditorInteractions {
 }
 
 export interface ComposerEditorController {
-  addSourceControlAttachment: (
-    attachment: ComposerSourceControlAttachment,
-  ) => void;
   addPasteSourceUrl: (sourceUrl: string) => void;
   addTerminalSelection: (selection: ComposerTerminalSelection) => void;
   editor: Editor | null;
   focus: () => void;
   getMarkdown: () => string;
-  sourceControlAttachments: ComposerSourceControlAttachment[];
   isEmpty: boolean;
   mentionedFiles: ComposerMentionedFile[];
   pasteSourceUrls: string[];
-  removeSourceControlAttachment: (id: string) => void;
   removeMention: (id: string) => void;
   removeTerminalSelection: (id: string) => void;
   removePasteSourceUrl: (sourceUrl: string) => void;
@@ -61,9 +55,6 @@ export function useComposerEditor({
     [],
   );
   const [pasteSourceUrls, setPasteSourceUrls] = useState<string[]>([]);
-  const [sourceControlAttachments, setSourceControlAttachments] = useState<
-    ComposerSourceControlAttachment[]
-  >([]);
   const addPasteSourceUrl = useCallback((sourceUrl: string) => {
     setPasteSourceUrls((current) =>
       current.includes(sourceUrl) ? current : [...current, sourceUrl],
@@ -71,22 +62,6 @@ export function useComposerEditor({
   }, []);
   const removePasteSourceUrl = useCallback((sourceUrl: string) => {
     setPasteSourceUrls((current) => current.filter((url) => url !== sourceUrl));
-  }, []);
-  const addSourceControlAttachment = useCallback(
-    (attachment: ComposerSourceControlAttachment) => {
-      setSourceControlAttachments((current) => {
-        if (current.some((item) => item.url === attachment.url)) {
-          return current;
-        }
-        return [...current, attachment];
-      });
-    },
-    [],
-  );
-  const removeSourceControlAttachment = useCallback((id: string) => {
-    setSourceControlAttachments((current) =>
-      current.filter((item) => item.id !== id),
-    );
   }, []);
   const [terminalSelections, setTerminalSelections] = useState<
     ComposerTerminalSelection[]
@@ -194,7 +169,6 @@ export function useComposerEditor({
     }
     setPasteSourceUrls([]);
     setTerminalSelections([]);
-    setSourceControlAttachments([]);
   }, [editor]);
   const removeMention = useCallback(
     (id: string) => {
@@ -231,17 +205,14 @@ export function useComposerEditor({
   );
 
   return {
-    addSourceControlAttachment,
     addPasteSourceUrl,
     addTerminalSelection,
     editor,
     focus,
     getMarkdown,
-    sourceControlAttachments,
     isEmpty: emptyState ?? true,
     mentionedFiles,
     pasteSourceUrls,
-    removeSourceControlAttachment,
     removeMention,
     removePasteSourceUrl,
     removeTerminalSelection,

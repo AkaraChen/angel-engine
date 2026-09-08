@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import type { ComposerEditorController } from "@/features/chat/components/composer/use-composer-editor";
 import {
   Globe,
-  LinkSimple,
   SpinnerGap as Loader2,
   Terminal as TerminalIcon,
   WarningCircle,
@@ -22,10 +21,6 @@ import {
 import { ChatAttachmentTile } from "@/features/chat/components/attachment-tile";
 import { urlPreviewQueryOptions } from "@/features/chat/api/url-preview-query";
 import { pasteSourceUrlPath } from "@/features/chat/components/composer/composer-helpers";
-import {
-  sourceControlAttachmentLabel,
-  type ComposerSourceControlAttachment,
-} from "@/features/chat/components/composer/source-control-attachments";
 import {
   terminalSelectionLabel,
   type ComposerTerminalSelection,
@@ -67,9 +62,7 @@ export function ComposerEditor({
   const {
     addPasteSourceUrl,
     editor,
-    sourceControlAttachments,
     pasteSourceUrls,
-    removeSourceControlAttachment,
     removePasteSourceUrl,
     removeTerminalSelection,
     setInteractions,
@@ -135,10 +128,8 @@ export function ComposerEditor({
     >
       <WorkspaceFileTreeIconSprite />
       <ComposerEditorHeader
-        sourceControlAttachments={sourceControlAttachments}
         headerClassName={headerClassName}
         headerLeading={headerLeading}
-        onRemoveSourceControlAttachment={removeSourceControlAttachment}
         onRemovePasteSource={removePasteSourceUrl}
         onRemoveTerminalSelection={removeTerminalSelection}
         pasteSourceUrls={pasteSourceUrls}
@@ -156,19 +147,15 @@ export function ComposerEditor({
 }
 
 function ComposerEditorHeader({
-  sourceControlAttachments,
   headerClassName,
   headerLeading,
-  onRemoveSourceControlAttachment,
   onRemovePasteSource,
   onRemoveTerminalSelection,
   pasteSourceUrls,
   terminalSelections,
 }: {
-  sourceControlAttachments: ComposerSourceControlAttachment[];
   headerClassName?: string;
   headerLeading?: ReactNode;
-  onRemoveSourceControlAttachment: (id: string) => void;
   onRemovePasteSource: (sourceUrl: string) => void;
   onRemoveTerminalSelection: (id: string) => void;
   pasteSourceUrls: string[];
@@ -183,8 +170,7 @@ function ComposerEditorHeader({
     !hasHeaderLeading &&
     attachments.files.length === 0 &&
     pasteSourceUrls.length === 0 &&
-    terminalSelections.length === 0 &&
-    sourceControlAttachments.length === 0
+    terminalSelections.length === 0
   ) {
     return null;
   }
@@ -214,28 +200,6 @@ function ComposerEditorHeader({
             previewText={item.selection}
             removeLabel={t("composer.removeAttachment", { name })}
             typeLabel={t("composer.terminalSelection")}
-          />
-        );
-      })}
-
-      {sourceControlAttachments.map((item) => {
-        const name = sourceControlAttachmentLabel(item);
-        return (
-          <ChatAttachmentTile
-            className="max-w-64"
-            fallbackIcon={<LinkSimple className="size-4" weight="duotone" />}
-            key={item.id}
-            name={name}
-            onRemove={() => onRemoveSourceControlAttachment(item.id)}
-            previewText={item.contextText}
-            removeLabel={t("composer.removeAttachment", { name })}
-            typeLabel={
-              item.providerId === "linear"
-                ? t("composer.linearIssue")
-                : item.kind === "workItem"
-                  ? t("composer.workItem")
-                  : t("composer.changeRequest")
-            }
           />
         );
       })}
