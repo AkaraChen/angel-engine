@@ -415,7 +415,7 @@ export const ChangeRequestPanel: FC<{
                     <BlockerRow
                       blocker={blocker}
                       key={blocker.kind}
-              onOpen={openExternal}
+                      onOpen={openExternal}
                     />
                   ))}
                 </ul>

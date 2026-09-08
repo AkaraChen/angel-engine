@@ -16,7 +16,6 @@ import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-
 export function WorkspaceToolContent({ root }: { root: string }) {
   const { t } = useTranslation();
   const {
-    active,
     activeDynamicTab,
     activeTabId,
     host,
