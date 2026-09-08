@@ -404,6 +404,7 @@ export function NewChatComposer({
               <NewChatRecentSection
                 chats={chats}
                 isProjectMode={isProjectWorkspaceMode(workspaceMode)}
+                projects={projects}
                 onOpenChat={onOpenChat}
               />
             </div>

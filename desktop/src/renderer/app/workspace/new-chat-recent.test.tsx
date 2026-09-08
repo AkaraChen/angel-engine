@@ -86,7 +86,6 @@ describe("NewChatRecentSection", () => {
           }),
         ]}
         isProjectMode
-        onCreateProject={vi.fn()}
         onOpenChat={vi.fn()}
         projects={projects}
       />,
@@ -128,7 +127,6 @@ describe("NewChatRecentSection", () => {
           }),
         ]}
         isProjectMode={false}
-        onCreateProject={vi.fn()}
         onOpenChat={vi.fn()}
         projects={projects}
       />,
@@ -179,7 +177,6 @@ describe("NewChatRecentSection", () => {
           }),
         ]}
         isProjectMode
-        onCreateProject={vi.fn()}
         onOpenChat={vi.fn()}
         projects={projects}
       />,
@@ -215,7 +212,6 @@ describe("NewChatRecentSection", () => {
           }),
         ]}
         isProjectMode
-        onCreateProject={vi.fn()}
         onOpenChat={vi.fn()}
         projects={projects}
       />,
@@ -224,21 +220,17 @@ describe("NewChatRecentSection", () => {
     expect(screen.getByText("angel-engine")).toBeTruthy();
   });
 
-  it("offers the project action when there is nothing to resume", () => {
-    const onCreateProject = vi.fn();
-    render(
+  it("renders nothing when there is nothing to resume", () => {
+    const { container } = render(
       <NewChatRecentSection
         chats={[]}
         isProjectMode
-        onCreateProject={onCreateProject}
         onOpenChat={vi.fn()}
         projects={projects}
       />,
     );
 
-    expect(screen.getByText("thread.empty.recentEmpty")).toBeTruthy();
-    screen.getByRole("button").click();
-    expect(onCreateProject).toHaveBeenCalledOnce();
+    expect(container.firstChild).toBeNull();
   });
 
   it("hides the project empty state in chat mode", () => {
@@ -246,7 +238,6 @@ describe("NewChatRecentSection", () => {
       <NewChatRecentSection
         chats={[]}
         isProjectMode={false}
-        onCreateProject={vi.fn()}
         onOpenChat={vi.fn()}
         projects={projects}
       />,

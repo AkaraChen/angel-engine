@@ -34,7 +34,7 @@ type WorkspaceDraftStateAction =
   | {
       action: SetStateAction<WorkspaceDraftState["sessionIds"]>;
       type: "sessionIds";
-    };
+    }
   | {
       action: SetStateAction<WorkspaceDraftState["cwds"]>;
       type: "cwds";
