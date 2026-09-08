@@ -25,9 +25,6 @@ export interface AuthCapability {
 
 export interface GitWorkflowCapability {
   parseUrl(url: string): RepositoryIdentity | null;
-  parseChangeRequestUrl(
-    url: string,
-  ): { repository: RepositoryIdentity; id: string } | null;
   clone?: ProviderOperation<"provider.clone">;
 }
 
@@ -41,18 +38,6 @@ export interface WorkItemCapability {
   list?: ProviderOperation<"workItems.list">;
 }
 
-export interface ChangeRequestCapability {
-  create?: ProviderOperation<"changeRequests.create">;
-  get?: ProviderOperation<"changeRequests.get">;
-  getByUrl?: ProviderOperation<"changeRequests.getByUrl">;
-  list?: ProviderOperation<"changeRequests.list">;
-  status?: ProviderOperation<"changeRequests.status">;
-  comment?: ProviderOperation<"changeRequests.comment">;
-  merge?: ProviderOperation<"changeRequests.merge">;
-  preflight?: ProviderOperation<"changeRequests.preflight">;
-  resolveHead?: ProviderOperation<"changeRequests.resolveHead">;
-}
-
 export type AutomationCapability = Record<never, never>;
 export type ReleaseCapability = Record<never, never>;
 export interface SourceControlProviderPlugin {
@@ -62,7 +47,6 @@ export interface SourceControlProviderPlugin {
   git: GitWorkflowCapability;
   repositories?: RepositoryCapability;
   workItems?: WorkItemCapability;
-  changeRequests?: ChangeRequestCapability;
   automation?: AutomationCapability;
   releases?: ReleaseCapability;
 }

@@ -77,8 +77,7 @@ function fakePlugin(options: {
       },
     },
     git: {
-      parseChangeRequestUrl: () => null,
-      parseUrl: () => null,
+            parseUrl: () => null,
     },
     manifest: {
       capabilities: ["provider.auth"],

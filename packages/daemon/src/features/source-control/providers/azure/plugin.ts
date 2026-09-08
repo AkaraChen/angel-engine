@@ -1,6 +1,4 @@
 import type {
-  ChangeRequest,
-  MergeRequirement,
   ProbeContext,
   ProviderMatch,
   ProviderOperationContext,
@@ -48,33 +46,6 @@ const projectListSchema = arkType({
   "+": "ignore",
   value: projectSchema.array(),
 });
-const policySchema = arkType({
-  "+": "ignore",
-  isBlocking: "boolean",
-  "id?": "number | string",
-  "isEnabled?": "boolean",
-  "type?": arkType({
-    "+": "ignore",
-    "displayName?": "string | null",
-    "id?": "string | null",
-  }),
-  "url?": "string | null",
-});
-const pullRequestSchema = arkType({
-  "+": "ignore",
-  "closedDate?": "string | null",
-  creationDate: "string > 0",
-  createdBy: actorSchema,
-  description: "string | null",
-  pullRequestId: "number.integer >= 1",
-  repository: repositorySchema,
-  sourceRefName: "string > 0",
-  status: "string > 0",
-  targetRefName: "string > 0",
-  title: "string > 0",
-  "url?": "string | null",
-});
-
 interface AzureDependencies {
   findAz?: () => Promise<string | null>;
   runAz?: ProviderCliRunner;
@@ -97,22 +68,13 @@ export function createAzureDevOpsPlugin(
         "discovery.listNamespaces",
         "discovery.listRepositories",
         "repositoryIdentity",
-        "changeRequests.list",
-        "changeRequests.get",
       ],
       displayName: "Azure DevOps",
       hosts: ["dev.azure.com"],
       id: PROVIDER_ID,
       unsupportedCapabilities: Object.fromEntries(
         [
-          "changeRequests.create",
-          "changeRequests.getByUrl",
-          "changeRequests.status",
-          "changeRequests.comment",
-          "changeRequests.merge",
-          "changeRequests.preflight",
-          "changeRequests.resolveHead",
-          "workItems.get",
+                        "workItems.get",
           "workItems.getByUrl",
           "workItems.list",
           "provider.clone",
@@ -187,77 +149,9 @@ export function createAzureDevOpsPlugin(
     },
     git: {
       parseUrl: parseAzureRepositoryUrl,
-      parseChangeRequestUrl: (url) => {
-        const parsed = parseAzurePullRequestUrl(url);
-        return parsed ? { id: parsed.id, repository: parsed.repository } : null;
-      },
     },
     repositories: { parseUrl: parseAzureRepositoryUrl },
-    changeRequests: {
-      list: async (input, context) => {
-        assertAzureRepository(input.repository);
-        const orgUrl = azureOrganizationUrl(input.repository);
-        const output = await json(
-          [
-            "repos",
-            "pr",
-            "list",
-            "--repository",
-            input.repository.remoteId ?? input.repository.name,
-            "--project",
-            input.repository.namespace[1],
-            "--organization",
-            orgUrl,
-            "--status",
-            "all",
-            "--top",
-            String(input.limit),
-          ],
-          pullRequestSchema.array(),
-          context,
-        );
-        const query = input.query?.toLowerCase() ?? "";
-        return output
-          .filter((pullRequest) =>
-            pullRequest.title.toLowerCase().includes(query),
-          )
-          .map((pullRequest) =>
-            mapPullRequest(pullRequest, input.repository, []),
-          );
-      },
-      get: async (input, context) => {
-        assertAzureRepository(input.repository);
-        const orgUrl = azureOrganizationUrl(input.repository);
-        const [pullRequest, policies] = await Promise.all([
-          json(
-            ["repos", "pr", "show", "--id", input.id, "--organization", orgUrl],
-            pullRequestSchema,
-            context,
-          ),
-          json(
-            [
-              "repos",
-              "policy",
-              "list",
-              "--repository-id",
-              input.repository.remoteId ?? input.repository.name,
-              "--project",
-              input.repository.namespace[1],
-              "--organization",
-              orgUrl,
-            ],
-            policySchema.array(),
-            context,
-          ),
-        ]);
-        return mapPullRequest(
-          pullRequest,
-          input.repository,
-          policies.map(mapPolicy),
-        );
-      },
-    },
-  };
+};
 }
 
 function matchAzure(
@@ -400,13 +294,6 @@ export function parseAzureRepositoryUrl(
   );
 }
 
-function parseAzurePullRequestUrl(raw: string) {
-  const repository = parseAzureRepositoryUrl(raw);
-  if (!repository) return null;
-  const match = /\/pullrequest\/(\d+)(?:\/|$)/.exec(raw);
-  return match ? { id: match[1], repository } : null;
-}
-
 function azureIdentity(
   host: string,
   organization: string,
@@ -467,42 +354,6 @@ function azureRepositoryIdentity(
   };
 }
 
-function mapPullRequest(
-  pullRequest: typeof pullRequestSchema.infer,
-  repository: RepositoryIdentity,
-  requirements: readonly MergeRequirement[],
-): ChangeRequest {
-  const source = pullRequest.sourceRefName.replace(/^refs\/heads\//, "");
-  const target = pullRequest.targetRefName.replace(/^refs\/heads\//, "");
-  const state = pullRequest.status.toLowerCase();
-  return {
-    additions: null,
-    allowedMergeMethods: [],
-    author: mapActor(pullRequest.createdBy),
-    body: pullRequest.description ?? "",
-    changedFiles: null,
-    commitCount: null,
-    createdAt: pullRequest.creationDate,
-    defaultMergeMethod: null,
-    deletions: null,
-    draft: false,
-    id: String(pullRequest.pullRequestId),
-    mergeRequirements: requirements,
-    mergedAt: state === "completed" ? (pullRequest.closedDate ?? null) : null,
-    number: pullRequest.pullRequestId,
-    repository,
-    reviewDecision: "none",
-    source: { name: source, oid: null, repository },
-    state:
-      state === "active" ? "open" : state === "completed" ? "merged" : "closed",
-    target: { name: target, oid: null, repository },
-    title: pullRequest.title,
-    updatedAt: pullRequest.closedDate ?? pullRequest.creationDate,
-    viewerCanMerge: null,
-    webUrl: `${repository.webUrl}/pullrequest/${pullRequest.pullRequestId}`,
-  };
-}
-
 function mapActor(actor: typeof actorSchema.infer): SourceControlActor {
   return {
     avatarUrl: actor.imageUrl ?? null,
@@ -510,28 +361,6 @@ function mapActor(actor: typeof actorSchema.infer): SourceControlActor {
     id: actor.id ?? null,
     login: actor.uniqueName ?? actor.displayName ?? "unknown",
     webUrl: null,
-  };
-}
-
-function mapPolicy(policy: typeof policySchema.infer): MergeRequirement {
-  const label = policy.type?.displayName ?? "Azure branch policy";
-  const normalized = label.toLowerCase();
-  const kind = normalized.includes("reviewer")
-    ? "review-approval"
-    : normalized.includes("comment")
-      ? "unresolved-discussions"
-      : normalized.includes("work item")
-        ? "linked-work-items"
-        : normalized.includes("build")
-          ? "checks"
-          : "other";
-  return {
-    blocking: policy.isBlocking,
-    detailsUrl: policy.url ?? null,
-    id: String(policy.id ?? policy.type?.id ?? label),
-    kind,
-    label,
-    state: policy.isEnabled === false ? "not-applicable" : "pending",
   };
 }
 

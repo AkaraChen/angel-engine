@@ -1,23 +1,14 @@
 import { type as arkType } from "arktype";
 
 import {
-  changeRequestSchema,
-  checkSummarySchema,
-  mergeRequirementSchema,
   providerDiagnosticSchema,
   repositoryIdentitySchema,
-  reviewCommentSchema,
   workItemSchema,
 } from "./schemas";
 import type {
-  ChangeRequest,
-  CheckSummary,
-  MergeMethod,
-  MergeRequirement,
   ProviderAuthenticationState,
   ProviderDiagnostic,
   RepositoryIdentity,
-  ReviewComment,
   SourceControlCapabilityId,
   WorkItem,
 } from "./types";
@@ -99,75 +90,6 @@ export interface ListRepositoriesInput {
   limit: number;
 }
 
-export interface CreateChangeRequestInput extends RepositoryOperationInput {
-  title: string;
-  body: string;
-  sourceBranch: string;
-  targetBranch: string;
-  draft: boolean;
-}
-
-export interface ChangeRequestStatusResult {
-  changeRequest: ChangeRequest;
-  checks: CheckSummary | null;
-}
-
-export interface AddChangeRequestCommentInput extends NumberedItemInput {
-  body: string;
-}
-
-export interface MergeChangeRequestInput extends NumberedItemInput {
-  deleteSourceBranch?: boolean;
-  method: MergeMethod;
-}
-
-export interface ChangeRequestPreflightInput extends RepositoryOperationInput {
-  sourceBranch: string;
-  targetBranch: string | null;
-}
-
-export interface ChangeRequestPreflightResult {
-  targetBranch: string;
-  requirements: readonly MergeRequirement[];
-}
-
-/** Renderer-facing create preflight, composed from provider and local Git state. */
-export interface ChangeRequestCreatePreflightResult
-  extends ChangeRequestPreflightResult {
-  aheadCount: number;
-  availableTargetBranches: readonly string[];
-  existing: ChangeRequest | null;
-  needsPush: boolean;
-  sourceBranch: string;
-}
-
-export interface ChangeRequestTemplate {
-  body: string;
-  name: string;
-  path: string | null;
-  relativePath: string | null;
-}
-
-export interface ChangeRequestTemplateResult {
-  body: string;
-  templates: readonly ChangeRequestTemplate[];
-}
-
-export interface CreateChangeRequestWorkspaceResult {
-  branch: string;
-  chatId: string;
-  cwd: string;
-  number: number;
-  title: string;
-  url: string;
-}
-
-export interface ChangeRequestHeadResult {
-  changeRequest: ChangeRequest;
-  remoteUrl: string;
-  ref: string;
-}
-
 export interface CloneRepositoryInput extends RepositoryOperationInput {
   targetPath: string;
 }
@@ -189,39 +111,6 @@ export interface SourceControlOperationMap {
   repositoryIdentity: {
     input: UrlOperationInput;
     output: RepositoryIdentity | null;
-  };
-  "changeRequests.create": {
-    input: CreateChangeRequestInput;
-    output: ChangeRequest;
-  };
-  "changeRequests.get": { input: NumberedItemInput; output: ChangeRequest };
-  "changeRequests.getByUrl": {
-    input: UrlOperationInput;
-    output: ChangeRequest;
-  };
-  "changeRequests.list": {
-    input: ListOperationInput;
-    output: readonly ChangeRequest[];
-  };
-  "changeRequests.status": {
-    input: NumberedItemInput;
-    output: ChangeRequestStatusResult;
-  };
-  "changeRequests.comment": {
-    input: AddChangeRequestCommentInput;
-    output: ReviewComment;
-  };
-  "changeRequests.merge": {
-    input: MergeChangeRequestInput;
-    output: ChangeRequest;
-  };
-  "changeRequests.preflight": {
-    input: ChangeRequestPreflightInput;
-    output: ChangeRequestPreflightResult;
-  };
-  "changeRequests.resolveHead": {
-    input: NumberedItemInput;
-    output: ChangeRequestHeadResult;
   };
   "workItems.get": { input: NumberedItemInput; output: WorkItem };
   "workItems.getByUrl": { input: UrlOperationInput; output: WorkItem };
@@ -298,78 +187,6 @@ export const sourceControlOperationSchemas = {
   repositoryIdentity: {
     input: urlInputSchema,
     output: repositoryIdentitySchema.or("null"),
-  },
-  "changeRequests.create": {
-    input: arkType({
-      "+": "reject",
-      repository: repositoryIdentitySchema,
-      title: "string > 0",
-      body: "string",
-      sourceBranch: "string > 0",
-      targetBranch: "string > 0",
-      draft: "boolean",
-    }),
-    output: changeRequestSchema,
-  },
-  "changeRequests.get": {
-    input: numberedItemInputSchema,
-    output: changeRequestSchema,
-  },
-  "changeRequests.getByUrl": {
-    input: urlInputSchema,
-    output: changeRequestSchema,
-  },
-  "changeRequests.list": {
-    input: listInputSchema,
-    output: changeRequestSchema.array(),
-  },
-  "changeRequests.status": {
-    input: numberedItemInputSchema,
-    output: arkType({
-      "+": "reject",
-      changeRequest: changeRequestSchema,
-      checks: checkSummarySchema.or("null"),
-    }),
-  },
-  "changeRequests.comment": {
-    input: arkType({
-      "+": "reject",
-      repository: repositoryIdentitySchema,
-      id: "string > 0",
-      body: "string > 0",
-    }),
-    output: reviewCommentSchema,
-  },
-  "changeRequests.merge": {
-    input: arkType({
-      "+": "reject",
-      repository: repositoryIdentitySchema,
-      id: "string > 0",
-      method: "'merge' | 'rebase' | 'squash'",
-    }),
-    output: changeRequestSchema,
-  },
-  "changeRequests.preflight": {
-    input: arkType({
-      "+": "reject",
-      repository: repositoryIdentitySchema,
-      sourceBranch: "string > 0",
-      targetBranch: "string | null",
-    }),
-    output: arkType({
-      "+": "reject",
-      targetBranch: "string > 0",
-      requirements: mergeRequirementSchema.array(),
-    }),
-  },
-  "changeRequests.resolveHead": {
-    input: numberedItemInputSchema,
-    output: arkType({
-      "+": "reject",
-      changeRequest: changeRequestSchema,
-      remoteUrl: "string > 0",
-      ref: "string > 0",
-    }),
   },
   "workItems.get": { input: numberedItemInputSchema, output: workItemSchema },
   "workItems.getByUrl": { input: urlInputSchema, output: workItemSchema },

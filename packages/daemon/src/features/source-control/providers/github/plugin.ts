@@ -29,18 +29,6 @@ import {
   parseGitHubRepositoryUrl,
   parseGitHubUrl,
 } from "./internal/resolve";
-import {
-  commentOnGitHubChangeRequest,
-  createGitHubChangeRequest,
-  getGitHubChangeRequest,
-  getGitHubChangeRequestByUrl,
-  getGitHubChangeRequestStatus,
-  listGitHubChangeRequests,
-  mergeGitHubChangeRequest,
-  preflightGitHubChangeRequest,
-  resolveGitHubChangeRequestHead,
-} from "./internal/change-requests";
-
 const PROVIDER_ID = "github";
 const PUBLIC_HOSTS = new Set(["github.com", "www.github.com"]);
 
@@ -244,15 +232,6 @@ export function createGitHubPlugin(
         "discovery.listNamespaces",
         "discovery.listRepositories",
         "repositoryIdentity",
-        "changeRequests.get",
-        "changeRequests.getByUrl",
-        "changeRequests.list",
-        "changeRequests.status",
-        "changeRequests.resolveHead",
-        "changeRequests.create",
-        "changeRequests.comment",
-        "changeRequests.merge",
-        "changeRequests.preflight",
         "workItems.get",
         "workItems.getByUrl",
         "workItems.list",
@@ -278,41 +257,13 @@ export function createGitHubPlugin(
     },
     git: {
       parseUrl: parseGitHubRepositoryUrl,
-      parseChangeRequestUrl: (url) => {
-        const parsed = parseGitHubUrl(url);
-        if (parsed?.kind !== "pullRequest") return null;
-        const repository = parseGitHubRepositoryUrl(parsed.url);
-        return repository === null
-          ? null
-          : { repository, id: String(parsed.number) };
-      },
       clone: (input, context) =>
         cloneGitHubRepository(input, context, resolvedDependencies),
     },
     repositories: {
       parseUrl: parseGitHubRepositoryUrl,
     },
-    changeRequests: {
-      create: (input, context) =>
-        createGitHubChangeRequest(input, context, resolvedDependencies),
-      get: (input, context) =>
-        getGitHubChangeRequest(input, context, resolvedDependencies),
-      getByUrl: (input, context) =>
-        getGitHubChangeRequestByUrl(input, context, resolvedDependencies),
-      list: (input, context) =>
-        listGitHubChangeRequests(input, context, resolvedDependencies),
-      status: (input, context) =>
-        getGitHubChangeRequestStatus(input, context, resolvedDependencies),
-      resolveHead: (input, context) =>
-        resolveGitHubChangeRequestHead(input, context, resolvedDependencies),
-      comment: (input, context) =>
-        commentOnGitHubChangeRequest(input, context, resolvedDependencies),
-      merge: (input, context) =>
-        mergeGitHubChangeRequest(input, context, resolvedDependencies),
-      preflight: (input, context) =>
-        preflightGitHubChangeRequest(input, context, resolvedDependencies),
-    },
-    workItems: {
+workItems: {
       get: (input, context) =>
         getGitHubWorkItem(input, context, resolvedDependencies),
       getByUrl: (input, context) =>

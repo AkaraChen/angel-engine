@@ -233,73 +233,15 @@ runProviderContractSuite(
             operationContext(),
           ),
       },
-      {
-        capability: "changeRequests.get",
-        run: (plugin) =>
-          plugin.changeRequests!.get!(numbered, operationContext()),
-      },
-      {
-        capability: "changeRequests.getByUrl",
-        run: (plugin) =>
-          plugin.changeRequests!.getByUrl!(
-            { url: pullRequest.url },
-            operationContext(),
-          ),
-      },
-      {
-        capability: "changeRequests.list",
-        run: (plugin) =>
-          plugin.changeRequests!.list!(listed, operationContext()),
-      },
-      {
-        capability: "changeRequests.status",
-        run: (plugin) =>
-          plugin.changeRequests!.status!(numbered, operationContext()),
-      },
-      {
-        capability: "changeRequests.resolveHead",
-        run: (plugin) =>
-          plugin.changeRequests!.resolveHead!(numbered, operationContext()),
-      },
-      {
-        capability: "changeRequests.create",
-        run: (plugin) =>
-          plugin.changeRequests!.create!(
-            {
-              body: "Body",
-              draft: false,
-              repository,
-              sourceBranch: "feature",
-              targetBranch: "main",
-              title: "Ship widgets",
-            },
-            operationContext(),
-          ),
-      },
-      {
-        capability: "changeRequests.comment",
-        run: (plugin) =>
-          plugin.changeRequests!.comment!(
-            { body: "Looks good", ...numbered },
-            operationContext(),
-          ),
-      },
-      {
-        capability: "changeRequests.merge",
-        run: (plugin) =>
-          plugin.changeRequests!.merge!(
-            { ...numbered, method: "merge" },
-            operationContext(),
-          ),
-      },
-      {
-        capability: "changeRequests.preflight",
-        run: (plugin) =>
-          plugin.changeRequests!.preflight!(
-            { repository, sourceBranch: "feature", targetBranch: null },
-            operationContext(),
-          ),
-      },
+
+
+
+
+
+
+
+
+
       {
         capability: "workItems.get",
         run: (plugin) =>

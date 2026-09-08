@@ -1,7 +1,4 @@
 import type {
-  ChangeRequest,
-  CheckRun,
-  CheckSummary,
   NumberedItemInput,
   ProbeContext,
   ProviderMatch,
@@ -64,51 +61,6 @@ const issueSchema = arkType({
   updated_at: "string > 0",
   web_url: "string > 0",
 });
-const mergeRequestSchema = arkType({
-  "+": "ignore",
-  "additions?": "number | null",
-  author: actorSchema,
-  created_at: "string > 0",
-  description: "string | null",
-  detailed_merge_status: "string",
-  draft: "boolean",
-  iid: positiveInteger,
-  merge_status: "string",
-  merged_at: "string | null",
-  source_branch: "string > 0",
-  state: "'opened' | 'closed' | 'merged'",
-  target_branch: "string > 0",
-  title: "string > 0",
-  updated_at: "string > 0",
-  web_url: "string > 0",
-});
-const noteSchema = arkType({
-  "+": "ignore",
-  author: actorSchema,
-  body: "string",
-  created_at: "string > 0",
-  id: "number | string",
-  "updated_at?": "string | null",
-});
-const pipelineSchema = arkType({
-  "+": "ignore",
-  id: "number | string",
-  "ref?": "string | null",
-  status: "string > 0",
-  web_url: "string > 0",
-});
-const jobSchema = arkType({
-  "+": "ignore",
-  allow_failure: "boolean",
-  "finished_at?": "string | null",
-  id: "number | string",
-  name: "string > 0",
-  "stage?": "string | null",
-  "started_at?": "string | null",
-  status: "string > 0",
-  web_url: "string > 0",
-});
-
 interface GitLabDependencies {
   findGlab?: () => Promise<string | null>;
   getToken?: () => Promise<string | null>;
@@ -140,14 +92,6 @@ export function createGitLabPlugin(
         "discovery.listNamespaces",
         "discovery.listRepositories",
         "repositoryIdentity",
-        "changeRequests.get",
-        "changeRequests.getByUrl",
-        "changeRequests.list",
-        "changeRequests.create",
-        "changeRequests.comment",
-        "changeRequests.status",
-        "changeRequests.preflight",
-        "changeRequests.resolveHead",
         "workItems.get",
         "workItems.getByUrl",
         "workItems.list",
@@ -157,12 +101,7 @@ export function createGitLabPlugin(
       hosts: ["gitlab.com"],
       id: PROVIDER_ID,
       unsupportedCapabilities: {
-        "changeRequests.merge": {
-          kind: "out-of-scope",
-          message:
-            "Merging GitLab change requests is outside the first release.",
-        },
-      },
+},
     },
     discovery: {
       match: matchGitLab,
@@ -208,12 +147,6 @@ export function createGitLabPlugin(
     },
     git: {
       parseUrl: parseGitLabRepositoryUrl,
-      parseChangeRequestUrl: (url) => {
-        const parsed = parseGitLabItemUrl(url);
-        return parsed?.kind === "merge-request"
-          ? { id: parsed.id, repository: parsed.repository }
-          : null;
-      },
       clone: async (input, context) => {
         assertGitLabRepository(input.repository);
         const remoteUrl = `${input.repository.webUrl}.git`;
@@ -284,87 +217,7 @@ export function createGitLabPlugin(
           )
         ).map((issue) => mapIssue(issue, input.repository)),
     },
-    changeRequests: {
-      get: (input, context) => getMergeRequest(api, input, context),
-      getByUrl: async (input, context) => {
-        const parsed = parseGitLabItemUrl(input.url);
-        if (parsed?.kind !== "merge-request") {
-          throw DaemonError.sourceControlUrlUnsupported(PROVIDER_ID);
-        }
-        return getMergeRequest(
-          api,
-          { id: parsed.id, repository: parsed.repository },
-          context,
-        );
-      },
-      list: async (input, context) =>
-        (
-          await api(
-            input.repository.host,
-            `${projectEndpoint(input.repository)}/merge_requests?scope=all&state=all&per_page=${input.limit}&search=${encodeURIComponent(input.query ?? "")}`,
-            mergeRequestSchema.array(),
-            context,
-          )
-        ).map((mergeRequest) =>
-          mapMergeRequest(mergeRequest, input.repository),
-        ),
-      create: async (input, context) => {
-        const payload = await api(
-          input.repository.host,
-          `${projectEndpoint(input.repository)}/merge_requests`,
-          mergeRequestSchema,
-          context,
-          [
-            "--method",
-            "POST",
-            "--field",
-            `title=${input.title}`,
-            "--field",
-            `description=${input.body}`,
-            "--field",
-            `source_branch=${input.sourceBranch}`,
-            "--field",
-            `target_branch=${input.targetBranch}`,
-            ...(input.draft ? ["--field", "draft=true"] : []),
-          ],
-        );
-        return mapMergeRequest(payload, input.repository);
-      },
-      comment: async (input, context) => {
-        const payload = await api(
-          input.repository.host,
-          `${projectEndpoint(input.repository)}/merge_requests/${encodeURIComponent(input.id)}/notes`,
-          noteSchema,
-          context,
-          ["--method", "POST", "--field", `body=${input.body}`],
-        );
-        return {
-          author: mapActor(payload.author),
-          body: payload.body,
-          createdAt: payload.created_at,
-          id: String(payload.id),
-          updatedAt: payload.updated_at ?? null,
-          webUrl: null,
-        };
-      },
-      status: async (input, context) => ({
-        changeRequest: await getMergeRequest(api, input, context),
-        checks: await snapshotChecks(api, input, context),
-      }),
-      preflight: async (input) => ({
-        requirements: [],
-        targetBranch: input.targetBranch ?? "main",
-      }),
-      resolveHead: async (input, context) => {
-        const changeRequest = await getMergeRequest(api, input, context);
-        return {
-          changeRequest,
-          ref: `refs/merge-requests/${input.id}/head`,
-          remoteUrl: `${input.repository.webUrl}.git`,
-        };
-      },
-    },
-  };
+};
 }
 
 function matchGitLab(
@@ -585,175 +438,6 @@ function mapIssue(
     title: issue.title,
     updatedAt: issue.updated_at,
     webUrl: issue.web_url,
-  };
-}
-
-function mapMergeRequest(
-  mergeRequest: typeof mergeRequestSchema.infer,
-  repository: RepositoryIdentity,
-): ChangeRequest {
-  const satisfied = mergeRequest.detailed_merge_status === "mergeable";
-  const ref = (name: string) => ({ name, oid: null, repository });
-  return {
-    additions: mergeRequest.additions ?? null,
-    allowedMergeMethods: [],
-    author: mapActor(mergeRequest.author),
-    body: mergeRequest.description ?? "",
-    changedFiles: null,
-    commitCount: null,
-    createdAt: mergeRequest.created_at,
-    defaultMergeMethod: null,
-    deletions: null,
-    draft: mergeRequest.draft,
-    id: String(mergeRequest.iid),
-    mergeRequirements: [
-      {
-        blocking: true,
-        detailsUrl: mergeRequest.web_url,
-        id: "gitlab:merge-status",
-        kind: "other",
-        label: "GitLab merge status",
-        state: satisfied ? "satisfied" : "pending",
-      },
-    ],
-    mergedAt: mergeRequest.merged_at,
-    number: mergeRequest.iid,
-    repository,
-    reviewDecision: "none",
-    source: ref(mergeRequest.source_branch),
-    state: mergeRequest.state === "opened" ? "open" : mergeRequest.state,
-    target: ref(mergeRequest.target_branch),
-    title: mergeRequest.title,
-    updatedAt: mergeRequest.updated_at,
-    viewerCanMerge: null,
-    webUrl: mergeRequest.web_url,
-  };
-}
-
-async function getMergeRequest(
-  api: <Output>(
-    host: string,
-    endpoint: string,
-    schema: (value: unknown) => Output | arkType.errors,
-    context: ProviderOperationContext,
-    extra?: readonly string[],
-  ) => Promise<Output>,
-  input: NumberedItemInput,
-  context: ProviderOperationContext,
-) {
-  return mapMergeRequest(
-    await api(
-      input.repository.host,
-      `${projectEndpoint(input.repository)}/merge_requests/${encodeURIComponent(input.id)}`,
-      mergeRequestSchema,
-      context,
-    ),
-    input.repository,
-  );
-}
-
-async function listChecks(
-  api: <Output>(
-    host: string,
-    endpoint: string,
-    schema: (value: unknown) => Output | arkType.errors,
-    context: ProviderOperationContext,
-    extra?: readonly string[],
-  ) => Promise<Output>,
-  input: NumberedItemInput,
-  context: ProviderOperationContext,
-): Promise<readonly CheckRun[]> {
-  const pipelines = await api(
-    input.repository.host,
-    `${projectEndpoint(input.repository)}/merge_requests/${encodeURIComponent(input.id)}/pipelines`,
-    pipelineSchema.array(),
-    context,
-  );
-  const pipeline = pipelines[0];
-  if (!pipeline) return [];
-  const jobs = await api(
-    input.repository.host,
-    `${projectEndpoint(input.repository)}/pipelines/${pipeline.id}/jobs`,
-    jobSchema.array(),
-    context,
-  );
-  return jobs.map((job) => mapJob(job, pipeline));
-}
-
-async function snapshotChecks(
-  api: <Output>(
-    host: string,
-    endpoint: string,
-    schema: (value: unknown) => Output | arkType.errors,
-    context: ProviderOperationContext,
-    extra?: readonly string[],
-  ) => Promise<Output>,
-  input: NumberedItemInput,
-  context: ProviderOperationContext,
-): Promise<CheckSummary> {
-  const checks = await listChecks(api, input, context);
-  const failed = checks.filter((check) => check.conclusion === "failure");
-  const failedBlocking = failed.filter((check) => check.blocking);
-  return {
-    checks,
-    failed,
-    failedBlocking,
-    hasPending: checks.some((check) => check.status !== "completed"),
-    headOid: null,
-    requiredAllGreen: failedBlocking.length === 0,
-  };
-}
-
-function mapJob(
-  job: typeof jobSchema.infer,
-  pipeline: typeof pipelineSchema.infer,
-): CheckRun {
-  const completed = [
-    "success",
-    "failed",
-    "canceled",
-    "skipped",
-    "manual",
-  ].includes(job.status);
-  return {
-    allowFailure: job.allow_failure,
-    attempt: 1,
-    blocking: !job.allow_failure,
-    completedAt: job.finished_at ?? null,
-    conclusion:
-      job.status === "success"
-        ? "success"
-        : job.status === "failed"
-          ? "failure"
-          : job.status === "canceled"
-            ? "canceled"
-            : job.status === "skipped"
-              ? "skipped"
-              : null,
-    detailsUrl: job.web_url,
-    group: {
-      attempt: 1,
-      detailsUrl: pipeline.web_url,
-      id: String(pipeline.id),
-      kind: "pipeline",
-      name: pipeline.ref ?? "Pipeline",
-      parentGroupId: null,
-      stage: job.stage ?? null,
-    },
-    id: String(job.id),
-    logRef: { jobId: String(job.id), kind: "job" },
-    manual: job.status === "manual",
-    name: job.name,
-    requiredness: job.allow_failure ? "optional" : "required",
-    retryOf: null,
-    startedAt: job.started_at ?? null,
-    status: completed
-      ? "completed"
-      : job.status === "manual"
-        ? "waiting-manual"
-        : job.status === "pending" || job.status === "created"
-          ? "queued"
-          : "running",
   };
 }
 

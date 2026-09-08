@@ -156,65 +156,14 @@ runProviderContractSuite(
             operationContext(),
           ),
       },
-      {
-        capability: "changeRequests.get",
-        run: (plugin) =>
-          plugin.changeRequests!.get!(numbered, operationContext()),
-      },
-      {
-        capability: "changeRequests.getByUrl",
-        run: (plugin) =>
-          plugin.changeRequests!.getByUrl!(
-            { url: mergeRequest.web_url },
-            operationContext(),
-          ),
-      },
-      {
-        capability: "changeRequests.list",
-        run: (plugin) =>
-          plugin.changeRequests!.list!(listed, operationContext()),
-      },
-      {
-        capability: "changeRequests.create",
-        run: (plugin) =>
-          plugin.changeRequests!.create!(
-            {
-              body: "",
-              draft: false,
-              repository,
-              sourceBranch: "feature",
-              targetBranch: "main",
-              title: "Ship widgets",
-            },
-            operationContext(),
-          ),
-      },
-      {
-        capability: "changeRequests.comment",
-        run: (plugin) =>
-          plugin.changeRequests!.comment!(
-            { body: "Looks good", ...numbered },
-            operationContext(),
-          ),
-      },
-      {
-        capability: "changeRequests.status",
-        run: (plugin) =>
-          plugin.changeRequests!.status!(numbered, operationContext()),
-      },
-      {
-        capability: "changeRequests.preflight",
-        run: (plugin) =>
-          plugin.changeRequests!.preflight!(
-            { repository, sourceBranch: "feature", targetBranch: null },
-            operationContext(),
-          ),
-      },
-      {
-        capability: "changeRequests.resolveHead",
-        run: (plugin) =>
-          plugin.changeRequests!.resolveHead!(numbered, operationContext()),
-      },
+
+
+
+
+
+
+
+
       {
         capability: "workItems.get",
         run: (plugin) =>
@@ -288,13 +237,6 @@ describe("GitLab provider boundaries", () => {
     });
   });
 
-  it("keeps merge and review threads outside the first release", () => {
-    const plugin = createGitLabPlugin();
-    expect(plugin.changeRequests?.merge).toBeUndefined();
-    expect(plugin.manifest.unsupportedCapabilities).toMatchObject({
-      "changeRequests.merge": { kind: "out-of-scope" },
-    });
-  });
 
   it("clones with glab without putting credentials in arguments", async () => {
     const runGlab = vi.fn(async () => ({ stderr: "", stdout: "" }));

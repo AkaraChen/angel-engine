@@ -53,7 +53,7 @@ function plugin(id: string, host: string): SourceControlProviderPlugin {
           : null;
       },
     },
-    git: { parseChangeRequestUrl: () => null, parseUrl: () => null },
+    git: { parseUrl: () => null },
     manifest: {
       capabilities: ["provider.auth"],
       displayName: id,

@@ -108,22 +108,8 @@ runProviderContractSuite(
             operationContext(),
           ),
       },
-      {
-        capability: "changeRequests.list",
-        run: (plugin) =>
-          plugin.changeRequests!.list!(
-            { limit: 10, query: null, repository },
-            operationContext(),
-          ),
-      },
-      {
-        capability: "changeRequests.get",
-        run: (plugin) =>
-          plugin.changeRequests!.get!(
-            { id: "42", repository },
-            operationContext(),
-          ),
-      },
+
+
     ],
     probe,
     repository: {
@@ -174,120 +160,7 @@ describe("Azure DevOps minimum adapter", () => {
     expect(repository.namespace).toHaveLength(2);
   });
 
-  it("declares only discovery, auth, identity and PR list/get", () => {
-    expect(createAzureDevOpsPlugin().manifest.capabilities).toEqual([
-      "provider.auth",
-      "discovery.listNamespaces",
-      "discovery.listRepositories",
-      "repositoryIdentity",
-      "changeRequests.list",
-      "changeRequests.get",
-    ]);
-  });
 
-  it("maps real Azure policy payloads with blocking and optional semantics", async () => {
-    const policies = [
-      {
-        id: 1,
-        isBlocking: true,
-        isEnabled: true,
-        type: { displayName: "Build validation", id: "build" },
-      },
-      {
-        id: 2,
-        isBlocking: false,
-        isEnabled: true,
-        type: { displayName: "Optional reviewers", id: "reviewers" },
-      },
-    ];
-    const runAz = vi.fn(async (args: readonly string[]) => ({
-      stderr: "",
-      stdout: JSON.stringify(
-        args.includes("policy") ? policies : contractPullRequest,
-      ),
-    }));
-    const plugin = createAzureDevOpsPlugin({ runAz });
 
-    const result = await plugin.changeRequests?.get?.(
-      { id: "42", repository },
-      { deadline: Date.now() + 10_000, signal: new AbortController().signal },
-    );
 
-    expect(result?.mergeRequirements).toEqual([
-      expect.objectContaining({ blocking: true, kind: "checks" }),
-      expect.objectContaining({ blocking: false, kind: "review-approval" }),
-    ]);
-    expect(runAz).toHaveBeenCalledWith(
-      expect.arrayContaining(["--organization", "https://dev.azure.com/acme"]),
-      expect.objectContaining({ signal: expect.any(AbortSignal) }),
-    );
-  });
-
-  it("preserves a mapped Azure DevOps Server org URL and fails hosted operations closed", async () => {
-    const serverUrl =
-      "https://ado.acme.internal/tfs/DefaultCollection/Widgets/_git/widget-api";
-    const serverRepository = parseAzureRepositoryUrl(
-      serverUrl,
-      "ado.acme.internal",
-    );
-    expect(serverRepository).toMatchObject({
-      extensions: {
-        azure: {
-          orgUrl: "https://ado.acme.internal/tfs/DefaultCollection",
-        },
-      },
-      host: "ado.acme.internal",
-      namespace: ["DefaultCollection", "Widgets"],
-      webUrl: serverUrl,
-    });
-
-    const runAz = vi.fn(async () => ({ stderr: "", stdout: "[]" }));
-    const plugin = createAzureDevOpsPlugin({
-      findAz: async () => "/usr/bin/az",
-      runAz,
-    });
-    const remote = {
-      fetchUrl: serverUrl,
-      name: "origin",
-      pushUrl: null,
-      url: serverUrl,
-    };
-    const match = plugin.discovery.match({
-      ...probe,
-      hostMappings: { "ado.acme.internal": "azure-devops" },
-      remotes: [remote],
-    });
-    expect(match).toMatchObject({ repository: serverRepository });
-    await expect(
-      plugin.discovery.checkReadiness(
-        Array.isArray(match) ? match[0] : match!,
-        {
-          deadline: Date.now() + 10_000,
-          signal: new AbortController().signal,
-        },
-      ),
-    ).resolves.toMatchObject({
-      authentication: "unavailable",
-      diagnostics: [{ code: "source-control/requires-configuration" }],
-    });
-    await expect(
-      plugin.changeRequests?.list?.(
-        { limit: 10, query: null, repository: serverRepository! },
-        {
-          deadline: Date.now() + 10_000,
-          signal: new AbortController().signal,
-        },
-      ),
-    ).rejects.toMatchObject({ code: "source-control/capability-unsupported" });
-    await expect(
-      plugin.changeRequests?.get?.(
-        { id: "42", repository: serverRepository! },
-        {
-          deadline: Date.now() + 10_000,
-          signal: new AbortController().signal,
-        },
-      ),
-    ).rejects.toMatchObject({ code: "source-control/capability-unsupported" });
-    expect(runAz).not.toHaveBeenCalled();
-  });
 });

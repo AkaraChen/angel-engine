@@ -41,7 +41,6 @@ export function createExampleProvider(): SourceControlProviderPlugin {
       }),
     },
     git: {
-      parseChangeRequestUrl: () => null,
       parseUrl: parseExampleRepositoryUrl,
     },
     repositories: { parseUrl: parseExampleRepositoryUrl },

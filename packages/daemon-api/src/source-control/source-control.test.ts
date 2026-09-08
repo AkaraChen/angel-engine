@@ -4,8 +4,6 @@ import { describe, expect, it } from "vitest";
 import { capabilityState, repositoryKey } from "./capabilities";
 import { sourceControlProjectConfigSchema } from "./config";
 import {
-  changeRequestSchema,
-  checkRunSchema,
   providerActivationSchema,
   repositoryIdentitySchema,
 } from "./schemas";
@@ -95,85 +93,7 @@ describe("source-control contracts", () => {
     );
   });
 
-  it("represents GitLab retry, manual, and allow-failure jobs", () => {
-    const retriedJob = {
-      id: "job-102",
-      group: {
-        id: "pipeline-7",
-        kind: "pipeline",
-        name: "merge request pipeline",
-        stage: "deploy",
-        parentGroupId: null,
-        attempt: 1,
-        detailsUrl: "https://gitlab.example.com/pipelines/7",
-      },
-      name: "deploy preview",
-      status: "waiting-manual",
-      conclusion: null,
-      requiredness: "unknown",
-      blocking: false,
-      attempt: 2,
-      retryOf: "job-91",
-      allowFailure: true,
-      manual: true,
-      startedAt: null,
-      completedAt: null,
-      detailsUrl: "https://gitlab.example.com/jobs/102",
-      logRef: { kind: "job", jobId: "102" },
-      extensions: { gitlab: { pipelineId: 7 } },
-    };
 
-    expectValid(checkRunSchema, retriedJob);
-  });
-
-  it("keeps Azure policies as merge requirements, not check runs", () => {
-    const repository = {
-      providerId: "azure-devops",
-      host: "dev.azure.com",
-      namespace: ["acme", "widgets"],
-      name: "web",
-      remoteId: "repo-guid",
-      displayPath: "acme/widgets/web",
-      webUrl: "https://dev.azure.com/acme/widgets/_git/web",
-    };
-    const changeRequest = {
-      id: "42",
-      number: 42,
-      repository,
-      title: "Ship widget",
-      body: "",
-      author: null,
-      state: "open",
-      draft: false,
-      source: { name: "feature/widget", oid: "abc", repository },
-      target: { name: "main", oid: "def", repository },
-      webUrl: "https://dev.azure.com/acme/widgets/_git/web/pullrequest/42",
-      createdAt: null,
-      updatedAt: null,
-      mergedAt: null,
-      additions: null,
-      deletions: null,
-      changedFiles: null,
-      commitCount: null,
-      reviewDecision: "review-required",
-      mergeRequirements: [
-        {
-          id: "policy-17",
-          kind: "linked-work-items",
-          state: "unsatisfied",
-          blocking: true,
-          label: "Linked work items",
-          detailsUrl: null,
-          extensions: { azureDevOps: { configurationId: 17 } },
-        },
-      ],
-      allowedMergeMethods: ["squash"],
-      defaultMergeMethod: "squash",
-      viewerCanMerge: true,
-    };
-
-    expectValid(changeRequestSchema, changeRequest);
-  });
 
   it("rejects provider-specific fields at neutral model top level", () => {
     const result = repositoryIdentitySchema({
