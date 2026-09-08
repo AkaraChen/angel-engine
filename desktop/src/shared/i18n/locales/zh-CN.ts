@@ -432,7 +432,6 @@ export const zhCN = {
       refreshProjects: "刷新项目",
       retryWorktreeCreation: "重试创建 worktree",
       settings: "设置",
-      shepherding: "正在 Shepherd 此会话",
       toggleChats: "折叠或展开聊天",
       mobileDescription: "显示移动端侧边栏。",
       title: "侧边栏",
@@ -1095,7 +1094,6 @@ export const zhCN = {
       commandPalette: "命令面板",
       commandSessions: "会话",
       commandImportSession: "导入会话到项目",
-      commandShepherdChangeRequest: "Shepherd 变更请求",
     },
     promptInput: {
       addPhotosOrFiles: "添加图片或文件",

@@ -8,7 +8,6 @@ import {
   GearSix as SettingsIcon,
   Plus as PlusIcon,
 } from "@phosphor-icons/react";
-import is from "@sindresorhus/is";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -93,14 +92,7 @@ export const WorkspaceCommandPalette: FC<WorkspaceCommandPaletteProps> = ({
           title: displayChatTitle(chat.title, t),
         })),
     ],
-    [
-      chats,
-      onImportSession,
-      onNewWorkspace,
-      onOpenSession,
-      onOpenSettings,
-      t,
-    ],
+    [chats, onImportSession, onNewWorkspace, onOpenSession, onOpenSettings, t],
   );
   const search = useMemo(() => createTitleSearch(entries), [entries]);
   const results = search(query, MAX_PALETTE_ITEMS);
@@ -108,16 +100,24 @@ export const WorkspaceCommandPalette: FC<WorkspaceCommandPaletteProps> = ({
   const sessionResults = results.filter((entry) => entry.kind === "session");
 
   useContextKey("palette.open", open);
-  useCommand(COMMAND_IDS.paletteOpen, () => {
-    setOpen((current) => !current);
-    return true;
-  }, []);
-  useCommand(COMMAND_IDS.paletteClose, () => {
-    if (!open) return false;
-    setOpen(false);
-    setQuery("");
-    return true;
-  }, [open]);
+  useCommand(
+    COMMAND_IDS.paletteOpen,
+    () => {
+      setOpen((current) => !current);
+      return true;
+    },
+    [],
+  );
+  useCommand(
+    COMMAND_IDS.paletteClose,
+    () => {
+      if (!open) return false;
+      setOpen(false);
+      setQuery("");
+      return true;
+    },
+    [open],
+  );
 
   const selectEntry = (entry: CommandPaletteEntry) => {
     setOpen(false);

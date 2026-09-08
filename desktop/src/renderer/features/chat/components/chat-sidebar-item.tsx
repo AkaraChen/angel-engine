@@ -2,7 +2,6 @@ import type { ReactElement } from "react";
 import { Archive, Robot as Bot, PushPin } from "@phosphor-icons/react";
 
 import is from "@sindresorhus/is";
-import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
   WorkspaceSidebarMenuAction,
@@ -13,11 +12,6 @@ import {
   agentRuntimeLabel,
 } from "@/features/agents/agent-runtime-icons";
 import { useChatAttention } from "@/features/chat/state/chat-run-store";
-import {
-  isShepherdActive,
-  shepherdSessionQueryOptions,
-} from "@/features/shepherd/api/queries";
-import { useApi } from "@/platform/use-api";
 import { cn } from "@/platform/utils";
 
 import { ChatRunningPulse } from "./chat-running-pulse";
@@ -132,7 +126,6 @@ function ChatSidebarTrailingSlot({
           )}
         >
           <ChatAttentionIndicators chatId={chatId} />
-          <ChatShepherdBadge chatId={chatId} />
           <ChatRunningPulse chatId={chatId} />
         </span>
         {onArchiveChat ? (
@@ -201,30 +194,5 @@ function ChatAttentionIndicators({
         />
       ) : null}
     </span>
-  );
-}
-
-function ChatShepherdBadge({
-  chatId,
-}: {
-  chatId: string;
-}): ReactElement | null {
-  const { t } = useTranslation();
-  const api = useApi();
-  const sessionQuery = useQuery(
-    shepherdSessionQueryOptions({ api, chatId, enabled: true }),
-  );
-  if (!isShepherdActive(sessionQuery.data?.session)) return null;
-
-  return (
-    <span
-      aria-label={t("sidebar.shepherding")}
-      className="
-        size-1.5 shrink-0 rounded-full bg-sky-500
-        shadow-[0_0_0_1px_rgba(14,165,233,0.34)]
-      "
-      role="img"
-      title={t("sidebar.shepherding")}
-    />
   );
 }

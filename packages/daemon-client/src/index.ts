@@ -68,12 +68,6 @@ import type {
   ProcessRegistrySnapshotEntry,
 } from "@angel-engine/daemon-api/daemon";
 import type {
-  ShepherdResumeInput,
-  ShepherdSession,
-  ShepherdStartInput,
-  ShepherdStopInput,
-} from "@angel-engine/daemon-api/shepherd";
-import type {
   CreateProjectInput,
   ProjectCloneEvent,
   ProjectCloneInput,
@@ -207,8 +201,7 @@ export function createDaemonClient(options: DaemonClientOptions) {
     const response = await send(path, init);
     if (!response.ok) {
       const payload = (await response.json().catch(() => undefined)) as
-        | Partial<DaemonErrorPayload>
-        | undefined;
+        Partial<DaemonErrorPayload> | undefined;
       throw DaemonRequestError.http(
         response.status,
         payload?.code,
@@ -610,24 +603,6 @@ export function createDaemonClient(options: DaemonClientOptions) {
         request<Chat>(
           `/api/chats/${encodeURIComponent(input.chatId)}/runtime`,
           json("PUT", { runtime: input.runtime }),
-        ),
-    },
-    shepherd: {
-      get: (chatId: string) =>
-        request<{ session: ShepherdSession | null }>(
-          `/api/shepherd?${query({ chatId })}`,
-        ),
-      resume: (input: ShepherdResumeInput) =>
-        request<ShepherdSession>(
-          `/api/shepherd/${encodeURIComponent(input.id)}/resume`,
-          json("POST", {}),
-        ),
-      start: (input: ShepherdStartInput) =>
-        request<ShepherdSession>("/api/shepherd/start", json("POST", input)),
-      stop: (input: ShepherdStopInput) =>
-        request<ShepherdSession>(
-          `/api/shepherd/${encodeURIComponent(input.id)}/stop`,
-          json("POST", {}),
         ),
     },
     sourceControl: {

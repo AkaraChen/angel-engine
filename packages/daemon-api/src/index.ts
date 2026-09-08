@@ -6,6 +6,5 @@ export * from "./chat";
 export * from "./mime";
 export * from "./projects";
 export * from "./source-control";
-export * from "./shepherd";
 export * from "./terminal";
 export * from "./workspace-tools";

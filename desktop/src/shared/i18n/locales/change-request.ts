@@ -91,56 +91,6 @@ export const changeRequestEn = {
   ready: "Ready to merge",
   refresh: "Refresh",
   resolve: "Mark resolved",
-  shepherd: {
-    actionFailed: "Shepherd action failed",
-    hold: {
-      ambiguous: "Shepherd is waiting until the ambiguous send is resolved.",
-      queuedRun: "Shepherd is waiting for a queued message to finish.",
-      waitingForYou: "Shepherd is waiting for your input before continuing.",
-    },
-    invalidUrl: "Could not parse the change request URL.",
-    noChat: "Open a workspace chat before starting shepherd.",
-    queued: "Waiting for the current reply to finish, then shepherd continues.",
-    resume: "Resume",
-    resumeFailed: "Could not resume shepherd",
-    rounds: "{{round}} / {{max}}",
-    settled: {
-      blocked: {
-        detail:
-          "No progress after repeated attempts. Take over or adjust the change request.",
-        title: "Shepherd blocked",
-      },
-      budget: {
-        detail:
-          "The round budget was reached. Resume or raise the limit later.",
-        title: "Round budget reached",
-      },
-      closed: {
-        detail: "The change request was merged or closed.",
-        title: "Change request closed",
-      },
-      green: {
-        detail: "Required checks are green and review threads are clear.",
-        title: "Ready to merge",
-      },
-      stopped: {
-        detail: "Shepherd paused. Resume when you want it to take over again.",
-        title: "Shepherd stopped",
-      },
-    },
-    shepherdingStop: "Shepherding… (click to stop)",
-    sourceCollapse: "Collapse shepherd source",
-    sourceExpand: "Expand shepherd source",
-    start: "Shepherd this change request",
-    startFailed: "Could not start shepherd",
-    started: "Shepherd started",
-    stopped: "Shepherd stopped",
-    title: "Shepherd",
-    working: "Working…",
-    yielded: "Shepherd paused — you took over the session.",
-    yieldedDetail:
-      "Resume when you want shepherd to continue watching this change request.",
-  },
   title: "Change request",
   unresolvedTitle: "Unresolved conversations ({{count}})",
 } satisfies LocaleResourceTranslationWorkspaceToolsChangeRequest;
@@ -227,53 +177,6 @@ export const changeRequestZhCN = {
   ready: "可以合并",
   refresh: "刷新",
   resolve: "标记为已解决",
-  shepherd: {
-    actionFailed: "Shepherd 操作失败",
-    hold: {
-      ambiguous: "Shepherd 在等待歧义发送被解决。",
-      queuedRun: "Shepherd 在等待队列中的消息完成。",
-      waitingForYou: "Shepherd 在等待你的输入后再继续。",
-    },
-    invalidUrl: "无法解析变更请求链接。",
-    noChat: "请先打开工作区会话再启动 Shepherd。",
-    queued: "等当前回复结束后继续。",
-    resume: "恢复",
-    resumeFailed: "无法恢复 Shepherd",
-    rounds: "{{round}} / {{max}}",
-    settled: {
-      blocked: {
-        detail: "连续尝试后仍无进展，请接管或调整变更请求。",
-        title: "Shepherd 已阻塞",
-      },
-      budget: {
-        detail: "已达轮次上限。需要时可恢复或提高上限。",
-        title: "轮次预算已用尽",
-      },
-      closed: {
-        detail: "变更请求已合并或关闭。",
-        title: "变更请求已关闭",
-      },
-      green: {
-        detail: "必需检查已通过，审阅对话已清空。",
-        title: "可以合并",
-      },
-      stopped: {
-        detail: "Shepherd 已暂停。需要时再恢复盯盘。",
-        title: "Shepherd 已停止",
-      },
-    },
-    shepherdingStop: "Shepherding…（点击停止）",
-    sourceCollapse: "收起来源卡片",
-    sourceExpand: "展开来源卡片",
-    start: "Shepherd 此变更请求",
-    startFailed: "无法启动 Shepherd",
-    started: "已启动 Shepherd",
-    stopped: "已停止 Shepherd",
-    title: "Shepherd",
-    working: "处理中…",
-    yielded: "Shepherd paused — 你接管了会话。",
-    yieldedDetail: "需要时点恢复，继续盯这个变更请求。",
-  },
   title: "变更请求",
   unresolvedTitle: "未解决的评论（{{count}}）",
 } satisfies LocaleResourceTranslationWorkspaceToolsChangeRequest;
@@ -359,53 +262,6 @@ export const changeRequestZhTW = {
   ready: "可以合併",
   refresh: "重新整理",
   resolve: "標記為已解決",
-  shepherd: {
-    actionFailed: "Shepherd 操作失敗",
-    hold: {
-      ambiguous: "Shepherd 正在等待歧義傳送被解決。",
-      queuedRun: "Shepherd 正在等待佇列中的訊息完成。",
-      waitingForYou: "Shepherd 正在等待你的輸入後再繼續。",
-    },
-    invalidUrl: "無法解析變更要求連結。",
-    noChat: "請先開啟工作區對話再啟動 Shepherd。",
-    queued: "等目前回覆結束後繼續。",
-    resume: "恢復",
-    resumeFailed: "無法恢復 Shepherd",
-    rounds: "{{round}} / {{max}}",
-    settled: {
-      blocked: {
-        detail: "連續嘗試後仍無進展，請接手或調整變更要求。",
-        title: "Shepherd 已阻塞",
-      },
-      budget: {
-        detail: "已達輪次上限。需要時可恢復或提高上限。",
-        title: "輪次預算已用盡",
-      },
-      closed: {
-        detail: "變更要求已合併或關閉。",
-        title: "變更要求已關閉",
-      },
-      green: {
-        detail: "必要檢查已通過，審閱對話已清空。",
-        title: "可以合併",
-      },
-      stopped: {
-        detail: "Shepherd 已暫停。需要時再恢復盯盤。",
-        title: "Shepherd 已停止",
-      },
-    },
-    shepherdingStop: "Shepherding…（點擊停止）",
-    sourceCollapse: "收起來源卡片",
-    sourceExpand: "展開來源卡片",
-    start: "Shepherd 此變更要求",
-    startFailed: "無法啟動 Shepherd",
-    started: "已啟動 Shepherd",
-    stopped: "已停止 Shepherd",
-    title: "Shepherd",
-    working: "處理中…",
-    yielded: "Shepherd paused — 你接管了對話。",
-    yieldedDetail: "需要時點恢復，繼續盯這個變更要求。",
-  },
   title: "變更要求",
   unresolvedTitle: "未解決的留言（{{count}}）",
 } satisfies LocaleResourceTranslationWorkspaceToolsChangeRequest;
@@ -512,59 +368,6 @@ export const changeRequestFr = {
   ready: "Prête à fusionner",
   refresh: "Actualiser",
   resolve: "Marquer comme résolue",
-  shepherd: {
-    actionFailed: "Échec de l’action Shepherd",
-    hold: {
-      ambiguous: "Shepherd attend que l’envoi ambigu soit résolu.",
-      queuedRun: "Shepherd attend la fin d’un message en file d’attente.",
-      waitingForYou: "Shepherd attend votre intervention avant de continuer.",
-    },
-    invalidUrl: "Impossible d’analyser l’URL de la demande de changement.",
-    noChat:
-      "Ouvrez une conversation d’espace de travail avant de lancer Shepherd.",
-    queued: "Shepherd continuera une fois la réponse en cours terminée.",
-    resume: "Reprendre",
-    resumeFailed: "Impossible de reprendre Shepherd",
-    rounds: "{{round}} / {{max}}",
-    settled: {
-      blocked: {
-        detail:
-          "Aucune progression après plusieurs tentatives. Prenez la main ou modifiez la demande de changement.",
-        title: "Shepherd est bloqué",
-      },
-      budget: {
-        detail:
-          "La limite de tours a été atteinte. Reprenez ou augmentez-la ultérieurement.",
-        title: "Limite de tours atteinte",
-      },
-      closed: {
-        detail: "La demande de changement a été fusionnée ou fermée.",
-        title: "Demande de changement fermée",
-      },
-      green: {
-        detail:
-          "Les vérifications requises sont au vert et les conversations de revue sont résolues.",
-        title: "Prête à fusionner",
-      },
-      stopped: {
-        detail:
-          "Shepherd est en pause. Reprenez lorsque vous souhaitez lui redonner la main.",
-        title: "Shepherd arrêté",
-      },
-    },
-    shepherdingStop: "Shepherd en cours… (cliquer pour arrêter)",
-    sourceCollapse: "Réduire la source de Shepherd",
-    sourceExpand: "Développer la source de Shepherd",
-    start: "Confier cette demande de changement à Shepherd",
-    startFailed: "Impossible de lancer Shepherd",
-    started: "Shepherd démarré",
-    stopped: "Shepherd arrêté",
-    title: "Shepherd",
-    working: "Traitement en cours…",
-    yielded: "Shepherd est en pause — vous avez repris la session.",
-    yieldedDetail:
-      "Reprenez lorsque vous souhaitez que Shepherd surveille de nouveau cette demande de changement.",
-  },
   title: "Demande de changement",
   unresolvedTitle: "Conversations non résolues ({{count}})",
 } satisfies LocaleResourceTranslationWorkspaceToolsChangeRequest;
@@ -668,60 +471,6 @@ export const changeRequestDe = {
   ready: "Bereit zum Zusammenführen",
   refresh: "Aktualisieren",
   resolve: "Als gelöst markieren",
-  shepherd: {
-    actionFailed: "Shepherd-Aktion fehlgeschlagen",
-    hold: {
-      ambiguous: "Shepherd wartet, bis der mehrdeutige Versand geklärt ist.",
-      queuedRun:
-        "Shepherd wartet auf den Abschluss einer Nachricht in der Warteschlange.",
-      waitingForYou: "Shepherd wartet vor dem Fortfahren auf deine Eingabe.",
-    },
-    invalidUrl: "Die Änderungsanfrage-URL konnte nicht verarbeitet werden.",
-    noChat: "Öffne einen Arbeitsbereich-Chat, bevor du Shepherd startest.",
-    queued:
-      "Shepherd fährt fort, sobald die aktuelle Antwort abgeschlossen ist.",
-    resume: "Fortsetzen",
-    resumeFailed: "Shepherd konnte nicht fortgesetzt werden",
-    rounds: "{{round}} / {{max}}",
-    settled: {
-      blocked: {
-        detail:
-          "Nach mehreren Versuchen gibt es keinen Fortschritt. Übernimm oder passe den Änderungsanfrage an.",
-        title: "Shepherd blockiert",
-      },
-      budget: {
-        detail:
-          "Das Rundenlimit wurde erreicht. Setze später fort oder erhöhe das Limit.",
-        title: "Rundenlimit erreicht",
-      },
-      closed: {
-        detail: "Der Änderungsanfrage wurde zusammengeführt oder geschlossen.",
-        title: "Änderungsanfrage geschlossen",
-      },
-      green: {
-        detail:
-          "Die erforderlichen Prüfungen sind grün und alle Review-Unterhaltungen sind geklärt.",
-        title: "Bereit zum Zusammenführen",
-      },
-      stopped: {
-        detail:
-          "Shepherd ist pausiert. Setze fort, wenn Shepherd wieder übernehmen soll.",
-        title: "Shepherd angehalten",
-      },
-    },
-    shepherdingStop: "Shepherd arbeitet… (zum Anhalten klicken)",
-    sourceCollapse: "Shepherd-Quelle einklappen",
-    sourceExpand: "Shepherd-Quelle ausklappen",
-    start: "Diesen Änderungsanfrage mit Shepherd betreuen",
-    startFailed: "Shepherd konnte nicht gestartet werden",
-    started: "Shepherd gestartet",
-    stopped: "Shepherd angehalten",
-    title: "Shepherd",
-    working: "In Arbeit…",
-    yielded: "Shepherd pausiert — du hast die Sitzung übernommen.",
-    yieldedDetail:
-      "Setze fort, wenn Shepherd diesen Änderungsanfrage wieder überwachen soll.",
-  },
   title: "Änderungsanfrage",
   unresolvedTitle: "Offene Unterhaltungen ({{count}})",
 } satisfies LocaleResourceTranslationWorkspaceToolsChangeRequest;
@@ -823,57 +572,6 @@ export const changeRequestJa = {
   ready: "マージできます",
   refresh: "更新",
   resolve: "解決済みにする",
-  shepherd: {
-    actionFailed: "Shepherd の操作に失敗しました",
-    hold: {
-      ambiguous: "Shepherd は曖昧な送信が解決されるまで待機しています。",
-      queuedRun:
-        "Shepherd はキュー内のメッセージが完了するまで待機しています。",
-      waitingForYou: "Shepherd は続行する前に入力を待っています。",
-    },
-    invalidUrl: "変更リクエストの URL を解析できませんでした。",
-    noChat: "Shepherd を開始する前にワークスペースのチャットを開いてください。",
-    queued: "現在の返信が完了すると Shepherd が続行します。",
-    resume: "再開",
-    resumeFailed: "Shepherd を再開できませんでした",
-    rounds: "{{round}} / {{max}}",
-    settled: {
-      blocked: {
-        detail:
-          "繰り返し試行しても進展がありません。引き継ぐか 変更リクエスト を調整してください。",
-        title: "Shepherd がブロックされました",
-      },
-      budget: {
-        detail:
-          "ラウンド上限に達しました。後で再開するか上限を増やしてください。",
-        title: "ラウンド上限に達しました",
-      },
-      closed: {
-        detail: "変更リクエストはマージまたはクローズされました。",
-        title: "変更リクエストはクローズ済みです",
-      },
-      green: {
-        detail: "必須チェックが成功し、レビュー会話もすべて解決されています。",
-        title: "マージできます",
-      },
-      stopped: {
-        detail: "Shepherd は一時停止中です。再び任せるときに再開してください。",
-        title: "Shepherd を停止しました",
-      },
-    },
-    shepherdingStop: "Shepherd が対応中…（クリックして停止）",
-    sourceCollapse: "Shepherd のソースを折りたたむ",
-    sourceExpand: "Shepherd のソースを展開",
-    start: "この 変更リクエスト を Shepherd に任せる",
-    startFailed: "Shepherd を開始できませんでした",
-    started: "Shepherd を開始しました",
-    stopped: "Shepherd を停止しました",
-    title: "Shepherd",
-    working: "処理中…",
-    yielded: "Shepherd は一時停止しました — セッションを引き継ぎました。",
-    yieldedDetail:
-      "Shepherd にこの 変更リクエスト の監視を続けさせる場合は再開してください。",
-  },
   title: "変更リクエスト",
   unresolvedTitle: "未解決の会話（{{count}}）",
 } satisfies LocaleResourceTranslationWorkspaceToolsChangeRequest;
@@ -971,55 +669,6 @@ export const changeRequestKo = {
   ready: "병합 준비 완료",
   refresh: "새로 고침",
   resolve: "해결됨으로 표시",
-  shepherd: {
-    actionFailed: "Shepherd 작업 실패",
-    hold: {
-      ambiguous: "Shepherd가 모호한 전송이 해결될 때까지 기다리고 있습니다.",
-      queuedRun: "Shepherd가 대기열 메시지가 완료될 때까지 기다리고 있습니다.",
-      waitingForYou: "Shepherd가 계속하기 전에 입력을 기다리고 있습니다.",
-    },
-    invalidUrl: "변경 요청 URL을 분석할 수 없습니다.",
-    noChat: "Shepherd를 시작하기 전에 작업 공간 채팅을 여세요.",
-    queued: "현재 응답이 끝나면 Shepherd가 계속 진행합니다.",
-    resume: "다시 시작",
-    resumeFailed: "Shepherd를 다시 시작할 수 없습니다",
-    rounds: "{{round}} / {{max}}",
-    settled: {
-      blocked: {
-        detail:
-          "반복해서 시도했지만 진전이 없습니다. 직접 처리하거나 변경 요청을 조정하세요.",
-        title: "Shepherd 차단됨",
-      },
-      budget: {
-        detail:
-          "라운드 한도에 도달했습니다. 나중에 다시 시작하거나 한도를 늘리세요.",
-        title: "라운드 한도 도달",
-      },
-      closed: {
-        detail: "변경 요청가 병합되었거나 닫혔습니다.",
-        title: "변경 요청 닫힘",
-      },
-      green: {
-        detail: "필수 검사가 통과했고 검토 대화가 모두 해결되었습니다.",
-        title: "병합 준비 완료",
-      },
-      stopped: {
-        detail: "Shepherd가 일시 중지되었습니다. 다시 맡기려면 재개하세요.",
-        title: "Shepherd 중지됨",
-      },
-    },
-    shepherdingStop: "Shepherd 작업 중… (클릭하여 중지)",
-    sourceCollapse: "Shepherd 소스 접기",
-    sourceExpand: "Shepherd 소스 펼치기",
-    start: "Shepherd에게 이 변경 요청 맡기기",
-    startFailed: "Shepherd를 시작할 수 없습니다",
-    started: "Shepherd 시작됨",
-    stopped: "Shepherd 중지됨",
-    title: "Shepherd",
-    working: "작업 중…",
-    yielded: "Shepherd 일시 중지 — 세션을 직접 처리하고 있습니다.",
-    yieldedDetail: "Shepherd가 이 변경 요청을 다시 감시하게 하려면 재개하세요.",
-  },
   title: "변경 요청",
   unresolvedTitle: "해결되지 않은 대화 ({{count}})",
 } satisfies LocaleResourceTranslationWorkspaceToolsChangeRequest;
@@ -1126,58 +775,6 @@ export const changeRequestEs = {
   ready: "Lista para fusionar",
   refresh: "Actualizar",
   resolve: "Marcar como resuelta",
-  shepherd: {
-    actionFailed: "Error en la acción de Shepherd",
-    hold: {
-      ambiguous: "Shepherd espera a que se resuelva el envío ambiguo.",
-      queuedRun: "Shepherd espera a que termine un mensaje en cola.",
-      waitingForYou: "Shepherd espera tu intervención antes de continuar.",
-    },
-    invalidUrl: "No se pudo interpretar la URL de la solicitud de cambio.",
-    noChat: "Abre un chat del espacio de trabajo antes de iniciar Shepherd.",
-    queued: "Shepherd continuará cuando termine la respuesta actual.",
-    resume: "Reanudar",
-    resumeFailed: "No se pudo reanudar Shepherd",
-    rounds: "{{round}} / {{max}}",
-    settled: {
-      blocked: {
-        detail:
-          "No hubo avances tras varios intentos. Toma el control o ajusta la solicitud de cambio.",
-        title: "Shepherd está bloqueado",
-      },
-      budget: {
-        detail:
-          "Se alcanzó el límite de rondas. Reanuda o amplía el límite más adelante.",
-        title: "Límite de rondas alcanzado",
-      },
-      closed: {
-        detail: "La solicitud de cambio se fusionó o cerró.",
-        title: "Solicitud de cambio cerrada",
-      },
-      green: {
-        detail:
-          "Las comprobaciones obligatorias están correctas y las conversaciones de revisión están resueltas.",
-        title: "Lista para fusionar",
-      },
-      stopped: {
-        detail:
-          "Shepherd está en pausa. Reanúdalo cuando quieras que vuelva a encargarse.",
-        title: "Shepherd detenido",
-      },
-    },
-    shepherdingStop: "Shepherd trabajando… (haz clic para detener)",
-    sourceCollapse: "Contraer la fuente de Shepherd",
-    sourceExpand: "Expandir la fuente de Shepherd",
-    start: "Encargar esta solicitud de cambio a Shepherd",
-    startFailed: "No se pudo iniciar Shepherd",
-    started: "Shepherd iniciado",
-    stopped: "Shepherd detenido",
-    title: "Shepherd",
-    working: "Trabajando…",
-    yielded: "Shepherd está en pausa: has tomado el control de la sesión.",
-    yieldedDetail:
-      "Reanúdalo cuando quieras que Shepherd vuelva a supervisar esta solicitud de cambio.",
-  },
   title: "Solicitud de cambio",
   unresolvedTitle: "Conversaciones sin resolver ({{count}})",
 } satisfies LocaleResourceTranslationWorkspaceToolsChangeRequest;
