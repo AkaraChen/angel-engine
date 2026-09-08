@@ -22,9 +22,6 @@ describe("LocalGitBackend boundary", () => {
       .map((file) => path.relative(sourceRoot, file))
       .sort();
 
-    expect(matches).toEqual([
-      "features/projects/clone.ts",
-      "features/source-control/local-git/backend.ts",
-    ]);
+    expect(matches).toEqual(["features/source-control/local-git/backend.ts"]);
   });
 });

@@ -196,34 +196,24 @@ describe("createDaemon", () => {
     expect(await response.json()).toBeInstanceOf(Array);
   });
 
-  it("persists project CRUD through the local database", async () => {
+  it("does not expose project CRUD routes", async () => {
     const daemon = await startDaemon();
-    const projectPath = await mkdtemp(path.join(os.tmpdir(), "angel-project-"));
 
     const createResponse = await daemonFetch(daemon, "/api/projects", {
-      body: JSON.stringify({ path: projectPath }),
+      body: JSON.stringify({ path: "/tmp/angel-project" }),
       headers: { "content-type": "application/json" },
       method: "POST",
     });
-    expect(createResponse.status).toBe(200);
-    const project = (await createResponse.json()) as {
-      id: string;
-      path: string;
-    };
-    expect(project.path).toBe(projectPath);
-
-    const listResponse = await daemonFetch(daemon, "/api/projects");
-    await expect(listResponse.json()).resolves.toContainEqual(project);
+    expect(createResponse.status).toBe(404);
 
     const deleteResponse = await daemonFetch(
       daemon,
-      `/api/projects/${project.id}`,
-      { method: "DELETE" },
+      "/api/projects/project-1",
+      {
+        method: "DELETE",
+      },
     );
-    expect(deleteResponse.status).toBe(200);
-
-    const finalListResponse = await daemonFetch(daemon, "/api/projects");
-    await expect(finalListResponse.json()).resolves.toEqual([]);
+    expect(deleteResponse.status).toBe(404);
   });
 
   it("acknowledges shutdown before invoking the process callback", async () => {
