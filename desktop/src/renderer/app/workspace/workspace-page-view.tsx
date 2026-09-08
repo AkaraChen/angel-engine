@@ -169,9 +169,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     runProjectContextMenuAction,
     updateChatFromRun,
   } = chatActions;
-  const openWorkspaceTerminal = useWorkspaceToolStore(
-    (state) => state.openWorkspaceTerminal,
-  );
   const {
     changeWorkspaceMode,
     createChatForProject,
@@ -252,33 +249,12 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     selectedChat,
     worktree: powerHomePageContext ?? powerDraftContext,
   });
-  const canOpenAngelTerminal =
-    canShowRightSidebar &&
-    is.nonEmptyString(workspaceToolContextKey) &&
-    is.nonEmptyString(workspaceToolRoot);
   const runCurrentWorkspacePathLauncherAction = async (
     action: PathLauncherActionId,
   ) => {
     if (currentLauncherTarget === undefined) return;
 
-    const result = await runPathLauncherAction(currentLauncherTarget, action);
-    if (
-      typeof result !== "object" ||
-      result.action !== "open_angel_terminal" ||
-      !is.nonEmptyString(workspaceToolContextKey)
-    ) {
-      return;
-    }
-
-    openWorkspaceTerminal({
-      contextKey: workspaceToolContextKey,
-      root: result.target,
-    });
-    if (workspaceToolHost === "sidebar") {
-      setRightSidebarOpen(true);
-    } else {
-      toggleWorkspaceTools();
-    }
+    await runPathLauncherAction(currentLauncherTarget, action);
   };
   const handleChatContextMenuAction = (
     chat: (typeof chats)[number],
@@ -493,7 +469,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                     ? t("fleet.title")
                     : workspaceTitle
               }
-              includeAngelTerminal={canOpenAngelTerminal}
+              includeAngelTerminal={false}
               onPathLauncherAction={
                 currentLauncherTarget === undefined
                   ? undefined

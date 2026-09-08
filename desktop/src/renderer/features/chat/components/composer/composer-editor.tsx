@@ -4,7 +4,6 @@ import {
   Globe,
   LinkSimple,
   SpinnerGap as Loader2,
-  Terminal as TerminalIcon,
   WarningCircle,
 } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
@@ -26,10 +25,6 @@ import {
   sourceControlAttachmentLabel,
   type ComposerSourceControlAttachment,
 } from "@/features/chat/components/composer/source-control-attachments";
-import {
-  terminalSelectionLabel,
-  type ComposerTerminalSelection,
-} from "@/features/chat/components/composer/terminal-selection-to-composer";
 import { composerRichTextClassName } from "@/features/chat/components/composer/composer-rich-text";
 import { ComposerKeymapBridge } from "@/features/chat/components/composer/composer-keymap-bridge";
 import { handleComposerFilePaste } from "@/features/chat/components/composer/composer-paste";
@@ -71,10 +66,8 @@ export function ComposerEditor({
     pasteSourceUrls,
     removeSourceControlAttachment,
     removePasteSourceUrl,
-    removeTerminalSelection,
     setInteractions,
     setTextInput,
-    terminalSelections,
   } = controller;
 
   const handlePaste = useCallback(
@@ -140,9 +133,7 @@ export function ComposerEditor({
         headerLeading={headerLeading}
         onRemoveSourceControlAttachment={removeSourceControlAttachment}
         onRemovePasteSource={removePasteSourceUrl}
-        onRemoveTerminalSelection={removeTerminalSelection}
         pasteSourceUrls={pasteSourceUrls}
-        terminalSelections={terminalSelections}
       />
 
       <PromptInputBody>
@@ -161,18 +152,14 @@ function ComposerEditorHeader({
   headerLeading,
   onRemoveSourceControlAttachment,
   onRemovePasteSource,
-  onRemoveTerminalSelection,
   pasteSourceUrls,
-  terminalSelections,
 }: {
   sourceControlAttachments: ComposerSourceControlAttachment[];
   headerClassName?: string;
   headerLeading?: ReactNode;
   onRemoveSourceControlAttachment: (id: string) => void;
   onRemovePasteSource: (sourceUrl: string) => void;
-  onRemoveTerminalSelection: (id: string) => void;
   pasteSourceUrls: string[];
-  terminalSelections: ComposerTerminalSelection[];
 }) {
   const { t } = useTranslation();
   const attachments = usePromptInputAttachments();
@@ -183,7 +170,6 @@ function ComposerEditorHeader({
     !hasHeaderLeading &&
     attachments.files.length === 0 &&
     pasteSourceUrls.length === 0 &&
-    terminalSelections.length === 0 &&
     sourceControlAttachments.length === 0
   ) {
     return null;
@@ -200,23 +186,6 @@ function ComposerEditorHeader({
           sourceUrl={sourceUrl}
         />
       ))}
-
-      {terminalSelections.map((item) => {
-        const name = terminalSelectionLabel(item.selection);
-        return (
-          <ChatAttachmentTile
-            className="max-w-72"
-            contentType={item.cwd}
-            fallbackIcon={<TerminalIcon className="size-4" weight="duotone" />}
-            key={item.id}
-            name={name}
-            onRemove={() => onRemoveTerminalSelection(item.id)}
-            previewText={item.selection}
-            removeLabel={t("composer.removeAttachment", { name })}
-            typeLabel={t("composer.terminalSelection")}
-          />
-        );
-      })}
 
       {sourceControlAttachments.map((item) => {
         const name = sourceControlAttachmentLabel(item);

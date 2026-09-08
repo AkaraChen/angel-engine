@@ -1,6 +1,5 @@
 import type { ManagedRuntime } from "effect";
 import type { ChatEngine } from "../features/chat/engine-runtime";
-import type { TerminalService } from "../features/terminal/manager";
 import type { ProcessRegistryService } from "../processes";
 import type { Db } from "./db";
 import type { DaemonError } from "./errors";
@@ -11,7 +10,6 @@ export type DaemonServices =
   | ChatEngine
   | Db
   | ProcessRegistryService
-  | TerminalService;
 
 export type DaemonRuntime = ManagedRuntime.ManagedRuntime<
   DaemonServices,

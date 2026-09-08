@@ -12,7 +12,6 @@ const nativeRuntimeModules = [
   "libsql",
   "@neon-rs/load",
   "detect-libc",
-  "node-pty",
   "ccusage",
 ];
 const nativeRuntimeModuleParents = new Map([
@@ -358,7 +357,7 @@ const config: ForgeConfig = {
     executableName: "angel-engine",
     asar: {
       unpack:
-        "{**/node_modules/node-pty/**/spawn-helper,**/node_modules/@ccusage/**/bin/**}",
+        "{**/node_modules/@ccusage/**/bin/**}",
     },
     extraResource: [
       path.join(projectRoot, "build", "app-update.yml"),

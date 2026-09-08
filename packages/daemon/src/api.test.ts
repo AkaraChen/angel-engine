@@ -13,7 +13,6 @@ import { describe, expect, it, vi } from "vitest";
 import { registerApi } from "./api";
 import { createChatEvents } from "./features/chat/chat-events";
 import { ChatEngine } from "./features/chat/engine-runtime";
-import { TerminalService } from "./features/terminal/manager";
 import { Db } from "./platform/db";
 import { DaemonError } from "./platform/errors";
 import { ProcessRegistryService } from "./processes";
@@ -777,7 +776,6 @@ function fakeDaemonRuntime(
         new Db({ database: Effect.die("Database is not used in this test.") }),
       ),
       ProcessRegistryService.Default,
-      TerminalService.Default,
     ),
   );
 }

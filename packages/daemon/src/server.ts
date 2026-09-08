@@ -27,7 +27,6 @@ import { WebSocketServer } from "ws";
 import { registerApi } from "./api";
 import { chatEventsLayer, createChatEvents } from "./features/chat/chat-events";
 import { ChatEngine } from "./features/chat/engine-runtime";
-import { TerminalService } from "./features/terminal/manager";
 import { compileBlockedHostPatterns, isHostBlocked } from "./host-guard";
 import { Db, dbConfigLayer } from "./platform/db";
 import { DaemonError, daemonErrorPayload } from "./platform/errors";
@@ -109,7 +108,6 @@ function createDaemonRuntime(
   const baseLayer = Layer.mergeAll(
     Layer.provide(Db.Default, configLayer),
     ProcessRegistryService.Default,
-    TerminalService.Default,
     chatEventsLayer(chatEvents),
   );
   const appLayer = Layer.provideMerge(ChatEngine.Default, baseLayer);
@@ -361,11 +359,7 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
       mobileToken !== undefined &&
       protocol === `angel-engine-token.${mobileToken}`;
     const isEvents = url.pathname === "/api/events";
-    const isTerminals = url.pathname === "/api/terminals";
-    if (
-      (!isEvents && !isTerminals) ||
-      (!isPrimary && !(isEvents && isMobile))
-    ) {
+    if ((!isEvents && !isPrimary) || (!isPrimary && isMobile)) {
       socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
       socket.destroy();
       return;
@@ -376,41 +370,7 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
         webSocket.once("close", () => eventSockets.delete(webSocket));
         return;
       }
-      // Terminal messages must apply in arrival order (a `create` immediately
-      // followed by `write` would otherwise race), so each socket gets a
-      // sequential effect chain.
-      let messageChain = Promise.resolve();
-      webSocket.on("message", (data) => {
-        messageChain = messageChain.then(async () => {
-          try {
-            const input = JSON.parse(data.toString()) as unknown;
-            await runDaemonApi(
-              runtime,
-              Effect.flatMap(TerminalService, (terminals) =>
-                terminals.handle(webSocket, input),
-              ),
-            );
-          } catch (error) {
-            webSocket.send(
-              JSON.stringify({
-                event: {
-                  message:
-                    error instanceof Error ? error.message : String(error),
-                  type: "error",
-                },
-              }),
-            );
-          }
-        });
-      });
-      webSocket.once("close", () => {
-        void runDaemonApi(
-          runtime,
-          Effect.flatMap(TerminalService, (terminals) =>
-            terminals.disconnect(webSocket),
-          ),
-        ).catch(() => undefined);
-      });
+      webSocket.close();
     });
   });
 

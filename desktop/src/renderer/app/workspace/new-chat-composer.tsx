@@ -37,7 +37,6 @@ import {
 } from "@/features/chat/components/composer/composer-menus";
 import { PromptSourceControlAttachButton } from "@/features/chat/components/composer/source-control-attach-button";
 import { useComposerEditor } from "@/features/chat/components/composer/use-composer-editor";
-import { useTerminalSelectionInsert } from "@/features/chat/components/composer/use-terminal-selection-insert";
 import { SketchUnderline } from "@/features/chat/components/sketch-underline";
 import { useChatOptions } from "@/features/chat/runtime/chat-options-context";
 import { useSendChatMessage } from "@/features/chat/runtime/use-send-chat-message";
@@ -180,7 +179,6 @@ export function NewChatComposer({
     : chatSuggestionKeys;
 
   const editor = useComposerEditor({ initialMarkdown });
-  useTerminalSelectionInsert(editor);
   const sourceAttachment = editor.sourceControlAttachments[0];
   const isChangeRequest = sourceAttachment?.kind === "changeRequest";
   const sendChatMessage = useSendChatMessage(slotKey, {
