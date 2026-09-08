@@ -349,9 +349,6 @@ export const fr = {
       mobileDescription: "Affiche la barre latérale mobile.",
       title: "Barre latérale",
       toggleSidebar: "Afficher ou masquer la barre latérale",
-      worktreeMain: "Principal",
-      worktreeCreating: "Création du worktree… {{progress}} %",
-      worktreeCreationFailed: "Échec de la création du worktree",
     },
     settings: {
       agents: {

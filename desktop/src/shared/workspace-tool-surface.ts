@@ -5,15 +5,7 @@ export interface WorkspaceToolSurfaceContext {
   root?: string | null;
 }
 
-export type WorkspaceToolPinnedTabId =
-  | "files"
-  | "git"
-  | "checks"
-  | "pr"
-  | "processes";
-
-// Pinned tab ids or dynamic tab ids; dynamic ids are runtime-generated strings.
-export type WorkspaceToolTabId = WorkspaceToolPinnedTabId | (string & {});
+export type WorkspaceToolTabId = string;
 
 export type WorkspaceToolSurfaceDynamicTab =
   | WorkspaceToolSurfaceFilePreviewTab
@@ -38,14 +30,7 @@ export interface WorkspaceToolSurfaceGitDiffTab
   root: string;
 }
 
-export type WorkspaceToolFocusSection = "checks";
-
 export interface WorkspaceToolSurfaceSnapshot {
   activeTabId: WorkspaceToolTabId;
-  /**
-   * Pending scroll/highlight target after a checks→pr redirect. Kept until the
-   * Checks section mounts; not cleared by the redirect itself.
-   */
-  focusSection?: WorkspaceToolFocusSection | null;
   tabs: WorkspaceToolSurfaceDynamicTab[];
 }

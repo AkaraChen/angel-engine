@@ -130,7 +130,7 @@ export function ArchivedSettingsPanel() {
         });
       }
     },
-    [queryClient, restoreArchivedChatsMutation, t, toast],
+    [restoreArchivedChatsMutation, t, toast],
   );
 
   const deleteChats = useCallback(

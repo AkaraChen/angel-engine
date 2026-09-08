@@ -7,7 +7,6 @@ import type {
 
 import type { QueryClient } from "@tanstack/react-query";
 import type { ApiClient } from "@/platform/api-client";
-import is from "@sindresorhus/is";
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
 import { queryKeys } from "@/platform/query-keys";
 

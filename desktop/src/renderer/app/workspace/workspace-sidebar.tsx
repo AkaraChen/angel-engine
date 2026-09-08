@@ -3,7 +3,6 @@ import type { ReactElement } from "react";
 
 import type { ChatContextMenuAction } from "@/features/chat/api/queries";
 import { Plus, GearSix as Settings } from "@phosphor-icons/react";
-import is from "@sindresorhus/is";
 import { m } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";

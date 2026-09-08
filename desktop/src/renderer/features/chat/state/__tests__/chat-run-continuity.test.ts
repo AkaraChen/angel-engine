@@ -143,7 +143,10 @@ beforeEach(() => {
 });
 
 describe("desktop chat run continuity", () => {
-  it("creates the chat before the run and keys the slot by the real chat id", async () => {
+  it.each([
+    "project-1",
+    undefined,
+  ])("creates the chat before the run and preserves cwd (project: %s)", async (projectId) => {
     const created = chat(uniqueId("chat"));
     chats.create.mockResolvedValue(created);
     const stream = controllableStream();
@@ -155,7 +158,7 @@ describe("desktop chat run continuity", () => {
       input: {
         cwd: "/repo/.worktrees/feature",
         prewarmId: "prewarm-1",
-        projectId: "project-1",
+        projectId,
         runtime: "codex",
       },
       message: userPrompt("build it"),
@@ -168,7 +171,7 @@ describe("desktop chat run continuity", () => {
       expect.objectContaining({
         cwd: "/repo/.worktrees/feature",
         prewarmId: "prewarm-1",
-        projectId: "project-1",
+        projectId,
         runtime: "codex",
       }),
     );

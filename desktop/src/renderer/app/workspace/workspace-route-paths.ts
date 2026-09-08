@@ -12,7 +12,6 @@ export function chatRoutePath(
   return chatRoutePathId(chat.id);
 }
 
-
 export function chatRoutePathId(chatId: string) {
   return `/chat/${encodeURIComponent(chatId)}`;
 }

@@ -1,5 +1,4 @@
 import type { Chat } from "@angel-engine/daemon-api/chat";
-import type { Project } from "@angel-engine/daemon-api/projects";
 import type { WorkspacePageModel } from "@/app/workspace/use-workspace-page-model";
 
 import is from "@sindresorhus/is";
@@ -21,7 +20,6 @@ import {
 export function useWorkspaceNavigation(model: WorkspacePageModel) {
   const {
     activeRuntime,
-    chats,
     draftSessionCounterRef,
     isDraftPage,
     location,
@@ -29,9 +27,7 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
     modelOverride,
     navigate,
     permissionModeOverride,
-    projects,
     reasoningEffortOverride,
-    routeDraftProjectId,
     selectedChatRuntimeConfig,
     setDraftAgentConfigs,
     setDraftInitialPrompts,
@@ -138,14 +134,6 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
     ],
   );
 
-  const createChatForProject = useCallback(
-    (project: Project) => {
-      if (isDraftPage && routeDraftProjectId === project.id) return;
-      startNewDraftSession(project.id);
-    },
-    [isDraftPage, routeDraftProjectId, startNewDraftSession],
-  );
-
   const createChatForSelection = useCallback(() => {
     if (isDraftPage) return;
     startNewDraftSession();
@@ -154,22 +142,6 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
   const createStandaloneWorkspace = useCallback(() => {
     startNewDraftSession();
   }, [startNewDraftSession]);
-
-  const selectDraftProject = useCallback(
-    (projectId: string) => {
-      navigateToDraft(projectId);
-    },
-    [navigateToDraft],
-  );
-
-
-  const openChatFromAnyMode = useCallback(
-    (chat: Chat) => {
-      const path = chatRoutePath(chat, { includeProject: true });
-      if (location !== path) navigate(path);
-    },
-    [location, navigate],
-  );
 
   const openSettings = useCallback(() => {
     window.desktopWindow.openSettings();
@@ -182,15 +154,12 @@ export function useWorkspaceNavigation(model: WorkspacePageModel) {
   );
 
   return {
-    createChatForProject,
     createChatForSelection,
     createStandaloneWorkspace,
     navigateToChat,
     navigateToDraft,
     openChat,
-    openChatFromAnyMode,
     openSettings,
-    selectDraftProject,
     startNewDraftSession,
   };
 }

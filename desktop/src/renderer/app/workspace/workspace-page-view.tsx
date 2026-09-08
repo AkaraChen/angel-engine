@@ -79,8 +79,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     sidebarOpen,
     sidebarOpenMobile,
     toggleWorkspaceTools,
-    workspaceToolContextKey,
-    workspaceToolRoot,
     workspaceTitle,
     workspaceToolsToggleLabel,
   } = model;
@@ -98,11 +96,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     updateChatFromRun,
   } = chatActions;
   const { createChatForSelection, openChat, openSettings } = navigation;
-  const selectFolder = async () => {
-    const cwd = await api.projects.chooseDirectory();
-    if (cwd === null) return;
-    model.setDraftCwds((current) => ({ ...current, [runtimePageKey]: cwd }));
-  };
   const handleChatContextMenuAction = (
     chat: (typeof chats)[number],
     action: Parameters<typeof runChatContextMenuAction>[1],
@@ -237,13 +230,17 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                     onChatCreated={updateChatFromRun}
                     onChatMessagesUpdated={setChatMessagesInCache}
                     onChatUpdated={updateChatFromRun}
-                    onSelectFolder={selectFolder}
+                    onSelectFolder={model.selectDraftFolder}
                     onOpenChat={openChat}
                     permissionMode={permissionModeOverride}
-                    prewarmId={model.prewarmQuery.data?.prewarmId}
+                    prewarmId={
+                      pinnedDraftCwd === undefined
+                        ? model.prewarmQuery.data?.prewarmId
+                        : undefined
+                    }
                     projectId={draftProject.id}
                     projectName={selectedProjectName}
-                    projectPath={draftProject.path}
+                    projectPath={pinnedDraftCwd ?? draftProject.path}
                     projects={projects}
                     reasoningEffort={reasoningEffortOverride}
                     runOrigin={{

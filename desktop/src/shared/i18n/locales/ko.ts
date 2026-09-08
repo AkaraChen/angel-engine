@@ -343,9 +343,6 @@ export const ko = {
       mobileDescription: "모바일 사이드바를 표시합니다.",
       title: "사이드바",
       toggleSidebar: "사이드바 전환",
-      worktreeMain: "메인",
-      worktreeCreating: "Worktree 만드는 중… {{progress}}%",
-      worktreeCreationFailed: "Worktree 생성 실패",
     },
     settings: {
       agents: {

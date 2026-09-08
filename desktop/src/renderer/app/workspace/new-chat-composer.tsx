@@ -146,7 +146,6 @@ export function NewChatComposer({
   const { t } = useTranslation();
   const isRunning = useChatRunIsRunning(slotKey);
   const cancelRun = useChatRunStore((state) => state.cancelRun);
-  const projectRequired = false;
   const editor = useComposerEditor({ initialMarkdown });
   const suggestionKeys = chatSuggestionKeys;
   const sendChatMessage = useSendChatMessage(slotKey, {
@@ -258,77 +257,67 @@ export function NewChatComposer({
             {t("thread.empty.description")}
           </p>
 
-          {projectRequired ? (
-            <div className="mt-8 flex flex-col items-center gap-3 rounded-xl px-6 py-8 text-center">
-              <p className="text-sm text-muted-foreground">
-                {t("thread.empty.description")}
-              </p>
-            </div>
-          ) : (
-            <div
-              className="
+          <div
+            className="
             relative mt-8 animate-in duration-300 ease-standard fade-in-0
             slide-in-from-bottom-[6px] [animation-delay:120ms]
             [animation-fill-mode:backwards]
           "
-              onDragEnter={handleDragEnter}
-              onDragLeave={handleDragLeave}
-              onDragEnd={handleDragEnd}
-              onDrop={handleDragEnd}
-            >
-              {notice}
-              <ChatComposer
-                blockSubmit={isRunning}
-                canCancel={isRunning}
-                controller={editor}
-                disabled={isRunning}
-                headerClassName={newChatHeaderClassName}
-                inputGroupClassName={cn(
-                  newChatInputGroupClassName,
-                  isDropTarget && newChatDropTargetClassName,
-                )}
-                onBeforeSubmit={onBeforeSubmit}
-                onCancel={handleCancel}
-                rows={3}
-                send={send}
-                textareaClassName="
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+            onDragEnd={handleDragEnd}
+            onDrop={handleDragEnd}
+          >
+            {notice}
+            <ChatComposer
+              blockSubmit={isRunning}
+              canCancel={isRunning}
+              controller={editor}
+              disabled={isRunning}
+              headerClassName={newChatHeaderClassName}
+              inputGroupClassName={cn(
+                newChatInputGroupClassName,
+                isDropTarget && newChatDropTargetClassName,
+              )}
+              onBeforeSubmit={onBeforeSubmit}
+              onCancel={handleCancel}
+              rows={3}
+              send={send}
+              textareaClassName="
               max-h-40 min-h-(--workspace-composer-min-height) resize-none
               px-3.5 py-3 [font-size:var(--workspace-composer-text-size)]
               leading-(--workspace-composer-line-height)
               placeholder:text-muted-foreground/55
             "
-              >
-                <NewChatComposerFooter
-                  editor={editor}
-                  editorIsEmpty={isEmpty}
-                  isRunning={isRunning}
-                  onCancel={handleCancel}
-                  projectSelect={
-                    <Button
-                      onClick={() => void onSelectFolder()}
-                      size="sm"
-                      type="button"
-                      variant="ghost"
-                    >
-                      {t("projects.chooseFolder")}
-                    </Button>
-                  }
-                />
-              </ChatComposer>
-            </div>
-          )}
+            >
+              <NewChatComposerFooter
+                editorIsEmpty={isEmpty}
+                isRunning={isRunning}
+                onCancel={handleCancel}
+                projectSelect={
+                  <Button
+                    onClick={() => void onSelectFolder()}
+                    size="sm"
+                    type="button"
+                    variant="ghost"
+                  >
+                    {t("projects.chooseFolder")}
+                  </Button>
+                }
+              />
+            </ChatComposer>
+          </div>
 
-          {projectRequired ? null : (
-            <div
-              className="
+          <div
+            className="
             mt-4 flex animate-in flex-wrap justify-center gap-2 duration-300
             ease-standard fade-in-0 slide-in-from-bottom-[6px]
             [animation-delay:180ms] [animation-fill-mode:backwards]
           "
-            >
-              {suggestionKeys.map((suggestionKey) => (
-                <button
-                  className="
+          >
+            {suggestionKeys.map((suggestionKey) => (
+              <button
+                className="
                 rounded-full border border-border-subtle bg-card px-3 py-1
                 text-xs text-muted-foreground transition-colors duration-120
                 ease-standard
@@ -339,38 +328,35 @@ export function NewChatComposer({
                 active:scale-[0.98]
                 motion-reduce:transition-none
               "
-                  key={suggestionKey}
-                  onClick={() => {
-                    editor.editor
-                      ?.chain()
-                      .focus()
-                      .clearContent()
-                      .insertContent(t(suggestionKey))
-                      .run();
-                  }}
-                  type="button"
-                >
-                  {t(suggestionKey)}
-                </button>
-              ))}
-            </div>
-          )}
+                key={suggestionKey}
+                onClick={() => {
+                  editor.editor
+                    ?.chain()
+                    .focus()
+                    .clearContent()
+                    .insertContent(t(suggestionKey))
+                    .run();
+                }}
+                type="button"
+              >
+                {t(suggestionKey)}
+              </button>
+            ))}
+          </div>
 
-          {projectRequired ? null : (
-            <div
-              className="
+          <div
+            className="
             animate-in duration-300 ease-standard fade-in-0
             slide-in-from-bottom-[6px] [animation-delay:240ms]
             [animation-fill-mode:backwards]
           "
-            >
-              <NewChatRecentSection
-                chats={chats}
-                onOpenChat={onOpenChat}
-                projects={projects}
-              />
-            </div>
-          )}
+          >
+            <NewChatRecentSection
+              chats={chats}
+              onOpenChat={onOpenChat}
+              projects={projects}
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -378,13 +364,11 @@ export function NewChatComposer({
 }
 
 function NewChatComposerFooter({
-  editor,
   editorIsEmpty,
   isRunning,
   onCancel,
   projectSelect,
 }: {
-  editor: ReturnType<typeof useComposerEditor>;
   editorIsEmpty: boolean;
   isRunning: boolean;
   projectSelect: ReactNode;

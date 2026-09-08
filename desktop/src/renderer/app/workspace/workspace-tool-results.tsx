@@ -1,6 +1,5 @@
 import type {
   WorkspaceFileReadResult,
-  WorkspaceGitDiffBaseKind,
   WorkspaceGitDiffResult,
 } from "@angel-engine/daemon-api/workspace-tools";
 import type { WorkspaceToolSurfaceDynamicTab } from "@shared/workspace-tool-surface";
@@ -20,10 +19,7 @@ import {
   WorkspaceToolEmpty,
 } from "@/app/workspace/workspace-tool-layout";
 import { WorkspaceToolPatchFileRows } from "@/app/workspace/workspace-tool-patch-list";
-import {
-  buildWorkspaceGitDiffPatchList,
-  getWorkspaceGitNumstatTotal,
-} from "@/app/workspace/workspace-tool-patch-model";
+import { buildWorkspaceGitDiffPatchList } from "@/app/workspace/workspace-tool-patch-model";
 import { useWorkspaceToolSurface } from "@/app/workspace/workspace-tool-surface-model";
 import { queryKeys } from "@/platform/query-keys";
 
@@ -101,11 +97,7 @@ export function WorkspaceGitDiffTool({
   }
 
   return (
-    <WorkspaceGitDiffResultView
-      baseKind={baseKind}
-      data={gitQuery.data}
-      pathFilter={tab.path}
-    />
+    <WorkspaceGitDiffResultView data={gitQuery.data} pathFilter={tab.path} />
   );
 }
 
@@ -162,11 +154,9 @@ function WorkspaceFileReadResultView({
 }
 
 function WorkspaceGitDiffResultView({
-  baseKind,
   data,
   pathFilter,
 }: {
-  baseKind: WorkspaceGitDiffBaseKind;
   data?: WorkspaceGitDiffResult;
   pathFilter?: string;
 }) {
@@ -184,10 +174,6 @@ function WorkspaceGitDiffResultView({
   const files = is.nonEmptyString(pathFilter)
     ? patchList.files.filter((file) => file.name === pathFilter)
     : patchList.files;
-  const totalLineChanges = getWorkspaceGitNumstatTotal(
-    data.numstat,
-    is.nonEmptyString(pathFilter) ? new Set([pathFilter]) : undefined,
-  );
 
   return (
     <div className="h-full min-h-0 overflow-auto p-3">

@@ -67,16 +67,14 @@ export function useComposerEditor({
     api,
     commands: environment.availableCommands,
     projectPath: environment.projectPath,
-    projectToolsEnabled:
-      environment.isProjectChat && environment.projectPath !== undefined,
+    projectToolsEnabled: environment.projectPath !== undefined,
     skills: environment.availableSkills,
   });
   catalogRef.current = {
     api,
     commands: environment.availableCommands,
     projectPath: environment.projectPath,
-    projectToolsEnabled:
-      environment.isProjectChat && environment.projectPath !== undefined,
+    projectToolsEnabled: environment.projectPath !== undefined,
     skills: environment.availableSkills,
   };
   const handlePasteRef = useRef<(event: ClipboardEvent) => boolean>(

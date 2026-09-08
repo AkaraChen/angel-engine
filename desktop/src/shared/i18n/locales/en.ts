@@ -344,9 +344,6 @@ export const en = {
       mobileDescription: "Displays the mobile sidebar.",
       title: "Sidebar",
       toggleSidebar: "Toggle sidebar",
-      worktreeMain: "Main",
-      worktreeCreating: "Creating worktree… {{progress}}%",
-      worktreeCreationFailed: "Worktree creation failed",
     },
     settings: {
       agents: {

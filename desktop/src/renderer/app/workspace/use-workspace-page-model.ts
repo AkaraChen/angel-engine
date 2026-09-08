@@ -107,10 +107,14 @@ export function useWorkspacePageModel({
   const draftState = useWorkspaceDraftState();
   const draftSessionCounterRef = useRef(0);
   const isDraftPage = !is.nonEmptyString(selectedChatId);
-  const pinnedDraftCwd =
-    draftState.draftCwds[
-      draftRuntimeKeyFromProjectId(routeDraftProjectId) ?? "standalone"
-    ];
+  const draftCwdKey =
+    draftRuntimeKeyFromProjectId(routeDraftProjectId) ?? "standalone";
+  const pinnedDraftCwd = draftState.draftCwds[draftCwdKey];
+  const selectDraftFolder = async () => {
+    const cwd = await api.projects.chooseDirectory();
+    if (cwd === null) return;
+    draftState.setDraftCwds((current) => ({ ...current, [draftCwdKey]: cwd }));
+  };
 
   const projectsQuery = useQuery({ ...projectListQueryOptions({ api }) });
   const chatsQuery = useQuery({ ...chatListQueryOptions({ api }) });
@@ -131,7 +135,7 @@ export function useWorkspacePageModel({
     ? projects.find((project) => project.id === selectedProjectId)
     : undefined;
   const selectedProjectPath = isDraftPage
-    ? draftProject.path
+    ? (pinnedDraftCwd ?? draftProject.path)
     : (selectedProject?.path ?? selectedChat?.cwd);
   const selectedProjectName = isDraftPage
     ? draftProject.name
@@ -206,7 +210,7 @@ export function useWorkspacePageModel({
   });
   const inspectDraftRuntimeConfig = pinnedDraftCwd !== undefined;
   const shouldInspectDraftRuntimeConfig =
-    isDraftPage && inspectDraftRuntimeConfig && draftProject.path !== undefined;
+    isDraftPage && inspectDraftRuntimeConfig;
   const draftRuntimeConfigQuery = useQuery({
     ...chatRuntimeConfigQueryOptions({
       api,
@@ -301,6 +305,7 @@ export function useWorkspacePageModel({
     runtimeConfig,
     runtimeOptions,
     runtimePageKey,
+    selectDraftFolder,
     selectedChat,
     selectedChatAgentConfig,
     selectedChatId,

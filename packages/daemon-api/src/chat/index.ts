@@ -275,10 +275,17 @@ interface ChatActivityBase {
 }
 
 export type ChatActivityStatus =
-  "running" | "waiting_for_you" | "stuck" | "done" | "failed";
+  | "running"
+  | "waiting_for_you"
+  | "stuck"
+  | "done"
+  | "failed";
 
 export type ChatActivityReason =
-  "approval" | "question" | "process_exited" | "runtime_error";
+  | "approval"
+  | "question"
+  | "process_exited"
+  | "runtime_error";
 
 export type ChatActivity =
   | (ChatActivityBase & {

@@ -127,16 +127,14 @@ export function AssistantComposer({
         placeholder:text-muted-foreground/62
       "
     >
-      <AssistantComposerFooter editor={editor} editorIsEmpty={isEmpty} />
+      <AssistantComposerFooter editorIsEmpty={isEmpty} />
     </ChatComposer>
   );
 }
 
 function AssistantComposerFooter({
-  editor,
   editorIsEmpty,
 }: {
-  editor: ReturnType<typeof useComposerEditor>;
   editorIsEmpty: boolean;
 }) {
   const { t } = useTranslation();

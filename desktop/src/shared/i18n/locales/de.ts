@@ -347,9 +347,6 @@ export const de = {
       mobileDescription: "Zeigt die mobile Seitenleiste an.",
       title: "Seitenleiste",
       toggleSidebar: "Seitenleiste ein-/ausblenden",
-      worktreeMain: "Haupt",
-      worktreeCreating: "Worktree wird erstellt… {{progress}} %",
-      worktreeCreationFailed: "Worktree-Erstellung fehlgeschlagen",
     },
     settings: {
       agents: {

@@ -508,9 +508,7 @@ function chatProjectContext(
     projectPath !== undefined &&
     chatPath !== undefined &&
     chatPath !== projectPath;
-  const path = isWorktree
-    ? chatPath
-    : (projectPath ?? (projectId !== undefined ? chatPath : undefined));
+  const path = isWorktree ? chatPath : (projectPath ?? chatPath);
   const displayPath = isWorktree ? projectPath : path;
 
   return {

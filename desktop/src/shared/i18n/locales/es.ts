@@ -347,9 +347,6 @@ export const es = {
       mobileDescription: "Muestra la barra lateral móvil.",
       title: "Barra lateral",
       toggleSidebar: "Alternar barra lateral",
-      worktreeMain: "Principal",
-      worktreeCreating: "Creando worktree… {{progress}} %",
-      worktreeCreationFailed: "Error al crear el worktree",
     },
     settings: {
       agents: {

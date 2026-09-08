@@ -445,9 +445,6 @@ export interface LocaleResourceTranslationSidebar {
   mobileDescription: string;
   title: string;
   toggleSidebar: string;
-  worktreeMain: string;
-  worktreeCreating: string;
-  worktreeCreationFailed: string;
 }
 
 export interface LocaleResourceTranslationSettingsAgents {

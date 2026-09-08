@@ -346,9 +346,6 @@ export const ja = {
       mobileDescription: "モバイルサイドバーを表示します。",
       title: "サイドバー",
       toggleSidebar: "サイドバーを切り替え",
-      worktreeMain: "メイン",
-      worktreeCreating: "Worktree を作成中… {{progress}}%",
-      worktreeCreationFailed: "Worktree の作成に失敗しました",
     },
     settings: {
       agents: {
