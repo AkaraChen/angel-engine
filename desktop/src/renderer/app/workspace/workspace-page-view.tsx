@@ -45,9 +45,6 @@ import { ImportSessionDialog } from "@/features/chat/components/import-session-d
 import { RenameChatDialog } from "@/features/chat/components/rename-chat-dialog";
 import { SessionHandoffDialog } from "@/features/chat/components/session-handoff-dialog";
 import { WorkspaceCommandPalette } from "@/features/command-palette/workspace-command-palette";
-import { CloneProgressDialog } from "@/features/projects/components/clone-progress-dialog";
-import { CloneRepositoryDialog } from "@/features/projects/components/clone-repository-dialog";
-import { ProjectSettingsDialog } from "@/features/projects/components/project-settings-dialog";
 import { SchedulePage } from "@/features/schedule/schedule-page";
 import { queryKeys } from "@/platform/query-keys";
 
@@ -76,18 +73,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
   );
   const closeImportSession = useCallback(() => {
     setImportTarget(null);
-  }, []);
-  const [cloneDialogOpen, setCloneDialogOpen] = useState(false);
-  const [cloneUrl, setCloneUrl] = useState<string | null>(null);
-  const openCloneDialog = useCallback(() => {
-    setCloneDialogOpen(true);
-  }, []);
-  const startClone = useCallback((url: string) => {
-    setCloneDialogOpen(false);
-    setCloneUrl(url);
-  }, []);
-  const closeCloneProgress = useCallback(() => {
-    setCloneUrl(null);
   }, []);
 
   const {
@@ -151,7 +136,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
   } = model;
   const {
     archiveChat,
-    closeProjectSettingsDialog,
     closeRenameChatDialog,
     closeSessionHandoffDialog,
     createProjectFromPicker,
@@ -161,7 +145,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     renameTargetChat,
     setChatMessagesInCache,
     setPersistedChatRuntime,
-    settingsTargetProject,
     runChatContextMenuAction,
     runPathLauncherAction,
     runProjectContextMenuAction,
@@ -179,7 +162,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     navigateToDraft,
     openChat,
     openChatFromAnyMode,
-    openSchedule
+    openSchedule,
     openPowerWorktree,
     openSettings,
     selectDraftProject,
@@ -349,7 +332,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
             isMacOS={isMacOS}
             isProjectsLoading={projectsQuery.isPending}
             onArchiveChat={archiveChat}
-            onCloneRepository={openCloneDialog}
             onCancelWorktreeCreation={cancelWorktreeCreation}
             onCreateProject={() => void createProjectFromPicker()}
             onCreateProjectChat={createChatForProject}
@@ -376,7 +358,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
             isMacOS={isMacOS}
             isProjectsLoading={projectsQuery.isPending}
             onArchiveChat={archiveChat}
-            onCloneRepository={openCloneDialog}
             onCancelWorktreeCreation={cancelWorktreeCreation}
             onCreateProject={() => void createProjectFromPicker()}
             onCreateProjectChat={createChatForProject}
@@ -426,29 +407,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
             onImported={handleImportedSession}
             runtimeOptions={runtimeOptions}
             target={importTarget}
-          />
-          <ProjectSettingsDialog
-            onClose={closeProjectSettingsDialog}
-            project={settingsTargetProject}
-          />
-          <CloneRepositoryDialog
-            onClone={startClone}
-            onOpenChange={setCloneDialogOpen}
-            open={cloneDialogOpen}
-            projectId={
-              selectedChat?.projectId ??
-              selectedProjectId ??
-              draftProject.id ??
-              null
-            }
-          />
-          <CloneProgressDialog
-            onClose={closeCloneProgress}
-            onOpenProject={(project) => {
-              closeCloneProgress();
-              createChatForProject(project);
-            }}
-            url={cloneUrl}
           />
           <WorktreeDirtyDialog
             checked={rememberWorktreeDirtyChoice}
@@ -611,7 +569,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                     onChatCreated={updateChatFromRun}
                     onChatMessagesUpdated={setChatMessagesInCache}
                     onChatUpdated={updateChatFromRun}
-                    onCreateProject={createProjectFromPicker}
                     onSelectFolder={async () => {
                       const selectedPath = await api.projects.chooseDirectory();
                       if (is.nonEmptyString(selectedPath)) {
@@ -623,7 +580,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                       }
                     }}
                     onOpenChat={openChat}
-                    onProjectChange={selectDraftProject}
                     permissionMode={permissionModeOverride}
                     prewarmId={
                       draftCreationLocation === "worktree"
@@ -634,7 +590,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                     projectName={selectedProjectName}
                     projectPath={draftCwd ?? draftProject.path}
                     projects={projects}
-                    projectsStatus={projectsQuery.status}
                     reasoningEffort={reasoningEffortOverride}
                     runOrigin={{
                       config: draftAgentConfigFromExplicitOverrides({

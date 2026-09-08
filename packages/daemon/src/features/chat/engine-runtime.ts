@@ -60,9 +60,6 @@ import {
   managedWorktreePath,
   removeCreatedProjectWorktree,
 } from "../source-control/local-git/projects";
-import { readProjectLifecycleSnapshot } from "../projects/lifecycle";
-import { getProject } from "../projects/repository";
-import { projectSetupLifecycle } from "../projects/setup-lifecycle";
 import {
   beginQueuedChatRunDispatch,
   cancelAmbiguousQueuedChatRun,
@@ -872,27 +869,6 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
                 ),
               );
             }
-            const creationJob = yield* getWorktreeCreationJob(input.chatId);
-            if (creationJob === null) {
-              const chat = yield* requireChat(input.chatId);
-              const worktreePath = managedWorktreePath(chat.cwd);
-              if (worktreePath === undefined) return false;
-              const snapshot = yield* Effect.tryPromise({
-                catch: (cause) => DaemonError.internal(cause),
-                try: () => readProjectLifecycleSnapshot(worktreePath),
-              });
-              const lifecycleView = yield* Effect.tryPromise({
-                catch: (cause) => DaemonError.internal(cause),
-                try: () => projectSetupLifecycle.view(worktreePath),
-              });
-              if (
-                !lifecycleView.running &&
-                snapshot.setup.status !== "running" &&
-                snapshot.setup.status !== "failed"
-              ) {
-                return false;
-              }
-            }
             yield* createQueuedChatRun({
               createdAt: new Date().toISOString(),
               input,
@@ -1026,36 +1002,7 @@ export class ChatEngine extends Effect.Service<ChatEngine>()(
         waitForChatSetup: (chatId: string, signal?: AbortSignal) =>
           Effect.gen(function* () {
             yield* waitForWorktreeCreation(chatId, signal);
-            const chat = yield* requireChat(chatId);
-            const worktreePath = managedWorktreePath(chat.cwd);
-            if (
-              worktreePath === undefined ||
-              !is.nonEmptyString(chat.projectId)
-            ) {
-              return;
-            }
-            const project = yield* getProject(chat.projectId);
-            if (project === null) {
-              return yield* Effect.fail(DaemonError.projectNotFound());
-            }
-            const snapshot = yield* Effect.tryPromise({
-              catch: (cause) => DaemonError.internal(cause),
-              try: () => readProjectLifecycleSnapshot(worktreePath),
-            });
-            if (snapshot.approvedDigest !== undefined) {
-              projectSetupLifecycle.restore({
-                approvedDigest: snapshot.approvedDigest,
-                context: snapshot.setupContext,
-                projectId: project.id,
-                projectRoot: project.path,
-                worktreePath,
-              });
-            }
-            yield* Effect.tryPromise({
-              catch: (cause) => DaemonError.worktreeCreateFailed(cause),
-              try: () =>
-                projectSetupLifecycle.waitUntilReady(worktreePath, signal),
-            });
+            return;
           }),
         streamChat,
       };

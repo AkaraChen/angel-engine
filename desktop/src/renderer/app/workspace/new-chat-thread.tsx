@@ -45,17 +45,14 @@ interface NewChatThreadProps {
   onBeforeSubmit?: () =>
     | ChatComposerBeforeSubmitResult
     | Promise<ChatComposerBeforeSubmitResult>;
-  onCreateProject: () => Project | undefined | Promise<Project | undefined>;
   onSelectFolder: () => void | Promise<void>;
   onOpenChat: (chat: Chat) => void;
-  onProjectChange: (projectId: string | null) => void;
   permissionMode?: string;
   prewarmId?: string;
   projectId?: string;
   projectName?: string;
   projectPath?: string;
   projects: Project[];
-  projectsStatus: ProjectsQueryStatus;
   reasoningEffort?: string;
   runOrigin: ChatRunOrigin;
   runtime: AgentRuntime;
@@ -77,10 +74,8 @@ export function NewChatThread({
   onChatMessagesUpdated,
   onChatUpdated,
   onBeforeSubmit,
-  onCreateProject,
   onSelectFolder,
   onOpenChat,
-  onProjectChange,
   permissionMode,
   prewarmId,
   projectId,
@@ -155,16 +150,13 @@ export function NewChatThread({
             onChatCreated={handleChatCreated}
             onChatMessagesUpdated={onChatMessagesUpdated}
             onChatUpdated={handleChatUpdated}
-            onCreateProject={onCreateProject}
             onSelectFolder={onSelectFolder}
             onOpenChat={onOpenChat}
-            onProjectChange={onProjectChange}
             permissionMode={permissionMode}
             prewarmId={prewarmId}
             projectId={projectId}
             projectName={projectName}
             projects={projects}
-            projectsStatus={projectsStatus}
             reasoningEffort={reasoningEffort}
             runtime={runtime}
             slotKey={slotKey}

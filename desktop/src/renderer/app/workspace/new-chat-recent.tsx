@@ -23,13 +23,11 @@ const RECENT_CHAT_LIMIT = 4;
 export function NewChatRecentSection({
   chats,
   isProjectMode,
-  onCreateProject,
   onOpenChat,
   projects,
 }: {
   chats: Chat[];
   isProjectMode: boolean;
-  onCreateProject: () => void;
   onOpenChat: (chat: Chat) => void;
   projects: Project[];
 }): ReactElement | null {
@@ -59,7 +57,7 @@ export function NewChatRecentSection({
     : allRecentChats.slice(0, RECENT_CHAT_LIMIT);
   const hiddenCount = allRecentChats.length - RECENT_CHAT_LIMIT;
 
-  if (recentChats.length === 0 && !isProjectMode) return null;
+  if (recentChats.length === 0) return null;
 
   return (
     <section className="mt-10 w-full">
@@ -80,9 +78,6 @@ export function NewChatRecentSection({
           <p className="text-sm text-muted-foreground">
             {t("thread.empty.recentEmpty")}
           </p>
-          <Button onClick={onCreateProject} size="sm" variant="outline">
-            {t("sidebar.addProject")}
-          </Button>
         </div>
       ) : (
         <>

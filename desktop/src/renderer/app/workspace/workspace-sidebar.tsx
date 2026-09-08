@@ -15,7 +15,6 @@ import is from "@sindresorhus/is";
 import { m } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { resolveWorkspaceNewChatTarget } from "@/app/workspace/workspace-new-chat-target";
 import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
 import {
   Sidebar,
@@ -29,7 +28,6 @@ import {
   WorkspaceSidebarMenuButton,
 } from "@/components/workspace-sidebar-primitives";
 import { SimpleChatSidebarSection } from "@/features/chat/components/simple-chat-sidebar-section";
-import { ProjectSidebarSection } from "@/features/projects/components/project-sidebar-section";
 
 type MaybeAsync = void | Promise<void>;
 const FLOATING_SIDEBAR_OPEN_DELAY_MS = 80;
@@ -240,22 +238,7 @@ function WorkspaceSidebarContent({
     (chat) => !is.nonEmptyString(chat.projectId),
   );
   const createChatFromNewButton = async () => {
-    const target = resolveWorkspaceNewChatTarget({
-      scheduleActive,
-      projects,
-      selectedChatId,
-      selectedProjectId,
-      workspaceMode: "work",
-    });
-
-    switch (target.type) {
-      case "none":
-        return;
-      case "project":
-        return onCreateProjectChat(target.project);
-      case "standalone":
-        return onCreateStandaloneChat();
-    }
+    return onCreateStandaloneChat();
   };
 
   return (
@@ -308,23 +291,6 @@ function WorkspaceSidebarContent({
             selectedChatId={selectedChatId}
           />
 
-        <ProjectSidebarSection
-            isLoading={isProjectsLoading}
-            onArchiveChat={onArchiveChat}
-            onCloneRepository={onCloneRepository}
-            onCancelWorktreeCreation={onCancelWorktreeCreation}
-            onCreateProject={onCreateProject}
-            onCreateProjectChat={onCreateProjectChat}
-            onImportSession={onImportSession}
-            onOpenChat={onOpenChat}
-            onRetryWorktreeCreation={onRetryWorktreeCreation}
-            onChatContextMenuAction={onChatContextMenuAction}
-            onProjectContextMenuAction={onProjectContextMenuAction}
-            onProjectPathLauncherAction={onProjectPathLauncherAction}
-            projectChatsByProjectId={projectChatsByProjectId}
-            projects={projects}
-            selectedChatId={selectedChatId}
-          />
       </SidebarContent>
 
       <SidebarFooter className="p-2">

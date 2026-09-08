@@ -14,9 +14,7 @@ import { ArrowUp, StopCircle as CircleStop } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
 import { useCallback, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { DraftProjectSelect } from "@/app/workspace/draft-project-select";
 import { NewChatRecentSection } from "@/app/workspace/new-chat-recent";
-import type { ProjectsQueryStatus } from "@/app/workspace/project-requirement-notice";
 import {
   isProjectWorkspaceMode,
   useWorkspaceUiStore,
@@ -126,16 +124,13 @@ interface NewChatComposerProps {
     messages?: ChatHistoryMessage[],
     config?: ChatRuntimeConfig,
   ) => void;
-  onCreateProject: () => Project | undefined | Promise<Project | undefined>;
   onSelectFolder: () => void | Promise<void>;
   onOpenChat: (chat: Chat) => void;
-  onProjectChange: (projectId: string | null) => void;
   permissionMode?: string;
   prewarmId?: string;
   projectId?: string;
   projectName?: string;
   projects: Project[];
-  projectsStatus: ProjectsQueryStatus;
   reasoningEffort?: string;
   runtime: string;
   slotKey: string;
@@ -154,16 +149,13 @@ export function NewChatComposer({
   onChatCreated,
   onChatMessagesUpdated,
   onChatUpdated,
-  onCreateProject,
   onSelectFolder,
   onOpenChat,
-  onProjectChange,
   permissionMode,
   prewarmId,
   projectId,
   projectName,
   projects,
-  projectsStatus,
   reasoningEffort,
   runtime,
   slotKey,
@@ -349,19 +341,6 @@ export function NewChatComposer({
                   onCancel={handleCancel}
                   projectSelect={
                     <>
-                      {isProjectWorkspaceMode(workspaceMode) ? (
-                      <>
-                        <DraftProjectSelect
-                          allowNoProject
-                          onCreateProject={onCreateProject}
-                          onProjectChange={onProjectChange}
-                          projects={projects}
-                          selectedProjectId={projectId}
-                          variant="chip"
-                        />
-                        {creationLocationAccessory}
-                      </>
-                      ) : null}
                       <button
                         className="rounded-full border border-border-subtle px-3 py-1 text-xs text-muted-foreground hover:bg-overlay-hover"
                         onClick={() => void onSelectFolder()}
@@ -425,9 +404,7 @@ export function NewChatComposer({
               <NewChatRecentSection
                 chats={chats}
                 isProjectMode={isProjectWorkspaceMode(workspaceMode)}
-                onCreateProject={() => void onCreateProject()}
                 onOpenChat={onOpenChat}
-                projects={projects}
               />
             </div>
           </>
