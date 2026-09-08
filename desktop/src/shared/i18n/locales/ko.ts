@@ -1,5 +1,4 @@
 import type { LocaleResource } from "./schema";
-import { scheduleKo } from "./schedule";
 import { changeRequestKo } from "./change-request";
 
 export const ko = {
@@ -397,7 +396,6 @@ export const ko = {
         list: "목록 보기",
       },
     },
-    schedule: scheduleKo,
     sidebar: {
       addProject: "프로젝트 추가",
       archiveChat: "채팅 보관",

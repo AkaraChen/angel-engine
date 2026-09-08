@@ -1,5 +1,4 @@
 import type { LocaleResource } from "./schema";
-import { scheduleFr } from "./schedule";
 import { changeRequestFr } from "./change-request";
 
 export const fr = {
@@ -404,7 +403,6 @@ export const fr = {
         list: "Vue en liste",
       },
     },
-    schedule: scheduleFr,
     sidebar: {
       addProject: "Ajouter un projet",
       archiveChat: "Archiver la discussion",

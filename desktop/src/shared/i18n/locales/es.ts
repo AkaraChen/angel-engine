@@ -1,5 +1,4 @@
 import type { LocaleResource } from "./schema";
-import { scheduleEs } from "./schedule";
 import { changeRequestEs } from "./change-request";
 
 export const es = {
@@ -402,7 +401,6 @@ export const es = {
         list: "Vista de lista",
       },
     },
-    schedule: scheduleEs,
     sidebar: {
       addProject: "Agregar proyecto",
       archiveChat: "Archivar chat",

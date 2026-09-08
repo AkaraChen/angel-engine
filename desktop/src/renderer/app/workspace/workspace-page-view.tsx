@@ -42,14 +42,12 @@ import { FleetPage } from "@/features/fleet/fleet-page";
 import { CloneProgressDialog } from "@/features/projects/components/clone-progress-dialog";
 import { CloneRepositoryDialog } from "@/features/projects/components/clone-repository-dialog";
 import { ProjectSettingsDialog } from "@/features/projects/components/project-settings-dialog";
-import { SchedulePage } from "@/features/schedule/schedule-page";
 import { queryKeys } from "@/platform/query-keys";
 
 interface WorkspacePageViewProps {
   chatActions: WorkspaceChatActions;
   currentRoutePath: string;
   fleetActive: boolean;
-  scheduleActive: boolean;
   model: WorkspacePageModel;
   navigation: WorkspaceNavigation;
 }
@@ -58,7 +56,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
   chatActions,
   currentRoutePath,
   fleetActive,
-  scheduleActive,
   model,
   navigation,
 }) => {
@@ -389,13 +386,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                 (rightSidebarOpen || workspaceToolHost !== "sidebar")
               }
               rightSidebarToggleLabel={workspaceToolsToggleLabel}
-              title={
-                scheduleActive
-                  ? t("schedule.title")
-                  : fleetActive
-                    ? t("fleet.title")
-                    : workspaceTitle
-              }
+              title={fleetActive ? t("fleet.title") : workspaceTitle}
               includeAngelTerminal={canOpenAngelTerminal}
               onPathLauncherAction={
                 currentLauncherTarget === undefined
@@ -412,9 +403,7 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
             />
             <main className="flex min-h-0 flex-1 overflow-hidden">
               <section className="flex min-h-0 min-w-0 flex-1 flex-col">
-                {scheduleActive ? (
-                  <SchedulePage projects={projects} />
-                ) : fleetActive ? (
+                {fleetActive ? (
                   <FleetPage
                     chats={chats}
                     isMetadataError={

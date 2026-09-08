@@ -23,7 +23,6 @@ export interface EventPublisher {
  */
 export interface ChatEventsApi {
   activityChanged: (chatId: string) => void;
-  automationsChanged: (automationIds: string[]) => void;
   conversationChanged: (chatIds: string[]) => void;
   metadataChanged: (chatIds: string[]) => void;
   shepherdChanged: (chatId: string) => void;
@@ -39,10 +38,6 @@ export function createChatEvents(publisher: EventPublisher): ChatEventsApi {
     activityChanged(chatId) {
       publisher.publish({ chatIds: [chatId], type: "chat-activity-changed" });
       publisher.publish({ chatIds: [chatId], type: "chat-attention-changed" });
-    },
-    automationsChanged(automationIds) {
-      if (automationIds.length === 0) return;
-      publisher.publish({ automationIds, type: "automations-changed" });
     },
     conversationChanged(chatIds) {
       if (chatIds.length === 0) return;

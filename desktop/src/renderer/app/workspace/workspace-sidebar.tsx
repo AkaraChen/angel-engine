@@ -5,12 +5,7 @@ import type { ReactElement } from "react";
 import type { PathLauncherActionId } from "@shared/path-launcher";
 import type { ChatContextMenuAction } from "@/features/chat/api/queries";
 import type { ProjectContextMenuAction } from "@/features/projects/api/queries";
-import {
-  Plus,
-  CalendarDots,
-  GearSix as Settings,
-  SquaresFour,
-} from "@phosphor-icons/react";
+import { Plus, GearSix as Settings, SquaresFour } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
 import { m } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
@@ -44,7 +39,6 @@ const FLOATING_SIDEBAR_TRANSITION = {
 interface WorkspaceSidebarProps {
   chats: Chat[];
   fleetActive: boolean;
-  scheduleActive: boolean;
   isChatsLoading: boolean;
   isMacOS: boolean;
   isProjectsLoading: boolean;
@@ -56,7 +50,6 @@ interface WorkspaceSidebarProps {
   onImportSession: (project: Project) => void;
   onOpenChat: (chat: Chat) => MaybeAsync;
   onOpenFleet: () => MaybeAsync;
-  onOpenSchedule: () => MaybeAsync;
   onOpenSettings: () => MaybeAsync;
   onChatContextMenuAction: (chat: Chat, action: ChatContextMenuAction) => void;
   onProjectContextMenuAction: (
@@ -194,7 +187,6 @@ export function WorkspaceFloatingSidebar(
 function WorkspaceSidebarContent({
   chats,
   fleetActive,
-  scheduleActive,
   isChatsLoading,
   isMacOS,
   isProjectsLoading,
@@ -206,7 +198,6 @@ function WorkspaceSidebarContent({
   onImportSession,
   onOpenChat,
   onOpenFleet,
-  onOpenSchedule,
   onOpenSettings,
   onChatContextMenuAction,
   onProjectContextMenuAction,
@@ -225,7 +216,7 @@ function WorkspaceSidebarContent({
   );
   const createChatFromNewButton = async () => {
     const target = resolveWorkspaceNewChatTarget({
-      fleetActive: fleetActive || scheduleActive,
+      fleetActive,
       projects,
       selectedChatId,
       selectedProjectId,
@@ -269,15 +260,6 @@ function WorkspaceSidebarContent({
             >
               <Plus weight="bold" />
               <span>{t("sidebar.newChat")}</span>
-            </WorkspaceSidebarMenuButton>
-          </AnimatedSidebarMenuItem>
-          <AnimatedSidebarMenuItem>
-            <WorkspaceSidebarMenuButton
-              isActive={scheduleActive}
-              onClick={() => void onOpenSchedule()}
-            >
-              <CalendarDots weight="duotone" />
-              <span>{t("schedule.title")}</span>
             </WorkspaceSidebarMenuButton>
           </AnimatedSidebarMenuItem>
           <AnimatedSidebarMenuItem>

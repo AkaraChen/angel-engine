@@ -217,7 +217,6 @@ function createService(ports: Partial<ShepherdPorts> & ShepherdPorts) {
 
   const events = {
     activityChanged: vi.fn(),
-    automationsChanged: vi.fn(),
     conversationChanged: vi.fn(),
     metadataChanged: vi.fn(),
     shepherdChanged: vi.fn(),
@@ -625,7 +624,6 @@ describe("ShepherdService", () => {
       chatRuns,
       chatEvents: {
         activityChanged: () => undefined,
-        automationsChanged: () => undefined,
         conversationChanged: () => undefined,
         metadataChanged: () => undefined,
         shepherdChanged: () => undefined,
