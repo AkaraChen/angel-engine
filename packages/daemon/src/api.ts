@@ -252,7 +252,6 @@ export function registerApi(
         engine((chatEngine) =>
           chatEngine.createChatFromInput(
             {
-              creationLocation: automation.workspaceKind,
               projectId: automation.projectId ?? undefined,
               runtime: automation.runtime,
               title: automation.name,
@@ -501,12 +500,6 @@ export function registerApi(
     activity.clearChat(chat.id);
     chatEvents.metadataChanged([chat.id]);
     return context.json(chat);
-  });
-  app.post("/api/chats/:id/archive-workspace", async (context) => {
-    const chat = await run(archiveChat(context.req.param("id")));
-    activity.clearChat(chat.id);
-    chatEvents.metadataChanged([chat.id]);
-    return context.json({ chat, removedWorktree: null });
   });
   app.post("/api/chats/:id/load", async (context) =>
     context.json(

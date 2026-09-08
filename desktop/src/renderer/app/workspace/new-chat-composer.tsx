@@ -1,6 +1,5 @@
 import type {
   Chat,
-  ChatCreationLocation,
   ChatHistoryMessage,
   ChatRuntimeConfig,
 } from "@angel-engine/daemon-api/chat";
@@ -98,8 +97,6 @@ const chatSuggestionKeys = [
 ] as const;
 interface NewChatComposerProps {
   chats: Chat[];
-  creationLocation?: ChatCreationLocation;
-  creationLocationAccessory?: ReactNode;
   cwd?: string;
   initialMarkdown?: string;
   model?: string;
@@ -135,8 +132,6 @@ interface NewChatComposerProps {
 
 export function NewChatComposer({
   chats,
-  creationLocation,
-  creationLocationAccessory,
   cwd,
   initialMarkdown,
   model,
@@ -167,10 +162,8 @@ export function NewChatComposer({
   const suggestionKeys = chatSuggestionKeys;
   useTerminalSelectionInsert(editor);
   const sourceAttachment = editor.sourceControlAttachments[0];
-  const isChangeRequest = sourceAttachment?.kind === "changeRequest";
   const sendChatMessage = useSendChatMessage(slotKey, {
     chatId: undefined,
-    creationLocation: isChangeRequest ? "worktree" : creationLocation,
     cwd,
     model,
     mode,
@@ -190,14 +183,6 @@ export function NewChatComposer({
             provider: sourceAttachment.providerId,
             url: sourceAttachment.url,
           },
-    worktreeRef:
-      isChangeRequest && is.nonEmptyString(sourceAttachment.sourceBranch)
-        ? {
-            remoteRef: `heads/${sourceAttachment.sourceBranch}`,
-            type: "existingBranch",
-            value: sourceAttachment.sourceBranch,
-          }
-        : undefined,
   });
   const { isEmpty } = editor;
 
@@ -207,7 +192,6 @@ export function NewChatComposer({
       mentionedFiles,
       selectedSkills,
       text,
-      worktreeSetupApproval,
     }: ChatComposerSubmission) => {
       await sendChatMessage.sendPromptMessage({
         attachments: files,
@@ -215,7 +199,6 @@ export function NewChatComposer({
         selectedSkills,
         t,
         text,
-        worktreeSetupApproval,
       });
     },
     [sendChatMessage, t],
@@ -344,20 +327,17 @@ export function NewChatComposer({
                   isRunning={isRunning}
                   onCancel={handleCancel}
                   projectSelect={
-                    <>
-                      <DraftProjectSelect
-                        allowNoProject={false}
-                        onCreateProject={onCreateProject}
-                        onProjectChange={(nextProjectId) => {
-                          if (is.nonEmptyString(nextProjectId))
-                            onProjectChange(nextProjectId);
-                        }}
-                        projects={projects}
-                        selectedProjectId={projectId}
-                        variant="chip"
-                      />
-                      {creationLocationAccessory}
-                    </>
+                    <DraftProjectSelect
+                      allowNoProject={false}
+                      onCreateProject={onCreateProject}
+                      onProjectChange={(nextProjectId) => {
+                        if (is.nonEmptyString(nextProjectId))
+                          onProjectChange(nextProjectId);
+                      }}
+                      projects={projects}
+                      selectedProjectId={projectId}
+                      variant="chip"
+                    />
                   }
                 />
               </ChatComposer>

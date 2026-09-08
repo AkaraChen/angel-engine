@@ -1,9 +1,5 @@
 import type { AgentRuntime } from "@angel-engine/daemon-api/agents";
-import type {
-  Chat,
-  ChatCreationLocation,
-  ChatRuntimeConfig,
-} from "@angel-engine/daemon-api/chat";
+import type { Chat, ChatRuntimeConfig } from "@angel-engine/daemon-api/chat";
 import type { Project } from "@angel-engine/daemon-api/projects";
 import type { ReactNode } from "react";
 import type {
@@ -32,8 +28,6 @@ interface NewChatThreadProps {
   chatOptions: ChatOptionsContextValue;
   /** Recent chats surfaced under the composer, not thread state. */
   chats: Chat[];
-  creationLocation?: ChatCreationLocation;
-  creationLocationAccessory?: ReactNode;
   cwd?: string;
   initialMarkdown?: string;
   model?: string;
@@ -65,8 +59,6 @@ interface NewChatThreadProps {
 export function NewChatThread({
   chatOptions,
   chats,
-  creationLocation,
-  creationLocationAccessory,
   cwd,
   initialMarkdown,
   model,
@@ -142,8 +134,6 @@ export function NewChatThread({
         <ChatRuntimeActionsProvider slotKey={slotKey}>
           <NewChatComposer
             chats={chats}
-            creationLocation={creationLocation}
-            creationLocationAccessory={creationLocationAccessory}
             cwd={cwd}
             initialMarkdown={initialMarkdown}
             model={model}

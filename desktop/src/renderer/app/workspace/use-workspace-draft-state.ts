@@ -1,5 +1,4 @@
 import type { AgentRuntime } from "@angel-engine/daemon-api/agents";
-import type { ChatCreationLocation } from "@angel-engine/daemon-api/chat";
 import type { SetStateAction } from "react";
 import type { DraftAgentConfig } from "@/app/workspace/workspace-thread-types";
 
@@ -7,7 +6,6 @@ import { useCallback, useReducer } from "react";
 
 interface WorkspaceDraftState {
   agentConfigs: Partial<Record<string, DraftAgentConfig>>;
-  creationLocations: Partial<Record<string, ChatCreationLocation>>;
   initialPrompts: Partial<Record<string, string>>;
   runtimes: Partial<Record<string, AgentRuntime>>;
   sessionIds: Partial<Record<string, number>>;
@@ -23,10 +21,6 @@ type WorkspaceDraftStateAction =
       type: "agentConfigs";
     }
   | {
-      action: SetStateAction<WorkspaceDraftState["creationLocations"]>;
-      type: "creationLocations";
-    }
-  | {
       action: SetStateAction<WorkspaceDraftState["runtimes"]>;
       type: "runtimes";
     }
@@ -37,7 +31,6 @@ type WorkspaceDraftStateAction =
 
 const emptyWorkspaceDraftState: WorkspaceDraftState = {
   agentConfigs: {},
-  creationLocations: {},
   initialPrompts: {},
   runtimes: {},
   sessionIds: {},
@@ -62,14 +55,6 @@ function workspaceDraftStateReducer(
         ...state,
         agentConfigs: applyWorkspaceDraftSetState(
           state.agentConfigs,
-          action.action,
-        ),
-      };
-    case "creationLocations":
-      return {
-        ...state,
-        creationLocations: applyWorkspaceDraftSetState(
-          state.creationLocations,
           action.action,
         ),
       };
@@ -107,11 +92,6 @@ export function useWorkspaceDraftState() {
       dispatchDraftState({ action, type: "agentConfigs" }),
     [],
   );
-  const setDraftCreationLocations = useCallback(
-    (action: SetStateAction<WorkspaceDraftState["creationLocations"]>) =>
-      dispatchDraftState({ action, type: "creationLocations" }),
-    [],
-  );
   const setDraftRuntimes = useCallback(
     (action: SetStateAction<WorkspaceDraftState["runtimes"]>) =>
       dispatchDraftState({ action, type: "runtimes" }),
@@ -130,12 +110,10 @@ export function useWorkspaceDraftState() {
 
   return {
     draftAgentConfigs: draftState.agentConfigs,
-    draftCreationLocations: draftState.creationLocations,
     draftInitialPrompts: draftState.initialPrompts,
     draftRuntimes: draftState.runtimes,
     draftSessionIds: draftState.sessionIds,
     setDraftAgentConfigs,
-    setDraftCreationLocations,
     setDraftInitialPrompts,
     setDraftRuntimes,
     setDraftSessionIds,

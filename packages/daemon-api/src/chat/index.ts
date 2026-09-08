@@ -24,7 +24,6 @@ import type {
   ChatToolActionPhase as JsChatToolActionPhase,
   ChatToolCallPart as JsChatToolCallPart,
 } from "@angel-engine/js-client";
-import type { DaemonErrorCode } from "../daemon";
 import { type as arkType } from "arktype";
 import { normalizeChatAttachmentsInput } from "@angel-engine/js-client/utils/attachments";
 import {
@@ -79,10 +78,6 @@ export {
 } from "./active-run";
 export { isChatStreamEvent } from "./stream-event";
 
-export type ChatCreationLocation = "project" | "worktree";
-export interface ChatCreationLocationInput {
-  creationLocation?: ChatCreationLocation;
-}
 export interface ChatCwdInput {
   cwd?: string;
 }
@@ -93,50 +88,19 @@ export interface ChatCwdInput {
 export interface ChatPrewarmIdInput {
   prewarmId?: string;
 }
-export interface WorktreeSetupApprovalInput {
-  worktreeSetupApproval?: string;
-}
-
-export type WorktreeCreationStage = "fetching" | "worktree" | "setup";
-export type WorktreeCreationStatus = "creating" | "failed";
-
-export interface WorktreeCreationState {
-  error?: string;
-  errorCode?: DaemonErrorCode;
-  jobId: string;
-  progress: number;
-  relatedChatId?: string;
-  stage: WorktreeCreationStage;
-  status: WorktreeCreationStatus;
-}
-
 export type Chat = JsChat & {
   sourceLink?: ChatSourceLink | null;
-  /** Present while an app-managed worktree is being created or needs retry. */
-  worktreeCreation?: WorktreeCreationState;
 };
-export interface ChatArchiveWorkspaceResult {
-  chat: Chat;
-  removedWorktree: string | null;
-}
-
 export interface ChatSourceLink {
   kind: "changeRequest" | "issue" | "pullRequest" | "workItem";
   provider: string;
   url: string;
 }
 export type ChatCreateInput = JsChatCreateInput &
-  ChatCreationLocationInput &
   ChatCwdInput &
-  ChatPrewarmIdInput &
-  WorktreeSetupApprovalInput & {
+  ChatPrewarmIdInput & {
     remoteThreadId?: string;
     sourceLink?: ChatSourceLink;
-    worktreeRef?: {
-      remoteRef?: string;
-      type: "existingBranch" | "newBranchFrom";
-      value: string;
-    };
   };
 
 /** A remote provider session that can be imported into Angel Engine. */
@@ -189,10 +153,7 @@ export type ChatElicitationQuestionOption = JsChatElicitationQuestionOption;
 export type ChatElicitationQuestion = JsChatElicitationQuestion;
 export type ChatElicitation = JsChatElicitation;
 export type ChatAttachmentInput = JsChatAttachmentInput;
-export type ChatSendInput = JsChatSendInput &
-  ChatCreationLocationInput &
-  ChatCwdInput &
-  WorktreeSetupApprovalInput;
+export type ChatSendInput = JsChatSendInput & ChatCwdInput;
 export type ChatStreamPart = "reasoning" | "text";
 
 export interface ChatAvailableCommand {
@@ -428,7 +389,6 @@ export type ChatRunObserverEvent =
   | { event: ChatStreamEvent; sequence: number; type: "event" };
 
 export interface ChatPrewarmInput {
-  creationLocation?: ChatCreationLocation;
   projectId?: string;
   runtime?: string;
 }
@@ -464,18 +424,8 @@ export interface ChatIdsInput {
 
 export type ChatArchivedRestoreInput = ChatIdsInput;
 export type ChatArchivedDeleteInput = ChatIdsInput;
-export type ChatArchivedDeleteImpactInput = ChatIdsInput;
-
-export interface ChatArchivedDeleteImpact {
-  chatCount: number;
-  managedWorktreeCount: number;
-  managedWorktrees: string[];
-}
-
 export interface ChatArchivedDeleteResult {
   deletedCount: number;
-  deletedWorktreeCount: number;
-  deletedWorktrees: string[];
 }
 
 export interface ChatSetModeResult {
@@ -610,7 +560,6 @@ const chatId = arkType("string > 0");
 
 export const chatCreateInputSchema = arkType({
   "+": "ignore",
-  "creationLocation?": "'project' | 'worktree' | undefined",
   "cwd?": "string > 0 | undefined",
   "model?": "string > 0 | undefined",
   "mode?": "string > 0 | undefined",
@@ -626,12 +575,6 @@ export const chatCreateInputSchema = arkType({
     url: "string > 0",
   },
   "title?": "string > 0 | undefined",
-  "worktreeSetupApproval?": "string > 0 | undefined",
-  "worktreeRef?": {
-    "remoteRef?": "string > 0",
-    type: "'existingBranch' | 'newBranchFrom'",
-    value: "string > 0",
-  },
 });
 
 export const listImportableSessionsInputSchema = arkType({
@@ -653,7 +596,6 @@ export const importChatInputSchema = arkType({
 
 export const chatPrewarmInputSchema = arkType({
   "+": "ignore",
-  "creationLocation?": "'project' | 'worktree' | undefined",
   "projectId?": "string > 0 | undefined",
   "runtime?": "string > 0 | undefined",
 });
@@ -679,7 +621,6 @@ export const chatSendInputSchema = arkType({
   "+": "ignore",
   "attachments?": "unknown | undefined",
   "chatId?": "string > 0 | undefined",
-  "creationLocation?": "'project' | 'worktree' | undefined",
   "cwd?": "string > 0 | undefined",
   "model?": "string > 0 | undefined",
   "mode?": "string > 0 | undefined",
@@ -690,7 +631,6 @@ export const chatSendInputSchema = arkType({
   "reasoningEffort?": "string > 0 | undefined",
   "runtime?": "string > 0 | undefined",
   text: "string",
-  "worktreeSetupApproval?": "string > 0 | undefined",
 });
 
 export const chatSetModeInputSchema = arkType({

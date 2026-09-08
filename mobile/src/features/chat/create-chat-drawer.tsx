@@ -32,7 +32,6 @@ import { basename } from "./chat-summary";
 import {
   buildCreateChatInput,
   canSubmitCreateChat,
-  canUseWorktree,
   INITIAL_CREATE_CHAT_FORM,
 } from "./create-chat-form";
 import { stashNewChatPrompt } from "./new-chat-prompt";
@@ -156,10 +155,6 @@ export const CreateChatDrawer: FC<CreateChatDrawerProps> = ({ children }) => {
                     model: "",
                     projectId,
                     reasoningEffort: "",
-                    // A worktree can't outlive its project, so clearing the
-                    // project disables the worktree option.
-                    useWorktree:
-                      projectId.length > 0 ? previous.useWorktree : false,
                   }));
                 }}
               >
@@ -178,25 +173,6 @@ export const CreateChatDrawer: FC<CreateChatDrawerProps> = ({ children }) => {
                 </SelectContent>
               </Select>
             </Field>
-
-            {canUseWorktree(form) ? (
-              <Field htmlFor="new-chat-location" label="Create in">
-                <Select
-                  value={form.useWorktree ? "worktree" : "project"}
-                  onValueChange={(value) =>
-                    update("useWorktree", value === "worktree")
-                  }
-                >
-                  <SelectTrigger className="w-full" id="new-chat-location">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="project">Project</SelectItem>
-                    <SelectItem value="worktree">Create worktree</SelectItem>
-                  </SelectContent>
-                </Select>
-              </Field>
-            ) : null}
 
             <Field htmlFor="new-chat-agent" label={t("createChat.agentLabel")}>
               <Select

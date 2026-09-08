@@ -475,7 +475,6 @@ describe("daemon chat runs", () => {
       body: JSON.stringify({
         prewarmId: "prewarm-1",
         runtime: "codex",
-        worktreeSetupApproval: "approved",
       }),
       headers: { "content-type": "application/json" },
       method: "POST",

@@ -229,7 +229,6 @@ function WorkspaceSidebarContent({
       projects,
       selectedChatId,
       selectedProjectId,
-      workspaceMode: "work",
     });
 
     switch (target.type) {

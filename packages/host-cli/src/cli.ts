@@ -242,8 +242,6 @@ async function dispatch(
       return client.activity.list();
     case "project":
       return dispatchProject(client, action, args);
-    case "worktree":
-      return dispatchWorktree(client, action, args);
     case "agent":
       requireAction(action, "agent", "ls");
       if (action !== "ls")
@@ -343,21 +341,6 @@ async function dispatchProject(
     default:
       throw new UsageError(`Unknown project command: ${action}`);
   }
-}
-
-async function dispatchWorktree(
-  client: DaemonClient,
-  action: string | undefined,
-  args: string[],
-): Promise<unknown> {
-  requireAction(action, "worktree", "ls");
-  if (action !== "ls")
-    throw new UsageError(`Unknown worktree command: ${action}`);
-  const flags = parseKeyFlags(args);
-  return client.worktrees.listManaged({
-    eligibleOnly:
-      flags["eligible-only"] === "true" || args.includes("--eligible-only"),
-  });
 }
 
 async function dispatchSkill(

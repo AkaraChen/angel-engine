@@ -58,7 +58,7 @@ describe("chatPrewarmMatches", () => {
       ),
     );
 
-  it("treats a missing creationLocation as project on both sides", async () => {
+  it("treats a missing with a standalone cwd on both sides", async () => {
     await expect(matches(standalonePrewarm, {})).resolves.toBe(true);
   });
 

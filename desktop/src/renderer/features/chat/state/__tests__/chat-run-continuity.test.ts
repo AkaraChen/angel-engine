@@ -153,12 +153,10 @@ describe("desktop chat run continuity", () => {
     const run = store.chatRunActions.startRun({
       callbacks: { onChatCreated },
       input: {
-        creationLocation: "worktree",
         cwd: "/repo/.worktrees/feature",
         prewarmId: "prewarm-1",
         projectId: "project-1",
         runtime: "codex",
-        worktreeSetupApproval: "setup-digest",
       },
       message: userPrompt("build it"),
       slotKey: "draft",
@@ -168,12 +166,10 @@ describe("desktop chat run continuity", () => {
     // Creation carries the prewarm and the placement; the run input does not.
     expect(chats.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        creationLocation: "worktree",
         cwd: "/repo/.worktrees/feature",
         prewarmId: "prewarm-1",
         projectId: "project-1",
         runtime: "codex",
-        worktreeSetupApproval: "setup-digest",
       }),
     );
     expect(onChatCreated).toHaveBeenCalledWith(created);

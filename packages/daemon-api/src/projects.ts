@@ -174,53 +174,6 @@ export interface UpdateProjectConfigInput
   scriptShell?: ProjectScriptShell;
 }
 
-/** One app-managed git worktree under `~/.angel-engine/worktrees`. */
-export interface ManagedWorktreeSummary {
-  activeChatCount: number;
-  archivedChatCount: number;
-  chatCount: number;
-  chatIds: string[];
-  /** True when no active chat still uses the worktree. */
-  eligibleForCleanup: boolean;
-  existsOnDisk: boolean;
-  latestChatUpdatedAt: string | null;
-  path: string;
-  projectId: string | null;
-  projectSlug: string;
-}
-
-export interface ManagedWorktreeScanInput {
-  eligibleOnly?: boolean;
-}
-
-export interface ManagedWorktreeDeleteTarget {
-  expectedChatIds: string[];
-  expectedExistsOnDisk: boolean;
-  path: string;
-}
-
-export interface ManagedWorktreeDeleteInput {
-  targets: ManagedWorktreeDeleteTarget[];
-}
-
-/** A worktree whose chats were deleted but whose directory could not be removed. */
-export interface ManagedWorktreeDeleteFailure {
-  error: string;
-  path: string;
-}
-
-export interface ManagedWorktreeDeleteResult {
-  deletedChatCount: number;
-  deletedChatIds: string[];
-  deletedWorktreeCount: number;
-  deletedWorktrees: string[];
-  /**
-   * Per-path failures hit after deletion started. Validation and eligibility
-   * failures reject the whole request instead and never reach this list.
-   */
-  failedWorktrees: ManagedWorktreeDeleteFailure[];
-}
-
 export interface CreateProjectInput {
   id?: string;
   path: string;
@@ -305,18 +258,6 @@ export const projectGitStatusInputSchema = arkType({
 export const projectSetupRetryInputSchema = arkType({
   "+": "ignore",
   setupApproval: "string > 0",
-});
-
-const managedWorktreeDeleteTargetSchema = arkType({
-  "+": "ignore",
-  expectedChatIds: arkType("string > 0").array(),
-  expectedExistsOnDisk: "boolean",
-  path: "string > 0",
-});
-
-export const managedWorktreeDeleteInputSchema = arkType({
-  "+": "ignore",
-  targets: managedWorktreeDeleteTargetSchema.array(),
 });
 
 export const updateProjectConfigInputSchema = arkType({

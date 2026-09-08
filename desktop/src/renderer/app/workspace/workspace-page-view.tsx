@@ -97,7 +97,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
     modeOverride,
     modelOverride,
     permissionModeOverride,
-    pinnedDraftCwd,
     projectChatsByProjectId,
     projects,
     projectsQuery,
@@ -483,7 +482,6 @@ export const WorkspacePageView: FC<WorkspacePageViewProps> = ({
                   <NewChatThread
                     chatOptions={chatOptions}
                     chats={chats}
-                    cwd={pinnedDraftCwd}
                     key={runtimePageKey}
                     initialMarkdown={initialDraftPrompt}
                     model={modelOverride}

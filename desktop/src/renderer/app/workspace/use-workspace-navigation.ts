@@ -1,7 +1,6 @@
 import type { Chat } from "@angel-engine/daemon-api/chat";
 import type { Project } from "@angel-engine/daemon-api/projects";
 import type { WorkspacePageModel } from "@/app/workspace/use-workspace-page-model";
-import type { WorkspaceMode } from "@/app/workspace/workspace-ui-store";
 
 import is from "@sindresorhus/is";
 import { useCallback } from "react";

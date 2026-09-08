@@ -1,4 +1,3 @@
-import type { ChatCreationLocation } from "@angel-engine/daemon-api/chat";
 import type { Project } from "@angel-engine/daemon-api/projects";
 import { FolderOpen, GitBranch } from "@phosphor-icons/react";
 import { useTranslation } from "react-i18next";
@@ -119,63 +118,6 @@ export function DraftProjectSelect({
               </SelectItem>
             );
           })}
-        </SelectContent>
-      </Select>
-    </div>
-  );
-}
-
-export function DraftCreationLocationSelect({
-  onValueChange,
-  value,
-  variant = "default",
-}: {
-  onValueChange: (value: ChatCreationLocation) => void;
-  value: ChatCreationLocation;
-  variant?: keyof typeof projectControlVariants;
-}) {
-  const { t } = useTranslation();
-
-  return (
-    <div className="relative w-fit max-w-48">
-      <GitBranch
-        className="
-          pointer-events-none absolute top-1/2 left-2.5 z-10 size-3.5
-          -translate-y-1/2 text-muted-foreground
-        "
-        weight="regular"
-      />
-      <Select
-        onValueChange={(nextValue) =>
-          onValueChange(nextValue as ChatCreationLocation)
-        }
-        value={value}
-      >
-        <SelectTrigger
-          aria-label={t("workspace.creationLocationSelect")}
-          className={cn(
-            projectControlVariants[variant],
-            "max-w-48",
-            variant === "default" &&
-              `
-                hover:bg-background/92
-                focus-visible:border-foreground/12! focus-visible:ring-0!
-                dark:hover:bg-card/90
-                dark:focus-visible:border-white/14!
-              `,
-          )}
-          size="sm"
-          title={t("workspace.creationLocationSelect")}
-        >
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="project">
-            {t("workspace.creationLocationProject")}
-          </SelectItem>
-          <SelectItem value="worktree">
-            {t("workspace.creationLocationWorktree")}
-          </SelectItem>
         </SelectContent>
       </Select>
     </div>

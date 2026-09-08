@@ -133,14 +133,6 @@ export class DaemonError extends Data.TaggedError(
     return new DaemonError({ code: "chat-cwd-invalid", message, status: 400 });
   }
 
-  static chatWorktreeCreationForbidden(message: string) {
-    return new DaemonError({
-      code: "chat-worktree-creation-forbidden",
-      message,
-      status: 400,
-    });
-  }
-
   static chatPrewarmFailed(message: string) {
     return new DaemonError({
       code: "chat-prewarm-failed",

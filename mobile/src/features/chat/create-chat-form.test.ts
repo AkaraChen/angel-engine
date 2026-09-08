@@ -5,7 +5,6 @@ import { describe, expect, it } from "vitest";
 import {
   buildCreateChatInput,
   canSubmitCreateChat,
-  canUseWorktree,
   INITIAL_CREATE_CHAT_FORM,
 } from "./create-chat-form";
 
@@ -20,55 +19,12 @@ describe("canSubmitCreateChat", () => {
   });
 });
 
-describe("canUseWorktree", () => {
-  it("is false without a project", () => {
-    expect(canUseWorktree(form({ projectId: "" }))).toBe(false);
-    expect(canUseWorktree(form({ projectId: "p1" }))).toBe(true);
-  });
-});
-
 describe("buildCreateChatInput", () => {
-  it("strips empty optional fields and omits creationLocation without a project", () => {
-    const input = buildCreateChatInput(
-      form({ prompt: "hi", model: "  ", reasoningEffort: "" }),
-    );
-    expect(input).toEqual({
-      projectId: undefined,
-      runtime: "claude",
-      model: undefined,
-      reasoningEffort: undefined,
-      creationLocation: undefined,
-    });
-  });
-
   it("passes model and reasoning through when set", () => {
     const input = buildCreateChatInput(
       form({ prompt: "hi", model: " gpt-x ", reasoningEffort: "high" }),
     );
     expect(input.model).toBe("gpt-x");
     expect(input.reasoningEffort).toBe("high");
-  });
-
-  it("sends creationLocation=project for a project chat", () => {
-    const input = buildCreateChatInput(
-      form({ prompt: "hi", projectId: "p1", useWorktree: false }),
-    );
-    expect(input.projectId).toBe("p1");
-    expect(input.creationLocation).toBe("project");
-  });
-
-  it("sends creationLocation=worktree when worktree creation is selected", () => {
-    const input = buildCreateChatInput(
-      form({ prompt: "hi", projectId: "p1", useWorktree: true }),
-    );
-    expect(input.creationLocation).toBe("worktree");
-  });
-
-  it("never requests a worktree without a project even if the flag is stale", () => {
-    const input = buildCreateChatInput(
-      form({ prompt: "hi", projectId: "", useWorktree: true }),
-    );
-    expect(input.projectId).toBeUndefined();
-    expect(input.creationLocation).toBeUndefined();
   });
 });

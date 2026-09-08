@@ -1,6 +1,5 @@
 import type {
   Chat,
-  ChatCreationLocation,
   ChatLoadResult,
   ChatPrewarmResult,
   ChatRuntimeConfig,
@@ -89,7 +88,6 @@ interface SourceControlLinkResolveQueryParams {
 
 interface ChatPrewarmQueryParams {
   api: ApiClient;
-  creationLocation?: ChatCreationLocation | null;
   enabled?: boolean;
   projectId?: string | null;
   runtime?: string | null;
@@ -111,15 +109,6 @@ interface SetChatRuntimeMutationParams {
 interface ArchiveChatMutationParams {
   api: ApiClient;
   onSuccess?: (data: Chat, variables: Chat) => Promise<void> | void;
-  queryClient: QueryClient;
-}
-
-interface ArchiveWorkspaceMutationParams {
-  api: ApiClient;
-  onSuccess?: (
-    data: Awaited<ReturnType<ApiClient["chats"]["archiveWorkspace"]>>,
-    chatId: string,
-  ) => Promise<void> | void;
   queryClient: QueryClient;
 }
 
@@ -388,29 +377,20 @@ export function sourceControlLinkResolveQueryOptions({
 
 export function chatPrewarmQueryOptions({
   api,
-  creationLocation,
   enabled = true,
   projectId,
   runtime,
   staleTime = 0,
 }: ChatPrewarmQueryParams) {
-  const normalizedCreationLocation = creationLocation ?? "project";
-
   return queryOptions({
-    enabled:
-      enabled && normalizedCreationLocation !== "worktree" && Boolean(runtime),
+    enabled: enabled && Boolean(runtime),
     gcTime: 300_000,
     queryFn: async (): Promise<ChatPrewarmResult> =>
       api.chats.prewarm({
-        creationLocation: normalizedCreationLocation,
         projectId: projectId ?? undefined,
         runtime: runtime ?? undefined,
       }),
-    queryKey: queryKeys.chats.prewarm(
-      runtime ?? null,
-      projectId ?? null,
-      normalizedCreationLocation,
-    ),
+    queryKey: queryKeys.chats.prewarm(runtime ?? null, projectId ?? null),
     retry: false,
     staleTime,
   });
@@ -476,26 +456,6 @@ export function archiveChatMutationOptions({
       queryClient.setQueryData<ChatLoadResult | undefined>(
         queryKeys.chats.detail(data.id),
         (current) => (current ? { ...current, chat: data } : current),
-      );
-      await onSuccess?.(data, variables);
-    },
-  });
-}
-
-export function archiveWorkspaceMutationOptions({
-  api,
-  onSuccess,
-  queryClient,
-}: ArchiveWorkspaceMutationParams) {
-  return mutationOptions({
-    mutationFn: async (chatId: string) => api.chats.archiveWorkspace(chatId),
-    onSuccess: async (data, variables) => {
-      queryClient.setQueryData<Chat[]>(queryKeys.chats.list(), (current = []) =>
-        current.filter((chat) => chat.id !== data.chat.id),
-      );
-      queryClient.setQueryData<ChatLoadResult | undefined>(
-        queryKeys.chats.detail(data.chat.id),
-        (current) => (current ? { ...current, chat: data.chat } : current),
       );
       await onSuccess?.(data, variables);
     },

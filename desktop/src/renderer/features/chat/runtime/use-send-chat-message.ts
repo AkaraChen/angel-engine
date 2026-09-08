@@ -1,7 +1,6 @@
 import type {
   Chat,
   ChatCreateInput,
-  ChatCreationLocation,
   ChatHistoryMessage,
   ChatRuntimeConfig,
 } from "@angel-engine/daemon-api/chat";
@@ -37,7 +36,6 @@ export interface SendChatMessageCallbacks {
 
 export interface SendChatMessageOptions extends SendChatMessageCallbacks {
   chatId?: string;
-  creationLocation?: ChatCreationLocation;
   cwd?: string;
   model?: string;
   mode?: string;
@@ -47,7 +45,6 @@ export interface SendChatMessageOptions extends SendChatMessageCallbacks {
   reasoningEffort?: string;
   runtime?: string;
   sourceLink?: ChatCreateInput["sourceLink"];
-  worktreeRef?: ChatCreateInput["worktreeRef"];
 }
 
 export interface SendPromptMessageInput {
@@ -56,7 +53,6 @@ export interface SendPromptMessageInput {
   mentionedFiles: ComposerMentionedFile[];
   selectedSkills: ComposerMentionedSkill[];
   t: TFunction;
-  worktreeSetupApproval?: string;
 }
 
 export function useSendChatMessage(
@@ -68,7 +64,7 @@ export function useSendChatMessage(
   latestOptionsRef.current = options;
 
   const sendAppendMessage = useCallback(
-    async (message: AppendMessage, worktreeSetupApproval?: string) => {
+    async (message: AppendMessage) => {
       const runConfig = message.runConfig?.custom;
       const modeOverride =
         typeof runConfig?.mode === "string" ? runConfig.mode : undefined;
@@ -81,7 +77,6 @@ export function useSendChatMessage(
         },
         input: {
           chatId: latestOptionsRef.current.chatId,
-          creationLocation: latestOptionsRef.current.creationLocation,
           cwd: latestOptionsRef.current.cwd,
           model: latestOptionsRef.current.model,
           mode: modeOverride ?? latestOptionsRef.current.mode,
@@ -91,8 +86,6 @@ export function useSendChatMessage(
           reasoningEffort: latestOptionsRef.current.reasoningEffort,
           runtime: latestOptionsRef.current.runtime,
           sourceLink: latestOptionsRef.current.sourceLink,
-          worktreeRef: latestOptionsRef.current.worktreeRef,
-          worktreeSetupApproval,
         },
         message,
         slotKey,
@@ -133,7 +126,7 @@ export function useSendChatMessage(
         sourceId: null,
       };
 
-      await sendAppendMessage(message, input.worktreeSetupApproval);
+      await sendAppendMessage(message);
     },
     [sendAppendMessage],
   );
