@@ -59,7 +59,6 @@
     "macos-alias",
     "msgpackr-extract",
     "msw",
-    "node-pty",
     "protobufjs",
     "sharp",
     "unrs-resolver"
