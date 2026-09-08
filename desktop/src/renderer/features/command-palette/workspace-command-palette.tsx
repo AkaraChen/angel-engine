@@ -100,24 +100,16 @@ export const WorkspaceCommandPalette: FC<WorkspaceCommandPaletteProps> = ({
   const sessionResults = results.filter((entry) => entry.kind === "session");
 
   useContextKey("palette.open", open);
-  useCommand(
-    COMMAND_IDS.paletteOpen,
-    () => {
-      setOpen((current) => !current);
-      return true;
-    },
-    [],
-  );
-  useCommand(
-    COMMAND_IDS.paletteClose,
-    () => {
-      if (!open) return false;
-      setOpen(false);
-      setQuery("");
-      return true;
-    },
-    [open],
-  );
+  useCommand(COMMAND_IDS.paletteOpen, () => {
+    setOpen((current) => !current);
+    return true;
+  }, []);
+  useCommand(COMMAND_IDS.paletteClose, () => {
+    if (!open) return false;
+    setOpen(false);
+    setQuery("");
+    return true;
+  }, [open]);
 
   const selectEntry = (entry: CommandPaletteEntry) => {
     setOpen(false);
@@ -185,9 +177,3 @@ const PaletteEntry: FC<{
     </CommandItem>
   );
 };
-
-function unsupportedCapabilityReason(
-  state: ReturnType<typeof capabilityState>,
-): string | null {
-  return state.supported ? null : state.reason.message;
-}
