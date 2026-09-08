@@ -83,13 +83,13 @@ describe("source-control contracts", () => {
     } as const;
 
     expectValid(providerActivationSchema, activation);
-    expect(capabilityState(activation.capabilities, "checks.snapshot")).toEqual(
+    expect(capabilityState(activation.capabilities, "provider.clone")).toEqual(
       {
         supported: false,
         reason: {
           kind: "unknown-capability",
           message:
-            "Capability checks.snapshot was not declared by the provider.",
+            "Capability provider.clone was not declared by the provider.",
         },
       },
     );

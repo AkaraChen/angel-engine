@@ -301,31 +301,6 @@ runProviderContractSuite(
           ),
       },
       {
-        capability: "checks.list",
-        run: (plugin) => plugin.checks!.list!(numbered, operationContext()),
-      },
-      {
-        capability: "checks.snapshot",
-        run: (plugin) => plugin.checks!.snapshot!(numbered, operationContext()),
-      },
-      {
-        capability: "checks.failureLog",
-        run: (plugin) =>
-          plugin.checks!.failureLog!(
-            {
-              logRef: { jobId: "111", kind: "workflow-run", runId: "9001" },
-              repository,
-              tailLines: 40,
-            },
-            operationContext(),
-          ),
-      },
-      {
-        capability: "checks.fixPrompt",
-        run: (plugin) =>
-          plugin.checks!.fixPrompt!(numbered, operationContext()),
-      },
-      {
         capability: "workItems.get",
         run: (plugin) =>
           plugin.workItems!.get!({ id: "3", repository }, operationContext()),

@@ -53,13 +53,6 @@ export interface ChangeRequestCapability {
   resolveHead?: ProviderOperation<"changeRequests.resolveHead">;
 }
 
-export interface ChecksCapability {
-  list?: ProviderOperation<"checks.list">;
-  snapshot?: ProviderOperation<"checks.snapshot">;
-  failureLog?: ProviderOperation<"checks.failureLog">;
-  fixPrompt?: ProviderOperation<"checks.fixPrompt">;
-}
-
 export type AutomationCapability = Record<never, never>;
 export type ReleaseCapability = Record<never, never>;
 export interface SourceControlProviderPlugin {
@@ -70,7 +63,6 @@ export interface SourceControlProviderPlugin {
   repositories?: RepositoryCapability;
   workItems?: WorkItemCapability;
   changeRequests?: ChangeRequestCapability;
-  checks?: ChecksCapability;
   automation?: AutomationCapability;
   releases?: ReleaseCapability;
 }

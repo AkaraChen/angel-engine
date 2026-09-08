@@ -2,8 +2,6 @@ import { type as arkType } from "arktype";
 
 import {
   changeRequestSchema,
-  checkLogRefSchema,
-  checkRunSchema,
   checkSummarySchema,
   mergeRequirementSchema,
   providerDiagnosticSchema,
@@ -13,8 +11,6 @@ import {
 } from "./schemas";
 import type {
   ChangeRequest,
-  CheckLogRef,
-  CheckRun,
   CheckSummary,
   MergeMethod,
   MergeRequirement,
@@ -172,25 +168,6 @@ export interface ChangeRequestHeadResult {
   ref: string;
 }
 
-export interface FailureLogInput extends RepositoryOperationInput {
-  logRef: CheckLogRef;
-  tailLines: number;
-}
-
-export interface FailureLogResult {
-  text: string;
-  truncated: boolean;
-}
-
-export interface ChecksFixPromptInput extends NumberedItemInput {}
-
-export interface ChecksFixPromptResult {
-  changeRequest: ChangeRequest;
-  checks: CheckSummary;
-  prompt: string;
-}
-
-
 export interface CloneRepositoryInput extends RepositoryOperationInput {
   targetPath: string;
 }
@@ -245,13 +222,6 @@ export interface SourceControlOperationMap {
   "changeRequests.resolveHead": {
     input: NumberedItemInput;
     output: ChangeRequestHeadResult;
-  };
-  "checks.list": { input: NumberedItemInput; output: readonly CheckRun[] };
-  "checks.snapshot": { input: NumberedItemInput; output: CheckSummary };
-  "checks.failureLog": { input: FailureLogInput; output: FailureLogResult };
-  "checks.fixPrompt": {
-    input: ChecksFixPromptInput;
-    output: ChecksFixPromptResult;
   };
   "workItems.get": { input: NumberedItemInput; output: WorkItem };
   "workItems.getByUrl": { input: UrlOperationInput; output: WorkItem };
@@ -399,32 +369,6 @@ export const sourceControlOperationSchemas = {
       changeRequest: changeRequestSchema,
       remoteUrl: "string > 0",
       ref: "string > 0",
-    }),
-  },
-  "checks.list": {
-    input: numberedItemInputSchema,
-    output: checkRunSchema.array(),
-  },
-  "checks.snapshot": {
-    input: numberedItemInputSchema,
-    output: checkSummarySchema,
-  },
-  "checks.failureLog": {
-    input: arkType({
-      "+": "reject",
-      repository: repositoryIdentitySchema,
-      logRef: checkLogRefSchema,
-      tailLines: "number.integer >= 1",
-    }),
-    output: arkType({ "+": "reject", text: "string", truncated: "boolean" }),
-  },
-  "checks.fixPrompt": {
-    input: numberedItemInputSchema,
-    output: arkType({
-      "+": "reject",
-      changeRequest: changeRequestSchema,
-      checks: checkSummarySchema,
-      prompt: "string > 0",
     }),
   },
   "workItems.get": { input: numberedItemInputSchema, output: workItemSchema },

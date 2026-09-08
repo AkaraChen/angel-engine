@@ -184,7 +184,7 @@ export const capabilityMatrixSchema = arkType({
 });
 
 const capabilityIdSchema = arkType(
-  "'provider.auth' | 'discovery.listNamespaces' | 'discovery.listRepositories' | 'repositoryIdentity' | 'changeRequests.create' | 'changeRequests.get' | 'changeRequests.getByUrl' | 'changeRequests.list' | 'changeRequests.status' | 'changeRequests.comment' | 'changeRequests.merge' | 'changeRequests.preflight' | 'changeRequests.resolveHead' | 'checks.list' | 'checks.snapshot' | 'checks.failureLog' | 'checks.fixPrompt' | 'workItems.get' | 'workItems.getByUrl' | 'workItems.list' | 'provider.clone'",
+  "'provider.auth' | 'discovery.listNamespaces' | 'discovery.listRepositories' | 'repositoryIdentity' | 'changeRequests.create' | 'changeRequests.get' | 'changeRequests.getByUrl' | 'changeRequests.list' | 'changeRequests.status' | 'changeRequests.comment' | 'changeRequests.merge' | 'changeRequests.preflight' | 'changeRequests.resolveHead' | 'workItems.get' | 'workItems.getByUrl' | 'workItems.list' | 'provider.clone'",
 );
 
 export const providerManifestSchema = arkType({

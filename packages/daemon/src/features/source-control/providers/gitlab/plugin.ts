@@ -151,8 +151,6 @@ export function createGitLabPlugin(
         "workItems.get",
         "workItems.getByUrl",
         "workItems.list",
-        "checks.list",
-        "checks.snapshot",
         "provider.clone",
       ],
       displayName: "GitLab",
@@ -163,15 +161,6 @@ export function createGitLabPlugin(
           kind: "out-of-scope",
           message:
             "Merging GitLab change requests is outside the first release.",
-        },
-        "checks.failureLog": {
-          kind: "not-implemented",
-          message: "GitLab job logs are not available in this release.",
-        },
-        "checks.fixPrompt": {
-          kind: "not-implemented",
-          message:
-            "GitLab check fix prompts are not available in this release.",
         },
       },
     },
@@ -375,11 +364,6 @@ export function createGitLabPlugin(
         };
       },
     },
-    checks: {
-      list: (input, context) => listChecks(api, input, context),
-      snapshot: (input, context) => snapshotChecks(api, input, context),
-    },
-
   };
 }
 

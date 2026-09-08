@@ -40,12 +40,6 @@ import {
   preflightGitHubChangeRequest,
   resolveGitHubChangeRequestHead,
 } from "./internal/change-requests";
-import {
-  buildGitHubChecksFixPrompt,
-  fetchGitHubCheckFailureLog,
-  listGitHubChecks,
-  snapshotGitHubChecks,
-} from "./internal/checks";
 
 const PROVIDER_ID = "github";
 const PUBLIC_HOSTS = new Set(["github.com", "www.github.com"]);
@@ -259,10 +253,6 @@ export function createGitHubPlugin(
         "changeRequests.comment",
         "changeRequests.merge",
         "changeRequests.preflight",
-        "checks.list",
-        "checks.snapshot",
-        "checks.failureLog",
-        "checks.fixPrompt",
         "workItems.get",
         "workItems.getByUrl",
         "workItems.list",
@@ -321,16 +311,6 @@ export function createGitHubPlugin(
         mergeGitHubChangeRequest(input, context, resolvedDependencies),
       preflight: (input, context) =>
         preflightGitHubChangeRequest(input, context, resolvedDependencies),
-    },
-    checks: {
-      list: (input, context) =>
-        listGitHubChecks(input, context, resolvedDependencies),
-      snapshot: (input, context) =>
-        snapshotGitHubChecks(input, context, resolvedDependencies),
-      failureLog: (input, context) =>
-        fetchGitHubCheckFailureLog(input, context, resolvedDependencies),
-      fixPrompt: (input, context) =>
-        buildGitHubChecksFixPrompt(input, context, resolvedDependencies),
     },
     workItems: {
       get: (input, context) =>

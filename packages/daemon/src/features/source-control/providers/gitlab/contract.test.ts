@@ -233,14 +233,6 @@ runProviderContractSuite(
         run: (plugin) => plugin.workItems!.list!(listed, operationContext()),
       },
       {
-        capability: "checks.list",
-        run: (plugin) => plugin.checks!.list!(numbered, operationContext()),
-      },
-      {
-        capability: "checks.snapshot",
-        run: (plugin) => plugin.checks!.snapshot!(numbered, operationContext()),
-      },
-      {
         capability: "provider.clone",
         run: (plugin) =>
           plugin.git.clone!(

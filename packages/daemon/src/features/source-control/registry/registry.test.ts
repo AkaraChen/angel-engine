@@ -81,7 +81,7 @@ function fakePlugin(options: {
       parseUrl: () => null,
     },
     manifest: {
-      capabilities: ["provider.auth", "checks.list"],
+      capabilities: ["provider.auth"],
       displayName: options.id,
       hosts: [options.host],
       id: options.id,
@@ -97,7 +97,6 @@ function activation(
     authentication: "authenticated",
     capabilities: {
       entries: {
-        "checks.list": { supported: true },
         "provider.auth": { supported: true },
       },
     },
@@ -227,7 +226,7 @@ describe("SourceControlRegistry", () => {
       activation: {
         capabilities: {
           entries: {
-            "checks.list": {
+            "provider.auth": {
               reason: { kind: "unauthenticated" },
               supported: false,
             },
@@ -264,7 +263,7 @@ describe("SourceControlRegistry", () => {
       activation: {
         capabilities: {
           entries: {
-            "checks.list": {
+            "provider.auth": {
               reason: { kind: "requires-configuration" },
               supported: false,
             },
@@ -303,8 +302,8 @@ describe("SourceControlRegistry", () => {
     await expect(
       registry.invoke({
         activation: activation(slow, root),
-        capability: "checks.list",
-        operation: "checks.list",
+        capability: "provider.auth",
+        operation: "provider.auth",
         run: () => new Promise(() => undefined),
       }),
     ).rejects.toMatchObject({
@@ -316,8 +315,8 @@ describe("SourceControlRegistry", () => {
     await expect(
       registry.invoke({
         activation: activation(healthy, root),
-        capability: "checks.list",
-        operation: "checks.list",
+        capability: "provider.auth",
+        operation: "provider.auth",
         run: async () => "healthy",
       }),
     ).resolves.toBe("healthy");
@@ -335,8 +334,8 @@ describe("SourceControlRegistry", () => {
     await expect(
       registry.invoke({
         activation: activation(plugin, root),
-        capability: "checks.list",
-        operation: "checks.list",
+        capability: "provider.auth",
+        operation: "provider.auth",
         run,
       }),
     ).rejects.toMatchObject({
@@ -386,8 +385,8 @@ describe("SourceControlRegistry", () => {
     const failure = await registry
       .invoke({
         activation: result.activation,
-        capability: "checks.list",
-        operation: "checks.list",
+        capability: "provider.auth",
+        operation: "provider.auth",
         run: async () => Promise.reject(new Error(`token=${token}`)),
       })
       .catch((cause: ProviderInvocationError) => cause);
@@ -443,8 +442,8 @@ describe("SourceControlRegistry", () => {
     const controller = new AbortController();
     const invocation = registry.invoke({
       activation: activation(plugin, root),
-      capability: "checks.list",
-      operation: "checks.list",
+      capability: "provider.auth",
+      operation: "provider.auth",
       run: () => new Promise(() => undefined),
       signal: controller.signal,
     });
@@ -467,8 +466,8 @@ describe("SourceControlRegistry", () => {
     await expect(
       registry.invoke({
         activation: current,
-        capability: "checks.list",
-        operation: "checks.list",
+        capability: "provider.auth",
+        operation: "provider.auth",
         run: async () => "unreachable",
       }),
     ).rejects.toMatchObject({

@@ -638,32 +638,5 @@ describe("GitHub source-control provider", () => {
       },
     });
 
-    await expect(
-      plugin.checks?.list?.({ id: "7", repository }, operationContext()),
-    ).resolves.toEqual([
-      expect.objectContaining({ name: "test", conclusion: "failure" }),
-    ]);
-    await expect(
-      plugin.checks?.snapshot?.({ id: "7", repository }, operationContext()),
-    ).resolves.toMatchObject({
-      failedBlocking: [expect.objectContaining({ name: "test" })],
-      headOid: "abc",
-    });
-    await expect(
-      plugin.checks?.failureLog?.(
-        {
-          logRef: { kind: "workflow-run", runId: "9001", jobId: "111" },
-          repository,
-          tailLines: 40,
-        },
-        operationContext(),
-      ),
-    ).resolves.toEqual({ text: "failure line", truncated: false });
-    await expect(
-      plugin.checks?.fixPrompt?.({ id: "7", repository }, operationContext()),
-    ).resolves.toMatchObject({
-      prompt: expect.stringContaining("test"),
-      checks: { failed: [expect.objectContaining({ name: "test" })] },
-    });
   });
 });
