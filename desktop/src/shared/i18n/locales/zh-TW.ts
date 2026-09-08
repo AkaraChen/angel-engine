@@ -432,7 +432,6 @@ export const zhTW = {
       refreshProjects: "重新整理專案",
       retryWorktreeCreation: "重試建立 worktree",
       settings: "設定",
-      shepherding: "正在 Shepherd 此對話",
       toggleChats: "切換聊天",
       mobileDescription: "顯示行動版側邊欄。",
       title: "側邊欄",
@@ -1096,7 +1095,6 @@ export const zhTW = {
       commandPalette: "命令面板",
       commandSessions: "工作階段",
       commandImportSession: "匯入對話到專案",
-      commandShepherdChangeRequest: "Shepherd 變更要求",
     },
     promptInput: {
       addPhotosOrFiles: "新增圖片或檔案",

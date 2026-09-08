@@ -437,7 +437,6 @@ export const ko = {
       refreshProjects: "프로젝트 새로고침",
       retryWorktreeCreation: "Worktree 생성 다시 시도",
       settings: "설정",
-      shepherding: "Shepherding this session",
       toggleChats: "채팅 전환",
       mobileDescription: "모바일 사이드바를 표시합니다.",
       title: "사이드바",
@@ -1130,7 +1129,6 @@ export const ko = {
       commandPalette: "명령 팔레트",
       commandSessions: "세션",
       commandImportSession: "프로젝트로 세션 가져오기",
-      commandShepherdChangeRequest: "Shepherd 변경 요청",
     },
     promptInput: {
       addPhotosOrFiles: "사진 또는 파일 추가",

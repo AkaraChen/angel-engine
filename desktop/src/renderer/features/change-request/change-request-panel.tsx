@@ -55,7 +55,6 @@ import {
   optionalFailedChecks,
   type MergeBlocker,
 } from "@/features/change-request/derive-merge-blockers";
-import { ShepherdSection } from "@/features/shepherd/shepherd-section";
 import { cn } from "@/platform/utils";
 
 const mergeMethods: MergeMethod[] = ["squash", "merge", "rebase"];
@@ -546,10 +545,6 @@ export const ChangeRequestPanel: FC<{
           </section>
         ) : null}
 
-        <ShepherdSection
-          changeRequest={status.changeRequest}
-          projectId={projectId}
-        />
       </div>
     </div>
   );

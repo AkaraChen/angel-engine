@@ -38,10 +38,6 @@
       "types": "./dist/source-control/index.d.ts",
       "import": "./dist/source-control/index.js"
     },
-    "./shepherd": {
-      "types": "./dist/shepherd.d.ts",
-      "import": "./dist/shepherd.js"
-    },
     "./terminal": {
       "types": "./dist/terminal.d.ts",
       "import": "./dist/terminal.js"

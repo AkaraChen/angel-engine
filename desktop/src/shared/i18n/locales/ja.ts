@@ -441,7 +441,6 @@ export const ja = {
       refreshProjects: "プロジェクトを更新",
       retryWorktreeCreation: "Worktree の作成を再試行",
       settings: "設定",
-      shepherding: "Shepherding this session",
       toggleChats: "チャットを切り替え",
       mobileDescription: "モバイルサイドバーを表示します。",
       title: "サイドバー",
@@ -1151,7 +1150,6 @@ export const ja = {
       commandPalette: "コマンドパレット",
       commandSessions: "セッション",
       commandImportSession: "プロジェクトにセッションを取り込む",
-      commandShepherdChangeRequest: "Shepherd 変更リクエスト",
     },
     promptInput: {
       addPhotosOrFiles: "写真またはファイルを追加",

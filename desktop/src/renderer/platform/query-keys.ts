@@ -109,11 +109,6 @@ export const queryKeys = {
   pathLauncher: {
     availability: () => ["path-launcher", "availability"] as const,
   },
-  shepherd: {
-    all: () => ["shepherd"] as const,
-    session: (chatId: string | null) =>
-      ["shepherd", "session", chatId] as const,
-  },
   projects: {
     all: () => ["projects"] as const,
     config: (id: string | null) => ["projects", "config", id] as const,

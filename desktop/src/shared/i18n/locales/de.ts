@@ -442,7 +442,6 @@ export const de = {
       refreshProjects: "Projekte aktualisieren",
       retryWorktreeCreation: "Worktree-Erstellung wiederholen",
       settings: "Einstellungen",
-      shepherding: "Shepherding this session",
       toggleChats: "Chats ein-/ausblenden",
       mobileDescription: "Zeigt die mobile Seitenleiste an.",
       title: "Seitenleiste",
@@ -1166,7 +1165,6 @@ export const de = {
       commandPalette: "Befehlspalette",
       commandSessions: "Sitzungen",
       commandImportSession: "Sitzungen ins Projekt importieren",
-      commandShepherdChangeRequest: "Shepherd Änderungsanfrage",
     },
     promptInput: {
       addPhotosOrFiles: "Fotos oder Dateien hinzufügen",

@@ -442,7 +442,6 @@ export const es = {
       refreshProjects: "Actualizar proyectos",
       retryWorktreeCreation: "Reintentar creación del worktree",
       settings: "Configuración",
-      shepherding: "Shepherding this session",
       toggleChats: "Alternar chats",
       mobileDescription: "Muestra la barra lateral móvil.",
       title: "Barra lateral",
@@ -1158,7 +1157,6 @@ export const es = {
       commandPalette: "Paleta de comandos",
       commandSessions: "Sesiones",
       commandImportSession: "Importar sesiones al proyecto",
-      commandShepherdChangeRequest: "Shepherd solicitud de cambio",
     },
     promptInput: {
       addPhotosOrFiles: "Agregar fotos o archivos",

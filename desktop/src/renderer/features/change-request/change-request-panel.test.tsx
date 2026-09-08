@@ -84,10 +84,6 @@ vi.mock("@/app/workspace/workspace-checks-panel", () => ({
   ),
 }));
 
-vi.mock("@/features/shepherd/shepherd-section", () => ({
-  ShepherdSection: () => <div data-testid="shepherd-section">shepherd</div>,
-}));
-
 vi.mock("@/features/source-control/api/use-activation", () => ({
   useSourceControlActivation: () => ({
     capabilities,
@@ -339,22 +335,6 @@ describe("ChangeRequestPanel", () => {
     await Promise.resolve();
     expect(checksSummary).not.toHaveBeenCalled();
     expect(reviewThreads).not.toHaveBeenCalled();
-  });
-
-  it("places Checks before Shepherd", async () => {
-    pullRequestStatus.mockResolvedValue(openStatus);
-    renderPanel();
-
-    await waitFor(() => {
-      expect(screen.getByTestId("workspace-checks-section")).toBeDefined();
-    });
-
-    const checks = screen.getByTestId("workspace-checks-section");
-    const shepherd = screen.getByTestId("shepherd-section");
-    expect(
-      checks.compareDocumentPosition(shepherd) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
   });
 
   it("renders and resolves generic review threads", async () => {
