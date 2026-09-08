@@ -116,8 +116,6 @@ export function createAzureDevOpsPlugin(
           "checks.snapshot",
           "checks.failureLog",
           "checks.fixPrompt",
-          "reviewThreads.list",
-          "reviewThreads.resolve",
           "workItems.get",
           "workItems.getByUrl",
           "workItems.list",

@@ -46,10 +46,6 @@ import {
   listGitHubChecks,
   snapshotGitHubChecks,
 } from "./internal/checks";
-import {
-  listGitHubReviewThreads,
-  resolveGitHubReviewThread,
-} from "./internal/reviews";
 
 const PROVIDER_ID = "github";
 const PUBLIC_HOSTS = new Set(["github.com", "www.github.com"]);
@@ -267,8 +263,6 @@ export function createGitHubPlugin(
         "checks.snapshot",
         "checks.failureLog",
         "checks.fixPrompt",
-        "reviewThreads.list",
-        "reviewThreads.resolve",
         "workItems.get",
         "workItems.getByUrl",
         "workItems.list",
@@ -337,12 +331,6 @@ export function createGitHubPlugin(
         fetchGitHubCheckFailureLog(input, context, resolvedDependencies),
       fixPrompt: (input, context) =>
         buildGitHubChecksFixPrompt(input, context, resolvedDependencies),
-    },
-    reviews: {
-      listThreads: (input, context) =>
-        listGitHubReviewThreads(input, context, resolvedDependencies),
-      resolveThread: (input, context) =>
-        resolveGitHubReviewThread(input, context, resolvedDependencies),
     },
     workItems: {
       get: (input, context) =>

@@ -173,14 +173,6 @@ export function createGitLabPlugin(
           message:
             "GitLab check fix prompts are not available in this release.",
         },
-        "reviewThreads.list": {
-          kind: "not-implemented",
-          message: "GitLab review threads are not available in this release.",
-        },
-        "reviewThreads.resolve": {
-          kind: "not-implemented",
-          message: "GitLab review threads are not available in this release.",
-        },
       },
     },
     discovery: {

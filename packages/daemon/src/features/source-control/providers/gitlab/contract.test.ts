@@ -299,11 +299,8 @@ describe("GitLab provider boundaries", () => {
   it("keeps merge and review threads outside the first release", () => {
     const plugin = createGitLabPlugin();
     expect(plugin.changeRequests?.merge).toBeUndefined();
-    expect(plugin.reviews).toBeUndefined();
     expect(plugin.manifest.unsupportedCapabilities).toMatchObject({
       "changeRequests.merge": { kind: "out-of-scope" },
-      "reviewThreads.list": { kind: "not-implemented" },
-      "reviewThreads.resolve": { kind: "not-implemented" },
     });
   });
 

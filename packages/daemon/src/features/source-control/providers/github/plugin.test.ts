@@ -665,19 +665,5 @@ describe("GitHub source-control provider", () => {
       prompt: expect.stringContaining("test"),
       checks: { failed: [expect.objectContaining({ name: "test" })] },
     });
-    await expect(
-      plugin.reviews?.listThreads?.(
-        { id: "7", repository },
-        operationContext(),
-      ),
-    ).resolves.toEqual([
-      expect.objectContaining({ id: "thread-1", state: "unresolved" }),
-    ]);
-    await expect(
-      plugin.reviews?.resolveThread?.(
-        { repository, threadId: "thread-1" },
-        operationContext(),
-      ),
-    ).resolves.toMatchObject({ id: "thread-1", state: "resolved" });
   });
 });

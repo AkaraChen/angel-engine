@@ -9,7 +9,6 @@ import {
   providerDiagnosticSchema,
   repositoryIdentitySchema,
   reviewCommentSchema,
-  reviewThreadSchema,
   workItemSchema,
 } from "./schemas";
 import type {
@@ -23,7 +22,6 @@ import type {
   ProviderDiagnostic,
   RepositoryIdentity,
   ReviewComment,
-  ReviewThread,
   SourceControlCapabilityId,
   WorkItem,
 } from "./types";
@@ -192,10 +190,6 @@ export interface ChecksFixPromptResult {
   prompt: string;
 }
 
-export interface ResolveReviewThreadInput extends RepositoryOperationInput {
-  threadId: string;
-}
-
 
 export interface CloneRepositoryInput extends RepositoryOperationInput {
   targetPath: string;
@@ -258,14 +252,6 @@ export interface SourceControlOperationMap {
   "checks.fixPrompt": {
     input: ChecksFixPromptInput;
     output: ChecksFixPromptResult;
-  };
-  "reviewThreads.list": {
-    input: NumberedItemInput;
-    output: readonly ReviewThread[];
-  };
-  "reviewThreads.resolve": {
-    input: ResolveReviewThreadInput;
-    output: ReviewThread;
   };
   "workItems.get": { input: NumberedItemInput; output: WorkItem };
   "workItems.getByUrl": { input: UrlOperationInput; output: WorkItem };
@@ -440,18 +426,6 @@ export const sourceControlOperationSchemas = {
       checks: checkSummarySchema,
       prompt: "string > 0",
     }),
-  },
-  "reviewThreads.list": {
-    input: numberedItemInputSchema,
-    output: reviewThreadSchema.array(),
-  },
-  "reviewThreads.resolve": {
-    input: arkType({
-      "+": "reject",
-      repository: repositoryIdentitySchema,
-      threadId: "string > 0",
-    }),
-    output: reviewThreadSchema,
   },
   "workItems.get": { input: numberedItemInputSchema, output: workItemSchema },
   "workItems.getByUrl": { input: urlInputSchema, output: workItemSchema },

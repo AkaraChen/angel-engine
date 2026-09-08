@@ -146,13 +146,6 @@ export interface CheckSummary {
   failed: readonly CheckRun[];
 }
 
-export interface ReviewLocation {
-  path: string;
-  side: "left" | "right";
-  startLine: number | null;
-  endLine: number | null;
-}
-
 export interface ReviewComment {
   id: string;
   author: SourceControlActor | null;
@@ -160,21 +153,6 @@ export interface ReviewComment {
   createdAt: string;
   updatedAt: string | null;
   webUrl: string | null;
-  extensions?: SourceControlExtensions;
-}
-
-export type ReviewThreadState =
-  | "unresolved"
-  | "resolved"
-  | "outdated"
-  | "not-resolvable";
-
-export interface ReviewThread {
-  id: string;
-  state: ReviewThreadState;
-  resolvable: boolean;
-  location: ReviewLocation | null;
-  comments: readonly ReviewComment[];
   extensions?: SourceControlExtensions;
 }
 
@@ -223,8 +201,6 @@ export type SourceControlCapabilityId =
   | "checks.snapshot"
   | "checks.failureLog"
   | "checks.fixPrompt"
-  | "reviewThreads.list"
-  | "reviewThreads.resolve"
   | "workItems.get"
   | "workItems.getByUrl"
   | "workItems.list"

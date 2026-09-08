@@ -147,14 +147,6 @@ export const checkSummarySchema = arkType({
   failed: checkRunSchema.array(),
 });
 
-export const reviewLocationSchema = arkType({
-  "+": "reject",
-  path: "string > 0",
-  side: "'left' | 'right'",
-  startLine: "number | null",
-  endLine: "number | null",
-});
-
 export const reviewCommentSchema = arkType({
   "+": "reject",
   id: "string > 0",
@@ -163,16 +155,6 @@ export const reviewCommentSchema = arkType({
   createdAt: "string > 0",
   updatedAt: "string | null",
   webUrl: "string | null",
-  "extensions?": extensionsSchema,
-});
-
-export const reviewThreadSchema = arkType({
-  "+": "reject",
-  id: "string > 0",
-  state: "'unresolved' | 'resolved' | 'outdated' | 'not-resolvable'",
-  resolvable: "boolean",
-  location: reviewLocationSchema.or("null"),
-  comments: reviewCommentSchema.array(),
   "extensions?": extensionsSchema,
 });
 
@@ -202,7 +184,7 @@ export const capabilityMatrixSchema = arkType({
 });
 
 const capabilityIdSchema = arkType(
-  "'provider.auth' | 'discovery.listNamespaces' | 'discovery.listRepositories' | 'repositoryIdentity' | 'changeRequests.create' | 'changeRequests.get' | 'changeRequests.getByUrl' | 'changeRequests.list' | 'changeRequests.status' | 'changeRequests.comment' | 'changeRequests.merge' | 'changeRequests.preflight' | 'changeRequests.resolveHead' | 'checks.list' | 'checks.snapshot' | 'checks.failureLog' | 'checks.fixPrompt' | 'reviewThreads.list' | 'reviewThreads.resolve' | 'workItems.get' | 'workItems.getByUrl' | 'workItems.list' | 'provider.clone'",
+  "'provider.auth' | 'discovery.listNamespaces' | 'discovery.listRepositories' | 'repositoryIdentity' | 'changeRequests.create' | 'changeRequests.get' | 'changeRequests.getByUrl' | 'changeRequests.list' | 'changeRequests.status' | 'changeRequests.comment' | 'changeRequests.merge' | 'changeRequests.preflight' | 'changeRequests.resolveHead' | 'checks.list' | 'checks.snapshot' | 'checks.failureLog' | 'checks.fixPrompt' | 'workItems.get' | 'workItems.getByUrl' | 'workItems.list' | 'provider.clone'",
 );
 
 export const providerManifestSchema = arkType({

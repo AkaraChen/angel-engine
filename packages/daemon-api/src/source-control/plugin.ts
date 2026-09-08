@@ -53,11 +53,6 @@ export interface ChangeRequestCapability {
   resolveHead?: ProviderOperation<"changeRequests.resolveHead">;
 }
 
-export interface ReviewCapability {
-  listThreads?: ProviderOperation<"reviewThreads.list">;
-  resolveThread?: ProviderOperation<"reviewThreads.resolve">;
-}
-
 export interface ChecksCapability {
   list?: ProviderOperation<"checks.list">;
   snapshot?: ProviderOperation<"checks.snapshot">;
@@ -75,7 +70,6 @@ export interface SourceControlProviderPlugin {
   repositories?: RepositoryCapability;
   workItems?: WorkItemCapability;
   changeRequests?: ChangeRequestCapability;
-  reviews?: ReviewCapability;
   checks?: ChecksCapability;
   automation?: AutomationCapability;
   releases?: ReleaseCapability;

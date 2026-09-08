@@ -326,19 +326,6 @@ runProviderContractSuite(
           plugin.checks!.fixPrompt!(numbered, operationContext()),
       },
       {
-        capability: "reviewThreads.list",
-        run: (plugin) =>
-          plugin.reviews!.listThreads!(numbered, operationContext()),
-      },
-      {
-        capability: "reviewThreads.resolve",
-        run: (plugin) =>
-          plugin.reviews!.resolveThread!(
-            { repository, threadId: "thread-1" },
-            operationContext(),
-          ),
-      },
-      {
         capability: "workItems.get",
         run: (plugin) =>
           plugin.workItems!.get!({ id: "3", repository }, operationContext()),
