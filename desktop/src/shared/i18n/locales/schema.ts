@@ -820,9 +820,6 @@ export interface LocaleResourceTranslationCommands {
 }
 
 export interface LocaleResourceTranslationSettingsWorkspace {
-  dirtyPromptDescription: string;
-  dirtyPromptSwitchLabel: string;
-  dirtyPromptTitle: string;
   osNotificationsDescription: string;
   osNotificationsSwitchLabel: string;
   osNotificationsTitle: string;

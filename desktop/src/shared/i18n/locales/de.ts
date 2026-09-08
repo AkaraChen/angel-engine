@@ -685,10 +685,6 @@ export const de = {
         unsupported: "Automatische Updates gibt es derzeit nur unter macOS.",
       },
       workspace: {
-        dirtyPromptDescription:
-          "Vor dem Erstellen eines Worktrees nachfragen, wenn das ausgewählte Projekt nicht übernommene Änderungen hat.",
-        dirtyPromptSwitchLabel: "Vor Worktrees aus dirty Repositories warnen",
-        dirtyPromptTitle: "Dirty-Repository-Warnung",
         osNotificationsDescription:
           "Systembanner anzeigen, wenn ein Hintergrund-Chat fertig ist, fehlschlägt oder dich braucht. Der In-App-Verlauf bleibt verfügbar.",
         osNotificationsSwitchLabel: "OS-Benachrichtigungen anzeigen",
