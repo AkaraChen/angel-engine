@@ -166,6 +166,93 @@ it("adds provider mappings after the released automation repair", async () => {
   }
 });
 
+it("drops Shepherd state without deleting chats or child rows", async () => {
+  const temporaryDir = await mkdtemp(
+    path.join(tmpdir(), "angel-migration-test-"),
+  );
+  const historicalMigrationsDir = path.join(temporaryDir, "migrations");
+  await mkdir(path.join(historicalMigrationsDir, "meta"), { recursive: true });
+  try {
+    await copyMigrations(
+      historicalMigrationsDir,
+      (tag) => tag !== "0014_drop_shepherd_sessions",
+    );
+    const client = createClient({
+      url: "file:" + path.join(temporaryDir, "database.sqlite"),
+    });
+    await migrate(drizzle(client), {
+      migrationsFolder: historicalMigrationsDir,
+    });
+    await client.execute({
+      args: ["project-1", "/workspace/project"],
+      sql: "INSERT INTO projects (id, path) VALUES (?, ?)",
+    });
+    await client.execute({
+      args: [
+        "chat-1",
+        "Existing chat",
+        "project-1",
+        "/workspace/project",
+        "codex",
+        "2026-08-12T00:00:00.000Z",
+        "2026-08-12T00:00:00.000Z",
+      ],
+      sql: "INSERT INTO chats (id, title, project_id, cwd, runtime, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    });
+    await client.execute({
+      args: [
+        "anchor-1",
+        "chat-1",
+        "session",
+        "2026-08-12T00:00:00.000Z",
+        "abc123",
+      ],
+      sql: "INSERT INTO chat_diff_anchors (id, chat_id, kind, recorded_at, sha) VALUES (?, ?, ?, ?, ?)",
+    });
+    await client.execute({
+      args: [
+        "shepherd-1",
+        "chat-1",
+        "acme",
+        "widgets",
+        7,
+        "watching",
+        "[]",
+        "[]",
+        "2026-08-12T00:00:00.000Z",
+        "2026-08-12T00:00:00.000Z",
+      ],
+      sql: "INSERT INTO shepherd_sessions (id, chat_id, owner, repo, pr_number, state, handled_fingerprints, pending_fingerprints, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    });
+
+    await migrate(drizzle(client), { migrationsFolder: migrationsDir });
+
+    await expect(
+      client.execute("SELECT id, title, project_id FROM chats"),
+    ).resolves.toMatchObject({
+      rows: [{ id: "chat-1", title: "Existing chat", project_id: "project-1" }],
+    });
+    await expect(
+      client.execute("SELECT id, chat_id, sha FROM chat_diff_anchors"),
+    ).resolves.toMatchObject({
+      rows: [{ id: "anchor-1", chat_id: "chat-1", sha: "abc123" }],
+    });
+    await expect(
+      client.execute("PRAGMA foreign_key_check"),
+    ).resolves.toMatchObject({
+      rows: [],
+    });
+    await expect(
+      client.execute(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'shepherd_sessions'",
+      ),
+    ).resolves.toMatchObject({ rows: [] });
+    client.close();
+  } finally {
+    await rm(temporaryDir, { force: true, recursive: true });
+  }
+});
+
 async function copyMigrations(
   targetDir: string,
   include: (tag: string) => boolean,
