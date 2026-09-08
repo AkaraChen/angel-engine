@@ -1,27 +1,20 @@
 import type { Chat } from "@angel-engine/daemon-api/chat";
 import type { Project } from "@angel-engine/daemon-api/projects";
-import type { IconProps } from "@phosphor-icons/react";
-import type { ComponentType, ReactElement } from "react";
+import type { ReactElement } from "react";
 
-import type { PathLauncherActionId } from "@shared/path-launcher";
-import type { WorkspaceMode } from "@/app/workspace/workspace-ui-store";
-import type { ChatContextMenuAction } from "@/features/chat/api/queries";
 import type { ProjectWorktreeChatGroup } from "@/features/chat/worktree-grouping";
+import type { PathLauncherActionId } from "@shared/path-launcher";
+import type { ChatContextMenuAction } from "@/features/chat/api/queries";
 import type { ProjectContextMenuAction } from "@/features/projects/api/queries";
 import {
-  Folder,
-  Lightning,
-  Chats as MessageSquare,
   Plus,
   CalendarDots,
   GearSix as Settings,
-  SquaresFour,
 } from "@phosphor-icons/react";
 import is from "@sindresorhus/is";
 import { m } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { resolveWorkspaceNewChatTarget } from "@/app/workspace/workspace-new-chat-target";
 import { useWorkspaceUiStore } from "@/app/workspace/workspace-ui-store";
 import {
   Sidebar,
@@ -35,9 +28,6 @@ import {
   WorkspaceSidebarMenuButton,
 } from "@/components/workspace-sidebar-primitives";
 import { SimpleChatSidebarSection } from "@/features/chat/components/simple-chat-sidebar-section";
-import { PowerProjectSidebarSection } from "@/features/projects/components/power-project-sidebar-section";
-import { ProjectSidebarSection } from "@/features/projects/components/project-sidebar-section";
-import { cn } from "@/platform/utils";
 
 type MaybeAsync = void | Promise<void>;
 const FLOATING_SIDEBAR_OPEN_DELAY_MS = 80;
@@ -49,19 +39,9 @@ const FLOATING_SIDEBAR_TRANSITION = {
   type: "spring",
 } as const;
 
-const WORKSPACE_MODES: Array<{
-  icon: ComponentType<Pick<IconProps, "className" | "weight">>;
-  labelKey: "sidebar.modeChat" | "sidebar.modePower" | "sidebar.modeWork";
-  value: WorkspaceMode;
-}> = [
-  { icon: MessageSquare, labelKey: "sidebar.modeChat", value: "chat" },
-  { icon: Folder, labelKey: "sidebar.modeWork", value: "work" },
-  { icon: Lightning, labelKey: "sidebar.modePower", value: "power" },
-];
 
 interface WorkspaceSidebarProps {
   chats: Chat[];
-  fleetActive: boolean;
   scheduleActive: boolean;
   isChatsLoading: boolean;
   isMacOS: boolean;
@@ -74,7 +54,6 @@ interface WorkspaceSidebarProps {
   onCreateStandaloneChat: () => MaybeAsync;
   onImportSession: (project: Project) => void;
   onOpenChat: (chat: Chat) => MaybeAsync;
-  onOpenFleet: () => MaybeAsync;
   onOpenSchedule: () => MaybeAsync;
   onOpenSettings: () => MaybeAsync;
   onOpenWorktree: (
@@ -96,7 +75,6 @@ interface WorkspaceSidebarProps {
     worktreeGroup: ProjectWorktreeChatGroup,
     action: PathLauncherActionId,
   ) => void;
-  onWorkspaceModeChange: (workspaceMode: WorkspaceMode) => void;
   projectChatsByProjectId: Map<string, Chat[]>;
   projects: Project[];
   selectedChatId?: string;
@@ -106,12 +84,10 @@ interface WorkspaceSidebarProps {
 export function WorkspaceSidebar({
   ...props
 }: WorkspaceSidebarProps): ReactElement {
-  const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
 
   return (
     <Sidebar
       className="select-none"
-      data-workspace-mode={workspaceMode}
       variant="inset"
     >
       <WorkspaceSidebarContent {...props} />
@@ -123,7 +99,6 @@ export function WorkspaceFloatingSidebar(
   props: WorkspaceSidebarProps,
 ): ReactElement | null {
   const sidebarOpen = useWorkspaceUiStore((state) => state.sidebarOpen);
-  const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
   const [peeked, setPeeked] = useState(false);
   const openTimerRef = useRef<number | null>(null);
   const closeTimerRef = useRef<number | null>(null);
@@ -193,7 +168,6 @@ export function WorkspaceFloatingSidebar(
         md:block
       "
       data-slot="workspace-floating-sidebar"
-      data-workspace-mode={workspaceMode}
       onMouseEnter={handlePeekEnter}
       onMouseLeave={handlePeekLeave}
     >
@@ -221,7 +195,6 @@ export function WorkspaceFloatingSidebar(
           "
           data-sidebar="sidebar"
           data-slot="sidebar"
-          data-workspace-mode={workspaceMode}
         >
           <WorkspaceSidebarContent {...props} />
         </div>
@@ -232,7 +205,6 @@ export function WorkspaceFloatingSidebar(
 
 function WorkspaceSidebarContent({
   chats,
-  fleetActive,
   scheduleActive,
   isChatsLoading,
   isMacOS,
@@ -245,7 +217,6 @@ function WorkspaceSidebarContent({
   onCreateStandaloneChat,
   onImportSession,
   onOpenChat,
-  onOpenFleet,
   onOpenSchedule,
   onOpenSettings,
   onOpenWorktree,
@@ -254,7 +225,6 @@ function WorkspaceSidebarContent({
   onProjectContextMenuAction,
   onProjectPathLauncherAction,
   onWorktreePathLauncherAction,
-  onWorkspaceModeChange,
   projectChatsByProjectId,
   projects,
   selectedChatId,
@@ -262,29 +232,13 @@ function WorkspaceSidebarContent({
 }: WorkspaceSidebarProps): ReactElement {
   const { t } = useTranslation();
   const platform = window.desktopEnvironment.platform;
-  const workspaceMode = useWorkspaceUiStore((state) => state.workspaceMode);
   const reserveNativeSidebarControlSpace =
     platform === "linux" || platform === "win32";
   const standaloneChats = chats.filter(
     (chat) => !is.nonEmptyString(chat.projectId),
   );
   const createChatFromNewButton = async () => {
-    const target = resolveWorkspaceNewChatTarget({
-      fleetActive: fleetActive || scheduleActive,
-      projects,
-      selectedChatId,
-      selectedProjectId,
-      workspaceMode,
-    });
-
-    switch (target.type) {
-      case "none":
-        return;
-      case "project":
-        return onCreateProjectChat(target.project);
-      case "standalone":
-        return onCreateStandaloneChat();
-    }
+    return onCreateStandaloneChat();
   };
 
   return (
@@ -293,11 +247,6 @@ function WorkspaceSidebarContent({
         {isMacOS || reserveNativeSidebarControlSpace ? (
           <div aria-hidden className="h-8 shrink-0" />
         ) : null}
-
-        <WorkspaceModeControl
-          onValueChange={onWorkspaceModeChange}
-          value={workspaceMode}
-        />
       </SidebarHeader>
 
       <SidebarContent className="gap-0 pb-1">
@@ -331,19 +280,9 @@ function WorkspaceSidebarContent({
               <span>{t("schedule.title")}</span>
             </WorkspaceSidebarMenuButton>
           </AnimatedSidebarMenuItem>
-          <AnimatedSidebarMenuItem>
-            <WorkspaceSidebarMenuButton
-              isActive={fleetActive}
-              onClick={() => void onOpenFleet()}
-            >
-              <SquaresFour weight="duotone" />
-              <span>{t("fleet.title")}</span>
-            </WorkspaceSidebarMenuButton>
-          </AnimatedSidebarMenuItem>
         </SidebarMenu>
 
-        {workspaceMode === "chat" ? (
-          <SimpleChatSidebarSection
+        <SimpleChatSidebarSection
             chats={standaloneChats}
             isLoading={isChatsLoading}
             onArchiveChat={onArchiveChat}
@@ -351,46 +290,7 @@ function WorkspaceSidebarContent({
             onChatContextMenuAction={onChatContextMenuAction}
             selectedChatId={selectedChatId}
           />
-        ) : null}
 
-        {workspaceMode === "power" ? (
-          <PowerProjectSidebarSection
-            isLoading={isProjectsLoading}
-            onCloneRepository={onCloneRepository}
-            onCreateProject={onCreateProject}
-            onCreateProjectChat={onCreateProjectChat}
-            onImportSession={onImportSession}
-            onCancelWorktreeCreation={onCancelWorktreeCreation}
-            onOpenWorktree={onOpenWorktree}
-            onOpenChat={onOpenChat}
-            onRetryWorktreeCreation={onRetryWorktreeCreation}
-            onProjectContextMenuAction={onProjectContextMenuAction}
-            onProjectPathLauncherAction={onProjectPathLauncherAction}
-            onWorktreePathLauncherAction={onWorktreePathLauncherAction}
-            projectChatsByProjectId={projectChatsByProjectId}
-            projects={projects}
-          />
-        ) : null}
-
-        {workspaceMode === "work" ? (
-          <ProjectSidebarSection
-            isLoading={isProjectsLoading}
-            onArchiveChat={onArchiveChat}
-            onCloneRepository={onCloneRepository}
-            onCancelWorktreeCreation={onCancelWorktreeCreation}
-            onCreateProject={onCreateProject}
-            onCreateProjectChat={onCreateProjectChat}
-            onImportSession={onImportSession}
-            onOpenChat={onOpenChat}
-            onRetryWorktreeCreation={onRetryWorktreeCreation}
-            onChatContextMenuAction={onChatContextMenuAction}
-            onProjectContextMenuAction={onProjectContextMenuAction}
-            onProjectPathLauncherAction={onProjectPathLauncherAction}
-            projectChatsByProjectId={projectChatsByProjectId}
-            projects={projects}
-            selectedChatId={selectedChatId}
-          />
-        ) : null}
       </SidebarContent>
 
       <SidebarFooter className="p-2">
@@ -404,82 +304,5 @@ function WorkspaceSidebarContent({
         </SidebarMenu>
       </SidebarFooter>
     </>
-  );
-}
-
-function WorkspaceModeControl({
-  onValueChange,
-  value,
-}: {
-  onValueChange: (value: WorkspaceMode) => void;
-  value: WorkspaceMode;
-}): ReactElement {
-  const { t } = useTranslation();
-
-  return (
-    <div
-      className="
-        px-1
-        group-data-[collapsible=icon]:hidden
-      "
-    >
-      <div
-        aria-label={t("sidebar.modeSwitcher")}
-        className="
-          grid grid-cols-3 gap-0.5 rounded-md bg-black/5.5 p-0.5
-          shadow-[inset_0_0_0_1px_rgba(0,0,0,0.06)]
-          dark:bg-white/5.5 dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.07)]
-        "
-        role="group"
-      >
-        {WORKSPACE_MODES.map((option) => {
-          const Icon = option.icon;
-          const isActive = value === option.value;
-          const label = t(option.labelKey);
-
-          return (
-            <button
-              aria-label={label}
-              aria-pressed={isActive}
-              className={cn(
-                `
-                  relative flex h-7 min-w-0 items-center justify-center gap-1.5
-                  rounded-[5px] px-2
-                  [font-size:var(--workspace-sidebar-label-text-size)]
-                  font-medium text-sidebar-foreground/58 outline-hidden
-                  focus-visible:text-sidebar-foreground
-                `,
-                isActive
-                  ? "text-sidebar-foreground"
-                  : `
-                    hover:bg-white/25 hover:text-sidebar-foreground/78
-                    focus-visible:bg-white/40
-                    dark:hover:bg-white/5.5
-                    dark:focus-visible:bg-white/10
-                  `,
-              )}
-              key={option.value}
-              onClick={() => onValueChange(option.value)}
-              title={label}
-              type="button"
-            >
-              {isActive ? (
-                <span
-                  aria-hidden="true"
-                  className="
-                    absolute inset-0 rounded-[5px] bg-white/58
-                    shadow-[0_1px_2px_rgba(0,0,0,0.08)]
-                    dark:bg-white/[0.14]
-                    dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]
-                  "
-                />
-              ) : null}
-              <Icon className="relative size-4 shrink-0" weight="duotone" />
-              <span className="relative min-w-0 truncate">{label}</span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
   );
 }
